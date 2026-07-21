@@ -1,0 +1,600 @@
+// =========================================================================================================
+// DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0616
+// =========================================================================================================
+
+var g_matrix = safeGdiImage(imgPath + "dot_matrix.png");
+var g_icons = safeGdiImage(imgPath + "sac_pbo.png");
+
+var DARKONE_DISPLAY_ACCENT_DEFAULT = 0;
+var DARKONE_DISPLAY_ACCENT_CUSTOM = 1;
+var DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED = 2;
+var DARKONE_DISPLAY_ACCENT_MODE_PROPERTY = "DARKONEJSP3.DISPLAY.ACCENT.MODE";
+var DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY = "DARKONEJSP3.DISPLAY.ACCENT.CUSTOM.COLOUR";
+var DARKONE_DISPLAY_DEFAULT_BLUE = -14053428; // #298FCC
+var DARKONE_DISPLAY_MATRIX_ROW_HEIGHT = 60;
+var DARKONE_DISPLAY_MATRIX_ROW_STRIDE = 66;
+var DARKONE_DISPLAY_ICON_ROW_HEIGHT = 36;
+var DARKONE_DISPLAY_ICON_ROW_STRIDE = 42;
+var DARKONE_DISPLAY_WHITE_ROW_INDEX = 4;
+
+function darkOneUseImageGraphics(image, callback) {
+	var gr = null;
+	try {
+		gr = image.GetGraphics();
+		callback(gr);
+	} finally {
+		if (gr) {
+			try { image.ReleaseGraphics(); } catch (e) {}
+		}
+	}
+}
+
+function darkOneCreateTintedSpriteRow(source, source_y, width, height, colour) {
+	if (!source) return null;
+
+	var mask = null;
+	var solid = null;
+	var result = null;
+	try {
+		mask = utils.CreateImage(width, height);
+		darkOneUseImageGraphics(mask, function (gr) {
+			gr.DrawImage(source, 0, 0, width, height, 0, source_y, width, height);
+		});
+		mask.ApplyEffect(1); // white source glyphs -> black mask pixels
+
+		solid = utils.CreateImage(width, height);
+		darkOneUseImageGraphics(solid, function (gr) {
+			gr.FillRectangle(0, 0, width, height, colour);
+		});
+
+		result = utils.CreateImage(width, height);
+		darkOneUseImageGraphics(result, function (gr) {
+			gr.DrawImageWithMask(solid, mask, 0, 0, width, height);
+		});
+		return result;
+	} catch (e) {
+		try { console.log('DarkOneJSP3 display accent sprite generation failed: ' + e.message); } catch (e2) {}
+		disposeImage(result);
+		return null;
+	} finally {
+		disposeImage(mask);
+		disposeImage(solid);
+	}
+}
+
+// ----- BASE IMAGE OBJECT -----
+function BaseImage() {
+	this.image = null;
+	this.curVal = "";
+}
+
+BaseImage.prototype.reset = function() {
+	this.curVal = "";
+};
+
+BaseImage.prototype.dispose = function() {
+	disposeImage(this.image);
+	this.image = null;
+};
+
+BaseImage.prototype.isDrawDigit = function(digitValue, index) {
+	return this.curVal == null || this.curVal == "" || digitValue != this.curVal.charAt(index);
+};
+
+function darkOneInheritImage(ctor) {
+	ctor.prototype = Object.create(BaseImage.prototype);
+	ctor.prototype.constructor = ctor;
+}
+
+// ----- CREATE TRACKNUMBER IMAGE -----
+function NumImage() {
+	BaseImage.call(this);
+	this.image = utils.CreateImage(216, 60);
+
+	this.init = function(curNo) {
+		var self = this;
+		darkOneUseImageGraphics(this.image, function (gr) {
+			for (var i = 0; i < 4; i++) self.drawDigit(gr, curNo, i);
+		});
+		this.curVal = curNo;
+	};
+
+	this.draw = function(curNo) {
+		if (this.curVal != curNo) this.init(curNo);
+	}
+
+	this.drawDigit = function(gr, curNo, index) {
+		var digitValue = curNo.charAt(index);
+
+		if (this.isDrawDigit(digitValue, index)) {
+			var xoffset = index * 54;
+			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
+			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue * 54, 54, 60);
+		}
+	}
+}
+
+// ----- CREATE TIME IMAGE -----
+function TimeImage() {
+	BaseImage.call(this);
+	this.image = utils.CreateImage(360, 60);
+
+	this.init = function(time) {
+		var self = this;
+		darkOneUseImageGraphics(this.image, function (gr) {
+			for (var i = 0; i < 6; i++) self.drawDigit(gr, time, i < 2 ? i : i < 4 ? i + 1 : i + 2, i < 2 ? 0 : i < 4 ? -36 : -72);
+			display_system.drawMatrixSprite(gr, 108, 0, 18, 60, 702, 18, 60);
+			display_system.drawMatrixSprite(gr, 234, 0, 18, 60, 702, 18, 60);
+		});
+		this.curVal = time;
+	};
+
+	this.draw = function(time) {
+		if (this.curVal != time) this.init(time);
+	}
+
+	this.drawDigit = function(gr, time, index, offset) {
+		var digitValue = time.charAt(index);
+
+		if (this.isDrawDigit(digitValue, index)) {
+			var xoffset = index * 54 + offset;
+			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
+			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, isNaN(digitValue) ? 0 : digitValue * 54, 54, 60);
+		}
+	}
+}
+
+// ----- CREATE BITRATE IMAGE -----
+function BitrateImage() {
+	BaseImage.call(this);
+	this.image = utils.CreateImage(270, 60);
+
+	this.init = function(bitrate) {
+		var self = this;
+		darkOneUseImageGraphics(this.image, function (gr) {
+			for (var i = 0; i < 5; i++) self.drawDigit(gr, bitrate, i);
+		});
+		this.curVal = bitrate;
+	};
+
+	this.draw = function(bitrate) {
+		if (this.curVal != bitrate) this.init(bitrate);
+	}
+
+	this.drawDigit = function(gr, bitrate, index) {
+		var digitValue = bitrate.charAt(index);
+
+		if (this.isDrawDigit(digitValue, index)) {
+			var xoffset = index * 54;
+			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
+
+			if (digitValue != " ") {
+				var tmp = digitValue * 54;
+				if (!isNaN(tmp)) display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, tmp, 54, 60);
+			}
+		}
+	}
+}
+
+// ----- CREATE VOLUME IMAGE -----
+function VolumeImage() {
+	BaseImage.call(this);
+	this.image = utils.CreateImage(504, 60);
+
+	this.init = function(volume) {
+		var self = this;
+		darkOneUseImageGraphics(this.image, function (gr) {
+			for (var i = 0; i < 6; i++) self.drawDigit(gr, volume, i < 4 ? i : i + 1, i < 4 ? 0 : -36);
+			display_system.drawMatrixSprite(gr, 216, 0, 18, 60, 720, 18, 60);
+			display_system.drawMatrixSprite(gr, 342, 0, 54, 60, 648, 54, 60);
+			display_system.drawMatrixSprite(gr, 396, 0, 108, 60, 792, 108, 60);
+		});
+		this.curVal = volume;
+	};
+
+	this.draw = function(volume) {
+		if (this.curVal != volume) this.init(volume);
+	}
+
+	this.drawDigit = function(gr, volume, index, offset) {
+		var digitValue = volume.charAt(index);
+
+		if (this.isDrawDigit(digitValue, index)) {
+			var xoffset = index * 54 + offset;
+			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
+			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue == "-" ? 738 : digitValue * 54, 54, 60);
+		}
+	}
+}
+
+darkOneInheritImage(NumImage);
+darkOneInheritImage(TimeImage);
+darkOneInheritImage(BitrateImage);
+darkOneInheritImage(VolumeImage);
+
+// ----- TITLE-FORMAT CACHE -----
+var tf_display_lossless = fb.TitleFormat("$if($stricmp(%__encoding%,lossless),1)");
+var tf_display_lossy = fb.TitleFormat("$if($not($stricmp(%__encoding%,lossless)),1)");
+var tf_display_hires = fb.TitleFormat("$if($and($greater(%samplerate%,88199),$greater(%__bitspersample%,23)),1)");
+var tf_display_multich = fb.TitleFormat("$if($greater(%__channels%,2),1)");
+var tf_display_md5 = fb.TitleFormat("[%__md5%]");
+var tf_display_replaygain = fb.TitleFormat("[%replaygain_track_gain%]");
+var tf_display_tracknumber_exists = fb.TitleFormat("[%tracknumber%]");
+var tf_display_totaltracks_exists = fb.TitleFormat("[%totaltracks%]");
+var tf_display_tracknumber = fb.TitleFormat("[$num(%tracknumber%,2)]");
+var tf_display_totaltracks = fb.TitleFormat("[$num(%totaltracks%,2)]");
+var tf_display_bitrate = fb.TitleFormat("%bitrate%");
+
+function evalTitleFormat(tf) {
+	try {
+		return tf.Eval();
+	} catch (e) {
+		return "";
+	}
+}
+
+// ----- DISPLAY-SYSTEM -----
+
+var section = {
+	sac : 0,
+	pbo : 1,
+	pbt : 2,
+	vol : 3,
+	bit : 4,
+};
+
+function DisplaySystem() {
+	this.display_style = window.GetProperty("Display Style", 0);
+	var t_rem = window.GetProperty("Remain Time on", false), v_timer = null, v_change = false;
+
+	this.initPos = function() {
+		this.x = 0;
+		this.y = 0;
+		this.w = ww;
+		this.h = wh;
+		this.right = this.x + this.w;
+		this.bottom = this.y + this.h;
+		this.pxSize = this.w / 400;
+		this.box_w = this.w / 6;
+		this.box_h = this.pxSize * 9;
+		this.ind_y = this.bottom - this.pxSize * 32;
+		this.inf_y = this.bottom - this.pxSize * 28;
+		this.inf_h = this.pxSize * 32;
+		this.InitFonts();
+		this.img_y = this.bottom - this.pxSize * 21;
+		this.img_h = this.pxSize * 20;
+		this.signs_left = this.x + Math.floor(this.w - this.pxSize * 18);
+		this.time_left = this.x + this.pxSize * 162;
+	}
+
+	this.InitFonts = function() {
+		var master_scale = typeof darkOneDisplayFontScale == 'function' ? darkOneDisplayFontScale() : 1.0;
+		var label_scale = typeof darkOneDisplayLabelFontScale == 'function' ? darkOneDisplayLabelFontScale() : 1.0;
+		var value_scale = typeof darkOneDisplayValueFontScale == 'function' ? darkOneDisplayValueFontScale() : 1.0;
+		var label_name = typeof darkOneDisplayLabelFontName == 'function' ? darkOneDisplayLabelFontName() : "Arial Black";
+		var label_weight = typeof darkOneDisplayLabelFontWeight == 'function' ? darkOneDisplayLabelFontWeight() : DWRITE_FONT_WEIGHT_BLACK;
+		var value_name = typeof darkOneDisplayValueFontName == 'function' ? darkOneDisplayValueFontName() : "Microsoft Sans Serif";
+		var value_weight = typeof darkOneDisplayValueFontWeight == 'function' ? darkOneDisplayValueFontWeight() : DWRITE_FONT_WEIGHT_NORMAL;
+
+		this.font_arial = darkOneCreateFont(label_name, Math.max(1, Math.round(this.pxSize * 7 * master_scale * label_scale)), 0, label_weight);
+		this.font_serif = darkOneCreateFont(value_name, Math.max(1, Math.round(this.pxSize * 29 * master_scale * value_scale)), 0, value_weight);
+	}
+
+	this.traceMouse = function(x, y) {
+		return x >= this.x && x <= this.right && y >= this.y && y <= this.bottom;
+	}
+
+	this.disposeAccentSprites = function() {
+		disposeImage(this.custom_matrix);
+		disposeImage(this.custom_icons);
+		this.custom_matrix = null;
+		this.custom_icons = null;
+	};
+
+	this.refreshAccentSprites = function() {
+		this.disposeAccentSprites();
+		this.matrix_image = g_matrix;
+		this.matrix_source_y = 0;
+		this.icon_image = g_icons;
+		this.icon_source_y = 0;
+
+		if (this.accent_mode == DARKONE_DISPLAY_ACCENT_DEFAULT) return;
+
+		this.custom_matrix = darkOneCreateTintedSpriteRow(
+			g_matrix,
+			DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_MATRIX_ROW_STRIDE,
+			g_matrix ? g_matrix.Width : 0,
+			DARKONE_DISPLAY_MATRIX_ROW_HEIGHT,
+			this.active_colour
+		);
+		this.custom_icons = darkOneCreateTintedSpriteRow(
+			g_icons,
+			DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_ICON_ROW_STRIDE,
+			g_icons ? g_icons.Width : 0,
+			DARKONE_DISPLAY_ICON_ROW_HEIGHT,
+			this.active_colour
+		);
+
+		if (this.custom_matrix) this.matrix_image = this.custom_matrix;
+		if (this.custom_icons) this.icon_image = this.custom_icons;
+	};
+
+	this.drawMatrixSprite = function(gr, dx, dy, dw, dh, sx, sw, sh) {
+		if (!this.matrix_image) return;
+		gr.DrawImage(this.matrix_image, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
+	};
+
+	this.drawStatusIcon = function(gr, dx, dy, dw, dh, sx, active) {
+		var image = active ? this.icon_image : g_icons;
+		if (!image) return;
+		var source_y = active ? this.icon_source_y : DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_ICON_ROW_STRIDE;
+		gr.DrawImage(image, dx, dy, dw, dh, sx, source_y, 54, 36, active ? 1.0 : 0.02);
+	};
+
+	this.resetRenderedImages = function() {
+		if (!this.images) return;
+		for (var i = 0; i < this.images.length; i++) {
+			if (this.images[i]) this.images[i].reset();
+		}
+	};
+
+	this.InitColours = function() {
+		var mode = window.GetProperty(DARKONE_DISPLAY_ACCENT_MODE_PROPERTY, null);
+		var custom_colour = window.GetProperty(DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY, null);
+
+		mode = Math.round(Number(mode));
+		if (mode != DARKONE_DISPLAY_ACCENT_CUSTOM &&
+				mode != DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED) {
+			mode = DARKONE_DISPLAY_ACCENT_DEFAULT;
+		}
+		custom_colour = Number(custom_colour == null ? DARKONE_DISPLAY_DEFAULT_BLUE : custom_colour);
+		if (!isFinite(custom_colour)) custom_colour = DARKONE_DISPLAY_DEFAULT_BLUE;
+
+		this.accent_mode = mode;
+		this.custom_accent_colour = custom_colour;
+		this.active_colour = mode == DARKONE_DISPLAY_ACCENT_CUSTOM
+			? custom_colour
+			: (mode == DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED
+				? (0xff000000 | (Number(window.GetColourCUI(4)) & 0x00ffffff))
+				: DARKONE_DISPLAY_DEFAULT_BLUE);
+		this.inactive_colour = combColours(p_backcol, -1, 0.02);
+		this.refreshAccentSprites();
+	}
+
+	this.setAccent = function(mode, custom_colour) {
+		if (mode != DARKONE_DISPLAY_ACCENT_CUSTOM &&
+				mode != DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED) {
+			mode = DARKONE_DISPLAY_ACCENT_DEFAULT;
+		}
+		window.SetProperty(DARKONE_DISPLAY_ACCENT_MODE_PROPERTY, mode);
+		if (custom_colour != null) window.SetProperty(DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY, Number(custom_colour));
+		this.InitColours();
+		this.setColours();
+		this.resetRenderedImages();
+	}
+
+	this.InitImages = function() {
+		if (this.images) {
+			for (var i = 0; i < this.images.length; i++) {
+				if (this.images[i]) this.images[i].dispose();
+			}
+		}
+
+		this.images = [];
+
+		if (this.display_style == 1) {
+			this.images[0] = new NumImage();
+			this.images[1] = new NumImage();
+			this.images[2] = new TimeImage();
+			this.images[3] = new BitrateImage();
+			this.images[4] = new VolumeImage();
+		}
+	};
+
+	this.setColours = function() {
+		this.Colours = [];
+
+		if (fb.IsPlaying) {
+			var a = [tf_display_lossless, tf_display_lossy, tf_display_hires, tf_display_multich, tf_display_md5, tf_display_replaygain];
+			for (var i = 0; i < 6; i++) this.Colours[i] = evalTitleFormat(a[i]) ? this.active_colour : this.inactive_colour;
+			this.Colours[6] = evalTitleFormat(tf_display_tracknumber_exists) ? ui_btntxtcol : this.inactive_colour;
+			this.Colours[7] = evalTitleFormat(tf_display_totaltracks_exists) ? ui_btntxtcol : this.inactive_colour;
+			this.Colours[8] = ui_btntxtcol;
+		} else for (var i = 0; i < 9; i++) this.Colours[i] = this.inactive_colour;
+	}
+
+	this.setTrackNo = function() {
+		if (fb.IsPlaying) {
+			var a = evalTitleFormat(tf_display_tracknumber);
+			var b = evalTitleFormat(tf_display_totaltracks);
+			this.TrackNo = this.display_style == 1 ? pad(a, 4) : a;
+			this.TotalNo = this.display_style == 1 ? pad(b, 4) : b;
+			this.Trackinfo = fb.PlaybackLength <= 0 ? false : true;
+		} else {
+			this.TrackNo = "";
+			this.TotalNo = "";
+			this.Trackinfo = false;
+		}
+	}
+
+	this.setPBTime = function() {
+		this.Elapse = TimeFmt(fb.PlaybackTime);
+		this.Remain = fb.PlaybackLength <= 0 ? this.display_style == 1 ? "" : "-- : -- : --" : TimeFmt(fb.PlaybackLength - fb.PlaybackTime);
+	}
+
+	this.setBitrate = function() {
+		var a = evalTitleFormat(tf_display_bitrate);
+		this.Bitrate = this.display_style == 1 ? pad_right(a, 5) : a;
+	}
+
+	this.init = function() {
+		this.setColours();
+		this.setTrackNo();
+		this.setPBTime();
+		this.setBitrate();
+	}
+
+	this.repaint = function(what) {
+		switch (what) {
+		case section.sac:
+			window.RepaintRect(this.signs_left, this.ind_y + this.pxSize * 2, this.pxSize * 18 + this.pxSize, this.pxSize * 12 + this.pxSize);
+			break;
+		case section.pbo:
+			window.RepaintRect(this.signs_left, this.bottom - this.pxSize * 13, this.pxSize * 18 + this.pxSize, this.pxSize * 12 + this.pxSize);
+			break;
+		case section.pbt:
+			if (!v_change) window.RepaintRect(this.time_left - this.pxSize * 18, this.ind_y, this.pxSize * 138, this.inf_h);
+			break;
+		case section.vol:
+			window.RepaintRect(this.time_left, this.ind_y, this.pxSize * 210, this.inf_h + this.box_h);
+			break;
+		case section.bit:
+			if (!v_change) window.RepaintRect(this.x + this.pxSize * 282, this.inf_y, this.pxSize * 90, this.inf_h);
+			break;
+		}
+	}
+
+	this.draw = function(gr) {
+var a = "LOSSLESS;LOSSY;HI-RES;MULTI-CH;AUDIO MD5;REPLAYGAIN".split(";");
+		for (var i = 0; i < 6; i++) {
+			gr.DrawRectangle(this.x + this.box_w * i + this.pxSize * 2, this.y, this.box_w - this.pxSize * 4, this.box_h, this.pxSize, this.Colours[i]);
+			darkOneDrawText(gr, a[i], this.font_arial, this.Colours[i], this.x + this.box_w * i + this.pxSize * 2, this.y, this.box_w - this.pxSize * 4, this.box_h, 5);
+		}
+
+		var b = ["TRACK", "TOTAL", t_rem ? "TIME REMAINING" : "TIME", "VOLUME", "KBPS"];
+		var c = [
+			this.Colours[6],
+			this.Colours[7],
+			v_change ? ui_btntxtcol : this.Colours[8],
+			v_change ? ui_btntxtcol : this.inactive_colour,
+			v_change ? this.inactive_colour : this.Colours[8]];
+		var d = [
+			0,
+			this.pxSize * 72,
+			this.pxSize * (this.display_style == 1 ? 162 : 169),
+			this.pxSize * 310,
+			this.pxSize * 349];
+		for (var j = 0; j < 5; j++) {
+			darkOneDrawText(gr, b[j], this.font_arial, c[j], this.x + d[j], this.ind_y, darkOneCalcTextWidth(b[j], this.font_arial), this.box_h, 0);
+		}
+
+		if (this.display_style == 1) {
+			if (fb.IsPlaying) {
+				if (this.Trackinfo) {
+					this.images[0].draw(this.TrackNo);
+					gr.DrawImage(this.images[0].image, this.x, this.img_y, this.pxSize * 72, this.img_h, 0, 0, this.images[0].image.Width, this.images[0].image.Height);
+					this.images[1].draw(this.TotalNo);
+					gr.DrawImage(this.images[1].image, this.x + this.pxSize * 72, this.img_y, this.pxSize * 72, this.img_h, 0, 0, this.images[1].image.Width, this.images[1].image.Height);
+				} else {
+					this.drawMatrixSprite(gr, this.x, this.img_y, this.pxSize * 104, this.img_h, 1260, 312, 60);
+				}
+				this.drawMatrixSprite(gr, this.x + this.pxSize * 144, this.img_y, this.pxSize * 18, this.img_h, fb.IsPaused ? 594 : 540, 54, 60);
+			}
+
+			if (v_change) {
+				var f = fb.Volume.toFixed(2) + " db";
+				this.images[4].draw(pad_right(f, 10));
+				gr.DrawImage(this.images[4].image, this.x + this.pxSize * 204, this.img_y, this.pxSize * 168, this.img_h, 0, 0, this.images[4].image.Width, this.images[4].image.Height);
+			} else {
+				if (fb.IsPlaying) {
+					var g = t_rem && fb.PlaybackLength < 0 ? false : true;
+					if (g) {
+						var t = t_rem ? this.Remain : this.Elapse;
+						this.images[2].draw(t);
+						gr.DrawImage(this.images[2].image, this.time_left, this.img_y, this.pxSize * 120, this.img_h, 0, 0, this.images[2].image.Width, this.images[2].image.Height);
+					} else {
+						this.drawMatrixSprite(gr, this.time_left, this.img_y, this.pxSize * 116, this.img_h, 900, 348, 60);
+					}
+
+					this.images[3].draw(this.Bitrate);
+					gr.DrawImage(this.images[3].image, this.x + this.pxSize * 282, this.img_y, this.pxSize * 90, this.img_h, 0, 0, this.images[3].image.Width, this.images[3].image.Height);
+				}
+			}
+		} else {
+			if (this.Trackinfo) {
+				darkOneDrawText(gr, this.TrackNo, this.font_serif, this.active_colour, this.x, this.inf_y, this.pxSize * 72, this.inf_h, 0);
+				darkOneDrawText(gr, this.TotalNo, this.font_serif, this.active_colour, this.x + this.pxSize * 72, this.inf_y, this.pxSize * 72, this.inf_h, 0);
+			} else if (fb.IsPlaying) {
+				darkOneDrawText(gr, "Stream", this.font_serif, this.active_colour, this.x, this.inf_y, this.pxSize * 144, this.inf_h, 0);
+			}
+
+			if (v_change) {
+				darkOneDrawText(gr, fb.Volume.toFixed(2) + " dB", this.font_serif, this.active_colour, this.time_left, this.inf_y, this.pxSize * 210, this.inf_h, 2);
+			} else if (fb.IsPlaying) {
+				var t = fb.IsPaused ? "-Paused-" : t_rem ? this.Remain : this.Elapse;
+				darkOneDrawText(gr, t, this.font_serif, this.active_colour, this.time_left, this.inf_y, this.pxSize * 120, this.inf_h, 5);
+				darkOneDrawText(gr, this.Bitrate, this.font_serif, this.active_colour, this.x + this.pxSize * 282, this.inf_y, this.pxSize * 90, this.inf_h, 2);
+			}
+		}
+		this.drawStatusIcon(gr, this.signs_left, this.ind_y + this.pxSize * 2, this.pxSize * 18, this.pxSize * 12, 0, fb.StopAfterCurrent);
+		this.drawStatusIcon(gr, this.signs_left, this.bottom - this.pxSize * 13, this.pxSize * 18, this.pxSize * 12, 60 + plman.PlaybackOrder * 60, fb.IsPlaying);
+	}
+
+	this.VolumeChange = function(val) {
+		v_timer = clearPanelTimer(v_timer);
+		v_timer = window.SetTimeout(function () {
+			display_system.repaint(section.vol);
+			v_timer = clearPanelTimer(v_timer);
+			v_change = false;
+		}, 3000);
+		v_change = true;
+		this.repaint(section.vol);
+	}
+
+	this.NotifyData = function(name, info) {
+		if (name == "remTime") {
+			t_rem = info;
+			window.SetProperty("Remain Time on", t_rem);
+			if (fb.IsPlaying) this.repaint(section.pbt);
+		}
+	}
+
+	this.PlayTime = function(time) {
+		this.setPBTime();
+		this.repaint(section.pbt);
+	}
+
+	this.PlayDynInfo = function() {
+		this.setBitrate();
+		this.repaint(section.bit);
+	}
+
+	this.PlayEdited = function() {
+		this.setTrackNo();
+		window.Repaint();
+	}
+
+	this.onStop = function(reason) {
+		if (reason != 2) {
+			this.setColours();
+			this.setTrackNo();
+			this.setPBTime();
+			this.setBitrate();
+			if (this.images) {
+				for (var i = 0; i < this.images.length; i++) {
+					if (this.images[i]) this.images[i].reset();
+				}
+			}
+		}
+		window.Repaint();
+	}
+
+	this.onUnload = function() {
+		v_timer = clearPanelTimer(v_timer);
+		if (this.images) for (var i = 0; i < this.images.length; i++) if (this.images[i]) this.images[i].dispose();
+		this.images = [];
+		this.font_arial = null;
+		this.font_serif = null;
+		this.disposeAccentSprites();
+		disposeImage(g_matrix);
+		disposeImage(g_icons);
+		g_matrix = null;
+		g_icons = null;
+	};
+
+	this.InitColours();
+	this.InitImages();
+	this.init();
+}
+
+var display_system = new DisplaySystem();

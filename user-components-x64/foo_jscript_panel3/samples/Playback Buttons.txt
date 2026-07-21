@@ -1,0 +1,80 @@
+// ==PREPROCESSOR==
+// @name "Playback Buttons"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// ==/PREPROCESSOR==
+
+var colours = {
+	buttons : RGB(255, 255, 255),
+	background : RGB(30, 30, 30),
+	sac : RGB(196, 30, 35),
+};
+
+//////////////////////////////////////////////////////////////
+
+var panel = new _panel();
+var buttons = new _buttons();
+var bs = _scale(24);
+
+buttons.update = function () {
+	var x = ((panel.w - bs * 4) / 2);
+	var y = Math.round((panel.h - bs) / 2);
+	this.buttons.stop = new _button(x, y, bs, bs, { char : chars.stop, colour:fb.StopAfterCurrent ? colours.sac : colours.buttons}, null, function () { fb.Stop(); }, 'Stop');
+	this.buttons.previous = new _button(x + bs, y, bs, bs, { char : chars.prev, colour:colours.buttons }, null, function () { fb.Prev(); }, 'Previous');
+	this.buttons.play = new _button(x + (bs * 2), y, bs, bs, { char : !fb.IsPlaying || fb.IsPaused ? chars.play : chars.pause, colour:colours.buttons}, null, function () { fb.PlayOrPause(); }, !fb.IsPlaying || fb.IsPaused ? 'Play' : 'Pause');
+	this.buttons.next = new _button(x + (bs * 3), y, bs, bs, { char : chars.next, colour:colours.buttons }, null, function () { fb.Next(); }, 'Next');
+}
+
+function on_mouse_lbtn_up(x, y) {
+	buttons.lbtn_up(x, y);
+}
+
+function on_mouse_leave() {
+	buttons.leave();
+}
+
+function on_mouse_move(x, y) {
+	buttons.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	if (buttons.buttons.stop.containsXY(x, y)) {
+		fb.StopAfterCurrent = !fb.StopAfterCurrent;
+		return true;
+	}
+
+	return panel.rbtn_up(x, y);
+}
+
+function on_paint(gr) {
+	gr.Clear(colours.background);
+	buttons.paint(gr);
+}
+
+function on_playback_pause() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playback_starting() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playback_stop() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playlist_stop_after_current_changed() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_size() {
+	panel.size();
+	buttons.update();
+}

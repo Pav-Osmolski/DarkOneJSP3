@@ -1,0 +1,133 @@
+// ==PREPROCESSOR==
+// @name "Minimal Seekbar + Playback Buttons"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\seekbar.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var seekbar = new _seekbar(0, 0, 0, 0);
+var buttons = new _buttons();
+var font = CreateFontString("Segoe UI", 12);
+var is_dark = window.IsDark;
+var bs = _scale(24);
+
+var tfo = {
+	playback_time : fb.TitleFormat('[%playback_time%]'),
+	length : fb.TitleFormat('$if2(%length%,LIVE)'),
+};
+
+var colours = {
+	dark : RGB(30, 30, 30),
+	light : RGB(240, 240, 240),
+	slider_background : RGB(160, 160, 160),
+	slider_contrast : RGB(196, 30, 35),
+};
+
+buttons.update = function () {
+	var x = (panel.w - bs * 4) / 2;
+	var y = panel.h - _scale(12) - bs;
+	var button_colour = is_dark ? colours.light : colours.dark;
+
+	this.buttons.stop = new _button(x, y, bs, bs, { char : chars.stop, colour: fb.StopAfterCurrent ? colours.slider_contrast : button_colour}, null, function () { fb.Stop(); }, 'Stop');
+	this.buttons.previous = new _button(x + bs, y, bs, bs, { char : chars.prev, colour: button_colour }, null, function () { fb.Prev(); }, 'Previous');
+	this.buttons.play = new _button(x + (bs * 2), y, bs, bs, { char : !fb.IsPlaying || fb.IsPaused ? chars.play : chars.pause, colour: button_colour}, null, function () { fb.PlayOrPause(); }, !fb.IsPlaying || fb.IsPaused ? 'Play' : 'Pause');
+	this.buttons.next = new _button(x + (bs * 3), y, bs, bs, { char : chars.next, colour: button_colour }, null, function () { fb.Next(); }, 'Next');
+}
+
+function on_colours_changed() {
+	is_dark = window.IsDark;
+	buttons.update();
+	window.Repaint();
+}
+
+function on_mouse_lbtn_down(x, y) {
+	seekbar.lbtn_down(x, y);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	if (buttons.lbtn_up(x, y))
+		return;
+
+	seekbar.lbtn_up(x, y);
+}
+
+function on_mouse_leave() {
+	buttons.leave();
+}
+
+function on_mouse_move(x, y) {
+	if (buttons.move(x, y))
+		return;
+
+	seekbar.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	if (buttons.buttons.stop.containsXY(x, y)) {
+		fb.StopAfterCurrent = !fb.StopAfterCurrent;
+		return true;
+	}
+
+	return panel.rbtn_up(x, y);
+}
+
+function on_mouse_wheel(s) {
+	seekbar.wheel(s);
+}
+
+function on_paint(gr) {
+	gr.Clear(is_dark ? colours.dark : colours.light);
+	buttons.paint(gr);
+	gr.FillRoundedRectangle(seekbar.x, seekbar.y, seekbar.w, seekbar.h, _scale(2), _scale(2), colours.slider_background);
+
+	if (fb.IsPlaying) {
+		var time_width = seekbar.x - _scale(12);
+		gr.WriteText(tfo.playback_time.Eval(), font, is_dark ? colours.light : colours.dark, 0, 0, time_width, _scale(28), 1, 2);
+		gr.WriteText(tfo.length.Eval(), font, is_dark ? colours.light : colours.dark, seekbar.x + seekbar.w + _scale(12), 0, time_width, _scale(28), 0, 2);
+
+		if (fb.PlaybackLength > 0) {
+			gr.FillEllipse(seekbar.x + seekbar.pos(), seekbar.y + _scale(3), _scale(6), _scale(6), colours.slider_contrast);
+		}
+	}
+}
+
+function on_playback_pause() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playback_seek() {
+	seekbar.playback_seek();
+}
+
+function on_playback_starting() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playback_stop() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_playback_time() {
+	window.Repaint();
+}
+
+function on_playlist_stop_after_current_changed() {
+	buttons.update();
+	window.Repaint();
+}
+
+function on_size() {
+	panel.size();
+	buttons.update();
+	seekbar.x = _scale(60);
+	seekbar.y = _scale(12);
+	seekbar.w = panel.w - (seekbar.x * 2);
+	seekbar.h = _scale(6);
+}

@@ -1,0 +1,65 @@
+// ==PREPROCESSOR==
+// @name "Play Log"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\play_log.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var play_log = new _play_log(LM, TM, 0, 0);
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_key_down(k) {
+	play_log.key_down(k);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	play_log.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	play_log.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, play_log);
+}
+
+function on_mouse_wheel(s) {
+	play_log.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	panel.draw_header(gr, play_log.header_text());
+	play_log.paint(gr);
+}
+
+function on_playback_dynamic_info_track(type) {
+	if (type == 0) {
+		play_log.log();
+	}
+}
+
+function on_playback_new_track() {
+	play_log.log();
+}
+
+function on_size() {
+	panel.size();
+	play_log.w = panel.w - (LM * 2);
+	play_log.h = panel.h - TM;
+	play_log.size();
+}

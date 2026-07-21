@@ -1,0 +1,168 @@
+// ==PREPROCESSOR==
+// @name "Allmusic Review + Album Art - DarkOneJSP3 Enhanced"
+// @version "0.6.4"
+// @author "marc2003 / DeViLhoOD"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\darkone_network.js"
+// @import "%fb2k_component_path%samples\js\albumart.js"
+// @import "%fb2k_component_path%samples\js\allmusic.js"
+// ==/PREPROCESSOR==
+
+var margin = _scale(12);
+
+var panel = new _panel();
+var allmusic = new _allmusic(0, 0, 0, 0);
+var albumart = new _albumart(margin, margin, 0, 0);
+var white = RGB(255, 255, 255);
+
+allmusic.paint = function (gr) {
+	_drawImage(gr, albumart.bitmap.blur, 0, 0, panel.w, panel.h, image.crop);
+	_drawOverlay(gr, 0, 0, panel.w, panel.h, 180);
+
+	var y = albumart.properties.layout.value == 0 ? margin : this.y - margin;
+	gr.WriteTextSimple(this.header_text(), panel.fonts.title, white, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
+
+	if (this.text_layout) {
+		gr.WriteTextLayout(this.text_layout, white, this.x, this.y + margin, this.w, this.ha, this.offset);
+		this.up_btn.paint(gr, white);
+		this.down_btn.paint(gr, white);
+	}
+}
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_http_request_done(task_id, success, response_text, status, response_headers) {
+	allmusic.http_request_done(task_id, success, response_text, status, response_headers);
+}
+
+function on_item_focus_change() {
+	if (panel.prefer_playing())
+		return;
+
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	allmusic.key_down(k);
+	albumart.key_down(k);
+}
+
+function on_metadb_changed(handles, fromhook) {
+	if (fromhook)
+		return;
+
+	allmusic.metadb_changed();
+	albumart.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	allmusic.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	allmusic.move(x, y);
+	albumart.move(x, y);
+}
+
+function on_mouse_lbtn_dblclk(x, y) {
+	albumart.lbtn_dblclk(x, y);
+}
+
+function on_notify_data(name, info) {
+	allmusic.notify_data(name, info);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	if (allmusic.containsXY(x, y))
+		return panel.rbtn_up(x, y, allmusic);
+
+	return panel.rbtn_up(x, y, albumart);
+}
+
+function on_mouse_wheel(s) {
+	if (utils.IsKeyPressed(VK_CONTROL)) {
+		var value = _clamp(albumart.properties.ratio.value - (s * 0.05), 0.2, 0.8);
+		if (value != albumart.properties.ratio.value) {
+			albumart.properties.ratio.value = value;
+			on_size();
+			window.Repaint();
+		}
+	} else {
+		albumart.wheel(s);
+		allmusic.wheel(s);
+	}
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	allmusic.paint(gr);
+	albumart.paint(gr);
+}
+
+function on_playback_dynamic_info_track(type) {
+	if (type == 0) {
+		// stream metadata doesn't contain album tags for
+		// lookups but we can update the artist in the title section
+		window.Repaint();
+	} else {
+		albumart.metadb_changed();
+	}
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	on_item_focus_change();
+}
+
+function on_script_unload() {
+	allmusic.dispose();
+}
+
+function on_size() {
+	panel.size();
+
+	switch (albumart.properties.layout.value) {
+	case 0: // Image left, Text right
+		albumart.w = panel.w * albumart.properties.ratio.value;
+		albumart.h = panel.h - (margin * 2);
+
+		allmusic.x = albumart.w + (margin * 2);
+		allmusic.y = margin * 2
+		allmusic.w = panel.w - albumart.w - (margin * 3);
+		allmusic.h = panel.h - allmusic.y;
+		break;
+	case 1: // Image top, Text bottom
+		albumart.w = panel.w - (margin * 2);
+		albumart.h = panel.h * albumart.properties.ratio.value;
+
+		allmusic.x = margin;
+		allmusic.y = albumart.h + (margin * 3);
+		allmusic.w = panel.w - (margin * 2);
+		allmusic.h = panel.h - albumart.h - (margin * 3);
+		break;
+	}
+
+	allmusic.size();
+}

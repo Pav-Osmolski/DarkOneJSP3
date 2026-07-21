@@ -1,0 +1,23 @@
+// ==PREPROCESSOR==
+// @name "FlipRotate + Mask"
+// @author "marc2003"
+// @import "%fb2k_component_path%helpers.txt"
+// ==/PREPROCESSOR==
+
+var original = utils.LoadImage(fb.ComponentPath + "samples\\images\\1.webp");
+var copy = original.Clone();
+copy.FlipRotate(WICBitmapTransformFlipVertical);
+
+var mask = utils.CreateImage(original.Width, original.Height);
+var temp_gr = mask.GetGraphics();
+
+// FillGradientRectangle is a simplified 2 colour helper method in helpers.txt
+FillGradientRectangle(temp_gr, 0, 0, original.Width, original.Height, 0, RGBA(0, 0, 0, 150), RGBA(0, 0, 0, 0))
+mask.ReleaseGraphics();
+temp_gr = null;
+
+function on_paint(gr) {
+	gr.Clear(RGB(255, 255, 255));
+	gr.DrawImage(original, 0, 0, original.Width, original.Height, 0, 0, original.Width, original.Height);
+	gr.DrawImageWithMask(copy, mask, 0, original.Height, original.Width, original.Height);
+}

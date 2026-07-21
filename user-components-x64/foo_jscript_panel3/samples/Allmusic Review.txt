@@ -1,0 +1,36 @@
+// ==PREPROCESSOR==
+// @name "Album Notes - DarkOneJSP3 (legacy AllMusic slot)"
+// @version "0.6.6"
+// @author "marc2003 / DeViLhoOD"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\darkone_network.js"
+// @import "%fb2k_component_path%samples\js\allmusic.js"
+// @import "%fb2k_component_path%samples\js\musicbrainz.js"
+// @import "%fb2k_component_path%samples\js\album_notes.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var album_notes = new _album_notes(LM, TM, 0, 0);
+panel.item_focus_change();
+
+function on_colours_changed() { panel.colours_changed(); window.Repaint(); }
+function on_font_changed() { panel.font_changed(); window.Repaint(); }
+function on_http_request_done(task_id, success, response_text, status, response_headers) { album_notes.http_request_done(task_id, success, response_text, status, response_headers); }
+function on_item_focus_change() { if (!panel.prefer_playing()) panel.item_focus_change(); }
+function on_key_down(k) { album_notes.key_down(k); }
+function on_metadb_changed(handles, fromhook) { if (!fromhook) album_notes.metadb_changed(); }
+function on_mouse_lbtn_up(x, y) { album_notes.lbtn_up(x, y); }
+function on_mouse_move(x, y) { album_notes.move(x, y); }
+function on_notify_data(name, info) { album_notes.notify_data(name, info); }
+function on_mouse_rbtn_up(x, y) { return panel.rbtn_up(x, y, album_notes); }
+function on_mouse_wheel(s) { album_notes.wheel(s); }
+function on_paint(gr) { panel.paint(gr); panel.draw_header(gr, album_notes.header_text()); album_notes.paint(gr); }
+function on_playback_dynamic_info_track(type) { if (type == 0) window.Repaint(); }
+function on_playback_new_track() { panel.item_focus_change(); }
+function on_playback_stop(reason) { if (reason != 2) panel.item_focus_change(); }
+function on_playlist_switch() { on_item_focus_change(); }
+function on_script_unload() { album_notes.dispose(); }
+function on_size() { panel.size(); album_notes.w = panel.w - (LM * 2); album_notes.h = panel.h - TM; album_notes.size(); }

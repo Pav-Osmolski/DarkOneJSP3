@@ -1,0 +1,233 @@
+// ==PREPROCESSOR==
+// @name "Status Bar"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\volume.js"
+// ==/PREPROCESSOR==
+
+var ww = 0;
+var wh = 0;
+var right_text = '';
+var right_text_width = 0;
+var font = CreateFontString('Segoe UI', 10);
+var starting = false;
+var stop_reason;
+
+var properties = {
+	tf : new _p('2K3.STATUS.TF', '%__bitrate% kbps %codec% [%codec_profile% ][%__tool% ][%__tagtype%]'),
+	name : new _p('2K3.STATUS.SHOW.NAME', true),
+	count : new _p('2K3.STATUS.SHOW.COUNT', true),
+	duration : new _p('2K3.STATUS.SHOW.DURATION', true),
+	size : new _p('2K3.STATUS.SHOW.SIZE', true),
+	background : new _p('2K3.STATUS.BACKGROUND', RGB(240, 240, 240)),
+	text : new _p('2K3.STATUS.TEXT', RGB(0, 0, 0))
+};
+
+var tfo = fb.TitleFormat(properties.tf.value);
+
+refresh();
+
+function refresh() {
+	var tmp = [];
+	var ap = plman.ActivePlaylist;
+
+	if (validate_playlist(ap)) {
+		var items = plman.GetPlaylistItems(ap);
+		var count = items.Count;
+		if (properties.name.enabled) {
+			var str = plman.IsPlaylistLocked(ap) ? '🔒 ' : '';
+			str += plman.GetPlaylistName(ap);
+			tmp.push(str);
+		}
+		if (properties.count.enabled) {
+			tmp.push(count + (count == 1 ? ' track' : ' tracks'));
+		}
+		if (properties.duration.enabled) {
+			tmp.push(utils.FormatDuration(items.CalcTotalDuration()));
+		}
+		if (properties.size.enabled) {
+			tmp.push(utils.FormatFileSize(items.CalcTotalSize()));
+		}
+		items.Dispose();
+	}
+
+	right_text = tmp.join(' :: ');
+	right_text_width = right_text.calc_width2(font);
+	window.Repaint();
+}
+
+function validate_playlist(playlist) {
+	return playlist >= 0 && playlist < plman.PlaylistCount;
+}
+
+function on_mouse_lbtn_dblclk() {
+	fb.RunMainMenuCommand('View/Show now playing in playlist');
+}
+
+function on_mouse_rbtn_up(x, y) {
+	var menu = window.CreatePopupMenu();
+	var colour_menu = window.CreatePopupMenu();
+	var context_popup = window.CreatePopupMenu();
+	var context = fb.CreateContextMenuManager();
+
+	if (fb.IsPlaying) {
+		context.InitNowPlaying();
+		context.BuildMenu(context_popup, 1000);
+		context_popup.AppendTo(menu, MF_STRING, 'Now playing');
+		menu.AppendMenuSeparator();
+	}
+
+	colour_menu.AppendMenuItem(MF_STRING, 1, 'Background...');
+	colour_menu.AppendMenuItem(MF_STRING, 2, 'Text...');
+	colour_menu.AppendTo(menu, MF_STRING, 'Colours');
+	menu.AppendMenuSeparator();
+	menu.AppendMenuItem(MF_STRING, 3, 'Title format...');
+	menu.AppendMenuSeparator();
+	menu.AppendMenuItem(CheckMenuIf(properties.name.enabled), 10, 'Show playlist name');
+	menu.AppendMenuItem(CheckMenuIf(properties.count.enabled), 11, 'Show playlist item count');
+	menu.AppendMenuItem(CheckMenuIf(properties.duration.enabled), 12, 'Show playlist duration');
+	menu.AppendMenuItem(CheckMenuIf(properties.size.enabled), 13, 'Show playlist size');
+	menu.AppendMenuSeparator();
+	menu.AppendMenuItem(MF_STRING, 20, 'Configure...');
+
+	var idx = menu.TrackPopupMenu(x, y);
+	menu.Dispose();
+
+	switch (idx) {
+	case 0:
+		break;
+	case 1:
+		properties.background.value = utils.ColourPicker(properties.background.value);
+		window.Repaint();
+		break;
+	case 2:
+		properties.text.value = utils.ColourPicker(properties.text.value);
+		window.Repaint();
+		break;
+	case 3:
+		try {
+			var tmp = utils.TextBox('Enter title format pattern. $rgb is supported.', window.Name, properties.tf.value).trim();
+			if (tmp.length && tmp != properties.tf.value) {
+				properties.tf.value = tmp;
+				tfo.Dispose();
+				tfo = fb.TitleFormat(properties.tf.value);
+				window.Repaint();
+			}
+		} catch (e) {}
+		break;
+	case 10:
+		properties.name.toggle();
+		refresh();
+		break;
+	case 11:
+		properties.count.toggle();
+		refresh();
+		break;
+	case 12:
+		properties.duration.toggle();
+		refresh();
+		break;
+	case 13:
+		properties.size.toggle();
+		refresh();
+		break;
+	case 20:
+		window.ShowConfigure();
+		break;
+	default:
+		context.ExecuteByID(idx - 1000);
+		break;
+	}
+
+	context.Dispose();
+	return true;
+}
+
+function on_mouse_wheel(s) {
+	if (s < 0) fb.VolumeDown();
+	else fb.VolumeUp();
+}
+
+function on_paint(gr) {
+	gr.Clear(properties.background.value);
+
+	var left_text = '';
+
+	if (starting)
+		left_text = 'Starting playback...';
+	else if (fb.IsPlaying)
+		left_text = tfo.Eval();
+	else
+		left_text = fb.VersionString;
+
+	gr.WriteText(left_text, font, properties.text.value, 5, 2, ww - 200 - right_text_width, wh - 4, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, DWRITE_WORD_WRAPPING_WHOLE_WORD, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
+
+	if (right_text.length) {
+		gr.WriteText(right_text, font, properties.text.value, 0, 2, ww - 130, wh - 4, DWRITE_TEXT_ALIGNMENT_TRAILING);
+	}
+
+	if (fb.CustomVolume == -1) {
+		gr.WriteText(fb.Volume.toFixed(2) + ' dB', font, properties.text.value, 0, 2, ww - 5, wh - 4, DWRITE_TEXT_ALIGNMENT_TRAILING);
+	} else {
+		gr.WriteText('Volume: ' + fb.CustomVolume, font, properties.text.value, 0, 2, ww - 5, wh - 4, DWRITE_TEXT_ALIGNMENT_TRAILING);
+	}
+}
+
+function on_playback_new_track() {
+	window.Repaint();
+}
+
+function on_playback_starting() {
+	if (stop_reason == 2)
+		return;
+
+	starting = true;
+	window.Repaint();
+
+	window.SetTimeout(function () {
+		starting = false;
+		window.Repaint();
+	}, 500);
+}
+
+function on_playback_stop(reason) {
+	stop_reason = reason;
+	window.Repaint();
+}
+
+function on_playback_time() {
+	window.Repaint();
+}
+
+function on_playlist_items_added(p) {
+	if (p == plman.ActivePlaylist) {
+		refresh();
+	}
+}
+
+function on_playlist_items_removed(p) {
+	if (p == plman.ActivePlaylist) {
+		refresh();
+	}
+}
+
+function on_playlist_switch() {
+	refresh();
+}
+
+function on_playlists_changed() {
+	if (properties.name.enabled) {
+		refresh();
+	}
+}
+
+function on_size() {
+	ww = window.Width;
+	wh = window.Height;
+}
+
+function on_volume_change() {
+	window.Repaint();
+}

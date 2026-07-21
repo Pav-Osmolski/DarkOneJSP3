@@ -1,0 +1,26 @@
+// ==PREPROCESSOR==
+// @name "RadialGradient"
+// @author "marc2003"
+// @import "%fb2k_component_path%helpers.txt"
+// ==/PREPROCESSOR==
+
+// As of 3.4.0, FillRectangle now accepts gradients in addition to solid colours.
+
+var stops = [
+	[ 0.0, RGB(227, 9, 64) ],
+	[ 0.33, RGB(231, 215, 2) ],
+	[ 0.66, RGB(15, 168, 149) ],
+	[ 1.0, RGB(19, 115, 232) ]
+];
+
+var radial_brush = {
+	Centre : [0, 0], // x and y values
+	Radius : [0, 0], // x and y values
+	Stops: stops
+};
+
+function on_paint(gr) {
+	radial_brush.Centre = [window.Width / 2, window.Height / 2];
+	radial_brush.Radius = [window.Width / 2, window.Height / 2];
+	gr.FillRectangle(0, 0, window.Width, window.Height, JSON.stringify(radial_brush));
+}

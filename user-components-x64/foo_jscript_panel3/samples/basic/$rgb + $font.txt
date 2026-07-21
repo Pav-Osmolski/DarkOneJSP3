@@ -1,0 +1,41 @@
+// ==PREPROCESSOR==
+// @import "%fb2k_component_path%helpers.txt"
+// ==/PREPROCESSOR==
+
+// As of component version 3.6.0, a new gr.WriteText2 method
+// handles $font and $rgb natively without javascript
+
+// See also: https://jscript-panel.github.io/docs/font-rgb/
+
+var tfo = fb.TitleFormat('$font(Segoe UI,24)$rgb(255,0,0)%artist% $font(Segoe UI,32)$rgb(0,255,0)%title%');
+var str = '';
+
+var default_font = CreateFontString('Segoe UI', 16);
+var default_colour = RGB(0, 0, 0);
+
+refresh();
+
+function refresh() {
+	var item = fb.GetFocusItem();
+
+	if (item) {
+		str = tfo.EvalWithMetadb(item);
+	} else {
+		str = '';
+	}
+}
+
+function on_item_focus_change() {
+	refresh();
+	window.Repaint();
+}
+
+function on_playlist_switch() {
+	refresh();
+	window.Repaint();
+}
+
+function on_paint(gr) {
+	gr.Clear(RGB(255, 255, 255));
+	gr.WriteText2(str, default_font, default_colour, 0, 0, window.Width, window.Height, 2, 2, 2);
+}

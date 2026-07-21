@@ -1,0 +1,597 @@
+{
+  "version": "0.7.34",
+  "target": {
+    "jscript_panel": "3.8.5",
+    "jsplitter": "4.1.11",
+    "foobar2000": "v2 x64"
+  },
+  "jsplitters": [
+    {
+      "number": 1,
+      "title": "DOJSP3.Root",
+      "script": "01_root.js"
+    },
+    {
+      "number": 2,
+      "title": "DOJSP3.Main",
+      "script": "02_main_columns.js"
+    },
+    {
+      "number": 3,
+      "title": "DOJSP3.InfoStack",
+      "script": "03_info_stack_tabs.js"
+    },
+    {
+      "number": 4,
+      "title": "DOJSP3.ArtSpectrum",
+      "script": "04_art_spectrum.js"
+    },
+    {
+      "number": 5,
+      "title": "DOJSP3.Controls",
+      "script": "05_bottom_controls.js"
+    },
+    {
+      "number": 6,
+      "title": "DOJSP3.DisplayStack",
+      "script": "06_display_waveform.js"
+    }
+  ],
+  "panels": [
+    {
+      "number": 1,
+      "title": "DOJSP3.PlaylistManager",
+      "type": "JScript Panel 3",
+      "source": "samples/Smooth Playlist Manager.txt"
+    },
+    {
+      "number": 2,
+      "title": "DOJSP3.LastfmBio",
+      "type": "JScript Panel 3",
+      "source": "samples/Last.fm Bio.txt"
+    },
+    {
+      "number": 3,
+      "title": "DOJSP3.LastfmInfo",
+      "type": "JScript Panel 3",
+      "source": "samples/Last.fm Artist Info + User Info.txt"
+    },
+    {
+      "number": 4,
+      "title": "DOJSP3.AlbumNotes",
+      "type": "JScript Panel 3",
+      "source": "samples/Album Notes.txt"
+    },
+    {
+      "number": 5,
+      "title": "DOJSP3.Queue",
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt"
+    },
+    {
+      "number": 6,
+      "title": "DOJSP3.Properties",
+      "type": "JScript Panel 3",
+      "source": "samples/Properties.txt"
+    },
+    {
+      "number": 7,
+      "title": "DOJSP3.AlbumArt",
+      "type": "JScript Panel 3",
+      "source": "samples/Album Art.txt"
+    },
+    {
+      "number": 8,
+      "title": "DOJSP3.Spectrum",
+      "type": "Enhanced Spectrum Analyser",
+      "source": "native component"
+    },
+    {
+      "number": 9,
+      "title": "DOJSP3.Playlist",
+      "type": "JScript Panel 3",
+      "source": "samples/JS Playlist.txt"
+    },
+    {
+      "number": 10,
+      "title": "DOJSP3.ControlsLeft",
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Left.txt"
+    },
+    {
+      "number": 11,
+      "title": "DOJSP3.QuickSearch",
+      "type": "Quick Search Toolbar",
+      "source": "native component"
+    },
+    {
+      "number": 12,
+      "title": "DOJSP3.Display",
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt"
+    },
+    {
+      "number": 13,
+      "title": "DOJSP3.Waveform",
+      "type": "Waveform Minibar (mod)",
+      "source": "native component"
+    },
+    {
+      "number": 14,
+      "title": "DOJSP3.ControlsRight",
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt"
+    }
+  ],
+  "enhancements": {
+    "js_playlist": {
+      "smooth_scrolling": true,
+      "refresh_interval_ms_default": 8,
+      "smooth_divisor_default": 2,
+      "wheel_throttle_ms_default": 8,
+      "wheel_row_step_default": 3,
+      "wheel_snap_default": true,
+      "free_pixel_scrolling": true,
+      "free_wheel_step_default": "automatic (65% of row height)",
+      "free_wheel_step_custom_range_pixels": [
+        4,
+        240
+      ],
+      "scrollbar_drag_snap_default": true,
+      "free_scrollbar_dragging": true,
+      "panel_settings_back_arrow_single_silhouette": true,
+      "panel_settings_back_arrow_uniform_alpha": true,
+      "panel_settings_back_arrow_coverage_antialiasing": true
+    },
+    "documentation": "structured index, current-state configuration and topic-based troubleshooting",
+    "playlist_manager": {
+      "playlist_name_filter": true,
+      "filter_visible_default": true,
+      "live_filter_delay_ms": 180,
+      "row_height_default": 26,
+      "refresh_interval_ms_default": 8,
+      "remember_scroll_position": true,
+      "scroll_state_version": 2,
+      "row_aware_scroll_anchor": true,
+      "playlist_guid_anchor": true,
+      "bottom_anchor_on_resize": true,
+      "legacy_pixel_property_migration": true,
+      "alternating_row_shading": true,
+      "alternating_row_shading_default": true,
+      "explicit_timer_cleanup": true,
+      "tracked_timer_groups": [
+        "repaint interval",
+        "initial population timeout",
+        "drag auto-scroll interval",
+        "scrollbar repeat interval",
+        "scroll-state save timeout",
+        "text cursor and delayed input timers"
+      ]
+    },
+    "control_buttons": {
+      "roundness_control": true,
+      "default": "automatic / follow appearance preset",
+      "presets_percent": [
+        0,
+        20,
+        33,
+        60,
+        100
+      ],
+      "custom_range_percent": [
+        0,
+        100
+      ]
+    },
+    "allmusic": {
+      "search_result_parser": "generic album-link discovery with nearby artist validation",
+      "legacy_exact_class_dependency_removed": true,
+      "edition_and_disc_suffix_cleanup": true,
+      "paragraph_preservation": true,
+      "manual_url_fallback": true,
+      "diagnostic_candidate_count": true,
+      "lookup_fallback": "MusicBrainz release-group AllMusic relationship lookup when AllMusic search is blocked or unparseable",
+      "http_status_handling": "checks on_http_request_done status instead of treating every server response as HTTP success",
+      "cloudflare_challenge_detection": true,
+      "blocked_lookup_state_cache": true,
+      "resolved_album_url_cache": true,
+      "browser_open_fallback": true,
+      "paste_review_from_clipboard": true,
+      "automatic_retry_policy": "one explicit attempt; persistent pause after Cloudflare challenge until user refreshes",
+      "musicbrainz_request_timeout_ms": 15000,
+      "musicbrainz_max_attempts": 3,
+      "musicbrainz_transient_retry_statuses": [
+        0,
+        408,
+        425,
+        429,
+        "5xx"
+      ],
+      "stale_late_response_handling": "timed-out task IDs are discarded; late callbacks are ignored",
+      "request_timer_cleanup": true,
+      "musicbrainz_fallback_guard_scope": "per album; reset whenever focused artist/album changes",
+      "global_browser_verification_backoff_minutes": 30,
+      "cross_panel_musicbrainz_request_pacing": true,
+      "project_user_agent": true,
+      "request_identity_profiles": [
+        "DarkOneJSP3 application",
+        "Google Chrome 150-style (experimental)"
+      ],
+      "manual_refresh_cancels_pending_work": true,
+      "managed_same_album_reactivation": true,
+      "stale_search_history_recovery": true,
+      "terminal_callback_for_idle_activation": true,
+      "silent_exit_guards": [
+        "missing artist or album tags",
+        "browser-verification backoff",
+        "request start failure",
+        "invalid full album-page retry URL"
+      ]
+    },
+    "musicbrainz": {
+      "enhanced_sample": true,
+      "artist_source_modes": [
+        "track artist",
+        "album artist"
+      ],
+      "tag_support": [
+        "MUSICBRAINZ_ARTISTID",
+        "MUSICBRAINZ ARTIST ID",
+        "MUSICBRAINZ_ALBUMARTISTID",
+        "MUSICBRAINZ ALBUM ARTIST ID"
+      ],
+      "missing_artist_id_resolution": "exact-name/alias MusicBrainz artist search with persistent local mapping",
+      "request_interval_ms": 1100,
+      "http_status_handling": true,
+      "busy_retry_count": 2,
+      "cache_days_default": 7,
+      "release_limit_default": 500,
+      "release_limit_options": [
+        100,
+        250,
+        500,
+        1000
+      ],
+      "release_sort_modes": [
+        "newest first",
+        "oldest first",
+        "title A-Z"
+      ],
+      "dynamic_release_categories": true,
+      "link_labels": "relationship type plus domain, with optional full URLs",
+      "remember_scroll_position": true,
+      "manual_artist_mbid_override": true,
+      "request_timeout_ms": 15000,
+      "transient_retry_statuses": [
+        0,
+        408,
+        425,
+        429,
+        "5xx"
+      ],
+      "cross_panel_request_pacing": true,
+      "property_namespace": "DARKONEJSP3.MUSICBRAINZ.*",
+      "ambiguity_safe_artist_resolution": true,
+      "request_identity_profiles": [
+        "DarkOneJSP3 application",
+        "Google Chrome 150-style (experimental)"
+      ],
+      "standalone_panel_supported": true,
+      "infostack_host": "DOJSP3.AlbumNotes",
+      "standalone_not_supported_as_infostack_child": true
+    },
+    "queue_viewer": {
+      "incremental_queue_indexes_scan": true,
+      "lazy_visible_scan": true,
+      "handle_list_disposal": true,
+      "item_accurate_progress": true,
+      "progress_repaint_throttle_ms": 75,
+      "source_playlist_navigation": true,
+      "factory_reset_wrapper": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt",
+      "generic_sample_participates_in_factory_reset": false
+    },
+    "optional_buttons": {
+      "configuration_retained_when_disabled": true,
+      "command_failure_diagnostics": true,
+      "command_type_redetection": true,
+      "javascript_commands_marked_advanced": true,
+      "message_box_information_icon": "MB_ICONASTERISK (JScript Panel 3 helper constant)",
+      "unsupported_mb_iconinformation_removed": true,
+      "label_character_limit": 10
+    },
+    "request_identity": {
+      "separate_api_and_html_profiles": true,
+      "api_default": "DarkOneJSP3 application",
+      "html_default": "DarkOneJSP3 application",
+      "optional_profile": "Google Chrome 150-style (experimental)",
+      "legacy_shared_profile_migration": true,
+      "persistence": "js_data/darkonejsp3.network-state.json",
+      "browser_challenge_execution": false
+    },
+    "album_notes": {
+      "consolidated_panel": true,
+      "views": [
+        "album notes",
+        "MusicBrainz releases",
+        "MusicBrainz links"
+      ],
+      "album_note_modes": [
+        "best available",
+        "browse one source"
+      ],
+      "default_enabled_note_sources": [
+        "AllMusic"
+      ],
+      "default_enabled_musicbrainz_roles": [
+        "matching and relationships",
+        "Releases view",
+        "Links view"
+      ],
+      "optional_note_sources": [
+        "TheAudioDB",
+        "Wikipedia",
+        "Apple Music"
+      ],
+      "source_enable_disable": true,
+      "configurable_priority": true,
+      "default_priority": [
+        "AllMusic",
+        "TheAudioDB",
+        "Wikipedia",
+        "Apple Music"
+      ],
+      "musicbrainz_roles_separated": true,
+      "tagged_release_group_ids_work_without_online_resolution": true,
+      "persistent_album_identity_map": "js_data/darkonejsp3.album-identity.json",
+      "ambiguity_safe_release_group_resolution": true,
+      "theaudiodb_default_development_key": "2",
+      "exact_theaudiodb_artist_album_verification": true,
+      "provider_specific_cache_periods": true,
+      "negative_result_cache_hours_default": 24,
+      "stable_mbid_cache_names": true,
+      "request_timeout_ms": 15000,
+      "request_max_attempts": 3,
+      "retry_after_support": true,
+      "exponential_retry_with_jitter": true,
+      "provider_request_pacing": true,
+      "retrieval_diagnostics": true,
+      "copy_and_open_source_actions": true,
+      "separate_api_and_html_request_identity": true,
+      "view_switch_state_sync": true,
+      "view_switch_immediate_repaint": true,
+      "required_infostack_title": "DOJSP3.AlbumNotes",
+      "legacy_infostack_title_aliases": false,
+      "musicbrainz_public_mode_switch_api": true,
+      "allmusic_activation_guard_ms": 250,
+      "enabled_source_chain_cannot_wait_without_provider_activity": true
+    },
+    "startup": {
+      "info_stack_children_hidden_before_first_layout": true,
+      "layout_readiness_handshake": [
+        "MainColumns",
+        "InfoStack",
+        "ArtSpectrum",
+        "BottomControls",
+        "DisplayWaveform"
+      ],
+      "transitions": [
+        "off",
+        "black reveal",
+        "staged reveal"
+      ],
+      "default_transition": "off",
+      "minimum_black_hold_ms_default": 250,
+      "safety_timeout_ms_default": 2000,
+      "staged_reveal_gap_ms": 125,
+      "preview_action": true,
+      "true_child_window_alpha_fade": false,
+      "prepaint_root_before_reveal": true,
+      "prepaint_root_colour": "DarkOne grey",
+      "prepaint_settle_ms": 150,
+      "displaystack_native_first_frame_mitigation": true,
+      "property_owner": "DOJSP3.Root",
+      "menu_location": "InfoStack tab context menu",
+      "communication": "serialised JSplitter-to-JSplitter v1 messages",
+      "jsscript_panel_startup_menu_removed": true,
+      "state_query_before_menu_display": true,
+      "layout_readiness_timeout_label": true,
+      "bridge_runtime_test": true,
+      "root_owned_factory_defaults": true
+    },
+    "display_accent": {
+      "menu": "Display accent colour",
+      "default": "DarkOne blue #298FCC",
+      "custom_colour_picker": true,
+      "custom_colour_hex_preview": true,
+      "plain_font_support": true,
+      "dot_matrix_runtime_tinting": true,
+      "status_icon_runtime_tinting": true,
+      "legacy_six_colour_property_migration": false,
+      "properties": [
+        "DARKONEJSP3.DISPLAY.ACCENT.MODE",
+        "DARKONEJSP3.DISPLAY.ACCENT.CUSTOM.COLOUR"
+      ],
+      "legacy_palette_property_recreated": false,
+      "columns_ui_selected_item_background": true,
+      "columns_ui_colour_index": 4,
+      "mode_values": {
+        "default": 0,
+        "custom": 1,
+        "columns_ui_selected_item_background": 2
+      }
+    },
+    "info_stack_tab_colour": {
+      "menu": "Tab font colour",
+      "default": "DarkOne blue #298FCC",
+      "custom_colour_picker": true,
+      "custom_colour_hex_preview": true,
+      "applies_to": "normal inactive tab labels",
+      "active_label_colour": "white",
+      "hover_label_colour": "grey",
+      "remember_custom_colour_while_default_active": true,
+      "properties": [
+        "DarkOneJSP3.InfoStack.TabColourMode",
+        "DarkOneJSP3.InfoStack.TabCustomColour"
+      ],
+      "jsplitter_picker_signature": "utils.ColourPicker(window_id, default_colour)",
+      "picker_window_id_argument": 0,
+      "cancel_does_not_open_text_fallback": true,
+      "columns_ui_selected_item_background": true,
+      "columns_ui_colour_index": 4,
+      "mode_values": {
+        "default": 0,
+        "custom": 1,
+        "columns_ui_selected_item_background": 2
+      }
+    },
+    "refinement_hardening": {
+      "settings_notifications": "single batched notification with category-aware panel refresh",
+      "display_rendering": "graphics contexts released with finally; image prototypes established once",
+      "volume_knob_mouse_leave_cleanup": true,
+      "remaining_time_negative_clamp": true,
+      "allmusic_manual_refresh_cancels_stale_work": true,
+      "musicbrainz_public_mode_switch_api": true,
+      "jsplitter_panel_lookup_cache": true,
+      "small_window_geometry_clamps": true,
+      "waveform_visibility_repaint_deduplication": true,
+      "optional_button_label_limit": 10,
+      "compatibility_source_mirrors_validated": true,
+      "validator_release_version_source": "build-info.json",
+      "playlist_manager_explicit_timer_cleanup": true,
+      "documentation_heading_structure_validation": true
+    },
+    "factory_reset": {
+      "canonical_registry": "DarkOneJSP3/shared/reset_defaults.js",
+      "per_panel_ownership": true,
+      "album_notes_resets_embedded_musicbrainz": true,
+      "provider_cache_files_preserved": true,
+      "optional_buttons_cleared_only_by_panel_or_full_reset": true,
+      "enhanced_playlist_scroll_and_refresh_covered": true,
+      "playlist_manager_scroll_refresh_and_layout_covered": true,
+      "playlist_manager_saved_scroll_cleared_by_full_reset": true,
+      "queue_viewer_reset_bridge_loaded": true,
+      "playlist_manager_alternating_rows_covered": true,
+      "infostack_automatic_font_scale_covered": true,
+      "scope": "DarkOneJSP3-managed properties only",
+      "generic_upstream_sample_customisation_preserved": true,
+      "art_spectrum_divider_colour_covered": true,
+      "serialised_notification_payload": true,
+      "legacy_object_payload_accepted": true,
+      "infostack_page_backgrounds_covered": true
+    },
+    "info_stack": {
+      "automatic_tab_font_sizing": true,
+      "automatic_font_base_scale_percent_default": 100,
+      "automatic_font_base_scale_percent_range": [
+        50,
+        200
+      ],
+      "fixed_font_size_supported": true,
+      "automatic_tab_area_follows_font_scale": true,
+      "automatic_tab_area_scale_applies_in_automatic_font_mode": true,
+      "backing_default": "DarkOne dark grey RGB 24,24,24"
+    },
+    "art_spectrum_dividers": {
+      "customisable_colour": true,
+      "default": "Black",
+      "modes": [
+        "Transparent / inherit parent",
+        "Black",
+        "DarkOne grey",
+        "DarkOne dark grey",
+        "Columns UI global background",
+        "Custom colour"
+      ],
+      "shared_left_and_right_setting": true,
+      "geometry_unchanged": true,
+      "lower_dividers_unchanged": true,
+      "menu_locations": [
+        "InfoStack tab context menu",
+        "upper divider strips"
+      ],
+      "properties": [
+        "DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE",
+        "DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR"
+      ],
+      "communication": "serialised JSplitter-to-JSplitter v1 messages",
+      "album_art_jscript_panel_bridge_removed": true,
+      "minimum_context_hit_target_px": 10
+    },
+    "info_stack_page_background": {
+      "menu": "Page background colour",
+      "pages": [
+        "Biography",
+        "Last.fm",
+        "Album Notes",
+        "Queue",
+        "Properties"
+      ],
+      "per_page_persistence": true,
+      "playlists_excluded": true,
+      "default": "DarkOne dark grey RGB 24,24,24",
+      "modes": [
+        "Transparent / inherit parent",
+        "Black",
+        "DarkOne grey",
+        "DarkOne dark grey",
+        "Columns UI global background",
+        "Custom colour"
+      ],
+      "properties": [
+        "DARKONEJSP3.PAGE.BACKGROUND.MODE",
+        "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR"
+      ],
+      "factory_reset_covered": true,
+      "generic_samples_unchanged_unless_opted_in": true
+    }
+  },
+  "credits": "DarkOneJSP3/docs/CREDITS.txt",
+  "public_attribution": "DeViLhoOD",
+  "build_info": "DarkOneJSP3/build-info.json",
+  "panel_title_policy": {
+    "information_source": {
+      "required": "DOJSP3.AlbumNotes",
+      "legacy_aliases_supported": false,
+      "tested_layout_title": "DOJSP3.AlbumNotes"
+    }
+  },
+  "fcl_policy": {
+    "recommended_setup": "manual layout from LAYOUT_AND_PANEL_MAP.txt",
+    "optional_path": "DarkOneJSP3/fcl/DarkOneJSP3.fcl",
+    "may_be_distributed": true,
+    "required": false,
+    "patched_or_generated": false,
+    "user_managed": true,
+    "included_in_hotfixes": false
+  },
+  "features": {
+    "info_stack_tab_area_menu": {
+      "automatic_label": "Automatic height (follows tab font sizing)",
+      "fixed_override_label": "Set fixed tab area height...",
+      "automatic_value": 0
+    }
+  },
+  "release_hardening": {
+    "display_waveform_background": {
+      "menu": "Host background",
+      "default": "DarkOne grey RGB 32,32,32",
+      "modes": [
+        "Transparent / inherit parent",
+        "Black",
+        "DarkOne grey",
+        "DarkOne dark grey",
+        "Columns UI global background",
+        "Custom colour"
+      ],
+      "properties": [
+        "DarkOneJSP3.DisplayWaveform.BackgroundMode",
+        "DarkOneJSP3.DisplayWaveform.BackgroundColour"
+      ],
+      "paints": [
+        "waveform spacer",
+        "area exposed while Waveform Minibar is hidden"
+      ],
+      "factory_reset_covered": true
+    }
+  }
+}

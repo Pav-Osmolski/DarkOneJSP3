@@ -1,0 +1,98 @@
+DarkOneJSP3 Layout and Panel Map
+================================
+
+Purpose
+-------
+JSplitter controllers locate their children by exact Columns UI custom title.
+These DOJSP3.* titles are runtime identifiers, not merely visible labels.
+Capitalisation and hierarchy must match this document.
+
+Exact hierarchy and custom titles
+---------------------------------
+Column
+└─ JSplitter 01                         DOJSP3.Root
+   ├─ JSplitter 02                      DOJSP3.Main
+   │  ├─ JSplitter 03                   DOJSP3.InfoStack
+   │  │  ├─ JScript Panel 3 01          DOJSP3.PlaylistManager
+   │  │  ├─ JScript Panel 3 02          DOJSP3.LastfmBio
+   │  │  ├─ JScript Panel 3 03          DOJSP3.LastfmInfo
+   │  │  ├─ JScript Panel 3 04          DOJSP3.AlbumNotes
+   │  │  ├─ JScript Panel 3 05          DOJSP3.Queue
+   │  │  └─ JScript Panel 3 06          DOJSP3.Properties
+   │  ├─ JSplitter 04                   DOJSP3.ArtSpectrum
+   │  │  ├─ JScript Panel 3 07          DOJSP3.AlbumArt
+   │  │  └─ Enhanced Spectrum Analyser  DOJSP3.Spectrum
+   │  └─ JScript Panel 3 08             DOJSP3.Playlist
+   └─ JSplitter 05                      DOJSP3.Controls
+      ├─ JScript Panel 3 09             DOJSP3.ControlsLeft
+      ├─ Quick Search Toolbar           DOJSP3.QuickSearch
+      ├─ JSplitter 06                   DOJSP3.DisplayStack
+      │  ├─ JScript Panel 3 10          DOJSP3.Display
+      │  └─ Waveform Minibar (mod)      DOJSP3.Waveform
+      └─ JScript Panel 3 11             DOJSP3.ControlsRight
+
+JScript Panel 3 script assignments
+----------------------------------
+01  samples\Smooth Playlist Manager.txt
+02  samples\Last.fm Bio.txt
+03  samples\Last.fm Artist Info + User Info.txt
+04  samples\Album Notes.txt
+05  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+06  samples\Properties.txt
+07  samples\Album Art.txt
+08  samples\JS Playlist.txt
+09  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
+10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
+11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
+
+JSplitter loader and controller assignments
+-------------------------------------------
+01  loaders\JSplitter 01 - Root.txt
+    controller: jsplitter\01_root.js
+
+02  loaders\JSplitter 02 - Main Columns.txt
+    controller: jsplitter\02_main_columns.js
+
+03  loaders\JSplitter 03 - Info Stack and Tabs.txt
+    controller: jsplitter\03_info_stack_tabs.js
+
+04  loaders\JSplitter 04 - Album Art and Spectrum.txt
+    controller: jsplitter\04_art_spectrum.js
+
+05  loaders\JSplitter 05 - Bottom Controls.txt
+    controller: jsplitter\05_bottom_controls.js
+
+06  loaders\JSplitter 06 - Display and Waveform.txt
+    controller: jsplitter\06_display_waveform.js
+
+Title rules
+-----------
+- Visible InfoStack tab text can be renamed without changing the DOJSP3.* title.
+- The fourth InfoStack child must be DOJSP3.AlbumNotes.
+- The scripted DOJSP3.Queue panel should load the DarkOneJSP3 Queue Viewer
+  wrapper, not the generic sample, when coordinated factory reset is required.
+- A native foo_queue_viewer panel may replace the supplied queue script, but its
+  custom title must remain DOJSP3.Queue.
+- Do not duplicate a DOJSP3.* title elsewhere in the same layout hierarchy.
+
+Relationship to the original DarkOne2021 PSS layout
+---------------------------------------------------
+PSS01 -> JSplitter 01: root main/bottom geometry and shared background
+PSS02 -> JSplitter 02: side columns align to the outer edges of the
+         original one-third separator strips; the upper pair share a
+         configurable colour while their geometry remains fixed
+PSS03 -> JSplitter 03: six-panel information stack and tab row
+PSS04 -> JSplitter 04: album artwork and spectrum placement
+PSS05 -> JSplitter 05: bottom controls, Quick Search and separators
+PSS06 -> JSplitter 06: display and waveform placement
+
+The old PSS03 source mentioned a seventh child, but the actual DarkOne2021
+layout and tab row contained six panels. DarkOneJSP3 implements those six
+panels.
+
+FCL note
+--------
+This panel map is the authoritative setup reference. The full package also
+contains an optional maintainer-exported FCL in DarkOneJSP3\fcl. Importing it
+is not the recommended first method and it remains installation-specific.
+Project tooling and hotfixes do not patch or generate the FCL.

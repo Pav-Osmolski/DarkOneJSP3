@@ -1,0 +1,79 @@
+// ==PREPROCESSOR==
+// @name "DWriteFonts"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\list_base.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var list = new _list_base(LM, TM, 0, 0);
+list.column_width = 0;
+
+list.paint = function (gr) {
+	for (var i = 0; i < Math.min(this.count, this.rows); i++) {
+		var name = this.data[i + this.offset].name;
+		gr.WriteTextSimple(name, panel.fonts.normal, panel.colours.text, this.x, this.y + _scale(12) + (i * panel.row_height), this.column_width, panel.row_height, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
+		gr.WriteTextSimple(name, CreateFontString(name, panel.fonts.size.value), panel.colours.text, this.x + this.column_width, this.y + _scale(12) + (i * panel.row_height), this.w, panel.row_height, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP)
+	}
+
+	this.up_btn.paint(gr, panel.colours.text);
+	this.down_btn.paint(gr, panel.colours.text);
+}
+
+list.update = function () {
+	this.data = [];
+	var fonts = utils.ListFonts().toArray();
+	_.forEach(fonts, function (name) {
+		this.data.push({
+			name : name
+		});
+	}, this);
+
+	this.count = this.data.length;
+}
+
+list.update();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_fonts_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_mouse_move(x, y) {
+	list.move(x, y);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	list.lbtn_up(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y);
+}
+
+function on_mouse_wheel(s) {
+	list.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	panel.draw_header(gr, 'Name');
+	gr.WriteTextSimple('WriteText', panel.fonts.small, panel.colours.highlight, LM + list.column_width, 0, list.column_width, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
+	list.paint(gr);
+}
+
+function on_size() {
+	panel.size();
+	list.w = panel.w - (TM * 2);
+	list.h = panel.h - TM;
+	list.size();
+	list.column_width = list.w / 2;
+}

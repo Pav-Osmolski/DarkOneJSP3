@@ -1,0 +1,569 @@
+// =========================================================================================================
+// DarkOneJSP3 global configuration - native JScript Panel 3 / Direct2D / DirectWrite
+// Target: JScript Panel 3.8.5
+// Original DarkOne4Mod code by tedGo; DarkOne2021 and JSP2 optimisation history preserved.
+// =========================================================================================================
+
+var configName = "DarkOneJSP3";
+var configPath = fb.ProfilePath + configName + "\\";
+var imgPath = configPath + "images\\";
+var sysWidth = utils.GetSystemMetrics(0);
+var ui_type = window.IsDefaultUI ? 1 : 0;
+var p_backcol = RGBA(32, 32, 32, 255);
+var ww = 0, wh = 0;
+var ui_backcol = 0, ui_textcol = 0, ui_btntxtcol = 0;
+
+function combColours(a, b, e) {
+    a = toRGB(a);
+    b = toRGB(b);
+    return 0xff000000 | Math.round(a[0] + e * (b[0] - a[0])) << 16 | Math.round(a[1] + e * (b[1] - a[1])) << 8 | Math.round(a[2] + e * (b[2] - a[2]));
+}
+
+function get_colours() {
+    ui_backcol = ui_type == 0 ? window.GetColourCUI(3) : window.GetColourDUI(1);
+    ui_textcol = ui_type == 0 ? window.GetColourCUI(0) : window.GetColourDUI(0);
+    ui_btntxtcol = ui_type == 0 ? window.GetColourCUI(2) : window.GetColourDUI(0);
+}
+get_colours();
+
+function repeat(str, num) {
+    num = Number(num);
+    var result = '';
+    while (true) {
+        if (num & 1) result += str;
+        num >>>= 1;
+        if (num <= 0) break;
+        str += str;
+    }
+    return result;
+}
+function pad(x, y, z) {
+    z || (z = ' '); x = x == null ? "" : String(x);
+    return x.length < y ? x + repeat(z, y - x.length) : x;
+}
+function pad_right(x, y, z) {
+    z || (z = ' '); x = x == null ? "" : String(x);
+    return x.length < y ? repeat(z, y - x.length) + x : x;
+}
+function TimeFmt(t) {
+    function zpad(n) { var str = n.toString(); return str.length < 2 ? "0" + str : str; }
+    t = Number(t);
+    if (!isFinite(t) || t < 0) t = 0;
+    t = Math.floor(t);
+    var h = Math.floor(t / 3600); t -= h * 3600;
+    var m = Math.floor(t / 60); t -= m * 60;
+    return zpad(h) + ":" + zpad(m) + ":" + zpad(t);
+}
+
+// JSP3 image lifecycle. The old helper name is retained to minimise needless churn in theme code.
+function safeGdiImage(path) {
+    try { return utils.LoadImage(path); } catch (e) { return null; }
+}
+function disposeImage(img) {
+    if (img) { try { img.Dispose(); } catch (e) {} }
+}
+function clearPanelTimer(timer_id) {
+    if (timer_id) { try { window.ClearTimeout(timer_id); } catch (e) {} }
+    return null;
+}
+
+// DirectWrite font strings and drawing adapters for the small subset of legacy GDI flags used by DarkOne.
+function darkOneCreateFont(name, size, style, weight) {
+    style = Number(style) || 0;
+    var resolved_weight = Number(weight);
+    if (isNaN(resolved_weight)) {
+        // GDI selected the heavy face automatically when the family was named
+        // "Arial Black". DirectWrite needs the weight made explicit to reproduce it.
+        resolved_weight = /(?:black|heavy)/i.test(String(name || ''))
+            ? DWRITE_FONT_WEIGHT_BLACK
+            : (style & 1) ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL;
+    }
+    resolved_weight = Math.max(DWRITE_FONT_WEIGHT_THIN, Math.min(DWRITE_FONT_WEIGHT_ULTRA_BLACK, Math.round(resolved_weight)));
+    return JSON.stringify({
+        Name : name,
+        Size : Math.max(1, Math.round(size)),
+        Weight : resolved_weight,
+        Style : (style & 2) ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+        Stretch : DWRITE_FONT_STRETCH_NORMAL
+    });
+}
+function darkOneFontSize(font) {
+    try { return Number(JSON.parse(font).Size) || 12; } catch (e) { return 12; }
+}
+function darkOneCalcTextWidth(text, font) {
+    try { return utils.CalcTextWidth2(String(text || ''), font); } catch (e) { return 0; }
+}
+var darkOneTextHeightCache = {};
+function darkOneCalcTextHeight(text, font) {
+    text = String(text || 'Ag');
+    var key = font + '\n' + text;
+    if (darkOneTextHeightCache.hasOwnProperty(key)) return darkOneTextHeightCache[key];
+    var height = 0;
+    var layout = null;
+    try {
+        layout = utils.CreateTextLayout2(text, '[' + font + ']', DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_NONE);
+        height = Math.ceil(layout.CalcTextHeight(4096));
+    } catch (e) {
+        height = Math.ceil(darkOneFontSize(font) * 1.28);
+    } finally {
+        if (layout) { try { layout.Dispose(); } catch (e2) {} }
+    }
+    height = Math.max(1, height);
+    darkOneTextHeightCache[key] = height;
+    return height;
+}
+function darkOneDrawText(gr, text, font, colour, x, y, w, h, flags) {
+    flags = flags || 0;
+    var horizontal = (flags & 2) ? DWRITE_TEXT_ALIGNMENT_TRAILING : (flags & 1) ? DWRITE_TEXT_ALIGNMENT_CENTER : DWRITE_TEXT_ALIGNMENT_LEADING;
+    var vertical = (flags & 4) ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : DWRITE_PARAGRAPH_ALIGNMENT_NEAR;
+    gr.WriteTextSimple(String(text == null ? '' : text), font, colour, x, y, Math.max(0, w), Math.max(0, h), horizontal, vertical, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
+}
+function darkOneFillEllipse(gr, x, y, w, h, colour) {
+    gr.FillEllipse(x + w / 2, y + h / 2, Math.max(0, w / 2), Math.max(0, h / 2), colour);
+}
+function darkOneDrawEllipse(gr, x, y, w, h, line_width, colour) {
+    gr.DrawEllipse(x + w / 2, y + h / 2, Math.max(0, w / 2), Math.max(0, h / 2), Math.max(0.5, line_width), colour);
+}
+
+// DarkOneJSP3 settings use the current namespace only.
+function darkOneNumberProperty(name, defaultValue, minValue, maxValue) {
+    var raw = window.GetProperty(name, null);
+    var value = Number(raw == null ? defaultValue : raw);
+    if (isNaN(value)) value = defaultValue;
+    return Math.max(minValue, Math.min(maxValue, value));
+}
+function darkOneFontScale() { return darkOneNumberProperty("DARKONEJSP3.FONT.SCALE", 1.0, 0.75, 1.75); }
+function darkOneButtonHitboxScale() { return darkOneNumberProperty("DARKONEJSP3.BUTTON.HITBOX.SCALE", 1.0, 0.85, 1.35); }
+function darkOneIconScale() { return darkOneNumberProperty("DARKONEJSP3.ICON.SCALE", 1.0, 0.75, 1.5); }
+function darkOneDisplayFontScale() { return darkOneNumberProperty("DARKONEJSP3.DISPLAY.FONT.SCALE", 1.0, 0.75, 1.5); }
+
+// Button roundness is expressed as a percentage of the maximum possible corner
+// radius. -1 preserves the original appearance-preset behaviour exactly.
+function darkOneButtonRoundness() { return darkOneNumberProperty("DARKONEJSP3.BUTTON.ROUNDNESS", -1, -1, 100); }
+function darkOneSetButtonRoundness(value) {
+    value = Number(value);
+    if (isNaN(value)) return false;
+    value = value < 0 ? -1 : Math.max(0, Math.min(100, value));
+    darkOneSetSharedProperty("DARKONEJSP3.BUTTON.ROUNDNESS", value);
+    return true;
+}
+function darkOneInputButtonRoundness() {
+    try {
+        var current = darkOneButtonRoundness();
+        var shown = current < 0 ? 33 : current;
+        var value = Number(utils.InputBox(
+            "Enter button corner roundness from 0 to 100.\n\n0 = square\n33 = classic DarkOne rounded\n100 = maximum / pill\n\nUse the menu's Automatic option to restore appearance-preset behaviour.",
+            "DarkOneJSP3 button roundness",
+            shown
+        ));
+        return !isNaN(value) && darkOneSetButtonRoundness(value);
+    } catch (e) {
+        return false;
+    }
+}
+
+var DARKONEJSP3_FONT_DEFAULTS = Object.freeze({
+    controlName : "Arial Black",
+    controlWeight : DWRITE_FONT_WEIGHT_BLACK,
+    displayLabelName : "Arial Black",
+    displayLabelWeight : DWRITE_FONT_WEIGHT_BLACK,
+    displayValueName : "Microsoft Sans Serif",
+    displayValueWeight : DWRITE_FONT_WEIGHT_NORMAL
+});
+
+function darkOneStringProperty(name, defaultValue) {
+    var raw = window.GetProperty(name, null);
+    raw = raw == null ? defaultValue : String(raw).trim();
+    return raw || defaultValue;
+}
+function darkOneFontNameProperty(name, defaultValue) {
+    var value = darkOneStringProperty(name, defaultValue);
+    try {
+        if (!utils.CheckFont(value)) value = defaultValue;
+    } catch (e) {
+        value = defaultValue;
+    }
+    return value;
+}
+function darkOneFontWeightProperty(name, defaultValue) {
+    return Math.round(darkOneNumberProperty(name, defaultValue, DWRITE_FONT_WEIGHT_THIN, DWRITE_FONT_WEIGHT_ULTRA_BLACK));
+}
+function darkOneControlFontName() { return darkOneFontNameProperty("DARKONEJSP3.CONTROL.FONT.NAME", DARKONEJSP3_FONT_DEFAULTS.controlName); }
+function darkOneControlFontWeight() { return darkOneFontWeightProperty("DARKONEJSP3.CONTROL.FONT.WEIGHT", DARKONEJSP3_FONT_DEFAULTS.controlWeight); }
+function darkOneDisplayLabelFontName() { return darkOneFontNameProperty("DARKONEJSP3.DISPLAY.LABEL.FONT.NAME", DARKONEJSP3_FONT_DEFAULTS.displayLabelName); }
+function darkOneDisplayLabelFontWeight() { return darkOneFontWeightProperty("DARKONEJSP3.DISPLAY.LABEL.FONT.WEIGHT", DARKONEJSP3_FONT_DEFAULTS.displayLabelWeight); }
+function darkOneDisplayLabelFontScale() { return darkOneNumberProperty("DARKONEJSP3.DISPLAY.LABEL.FONT.SCALE", 1.0, 0.6, 2.0); }
+function darkOneDisplayValueFontName() { return darkOneFontNameProperty("DARKONEJSP3.DISPLAY.VALUE.FONT.NAME", DARKONEJSP3_FONT_DEFAULTS.displayValueName); }
+function darkOneDisplayValueFontWeight() { return darkOneFontWeightProperty("DARKONEJSP3.DISPLAY.VALUE.FONT.WEIGHT", DARKONEJSP3_FONT_DEFAULTS.displayValueWeight); }
+function darkOneDisplayValueFontScale() { return darkOneNumberProperty("DARKONEJSP3.DISPLAY.VALUE.FONT.SCALE", 1.0, 0.6, 2.0); }
+
+function darkOneQuote(value) { return '"' + String(value || '').replace(/"/g, '""') + '"'; }
+function darkOneOpenFolder(folder) {
+    try { utils.Run('explorer', darkOneQuote(folder)); return true; } catch (e) { return false; }
+}
+function darkOneSettingCategory(name) {
+    name = String(name || '');
+    if (name.indexOf('DARKONEJSP3.DISPLAY.') === 0) return 'display';
+    if (name.indexOf('DARKONEJSP3.CONTROL.') === 0 ||
+        name === 'DARKONEJSP3.FONT.SCALE' ||
+        name === 'DARKONEJSP3.BUTTON.HITBOX.SCALE' ||
+        name === 'DARKONEJSP3.BUTTON.ROUNDNESS' ||
+        name === 'DARKONEJSP3.ICON.SCALE') return 'controls';
+    return 'all';
+}
+function darkOneSettingsResult(names, forceAll) {
+    var result = {
+        handled : true,
+        all : Boolean(forceAll),
+        names : [],
+        categories : {}
+    };
+    for (var i = 0; i < names.length; i++) {
+        var name = String(names[i] || '');
+        if (!name) continue;
+        result.names.push(name);
+        var category = darkOneSettingCategory(name);
+        result.categories[category] = true;
+        if (category === 'all') result.all = true;
+    }
+    return result;
+}
+function darkOneNotifyAffects(change, category) {
+    if (!change) return false;
+    if (change === true || change.all) return true;
+    return Boolean(change.categories && change.categories[category]);
+}
+function darkOneNotifyMatches(change, prefix) {
+    if (!change) return false;
+    if (change === true || change.all) return true;
+    prefix = String(prefix || '');
+    for (var i = 0; i < change.names.length; i++) {
+        if (change.names[i].indexOf(prefix) === 0) return true;
+    }
+    return false;
+}
+function darkOneApplySharedValues(values) {
+    var names = [];
+    for (var name in values) {
+        if (!Object.prototype.hasOwnProperty.call(values, name)) continue;
+        var normalised = String(name || '');
+        if (!normalised) continue;
+        window.SetProperty(normalised, values[name]);
+        names.push(normalised);
+    }
+    return darkOneSettingsResult(names, false);
+}
+function darkOneSetSharedProperties(values) {
+    var payload = {};
+    for (var name in values) {
+        if (!Object.prototype.hasOwnProperty.call(values, name)) continue;
+        var normalised = String(name || '');
+        if (!normalised) continue;
+        payload[normalised] = values[name];
+        window.SetProperty(normalised, values[name]);
+    }
+    try {
+        window.NotifyOthers('DarkOneJSP3.Settings.Batch', JSON.stringify({ values : payload }));
+    } catch (e) {}
+}
+function darkOneSetSharedProperty(name, value) {
+    var values = {};
+    values[name] = value;
+    darkOneSetSharedProperties(values);
+}
+function darkOneHandleNotify(name, info) {
+    if (name == 'DarkOneJSP3.Settings.Batch') {
+        try {
+            var batch = typeof info == 'string' ? JSON.parse(info) : info;
+            var values = batch && batch.values && typeof batch.values == 'object' ? batch.values : {};
+            return darkOneApplySharedValues(values);
+        } catch (e) {
+            return darkOneSettingsResult([], true);
+        }
+    }
+
+    if (name == 'DarkOneJSP3.SetProperty') {
+        var property_name = '';
+        var property_value;
+        if (typeof info == 'string' && info.charAt(0) == '{') {
+            try {
+                var payload = JSON.parse(info);
+                property_name = String(payload.name || '');
+                property_value = payload.value;
+            } catch (e2) {}
+        }
+        if (!property_name) {
+            var arr = String(info).split('\t');
+            if (arr.length >= 2) {
+                property_name = arr.shift();
+                property_value = arr.join('\t');
+                var numeric_value = Number(property_value);
+                if (!isNaN(numeric_value)) property_value = numeric_value;
+            }
+        }
+        var single = {};
+        if (property_name) single[property_name] = property_value;
+        return darkOneApplySharedValues(single);
+    }
+
+    if (name == 'DarkOneJSP3.Settings.Changed') {
+        return darkOneSettingsResult([], true);
+    }
+    return false;
+}
+function darkOneSetNumberProperty(name, title, defaultValue, minValue, maxValue) {
+    try {
+        var current = darkOneNumberProperty(name, defaultValue, minValue, maxValue);
+        var value = Number(utils.InputBox('Enter a value between ' + minValue + ' and ' + maxValue + '. Default: ' + defaultValue, title, current));
+        if (!isNaN(value)) {
+            darkOneSetSharedProperty(name, Math.max(minValue, Math.min(maxValue, value)));
+            window.Reload();
+        }
+    } catch (e) {}
+}
+function darkOneSetFontFamilyProperty(name, title, currentValue, defaultValue) {
+    try {
+        var value = String(utils.InputBox(
+            'Enter an installed DirectWrite font family.\n\nExamples: Arial Black, Segoe UI, Bahnschrift, Microsoft Sans Serif',
+            title,
+            currentValue
+        )).trim();
+        if (!value) return;
+        if (!utils.CheckFont(value)) {
+            utils.MessageBox('"' + value + '" is not available to DirectWrite.\n\nThe existing font has not been changed.', title, MB_OK);
+            return;
+        }
+        darkOneSetSharedProperty(name, value);
+        window.Reload();
+    } catch (e) {}
+}
+function darkOneSetFontWeightProperty(name, value) {
+    darkOneSetSharedProperty(name, value);
+    window.Reload();
+}
+function darkOneAppendWeightMenu(parent, title, baseId, currentWeight, disposableMenus) {
+    var menu = window.CreatePopupMenu();
+    var weights = [
+        [DWRITE_FONT_WEIGHT_NORMAL, 'Regular (400)'],
+        [DWRITE_FONT_WEIGHT_MEDIUM, 'Medium (500)'],
+        [DWRITE_FONT_WEIGHT_SEMI_BOLD, 'Semi-bold (600)'],
+        [DWRITE_FONT_WEIGHT_BOLD, 'Bold (700)'],
+        [DWRITE_FONT_WEIGHT_BLACK, 'Black (900)']
+    ];
+    for (var i = 0; i < weights.length; i++) {
+        menu.AppendMenuItem(MF_STRING, baseId + i, weights[i][1]);
+        if (Number(currentWeight) == weights[i][0]) menu.CheckMenuItem(baseId + i, true);
+    }
+    menu.AppendTo(parent, MF_STRING, title);
+    disposableMenus.push(menu);
+}
+function darkOneResetControlFont() {
+    darkOneSetSharedProperties({
+        'DARKONEJSP3.CONTROL.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.controlName,
+        'DARKONEJSP3.CONTROL.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.controlWeight,
+        'DARKONEJSP3.FONT.SCALE' : 1.0
+    });
+    window.Reload();
+}
+function darkOneResetDisplayLabelFont() {
+    darkOneSetSharedProperties({
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.displayLabelName,
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.displayLabelWeight,
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.SCALE' : 1.0
+    });
+    window.Reload();
+}
+function darkOneResetDisplayValueFont() {
+    darkOneSetSharedProperties({
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.displayValueName,
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.displayValueWeight,
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.SCALE' : 1.0
+    });
+    window.Reload();
+}
+function darkOneResetAllFonts() {
+    darkOneSetSharedProperties({
+        'DARKONEJSP3.CONTROL.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.controlName,
+        'DARKONEJSP3.CONTROL.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.controlWeight,
+        'DARKONEJSP3.FONT.SCALE' : 1.0,
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.displayLabelName,
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.displayLabelWeight,
+        'DARKONEJSP3.DISPLAY.LABEL.FONT.SCALE' : 1.0,
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.NAME' : DARKONEJSP3_FONT_DEFAULTS.displayValueName,
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.WEIGHT' : DARKONEJSP3_FONT_DEFAULTS.displayValueWeight,
+        'DARKONEJSP3.DISPLAY.VALUE.FONT.SCALE' : 1.0,
+        'DARKONEJSP3.DISPLAY.FONT.SCALE' : 1.0
+    });
+    window.Reload();
+}
+
+// Coordinated DarkOneJSP3 factory-reset support. Cache files are intentionally preserved.
+function darkOneResetScope(info) {
+    if (typeof info == 'string') {
+        try {
+            var payload = JSON.parse(info);
+            if (payload && payload.scope) return String(payload.scope);
+        } catch (e) {
+            if (info == 'appearance' || info == 'behaviour' || info == 'all') return info;
+        }
+    }
+    return info && info.scope ? String(info.scope) : 'all';
+}
+function darkOneApplyResetDefaults(scope) {
+    return darkOneJsp3ApplyRoleReset(typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '', scope || 'all');
+}
+function darkOneHandleResetNotification(name, info) {
+    if (name !== 'DarkOneJSP3.Reset.Properties') return false;
+    darkOneApplyResetDefaults(darkOneResetScope(info));
+    try { window.Reload(); } catch (e) { window.Repaint(); }
+    return true;
+}
+function darkOneConfirmFactoryReset(scope) {
+    var label = scope === 'appearance' ? 'appearance settings' : scope === 'behaviour' ? 'behaviour settings' : 'all DarkOneJSP3 settings';
+    var result = utils.MessageBox(
+        'Reset ' + label + ' across every DarkOneJSP3 panel?\n\nAlbum Notes caches and downloaded data will be preserved. Foobar2000 panels will reload.',
+        'Reset DarkOneJSP3',
+        MB_YESNO | MB_ICONQUESTION
+    );
+    if (result !== IDYES) return false;
+    darkOneApplyResetDefaults(scope);
+    try { window.NotifyOthers('DarkOneJSP3.Reset.Properties', JSON.stringify({ version : 1, scope : scope })); } catch (e) {}
+    try { window.Reload(); } catch (e2) { window.Repaint(); }
+    return true;
+}
+
+function darkOneToolsMenu(x, y) {
+    var menus = [];
+    var m = window.CreatePopupMenu(); menus.push(m);
+    var fonts = window.CreatePopupMenu(); menus.push(fonts);
+    var control = window.CreatePopupMenu(); menus.push(control);
+    var labels = window.CreatePopupMenu(); menus.push(labels);
+    var values = window.CreatePopupMenu(); menus.push(values);
+    var sc = window.CreatePopupMenu(); menus.push(sc);
+    var reset = window.CreatePopupMenu(); menus.push(reset);
+
+    control.AppendMenuItem(MF_GRAYED, 0, 'Current: ' + darkOneControlFontName());
+    control.AppendMenuItem(MF_STRING, 9201, 'Set font family...');
+    darkOneAppendWeightMenu(control, 'Weight', 9210, darkOneControlFontWeight(), menus);
+    control.AppendMenuItem(MF_STRING, 9202, 'Size scale...');
+    control.AppendMenuSeparator();
+    control.AppendMenuItem(MF_STRING, 9203, 'Restore default');
+    control.AppendTo(fonts, MF_STRING, 'Control-panel labels');
+
+    labels.AppendMenuItem(MF_GRAYED, 0, 'Current: ' + darkOneDisplayLabelFontName());
+    labels.AppendMenuItem(MF_STRING, 9301, 'Set font family...');
+    darkOneAppendWeightMenu(labels, 'Weight', 9310, darkOneDisplayLabelFontWeight(), menus);
+    labels.AppendMenuItem(MF_STRING, 9302, 'Size scale...');
+    labels.AppendMenuSeparator();
+    labels.AppendMenuItem(MF_STRING, 9303, 'Restore default');
+    labels.AppendTo(fonts, MF_STRING, 'Display captions');
+
+    values.AppendMenuItem(MF_GRAYED, 0, 'Current: ' + darkOneDisplayValueFontName());
+    values.AppendMenuItem(MF_STRING, 9401, 'Set font family...');
+    darkOneAppendWeightMenu(values, 'Weight', 9410, darkOneDisplayValueFontWeight(), menus);
+    values.AppendMenuItem(MF_STRING, 9402, 'Size scale...');
+    values.AppendMenuSeparator();
+    values.AppendMenuItem(MF_STRING, 9403, 'Restore default');
+    values.AppendTo(fonts, MF_STRING, 'Display values');
+
+    fonts.AppendMenuSeparator();
+    fonts.AppendMenuItem(MF_STRING, 9500, 'Reset all font defaults');
+    fonts.AppendTo(m, MF_STRING, 'Fonts');
+
+    sc.AppendMenuItem(MF_STRING, 9101, 'Control font scale...');
+    sc.AppendMenuItem(MF_STRING, 9102, 'Button hitbox scale...');
+    sc.AppendMenuItem(MF_STRING, 9103, 'Icon scale...');
+    sc.AppendMenuItem(MF_STRING, 9104, 'Display master font scale...');
+    sc.AppendMenuSeparator();
+    sc.AppendMenuItem(MF_STRING, 9105, 'Reset scaling defaults');
+    sc.AppendTo(m, MF_STRING, 'High-DPI / scaling');
+
+    m.AppendMenuSeparator();
+    reset.AppendMenuItem(MF_STRING, 9700, 'Reset this panel');
+    reset.AppendMenuSeparator();
+    reset.AppendMenuItem(MF_STRING, 9701, 'Reset appearance settings...');
+    reset.AppendMenuItem(MF_STRING, 9702, 'Reset behaviour settings...');
+    reset.AppendMenuSeparator();
+    reset.AppendMenuItem(MF_STRING, 9703, 'Reset all DarkOneJSP3 settings...');
+    reset.AppendTo(m, MF_STRING, 'Reset DarkOneJSP3');
+
+    m.AppendMenuSeparator();
+    m.AppendMenuItem(MF_GRAYED, 0, 'Renderer: Direct2D + DirectWrite (JSP3)');
+    m.AppendMenuSeparator();
+    m.AppendMenuItem(MF_STRING, 9110, 'Open DarkOneJSP3 folder');
+    m.AppendMenuItem(MF_STRING, 9111, 'Open JScript Panel js_data cache');
+    m.AppendMenuItem(MF_STRING, 9112, 'Open JScript Panel 3 component folder');
+    m.AppendMenuSeparator();
+    m.AppendMenuItem(MF_STRING, 9120, 'Panel properties');
+    m.AppendMenuItem(MF_STRING, 9121, 'Configure script...');
+    m.AppendMenuItem(MF_STRING, 9122, 'Reload this panel');
+
+    var idx = m.TrackPopupMenu(x, y);
+    for (var i = menus.length - 1; i >= 0; i--) {
+        try { menus[i].Dispose(); } catch (e) {}
+    }
+
+    var weightMap = {
+        9210 : DWRITE_FONT_WEIGHT_NORMAL,
+        9211 : DWRITE_FONT_WEIGHT_MEDIUM,
+        9212 : DWRITE_FONT_WEIGHT_SEMI_BOLD,
+        9213 : DWRITE_FONT_WEIGHT_BOLD,
+        9214 : DWRITE_FONT_WEIGHT_BLACK,
+        9310 : DWRITE_FONT_WEIGHT_NORMAL,
+        9311 : DWRITE_FONT_WEIGHT_MEDIUM,
+        9312 : DWRITE_FONT_WEIGHT_SEMI_BOLD,
+        9313 : DWRITE_FONT_WEIGHT_BOLD,
+        9314 : DWRITE_FONT_WEIGHT_BLACK,
+        9410 : DWRITE_FONT_WEIGHT_NORMAL,
+        9411 : DWRITE_FONT_WEIGHT_MEDIUM,
+        9412 : DWRITE_FONT_WEIGHT_SEMI_BOLD,
+        9413 : DWRITE_FONT_WEIGHT_BOLD,
+        9414 : DWRITE_FONT_WEIGHT_BLACK
+    };
+
+    if (weightMap.hasOwnProperty(idx)) {
+        var property = idx < 9300 ? 'DARKONEJSP3.CONTROL.FONT.WEIGHT' : idx < 9400 ? 'DARKONEJSP3.DISPLAY.LABEL.FONT.WEIGHT' : 'DARKONEJSP3.DISPLAY.VALUE.FONT.WEIGHT';
+        darkOneSetFontWeightProperty(property, weightMap[idx]);
+        return true;
+    }
+
+    switch (idx) {
+    case 9101: darkOneSetNumberProperty('DARKONEJSP3.FONT.SCALE', 'DarkOneJSP3 control font scale', 1.0, 0.75, 1.75); break;
+    case 9102: darkOneSetNumberProperty('DARKONEJSP3.BUTTON.HITBOX.SCALE', 'DarkOneJSP3 button hitbox scale', 1.0, 0.85, 1.35); break;
+    case 9103: darkOneSetNumberProperty('DARKONEJSP3.ICON.SCALE', 'DarkOneJSP3 icon scale', 1.0, 0.75, 1.5); break;
+    case 9104: darkOneSetNumberProperty('DARKONEJSP3.DISPLAY.FONT.SCALE', 'DarkOneJSP3 display master font scale', 1.0, 0.75, 1.5); break;
+    case 9105:
+        darkOneSetSharedProperties({
+            'DARKONEJSP3.FONT.SCALE' : 1.0,
+            'DARKONEJSP3.BUTTON.HITBOX.SCALE' : 1.0,
+            'DARKONEJSP3.ICON.SCALE' : 1.0,
+            'DARKONEJSP3.DISPLAY.FONT.SCALE' : 1.0
+        });
+        window.Reload();
+        break;
+    case 9201: darkOneSetFontFamilyProperty('DARKONEJSP3.CONTROL.FONT.NAME', 'DarkOneJSP3 control-panel font', darkOneControlFontName(), DARKONEJSP3_FONT_DEFAULTS.controlName); break;
+    case 9202: darkOneSetNumberProperty('DARKONEJSP3.FONT.SCALE', 'DarkOneJSP3 control-panel font scale', 1.0, 0.75, 1.75); break;
+    case 9203: darkOneResetControlFont(); break;
+    case 9301: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.LABEL.FONT.NAME', 'DarkOneJSP3 display-caption font', darkOneDisplayLabelFontName(), DARKONEJSP3_FONT_DEFAULTS.displayLabelName); break;
+    case 9302: darkOneSetNumberProperty('DARKONEJSP3.DISPLAY.LABEL.FONT.SCALE', 'DarkOneJSP3 display-caption font scale', 1.0, 0.6, 2.0); break;
+    case 9303: darkOneResetDisplayLabelFont(); break;
+    case 9401: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.VALUE.FONT.NAME', 'DarkOneJSP3 display-value font', darkOneDisplayValueFontName(), DARKONEJSP3_FONT_DEFAULTS.displayValueName); break;
+    case 9402: darkOneSetNumberProperty('DARKONEJSP3.DISPLAY.VALUE.FONT.SCALE', 'DarkOneJSP3 display-value font scale', 1.0, 0.6, 2.0); break;
+    case 9403: darkOneResetDisplayValueFont(); break;
+    case 9500: darkOneResetAllFonts(); break;
+    case 9700:
+        darkOneApplyResetDefaults('all');
+        window.Reload();
+        break;
+    case 9701: darkOneConfirmFactoryReset('appearance'); break;
+    case 9702: darkOneConfirmFactoryReset('behaviour'); break;
+    case 9703: darkOneConfirmFactoryReset('all'); break;
+    case 9110: darkOneOpenFolder(configPath); break;
+    case 9111: darkOneOpenFolder(fb.ProfilePath + 'js_data\\'); break;
+    case 9112: darkOneOpenFolder(fb.ComponentPath); break;
+    case 9120: window.ShowProperties(); break;
+    case 9121: window.ShowConfigure(); break;
+    case 9122: window.Reload(); break;
+    }
+    return idx != 0;
+}

@@ -1,0 +1,787 @@
+DarkOne2021 Columns UI Layout:
+
+• Panel Stack Splitter 01
+	◦ Panel Stack Splitter 02
+		◦ Panel Stack Splitter 03
+			◦ JScript Panel 01
+			◦ JScript Panel 02
+			◦ JScript Panel 03
+			◦ JScript Panel 04
+			◦ JScript Panel 05
+			◦ JScript Panel 06
+		◦ Panel Stack Splitter 04
+			◦ JScript Panel 07
+			◦ Enhanced Spectrum Analyser
+		◦ JScript Panel 08
+	◦ Panel Stack Splitter 05
+		◦ JScript Panel 09
+		◦ Quick Search Toolbar
+		◦ Panel Stack Splitter 06
+			◦ JScript Panel 10
+			◦ Waveform Minibar (mod)
+		◦ JScript Panel 11
+
+All the Panel Stack Splitters have Forced Layout ticked, and Size 100 defined in the Splitter Settings properties.
+
+Panel Stack Splitter 01:
+
+// ----- GLOBAL-VARIABLES -----
+$set_ps_global(do.settings.path,%ps_user_profile_path%\cui-configs\darkone4mod\settings\)
+$set_ps_global(do.panel.w,$muldiv(%ps_width%,5,16))
+
+$init_ps_global(do.playlist.switch,1)
+$init_ps_global(do.display.switch,1)
+$init_ps_global(do.panel.switch,1)
+$init_ps_global(do.library.switch,1)
+$init_ps_global(do.al.scroll,0)
+$init_ps_global(do.fil.scroll,0)
+$init_ps_global(do.view.switch,1)
+
+// ----- GLOBAL-FONT -----
+$set_ps_global(do.font.name,Segoe UI)
+$font(%do.font.name%,10,)
+$puts(a,$muldiv(%ps_width%,100,$gettextwidth(AAAAAAAAAAAAAAAA)))
+$set_ps_global(do.font.size,$add($div($get(a),100),$ifgreater(1000,$get(a),$ifgreater($right($get(a),2),49,1,0),0)))
+
+// ----- GLOBAL-COLOURS -----
+$set_ps_global(do.bar.colour,32-32-32)
+$set_ps_global(do.btn.ncol,41-143-204)
+$set_ps_global(do.btn.hcol,155-155-155)
+$set_ps_global(do.btn.xcol,255-255-255)
+
+$movepanel(0,0,0,%ps_width%,$sub(%ps_height%,$add($div(%ps_width%,10),$div(%ps_width%,128))))
+
+
+Panel Stack Splitter 02:
+
+$set_ps_global(ww,$muldiv(%ps_width%,21,64))
+
+$movepanel(0,0,0,%ww%,%ps_height%)
+$movepanel(1,%ww%,0,$sub(%ps_width%,%ww%,%ww%),%ps_height%)
+$movepanel(2,$sub(%ps_width%,%ww%),0,%ww%,%ps_height%)
+		
+Panel Stack Splitter 03:
+
+// ----- GLOBAL-FONT -----
+$font(%do.font.name%,%do.font.size%,)
+
+// ----- PANEL PLACEMENT -----
+$puts(t.h,$gettextheight())
+$puts(h,$sub(%ps_height%,$add($get(t.h),$div(%ps_width%,40))))
+
+$movepanel(0,0,0,%ps_width%,$get(h))
+$movepanel(1,0,0,%ps_width%,$get(h))
+$movepanel(2,0,0,%ps_width%,$get(h))
+$movepanel(3,0,0,%ps_width%,$get(h))
+$movepanel(4,0,0,%ps_width%,$get(h))
+$movepanel(5,0,0,%ps_width%,$get(h))
+$movepanel(6,0,0,%ps_width%,$get(h))
+
+// ----- SHOWPANEL -----
+$showpanel(0,$ifequal(%do.panel.switch%,1,1,0))
+$showpanel(1,$ifequal(%do.panel.switch%,2,1,0))
+$showpanel(2,$ifequal(%do.panel.switch%,3,1,0))
+$showpanel(3,$ifequal(%do.panel.switch%,4,1,0))
+$showpanel(4,$ifequal(%do.panel.switch%,5,1,0))
+$showpanel(5,$ifequal(%do.panel.switch%,6,1,0))
+$showpanel(6,$ifequal(%do.panel.switch%,7,1,0))
+
+// ----- BUTTON-VARIABLES -----
+$puts(y,$sub(%ps_height%,$get(t.h)))
+$puts(t1,$getcaption(0))
+$puts(t2,$getcaption(1))
+$puts(t3,$getcaption(2))
+$puts(t4,$getcaption(3))
+$puts(t5,$getcaption(4))
+$puts(t6,$getcaption(5))
+$puts(t7,$getcaption(6))
+$puts(w1,$div(%ps_width%,6))
+
+// ----- BUTTONS -----
+$textbutton(0,0,0,0,,,,,)
+$textbutton(0,$get(y),$get(w1),$get(t.h),$get(t1),$get(t1),SETGLOBAL:do.panel.switch:1;REFRESH,fontcolor:$ifequal(%do.panel.switch%,1,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,1,%do.btn.xcol%,%do.btn.hcol%))
+$textbutton($get(w1),$get(y),$get(w1),$get(t.h),$get(t2),$get(t2),SETGLOBAL:do.panel.switch:2;REFRESH,fontcolor:$ifequal(%do.panel.switch%,2,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,2,%do.btn.xcol%,%do.btn.hcol%))
+$textbutton($mul($get(w1),2),$get(y),$get(w1),$get(t.h),$get(t3),$get(t3),SETGLOBAL:do.panel.switch:3;REFRESH,fontcolor:$ifequal(%do.panel.switch%,3,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,3,%do.btn.xcol%,%do.btn.hcol%))
+$textbutton($mul($get(w1),3),$get(y),$get(w1),$get(t.h),$get(t4),$get(t4),SETGLOBAL:do.panel.switch:4;REFRESH,fontcolor:$ifequal(%do.panel.switch%,4,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,4,%do.btn.xcol%,%do.btn.hcol%))
+$textbutton($mul($get(w1),4),$get(y),$get(w1),$get(t.h),$get(t5),$get(t5),SETGLOBAL:do.panel.switch:5;REFRESH,fontcolor:$ifequal(%do.panel.switch%,5,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,5,%do.btn.xcol%,%do.btn.hcol%))
+$textbutton($mul($get(w1),5),$get(y),$get(w1),$get(t.h),$get(t6),$get(t6),SETGLOBAL:do.panel.switch:6;REFRESH,fontcolor:$ifequal(%do.panel.switch%,6,%do.btn.xcol%,%do.btn.ncol%),fontcolor:$ifequal(%do.panel.switch%,6,%do.btn.xcol%,%do.btn.hcol%))
+
+Panel Stack Splitter 04:
+
+$movepanel(0,20,0,$sub(%ps_width%,40),$sub(%ps_width%,40))
+$movepanel(1,20,$add($sub(%ps_width%,40)),$sub(%ps_width%,40),$sub(%ps_height%,%ps_width%,-40))
+
+Panel Stack Splitter 05:
+
+// ----- VARIABLES -----
+$puts(qs.h,$max($muldiv(%ps_height%,13,64),26))
+$puts(qs.t,$sub(%ps_height%,$add($div(%ps_height%,8),$get(qs.h))))
+$puts(px.w,$div(%ps_width%,640))
+$puts(tmp1,$muldiv(%ps_width%,445,16))
+$puts(tmp2,$muldiv(%ps_width%,145,32))
+$puts(vis.x,$add($div($get(tmp1),100),$ifgreater($right($get(tmp1),2),49,1,0)))
+$puts(vis.w,$add($div($get(tmp2),100),$ifgreater($right($get(tmp2),2),49,1,0)))
+
+// ----- BACKGROUND -----
+$drawrect($sub($div(%ps_width%,3),$get(px.w)),0,$mul($get(px.w),2),%ps_height%,24-24-24-255,24-24-24-255)
+$drawrect($sub(%ps_width%,$add($div(%ps_width%,3),$get(px.w))),0,$mul($get(px.w),2),%ps_height%,24-24-24-255,24-24-24-255)
+
+// ----- QUICKSEARCH-TOOLBAR-BACKGROUND -----
+$drawrect($add($div(%ps_width%,128),2),$add($get(qs.t),1),$sub($muldiv(%do.panel.w%,7,16),2),$sub($get(qs.h),2),30-30-30-255,105-105-105-255,)
+$drawrect($add($div(%ps_width%,128),1),$get(qs.t),$muldiv(%do.panel.w%,7,16),$get(qs.h),0-0-0-0,105-105-105-255,)
+
+$movepanel(0,0,0,$muldiv(%ps_width%,21,64),$muldiv(%ps_height%,5,8))
+$movepanel(1,$add($div(%ps_width%,128),3),$add($get(qs.t),2),$sub($muldiv(%do.panel.w%,7,16),4),$sub($get(qs.h),4))
+$movepanel(2,$div($sub(%ps_width%,$muldiv(%ps_width%,5,16)),2),$muldiv(%ps_width%,9,640),$muldiv(%ps_width%,5,16),$muldiv(%ps_width%,3,40))
+$movepanel(3,$sub(%ps_width%,$muldiv(%ps_width%,21,64)),0,$muldiv(%ps_width%,21,64),%ps_height%)
+
+Panel Stack Splitter 06:
+
+$fillrect(0,$add($div(%ps_height%,2),20),%ps_width%,$sub($div(%ps_height%,2),20),32-32-32,)
+
+$movepanel(0,0,0,%ps_width%,$div(%ps_height%,2))
+$movepanel(1,1,$add($div(%ps_height%,2),21),$sub(%ps_width%,2),$sub($div(%ps_height%,2),22))
+
+JScript Panel 01: 
+
+// ==PREPROCESSOR==
+// @name "JS Smooth Playlist Manager"
+// @version "2022-mod"
+// @author "Br3tt aka Falstaff"
+// @import "%fb2k_component_path%samples\smooth\common.js"
+// @import "%fb2k_component_path%samples\smooth\filterbox.js"
+// @import "%fb2k_component_path%samples\smooth\inputbox.js"
+// @import "%fb2k_component_path%samples\smooth\scrollbar.js"
+// @import "%fb2k_component_path%samples\smooth\jsspm.js"
+// ==/PREPROCESSOR==
+
+/*
+[Features]
+ * Order playlists by dragging items with the mouse. Playlists can be sorted by name using the right click menu.
+ * Preset autoplaylists available.
+ * Filter box.
+ * True Smooth Scrolling.
+ * Screen Touch support.
+ * Cover art or custom image as background supported (including a blur effect).
+ * ... and more!
+
+[Tips]
+ * Change colours and fonts in foobar2000 Preferences > DefaultUI or ColumsUI or choose custom colours from the right click menu.
+ * CTRL + T to toggle the info bar
+ * CTRL + mouse wheel to zoom
+ * Use F2 key to rename selected playlist
+*/
+
+JScript Panel 02:
+
+// ==PREPROCESSOR==
+// @name "Last.fm Bio"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\lastfm.js"
+// @import "%fb2k_component_path%samples\js\text.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var lastfm = new _lastfm();
+var text = new _text('lastfm_bio', LM, TM, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_item_focus_change() {
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	text.key_down(k);
+}
+
+function on_metadb_changed() {
+	text.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	text.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	text.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, text);
+}
+
+function on_mouse_wheel(s) {
+	text.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	gr.GdiDrawText(text.header_text(), panel.fonts.title, panel.colours.highlight, LM, 0, panel.w - (LM * 2), TM, LEFT);
+	gr.DrawLine(text.x, text.y + 1, text.x + text.w, text.y + 1, 1, panel.colours.highlight);
+	text.paint(gr);
+}
+
+function on_playback_dynamic_info_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	panel.item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+	text.w = panel.w - (LM * 2);
+	text.h = panel.h - TM;
+	text.size();
+}
+
+JScript Panel 03:
+
+// ==PREPROCESSOR==
+// @name "Last.fm Similar Artists + User Charts + Recent Tracks"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\list.js"
+// @import "%fb2k_component_path%samples\js\lastfm.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var lastfm = new _lastfm();
+var list = new _list('lastfm_info', LM, TM, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_item_focus_change() {
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	list.key_down(k);
+}
+
+function on_metadb_changed() {
+	list.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	list.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	list.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, list);
+}
+
+function on_mouse_wheel(s) {
+	list.wheel(s);
+}
+
+function on_notify_data(name, data) {
+	lastfm.notify_data(name, data);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	gr.GdiDrawText(list.header_text(), panel.fonts.title, panel.colours.highlight, LM, 0, panel.w - (LM * 2), TM, LEFT);
+	gr.DrawLine(list.x, list.y + 1, list.x + list.w, list.y + 1, 1, panel.colours.highlight);
+	list.paint(gr);
+}
+
+function on_playback_dynamic_info_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	panel.item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+	list.w = panel.w - (LM * 2);
+	list.h = panel.h - TM;
+	list.size();
+}
+
+JScript Panel 04:
+
+// ==PREPROCESSOR==
+// @name "Allmusic Review"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\text.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var text = new _text('allmusic', LM, TM, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_item_focus_change() {
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	text.key_down(k);
+}
+
+function on_metadb_changed() {
+	text.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	text.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	text.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, text);
+}
+
+function on_mouse_wheel(s) {
+	text.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	gr.GdiDrawText(text.header_text(), panel.fonts.title, panel.colours.highlight, LM, 0, panel.w - (LM * 2), TM, LEFT);
+	gr.DrawLine(text.x, text.y + 1, text.x + text.w, text.y + 1, 1, panel.colours.highlight);
+	text.paint(gr);
+}
+
+function on_playback_dynamic_info_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	panel.item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+	text.w = panel.w - (LM * 2);
+	text.h = panel.h - TM;
+	text.size();
+}
+
+JScript Panel 05:
+
+// ==PREPROCESSOR==
+// @name "Queue Viewer"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\list.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var list = new _list('queue_viewer', LM, TM, 0, 0);
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_key_down(k) {
+	list.key_down(k);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	list.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	list.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, list);
+}
+
+function on_mouse_wheel(s) {
+	list.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	gr.GdiDrawText(list.header_text(), panel.fonts.title, panel.colours.highlight, LM, 0, panel.w - (LM * 2), TM, LEFT);
+	gr.DrawLine(list.x, list.y + 1, list.x + list.w, list.y + 1, 1, panel.colours.highlight);
+	list.paint(gr);
+}
+
+function on_playback_queue_changed() {
+	list.playback_queue_changed();
+}
+
+function on_size() {
+	panel.size();
+	list.w = panel.w - (LM * 2);
+	list.h = panel.h - TM;
+	list.size();
+}
+
+JScript Panel 06:
+
+// ==PREPROCESSOR==
+// @name "Properties"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\list.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var list = new _list('properties', LM, TM, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_item_focus_change() {
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	list.key_down(k);
+}
+
+function on_metadb_changed() {
+	list.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	list.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	list.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, list);
+}
+
+function on_mouse_wheel(s) {
+	list.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	gr.GdiDrawText(list.header_text(), panel.fonts.title, panel.colours.highlight, LM, 0, panel.w - (LM * 2), TM, LEFT);
+	gr.DrawLine(list.x, list.y + 1, list.x + list.w, list.y + 1, 1, panel.colours.highlight);
+	list.paint(gr);
+}
+
+function on_playback_dynamic_info_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	panel.item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+	list.w = panel.w - (LM * 2);
+	list.h = panel.h - TM;
+	list.size();
+}
+
+JScript Panel 07:
+
+// ==PREPROCESSOR==
+// @name "Album Art"
+// @author "marc2003"
+// @import "%fb2k_component_path%samples\js\lodash.min.js"
+// @import "%fb2k_component_path%samples\js\helpers.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\albumart.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel({ custom_background : true });
+var albumart = new _albumart(0, 0, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_item_focus_change() {
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	albumart.key_down(k);
+}
+
+function on_metadb_changed() {
+	albumart.metadb_changed();
+}
+
+function on_mouse_lbtn_dblclk(x, y) {
+	albumart.lbtn_dblclk(x, y);
+}
+
+function on_mouse_move(x, y) {
+	albumart.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, albumart);
+}
+
+function on_mouse_wheel(s) {
+	albumart.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	albumart.paint(gr);
+}
+
+function on_playback_dynamic_info_track(type) {
+	if (type == 1) panel.item_focus_change();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	panel.item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+	albumart.w = panel.w;
+	albumart.h = panel.h;
+}
+
+JScript Panel 08:
+
+// ==PREPROCESSOR==
+// @name "JS Playlist"
+// @version "2021-mod"
+// @author "Br3tt aka Falstaff"
+// @import "%fb2k_component_path%samples\jsplaylist\common.js",
+// @import "%fb2k_component_path%samples\jsplaylist\inputbox.js",
+// @import "%fb2k_component_path%samples\jsplaylist\topbar.js",
+// @import "%fb2k_component_path%samples\jsplaylist\scrollbar.js",
+// @import "%fb2k_component_path%samples\jsplaylist\headerbar.js",
+// @import "%fb2k_component_path%samples\jsplaylist\playlist.js",
+// @import "%fb2k_component_path%samples\jsplaylist\playlistmanager.js",
+// @import "%fb2k_component_path%samples\jsplaylist\settings.js",
+// @import "%fb2k_component_path%samples\jsplaylist\main.js"
+// ==/PREPROCESSOR==
+
+/*
+[Features]
+ * Customisable group headers with album art, expand/collapse, etc.
+ * Clickable RATING stars. Uses foo_playcount if present, writes RATING tags if not.
+ * Smooth Scrolling.
+ * Arrange columns as you want, create custom columns with titleformatting and custom colours.
+ * Optional playlist info header.
+ * Use album art or a custom image as background wallpaper.
+ * Use the middle click mouse button or tab key to open the built in Playlist Manager.
+ * Built in settings panel.
+ * Sort by clicking column headers.
+ * ... and more!
+
+[Tips]
+ * Change colours and fonts in foobar2000 Preferences > DefaultUI or ColumsUI or enable custom colours via the right click menu.
+ * Left click on a column header to sort the playlist on this field.
+ * Right click on the columns toolbar to toggle columns on/off. Use the main settings to customise them.
+ * CTRL + T to toggle the columns toolbar.
+ * CTRL + I to toggle the playlist info panel.
+ * CTRL + C, CTRL + X, CTRL + V to copy/cut/paste using the Windows Clipboard. Clipboard contents can now be pasted in Windows Explorer.
+ * Use F2 key to rename active playlist in playlist manager panel.
+ * Use F5 key to refresh covers.
+ * As of JScript Panel v2.6.3, all playlist specific tags like %list_index%, %list_total%, %isplaying%, %queue_index% etc are supported in custom columns.
+ * Special TF function to set specific colour for the text that follows it: $rgb(r,g,b)
+   do not use $rgb(r,g,b) in a test condition compare but always for the result part (then or else):
+   ==> avoid this: $if($rgb(0,0,0)%title%,%title%,)
+   ==> but do this: $if(%title%,$rgb(0,0,0)%title%,)
+ * ... etc
+*/
+
+JScript Panel 09:
+
+// ==PREPROCESSOR==
+// @name "DarkOne4Mod - Control Panel - Left"
+// @version "2.0"
+// @author "tedGo"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Config_Global_Script.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Global_Script.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Object_TextButton.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_CommonButtonOptions.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Function_OptBtnCmd.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Function_getMainMenu.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Panel_Control_Left.js"
+// ==/PREPROCESSOR==
+
+JScript Panel 10:
+
+// ==PREPROCESSOR==
+// @name "DarkOne4Mod - Display Panel"
+// @version "2.0"
+// @author "tedGo"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Config_Global_Script.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Object_DisplaySystem.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Panel_Display.js"
+// ==/PREPROCESSOR==
+
+JScript Panel 11:
+
+// ==PREPROCESSOR==
+// @name "DarkOne4Mod - Control Panel - Right"
+// @version "2.0"
+// @author "tedGo"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Config_Global_Script.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Global_Script.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Object_TextButton.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Object_Volumeknob.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_CommonButtonOptions.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Function_OptBtnCmd.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Function_getOpenMenu.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Buttons_Function_getPBOMenu.js"
+// @import "%fb2k_profile_path%DarkOne2021\jscript\js\Panel_Control_Right.js"
+// ==/PREPROCESSOR==
+
+		
+So now I obviously need to recreate the UI Layout to achieve the same look but adjust the scripts. This is what I have so far.
+I understand that the JScript Panel 3 items will need to match to the new JS files generated for DarkOneJSP3 and the correct JScript Panel 3 sample scripts.
+
+DarkOneJSP3 Columns UI Layout:
+
+• JSplitter 01
+	◦ JSplitter 02
+		◦ JSplitter 03
+			◦ JScript Panel 3 01
+			◦ JScript Panel 3 02
+			◦ JScript Panel 3 03
+			◦ JScript Panel 3 04
+			◦ JScript Panel 3 05
+			◦ JScript Panel 3 06
+		◦ JSplitter 04
+			◦ JScript Panel 3 07
+			◦ Enhanced Spectrum Analyser
+		◦ JScript Panel 3 08
+	◦ JSplitter 05
+		◦ JScript Panel 3 09
+		◦ Quick Search Toolbar
+		◦ JSplitter 06
+			◦ JScript Panel 3 10
+			◦ Waveform Minibar (mod)
+		◦ JScript Panel 3 11

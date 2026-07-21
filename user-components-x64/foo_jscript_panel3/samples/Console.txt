@@ -1,0 +1,61 @@
+// ==PREPROCESSOR==
+// @name "Console"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\console.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var con = new _console(LM, TM, 0, 0);
+
+function on_colours_changed() {
+	panel.colours_changed();
+	con.console_refresh();
+	window.Repaint();
+}
+
+function on_console_refresh() {
+	con.console_refresh();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_key_down(k) {
+	con.key_down(k);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	con.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	con.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, con);
+}
+
+function on_mouse_wheel(s) {
+	con.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	panel.draw_header(gr, con.header_text());
+	con.paint(gr);
+}
+
+function on_size() {
+	panel.size();
+	con.w = panel.w - (LM * 2);
+	con.h = panel.h - TM;
+	con.size();
+}

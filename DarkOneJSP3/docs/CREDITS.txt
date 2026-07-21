@@ -1,0 +1,87 @@
+DarkOneJSP3 Credits and Attribution
+===================================
+
+DarkOneJSP3 is an unofficial community continuation of the DarkOne family of
+foobar2000 themes. It combines the original DarkOne visual identity and panel
+concepts with a modern x64 architecture based on Columns UI, JSplitter 4.x and
+JScript Panel 3.8.5.
+
+Project direction and adaptation
+--------------------------------
+DeViLhoOD
+- DarkOne2021 adaptation and maintenance.
+- DarkOneJSP3 project direction, design decisions, migration requirements,
+  integration, testing and quality assurance.
+- Modern x64 layout, configuration and usability enhancements.
+
+Original DarkOne theme
+----------------------
+tedGo
+- Creator of the original DarkOne theme and DarkOne4Mod.
+- Original visual design, layout concepts, control-panel identity, artwork and
+  the core control/display scripts from which DarkOne2021 and DarkOneJSP3
+  derive.
+
+Playlist scripts
+----------------
+Br3tt (also known as Falstaff)
+- Original JS Playlist, Smooth Playlist Manager and related smooth-playlist
+  scripts used as the foundation for the DarkOne playlist panels.
+- DarkOneJSP3 adaptations retain the original author credit in their headers.
+
+JScript Panel 3 and samples
+---------------------------
+marc2003
+- Creator and maintainer of JScript Panel 3.
+- Author of the JScript Panel sample framework and many panels used or adapted
+  by DarkOneJSP3, including Album Art, Last.fm, AllMusic, Properties and the
+  original Queue Viewer design.
+
+Additional sample contributors
+------------------------------
+Case
+- Original VU Meter sample work included in the JScript Panel 3 sample tree.
+
+T. P. Wang
+- Original timer sample work included in the JScript Panel 3 sample tree.
+
+JSplitter
+---------
+dima-lur
+- Creator and maintainer of JSplitter.
+- JSplitter provides the scripted layout, panel hosting, geometry and visibility
+  layer used by DarkOneJSP3.
+
+Platform and component authors
+------------------------------
+DarkOneJSP3 also depends on foobar2000, Columns UI and optional third-party
+components such as Quick Search Toolbar, Enhanced Spectrum Analyser and
+Waveform Minibar (mod). These remain the work of their respective authors and
+are governed by their own licences and distribution terms.
+
+The bundled JScript Panel 3 component tree retains its original licence files
+at:
+
+  user-components-x64\foo_jscript_panel3\licenses\
+
+Development assistance
+----------------------
+OpenAI ChatGPT was used as an AI-assisted development tool for portions of the
+JScript Panel 3 migration, JSplitter integration, code review, documentation and
+iterative troubleshooting. Project decisions and runtime acceptance testing were
+directed and performed by DeViLhoOD.
+
+Attribution and rights
+----------------------
+- DarkOneJSP3 does not claim ownership of third-party code, artwork,
+  components or trademarks.
+- Original author notices in scripts and licence files must be retained.
+- This adaptation is not an official release by tedGo, marc2003, Br3tt, dima-lur
+  or the authors of the hosted foobar2000 components.
+- Inclusion is a statement of attribution, not an implication of endorsement.
+
+Thank you
+---------
+Special thanks to everyone who created, maintained, documented and shared the
+foobar2000 components and scripts that made DarkOne, DarkOne2021 and DarkOneJSP3
+possible.

@@ -1,0 +1,37 @@
+// ==PREPROCESSOR==
+// @name "Queue Viewer - DarkOneJSP3 Enhanced"
+// @version "0.5.0"
+// @author "marc2003 / DeViLhoOD"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\queue_viewer.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var queue = new _queue_viewer(LM, TM, 0, 0);
+
+function on_colours_changed() { panel.colours_changed(); window.Repaint(); }
+function on_font_changed() { panel.font_changed(); window.Repaint(); }
+function on_key_down(k) { queue.key_down(k); }
+function on_mouse_lbtn_dblclk(x, y) { queue.lbtn_dblclk(x, y); }
+function on_mouse_lbtn_up(x, y) { queue.lbtn_up(x, y); }
+function on_mouse_leave() { queue.leave(); }
+function on_mouse_move(x, y) { queue.move(x, y); }
+function on_mouse_rbtn_up(x, y) { return panel.rbtn_up(x, y, queue); }
+function on_mouse_wheel(s) { queue.wheel(s); }
+function on_paint(gr) {
+    queue.on_visible_paint();
+    panel.paint(gr);
+    panel.draw_header(gr, queue.header_text());
+    queue.paint(gr);
+}
+function on_playback_queue_changed(origin) { queue.playback_queue_changed(origin); }
+function on_script_unload() { queue.dispose(); }
+function on_size() {
+    panel.size();
+    queue.w = panel.w - (LM * 2);
+    queue.h = panel.h - TM;
+    queue.size();
+}

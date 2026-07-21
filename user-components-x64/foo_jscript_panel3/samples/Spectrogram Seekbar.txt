@@ -1,0 +1,86 @@
+// ==PREPROCESSOR==
+// @name "Spectrogram Seekbar"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\seekbar.js"
+// ==/PREPROCESSOR==
+
+/*
+Full setup instructions here: https://jscript-panel.github.io/gallery/spectrogram-seekbar/
+
+If you edit the ffmeg_exe variable, directory separators must be escaped like "D:\\Audio\\Tools\\ffmpeg.exe"
+If you edit the spectrogram_cache variable, you must make sure the folder already exists.
+*/
+
+var ffmpeg_exe = fb.ProfilePath + 'ffmpeg.exe';
+var spectrogram_cache = folders.data + 'spectrogram_cache\\';
+
+var panel = new _panel();
+var seekbar = new _seekbar(0, 0, 0, 0, true);
+
+if (fb.IsPlaying)
+	on_playback_new_track(fb.GetNowPlaying());
+else
+	on_item_focus_change();
+
+function on_item_focus_change() {
+	seekbar.item_focus_change();
+}
+
+function on_mouse_lbtn_down(x, y) {
+	seekbar.lbtn_down(x, y);
+}
+
+function on_mouse_lbtn_up(x, y) {
+	seekbar.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	seekbar.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, seekbar);
+}
+
+function on_mouse_wheel(s) {
+	seekbar.wheel(s);
+}
+
+function on_paint(gr) {
+	gr.Clear(RGB(0, 0, 0));
+	seekbar.paint(gr);
+}
+
+function on_playback_new_track(metadb) {
+	seekbar.playback_new_track(metadb);
+}
+
+function on_playback_pause() {
+	seekbar.playback_seek();
+}
+
+function on_playback_seek() {
+	seekbar.playback_seek();
+}
+
+function on_playback_stop(reason) {
+	seekbar.playback_stop(reason);
+}
+
+function on_playlist_switch() {
+	seekbar.item_focus_change();
+}
+
+function on_run_cmd_async_done(task_id) {
+	seekbar.run_cmd_async_done(task_id);
+}
+
+function on_size() {
+	panel.size();
+	seekbar.w = panel.w;
+	seekbar.h = panel.h;
+}

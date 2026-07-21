@@ -1,0 +1,99 @@
+// ==PREPROCESSOR==
+// @name "Images"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\images.js"
+// ==/PREPROCESSOR==
+
+var panel = new _panel();
+var images = new _images();
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_http_request_done(task_id, success, response_text) {
+	images.http_request_done(task_id, success, response_text);
+}
+
+function on_item_focus_change() {
+	if (panel.prefer_playing())
+		return;
+
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	images.key_down(k);
+}
+
+function on_metadb_changed(handles, fromhook) {
+	if (fromhook)
+		return;
+
+	images.metadb_changed();
+}
+
+function on_mouse_move(x, y) {
+	images.move(x, y);
+}
+
+function on_mouse_lbtn_dblclk(x, y) {
+	images.lbtn_dblclk(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, images);
+}
+
+function on_mouse_wheel(s) {
+	images.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	images.paint(gr);
+}
+
+function on_playback_dynamic_info_track(type) {
+	if (type == 0) {
+		images.playback_new_track();
+	}
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+	images.playback_new_track();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playback_time() {
+	images.playback_time();
+}
+
+function on_playlist_switch() {
+	on_item_focus_change();
+}
+
+function on_size() {
+	panel.size();
+
+	images.w = panel.w;
+	images.h = panel.h;
+}

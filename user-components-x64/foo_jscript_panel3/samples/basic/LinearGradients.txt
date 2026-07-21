@@ -1,0 +1,49 @@
+// ==PREPROCESSOR==
+// @name "LinearGradients"
+// @author "marc2003"
+// @import "%fb2k_component_path%helpers.txt"
+// ==/PREPROCESSOR==
+
+/*
+Since FillGradientRectangle and FillGradientRectangleAdvanced were removed in 3.4.0,
+all other Draw/Fill methods have been updated to support gradients in addition to solid colours.
+
+This applies to:
+DrawEllipse
+DrawLine
+DrawRectangle
+DrawRoundedRectangle
+FillEllipse
+FillRectangle
+FillRoundedRectangle
+
+This shows just a few...
+*/
+
+var red = RGB(255, 0, 0);
+
+var stops = [
+	[ 0.0, RGB(227, 9, 64) ],
+	[ 0.33, RGB(231, 215, 2) ],
+	[ 0.66, RGB(15, 168, 149) ],
+	[ 1.0, RGB(19, 115, 232) ]
+];
+
+var linear_brush = {
+	Start : [0, 0], // x and y values
+	End : [0, 0], // x and y values
+	Stops: stops
+};
+
+function on_paint(gr) {
+	linear_brush.End = [0, 100];
+	var str = JSON.stringify(linear_brush);
+
+	gr.DrawEllipse(100, 100, 50, 50, 5, red);
+	gr.DrawEllipse(300, 100, 50, 50, 5, str);
+	gr.FillEllipse(500, 100, 50, 50, str);
+
+	gr.DrawRectangle(50, 200, 100, 100, 5, red);
+	gr.DrawRectangle(250, 200, 100, 100, 5, str);
+	gr.FillRectangle(450, 200, 100, 100, str);
+}

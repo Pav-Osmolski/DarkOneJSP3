@@ -1,0 +1,122 @@
+// ==PREPROCESSOR==
+// @name "Text Display"
+// @author "marc2003"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\albumart.js"
+// @import "%fb2k_component_path%samples\js\text_display.js"
+// ==/PREPROCESSOR==
+
+// https://jscript-panel.github.io/gallery/text-display/
+
+var panel = new _panel({ custom_background : true });
+var albumart = new _albumart(0, 0, 0, 0);
+var text = new _text_display(LM, 0, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	text.refresh(true);
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	text.refresh(true);
+}
+
+function on_item_focus_change() {
+	if (panel.prefer_playing())
+		return;
+
+	panel.item_focus_change();
+}
+
+function on_metadb_changed(handles, fromhook) {
+	if (!fromhook) {
+		albumart.metadb_changed();
+	}
+
+	text.metadb_changed();
+}
+
+function on_mouse_lbtn_dblclk(x, y) {
+	if (text.properties.layout.value > 0) {
+		albumart.lbtn_dblclk(x, y);
+	}
+}
+
+function on_mouse_move(x, y) {
+	if (text.properties.layout.value > 0 && albumart.move(x, y))
+		return;
+
+	text.move(x, y);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, text);
+}
+
+function on_mouse_wheel(s) {
+	if (albumart.wheel(s))
+		return;
+
+	text.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	text.paint(gr);
+}
+
+function on_playback_dynamic_info_track(type) {
+	if (type == 0)
+		text.metadb_changed();
+	else if (text.properties.albumart.enabled || text.properties.layout.value > 0)
+		albumart.metadb_changed();
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_pause() {
+	text.refresh();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playback_time() {
+	text.playback_time();
+}
+
+function on_playlist_items_added() {
+	text.refresh();
+}
+
+function on_playlist_items_removed() {
+	text.refresh();
+}
+
+function on_playlist_items_reordered() {
+	text.refresh();
+}
+
+function on_playlist_switch() {
+	on_item_focus_change();
+}
+
+function on_playlists_changed() {
+	text.refresh();
+}
+
+function on_size() {
+	panel.size();
+	text.size();
+}

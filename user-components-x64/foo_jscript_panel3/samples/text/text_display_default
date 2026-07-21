@@ -1,0 +1,8 @@
+$font(Segoe UI,24,700)
+[%title%$crlf()]
+$font(Segoe UI,18)
+[%artist%$crlf()]
+$font(Segoe UI,14)
+[%album% '('%date%')'$crlf()]
+$font(Segoe UI,10)
+[%__bitrate% kbps %codec% [%codec_profile% ][%__tool% ][%__tagtype%]]

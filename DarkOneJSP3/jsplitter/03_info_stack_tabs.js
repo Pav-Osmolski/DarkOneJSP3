@@ -1,0 +1,1088 @@
+"use strict";
+include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+var DARKONEJSP3_RESET_ROLE = "info-stack";
+
+// Replaces Panel Stack Splitter 03.
+// The source PSS contains stale placement/show code for a seventh child but
+// only six actual panels and six buttons. This port deliberately implements
+// the six real panels.
+//
+// v0.3.0 adds persistent background, tab visibility and display-label
+// customisation. Child custom titles are stable API identifiers; only the
+// labels drawn in this tab strip are renamed.
+//
+// v0.3.1 centres tab labels across the entire reserved tab strip (the original
+// PSS layout reserved both a spacing gap and the text row at the bottom).
+//
+// v0.3.2 makes Title Case the default label style and adds a persistent,
+// user-configurable tab-area height while retaining the original DarkOne
+// width-scaled geometry as the automatic setting.
+//
+// v0.6.11 adds a Default/Custom font-colour mode for inactive tab labels.
+// The active label remains white and the hovered label remains grey so the
+// existing selection and hover feedback are preserved.
+//
+// v0.6.12 fixes the JSplitter-specific native colour-picker call. JSplitter
+// requires utils.ColourPicker(window_id, default_colour), unlike JScript Panel's
+// one-argument form. Cancelling the native picker now exits cleanly instead of
+// falling through to the manual text-entry fallback.
+
+//
+// v0.6.13 adds a percentage-based automatic-font scale. The normal 100% value
+// preserves the existing responsive calculation, while users can enlarge or
+// reduce it without switching to a fixed pixel size.
+//
+// v0.6.14 makes the automatic tab-area padding follow that same scale while
+// automatic font sizing is active. Fixed font sizing keeps the established
+// 100% padding, and a manually configured tab-area height remains independent.
+
+// v0.6.15 clarifies the tab-area override command as a fixed-height action.
+// The automatic-height check item remains the only automatic mode control.
+//
+// v0.6.16 hosts the Album Art/Spectrum divider-colour menu inside JSplitter.
+// State is exchanged with Main Columns through a serialised JSplitter-to-
+// JSplitter notification, avoiding unsupported JScript Panel bridging.
+//
+// v0.6.17 hosts startup controls in this JSplitter menu. The root remains the
+// sole property owner; versioned serialised messages query state, change the
+// mode/timings, preview the curtain and restore defaults reliably.
+
+// v0.6.18 distinguishes the InfoStack backing/tab-strip background from the
+// five JScript Panel page backgrounds, adds DarkOne dark grey (RGB 24,24,24),
+// and makes it the default so transparent pages inherit the intended tone.
+//
+// v0.6.19 fixes the background-mode range so the new DarkOne dark grey mode
+// (value 4) is not clamped to the legacy custom-colour mode (value 3).
+//
+// v0.6.20 adds the same DarkOne dark grey choice to the two upper side
+// dividers while preserving their legacy custom-colour mode at value 3.
+//
+// v0.6.21 adds an explicit Columns UI global background choice to the
+// InfoStack backing and upper-divider menus. Existing mode values are retained;
+// the new live Columns UI mode uses value 5.
+//
+// v0.6.22 adds Columns UI selected-item background as a live inactive-tab
+// font-colour source. Existing Default and Custom modes remain values 0 and 1;
+// the new Columns UI mode uses value 2.
+
+var INFO_PANELS = [
+    { key: 'Playlists',  title: DOJSP3.titles.playlistManager, defaultLabel: 'Playlists',  uppercaseLabel: 'PLAYLISTS' },
+    { key: 'Biography',  title: DOJSP3.titles.lastfmBio,       defaultLabel: 'Biography',  uppercaseLabel: 'BIOGRAPHY' },
+    { key: 'Lastfm',     title: DOJSP3.titles.lastfmInfo,      defaultLabel: 'Last.fm',    uppercaseLabel: 'LAST.FM' },
+    { key: 'Allmusic',   title: DOJSP3.titles.albumNotes,      defaultLabel: 'Album Notes', uppercaseLabel: 'ALBUM NOTES' },
+    { key: 'Queue',      title: DOJSP3.titles.queue,           defaultLabel: 'Queue',      uppercaseLabel: 'QUEUE' },
+    { key: 'Properties', title: DOJSP3.titles.properties,      defaultLabel: 'Properties', uppercaseLabel: 'PROPERTIES' }
+];
+
+var STARTUP_CONTROLLER_NAME = 'InfoStack';
+var startupLayoutReady = false;
+
+function signalStartupReady() {
+    startupLayoutReady = true;
+    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
+}
+
+function hideInfoChildrenBeforeFirstLayout() {
+    // The exported FCL may leave a child visible while JSplitter is still
+    // evaluating this controller. Hide every candidate immediately so the
+    // saved active tab is the first information panel the user actually sees.
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        try {
+            var child = window.GetPanel(INFO_PANELS[i].title);
+            if (child) child.Show(false);
+        } catch (e) {}
+    }
+}
+
+hideInfoChildrenBeforeFirstLayout();
+
+var ACTIVE_PROPERTY = 'DarkOneJSP3.InfoStack.ActivePanel';
+var FONT_PROPERTY = 'DarkOneJSP3.InfoStack.FontSize';
+var AUTO_FONT_SCALE_PROPERTY = 'DarkOneJSP3.InfoStack.AutoFontScale';
+var BACKGROUND_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.BackgroundMode';
+var BACKGROUND_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.BackgroundColour';
+var TAB_AREA_HEIGHT_PROPERTY = 'DarkOneJSP3.InfoStack.TabAreaHeight';
+var LABEL_DEFAULTS_VERSION_PROPERTY = 'DarkOneJSP3.InfoStack.LabelDefaultsVersion';
+var TAB_COLOUR_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.TabColourMode';
+var TAB_CUSTOM_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.TabCustomColour';
+
+var DIVIDER_MESSAGE_VERSION = 'v1';
+var DIVIDER_QUERY_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Query';
+var DIVIDER_SET_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Set';
+var DIVIDER_STATE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.State';
+
+var DIVIDER_TRANSPARENT = 0;
+var DIVIDER_BLACK = 1;
+var DIVIDER_DARKONE = 2;
+var DIVIDER_CUSTOM = 3;
+var DIVIDER_DARKONE_DARK = 4;
+var DIVIDER_COLUMNS_UI = 5;
+var dividerMenuMode = DIVIDER_BLACK;
+var dividerMenuCustomColour = 0xff000000;
+var dividerMenuStateKnown = false;
+
+
+var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';
+var STARTUP_CONTROL_QUERY_NOTIFICATION =
+    'DarkOneJSP3.Startup.Controls.Query';
+var STARTUP_CONTROL_COMMAND_NOTIFICATION =
+    'DarkOneJSP3.Startup.Controls.Command';
+var STARTUP_CONTROL_STATE_NOTIFICATION =
+    'DarkOneJSP3.Startup.Controls.State';
+
+var STARTUP_OFF = 0;
+var STARTUP_BLACK_REVEAL = 1;
+var STARTUP_STAGED_REVEAL = 2;
+var startupMenuTransition = STARTUP_OFF;
+var startupMenuMinimumDelay = 250;
+var startupMenuReadinessTimeout = 2000;
+var startupMenuStateKnown = false;
+
+// Background modes:
+// 0 = transparent, 1 = black, 2 = DarkOne grey, 3 = custom (legacy),
+// 4 = DarkOne dark grey, 5 = Columns UI global background. Keeping custom at
+// 3 preserves existing properties.
+var BACKGROUND_TRANSPARENT = 0;
+var BACKGROUND_BLACK = 1;
+var BACKGROUND_DARKONE = 2;
+var BACKGROUND_CUSTOM = 3;
+var BACKGROUND_DARKONE_DARK = 4;
+var BACKGROUND_COLUMNS_UI = 5;
+
+// Tab font-colour modes. Only the normal/inactive label uses this accent; the
+// selected label stays white and the hovered label stays grey.
+var TAB_COLOUR_DEFAULT = 0;
+var TAB_COLOUR_CUSTOM = 1;
+var TAB_COLOUR_COLUMNS_UI_SELECTED = 2;
+
+var activeIndex = DOJSP3.clamp(Number(window.GetProperty(ACTIVE_PROPERTY, 0)) || 0, 0, INFO_PANELS.length - 1);
+var hoverIndex = -1;
+var ww = 0;
+var wh = 0;
+var tabHeight = 18;
+var tabY = 0;
+var tabAreaHeight = 18;
+var contentHeight = 1;
+var font = gdi.Font('Segoe UI', 10, 0);
+
+// JSplitter exposes these values in docs/Flags.js, but does not inject that
+// documentation file into each panel script automatically. Keep the small
+// set used by this controller local so it has no external include dependency.
+var TAB_TEXT_FLAGS = 0x00000001 | 0x00000004 | 0x00000020 | 0x00000800;
+var CURSOR_ARROW = 32512;
+var CURSOR_HAND = 32649;
+var MENU_STRING = 0x00000000;
+var MENU_GRAYED = 0x00000001;
+var MENU_POPUP = 0x00000010;
+
+function visibleProperty(index) {
+    return 'DarkOneJSP3.InfoStack.Tab.' + INFO_PANELS[index].key + '.Visible';
+}
+
+function labelProperty(index) {
+    return 'DarkOneJSP3.InfoStack.Tab.' + INFO_PANELS[index].key + '.Label';
+}
+
+function migrateTitleCaseDefaults() {
+    var version = Number(window.GetProperty(LABEL_DEFAULTS_VERSION_PROPERTY, 0)) || 0;
+    if (version >= 2) return;
+
+    // v0.3.0/v0.3.1 stored all-caps defaults. v0.6.0 renames only the
+    // untouched information-source default from AllMusic to Album Notes.
+    // User-customised labels remain unchanged.
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        var legacy = INFO_PANELS[i].uppercaseLabel;
+        var current = String(window.GetProperty(labelProperty(i), legacy));
+        if (version < 1 && current === legacy) {
+            window.SetProperty(labelProperty(i), INFO_PANELS[i].defaultLabel);
+            current = INFO_PANELS[i].defaultLabel;
+        }
+        if (version < 2 && INFO_PANELS[i].key === 'Allmusic' && current === 'AllMusic') {
+            window.SetProperty(labelProperty(i), 'Album Notes');
+        }
+    }
+    window.SetProperty(LABEL_DEFAULTS_VERSION_PROPERTY, 2);
+}
+
+migrateTitleCaseDefaults();
+
+function isTabVisible(index) {
+    return Boolean(window.GetProperty(visibleProperty(index), true));
+}
+
+function tabLabel(index) {
+    var value = String(window.GetProperty(labelProperty(index), INFO_PANELS[index].defaultLabel));
+    value = value.replace(/^\s+|\s+$/g, '');
+    return value || INFO_PANELS[index].defaultLabel;
+}
+
+function menuLabel(value) {
+    // Win32 menus use ampersands for access keys. Doubling them preserves a
+    // literal ampersand in a user-supplied tab title.
+    return String(value).replace(/&/g, '&&');
+}
+
+function visibleIndexes() {
+    var result = [];
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        if (isTabVisible(i)) result.push(i);
+    }
+    return result;
+}
+
+function ensureActiveTab() {
+    var visible = visibleIndexes();
+
+    // Recover safely if imported/corrupt properties somehow hide every tab.
+    if (!visible.length) {
+        window.SetProperty(visibleProperty(0), true);
+        visible = [0];
+    }
+
+    if (isTabVisible(activeIndex)) return;
+
+    activeIndex = visible[0];
+    window.SetProperty(ACTIVE_PROPERTY, activeIndex);
+}
+
+function inferredRootWidth() {
+    return ww > 0 ? (ww * 64 / 21) : 0;
+}
+
+function automaticFontScale() {
+    var value = Math.round(Number(window.GetProperty(AUTO_FONT_SCALE_PROPERTY, 100)) || 100);
+    return DOJSP3.clamp(value, 50, 200);
+}
+
+function automaticFontSize() {
+    var baseSize = DOJSP3.clamp(Math.round(inferredRootWidth() / 112), 10, 36);
+    return DOJSP3.clamp(Math.round(baseSize * automaticFontScale() / 100), 8, 48);
+}
+
+function rebuildFont() {
+    var configured = Number(window.GetProperty(FONT_PROPERTY, 0)) || 0;
+    var size = configured > 0
+        ? DOJSP3.clamp(Math.round(configured), 8, 48)
+        : automaticFontSize();
+    font = gdi.Font('Segoe UI', size, 0);
+    tabHeight = Math.max(16, font.Height + 2);
+}
+
+function configuredTabAreaHeight() {
+    return Math.max(0, Math.round(Number(window.GetProperty(TAB_AREA_HEIGHT_PROPERTY, 0)) || 0));
+}
+
+function automaticTabAreaHeight() {
+    // Preserve the original 100% PSS geometry, but let automatic font scaling
+    // enlarge or reduce the surrounding tab-area padding proportionally. A
+    // fixed font size is independent of the automatic base-scale property.
+    var baseGap = DOJSP3.idiv(ww, 40);
+    var fixedFontSize = Number(window.GetProperty(FONT_PROPERTY, 0)) || 0;
+    var gapScale = fixedFontSize > 0 ? 100 : automaticFontScale();
+    var scaledGap = Math.max(0, Math.round(baseGap * gapScale / 100));
+    return tabHeight + scaledGap;
+}
+
+function setTabAreaHeight(value) {
+    value = Math.round(Number(value) || 0);
+    window.SetProperty(TAB_AREA_HEIGHT_PROPERTY, value <= 0 ? 0 : DOJSP3.clamp(value, 18, 240));
+    layoutInfoStack();
+    window.Repaint();
+}
+
+function panelAt(index) {
+    return DOJSP3.panel(INFO_PANELS[index].title);
+}
+
+function applyVisibility() {
+    ensureActiveTab();
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        var p = panelAt(i);
+        DOJSP3.show(p, isTabVisible(i) && i === activeIndex);
+    }
+}
+
+function layoutInfoStack() {
+    if (ww <= 0 || wh <= 0) return;
+
+    ensureActiveTab();
+    rebuildFont();
+    var requestedAreaHeight = configuredTabAreaHeight();
+    var desiredAreaHeight = requestedAreaHeight > 0 ? requestedAreaHeight : automaticTabAreaHeight();
+    var maximumAreaHeight = Math.max(1, wh - 1);
+    var minimumAreaHeight = Math.min(Math.max(18, tabHeight), maximumAreaHeight);
+
+    tabAreaHeight = Math.max(minimumAreaHeight, Math.min(desiredAreaHeight, maximumAreaHeight));
+    contentHeight = Math.max(1, wh - tabAreaHeight);
+    tabY = contentHeight;
+    // Recalculate from the final boundary so the child area and tab area
+    // always consume the splitter exactly, even at very small dimensions.
+    tabAreaHeight = Math.max(1, wh - tabY);
+
+    var allChildrenAvailable = true;
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        var child = panelAt(i);
+        if (!child) allChildrenAvailable = false;
+        DOJSP3.move(child, 0, 0, ww, contentHeight);
+    }
+    applyVisibility();
+    if (!startupLayoutReady && allChildrenAvailable) signalStartupReady();
+}
+
+function selectPanel(index, notify) {
+    index = DOJSP3.clamp(Math.round(Number(index) || 0), 0, INFO_PANELS.length - 1);
+    if (!isTabVisible(index) || activeIndex === index) return;
+
+    activeIndex = index;
+    window.SetProperty(ACTIVE_PROPERTY, activeIndex);
+    applyVisibility();
+    window.Repaint();
+
+    if (notify !== false) {
+        window.NotifyOthers('DarkOneJSP3.InfoStack.SelectionChanged', activeIndex);
+    }
+}
+
+function nearestVisibleIndex(fromIndex) {
+    var visible = visibleIndexes();
+    if (!visible.length) return -1;
+
+    for (var i = 0; i < visible.length; i++) {
+        if (visible[i] > fromIndex) return visible[i];
+    }
+    for (var j = visible.length - 1; j >= 0; j--) {
+        if (visible[j] < fromIndex) return visible[j];
+    }
+    return visible[0];
+}
+
+function setTabVisible(index, visible) {
+    visible = Boolean(visible);
+    if (isTabVisible(index) === visible) return;
+
+    if (!visible && visibleIndexes().length <= 1) {
+        fb.ShowPopupMessage('At least one information tab must remain visible.', 'DarkOneJSP3');
+        return;
+    }
+
+    window.SetProperty(visibleProperty(index), visible);
+
+    if (!visible && activeIndex === index) {
+        var replacement = nearestVisibleIndex(index);
+        if (replacement >= 0) {
+            activeIndex = replacement;
+            window.SetProperty(ACTIVE_PROPERTY, activeIndex);
+            window.NotifyOthers('DarkOneJSP3.InfoStack.SelectionChanged', activeIndex);
+        }
+    }
+
+    hoverIndex = -1;
+    layoutInfoStack();
+    window.Repaint();
+}
+
+function setTabLabel(index, value) {
+    value = String(value || '').replace(/^\s+|\s+$/g, '');
+    if (!value) {
+        window.SetProperty(labelProperty(index), INFO_PANELS[index].defaultLabel);
+    } else {
+        // Keep accidental essays out of the tab strip while still allowing
+        // comfortably descriptive labels.
+        window.SetProperty(labelProperty(index), value.substring(0, 40));
+    }
+    window.RepaintRect(0, tabY, ww, tabAreaHeight);
+}
+
+function renameTab(index) {
+    try {
+        var current = tabLabel(index);
+        var entered = utils.InputBox(
+            'Enter the display title for this tab. Leave it empty to restore the default.\n\n' +
+            'This changes only the visible label, not the JSplitter child custom title.',
+            window.Name,
+            current
+        );
+        setTabLabel(index, entered);
+    } catch (e) {}
+}
+
+function applyLabelPreset(useTitleCase) {
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        window.SetProperty(
+            labelProperty(i),
+            useTitleCase ? INFO_PANELS[i].defaultLabel : INFO_PANELS[i].uppercaseLabel
+        );
+    }
+    window.RepaintRect(0, tabY, ww, tabAreaHeight);
+}
+
+function resetAllLabels() {
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        window.SetProperty(labelProperty(i), INFO_PANELS[i].defaultLabel);
+    }
+    window.RepaintRect(0, tabY, ww, tabAreaHeight);
+}
+
+function tabFromPoint(x, y) {
+    if (y < tabY || y >= tabY + tabAreaHeight || x < 0 || x >= ww) return -1;
+
+    var visible = visibleIndexes();
+    if (!visible.length) return -1;
+
+    var slot = DOJSP3.clamp(Math.floor(x * visible.length / Math.max(1, ww)), 0, visible.length - 1);
+    return visible[slot];
+}
+
+function backgroundMode() {
+    return DOJSP3.clamp(
+        Math.round(Number(window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE_DARK)) || 0),
+        BACKGROUND_TRANSPARENT,
+        BACKGROUND_COLUMNS_UI
+    );
+}
+
+function backgroundColour() {
+    var mode = backgroundMode();
+    if (mode === BACKGROUND_BLACK) return 0xff000000;
+    if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
+    if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;
+    if (mode === BACKGROUND_COLUMNS_UI) return columnsUiBackgroundColour();
+    if (mode === BACKGROUND_CUSTOM) {
+        return Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818));
+    }
+    return 0x00000000;
+}
+
+function colourToHex(colour) {
+    var rgb = Number(colour) % 0x1000000;
+    if (rgb < 0) rgb += 0x1000000;
+    var text = rgb.toString(16).toUpperCase();
+    while (text.length < 6) text = '0' + text;
+    return '#' + text;
+}
+
+function parseOpaqueColour(value) {
+    value = String(value || '').replace(/^\s+|\s+$/g, '');
+    var match;
+
+    match = value.match(/^#?([0-9a-f]{6})$/i);
+    if (match) return 0xff000000 + parseInt(match[1], 16);
+
+    match = value.match(/^\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*$/);
+    if (match) {
+        var r = DOJSP3.clamp(parseInt(match[1], 10), 0, 255);
+        var g = DOJSP3.clamp(parseInt(match[2], 10), 0, 255);
+        var b = DOJSP3.clamp(parseInt(match[3], 10), 0, 255);
+        return 0xff000000 + (r * 0x10000) + (g * 0x100) + b;
+    }
+
+    return null;
+}
+
+function opaqueColour(colour) {
+    return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
+}
+
+function columnsUiBackgroundColour() {
+    try {
+        return opaqueColour(window.GetColourCUI(3));
+    } catch (e) {
+        return DOJSP3.colours.bar;
+    }
+}
+
+function serialiseDividerState(mode, customColour) {
+    return DIVIDER_MESSAGE_VERSION + '|' +
+        String(mode) + '|' +
+        String(opaqueColour(customColour) >>> 0);
+}
+
+function parseDividerStateMessage(data) {
+    var parts = String(data || '').split('|');
+    if (parts.length !== 3 || parts[0] !== DIVIDER_MESSAGE_VERSION) return null;
+
+    var mode = Number(parts[1]);
+    var colour = Number(parts[2]);
+    if (isNaN(mode) || isNaN(colour)) return null;
+
+    return {
+        mode: DOJSP3.clamp(
+            Math.round(mode),
+            DIVIDER_TRANSPARENT,
+            DIVIDER_COLUMNS_UI
+        ),
+        customColour: opaqueColour(colour)
+    };
+}
+
+function requestDividerState() {
+    window.NotifyOthers(DIVIDER_QUERY_NOTIFICATION, DIVIDER_MESSAGE_VERSION);
+}
+
+function setDividerState(mode, customColour) {
+    dividerMenuMode = DOJSP3.clamp(
+        Math.round(Number(mode) || 0),
+        DIVIDER_TRANSPARENT,
+        DIVIDER_COLUMNS_UI
+    );
+    if (typeof customColour !== 'undefined') {
+        dividerMenuCustomColour = opaqueColour(customColour);
+    }
+    dividerMenuStateKnown = true;
+    window.NotifyOthers(
+        DIVIDER_SET_NOTIFICATION,
+        serialiseDividerState(dividerMenuMode, dividerMenuCustomColour)
+    );
+}
+
+function chooseCustomDividerColour() {
+    var chosen = null;
+    try {
+        if (utils && typeof utils.ColourPicker === 'function') {
+            chosen = utils.ColourPicker(0, dividerMenuCustomColour);
+        }
+    } catch (e) {
+        chosen = null;
+    }
+    if (chosen === null || typeof chosen === 'undefined' ||
+            isNaN(Number(chosen))) return;
+    setDividerState(DIVIDER_CUSTOM, chosen);
+}
+
+function parseStartupControlState(data) {
+    var parts = String(data || '').split('|');
+    if (parts.length !== 5 ||
+            parts[0] !== STARTUP_CONTROL_MESSAGE_VERSION ||
+            parts[1] !== 'state') return null;
+
+    var transition = Number(parts[2]);
+    var minimumDelay = Number(parts[3]);
+    var readinessTimeout = Number(parts[4]);
+    if (isNaN(transition) || isNaN(minimumDelay) ||
+            isNaN(readinessTimeout)) return null;
+
+    return {
+        transition: DOJSP3.clamp(
+            Math.round(transition),
+            STARTUP_OFF,
+            STARTUP_STAGED_REVEAL
+        ),
+        minimumDelay: DOJSP3.clamp(Math.round(minimumDelay), 0, 5000),
+        readinessTimeout: DOJSP3.clamp(
+            Math.round(readinessTimeout),
+            500,
+            10000
+        )
+    };
+}
+
+function applyStartupMenuState(state) {
+    startupMenuTransition = state.transition;
+    startupMenuMinimumDelay = state.minimumDelay;
+    startupMenuReadinessTimeout = state.readinessTimeout;
+    startupMenuStateKnown = true;
+}
+
+function requestStartupControlState() {
+    window.NotifyOthers(
+        STARTUP_CONTROL_QUERY_NOTIFICATION,
+        STARTUP_CONTROL_MESSAGE_VERSION
+    );
+}
+
+function sendStartupControlCommand(action, key, value) {
+    var message = STARTUP_CONTROL_MESSAGE_VERSION + '|' + String(action);
+    if (action === 'set') {
+        message += '|' + String(key) + '|' + String(Math.round(value));
+    }
+    window.NotifyOthers(STARTUP_CONTROL_COMMAND_NOTIFICATION, message);
+}
+
+function setStartupTransition(mode) {
+    startupMenuTransition = DOJSP3.clamp(
+        Math.round(Number(mode) || 0),
+        STARTUP_OFF,
+        STARTUP_STAGED_REVEAL
+    );
+    startupMenuStateKnown = true;
+    sendStartupControlCommand('set', 'transition', startupMenuTransition);
+}
+
+function setStartupTiming(key, title, current, minimum, maximum) {
+    try {
+        var entered = Math.round(Number(utils.InputBox(
+            'Enter a value from ' + minimum + ' to ' + maximum +
+                ' milliseconds.',
+            title,
+            String(current)
+        )));
+        if (!isFinite(entered) || entered < minimum || entered > maximum) {
+            try {
+                fb.ShowPopupMessage(
+                    'Enter a value from ' + minimum + ' to ' + maximum +
+                        ' milliseconds.',
+                    title
+                );
+            } catch (e) {}
+            return;
+        }
+        if (key === 'minimum-delay') startupMenuMinimumDelay = entered;
+        else startupMenuReadinessTimeout = entered;
+        startupMenuStateKnown = true;
+        sendStartupControlCommand('set', key, entered);
+    } catch (e2) {}
+}
+
+function restoreStartupControlDefaults() {
+    startupMenuTransition = STARTUP_OFF;
+    startupMenuMinimumDelay = 250;
+    startupMenuReadinessTimeout = 2000;
+    startupMenuStateKnown = true;
+    sendStartupControlCommand('restore');
+}
+
+function tabColourMode() {
+    return DOJSP3.clamp(
+        Math.round(Number(window.GetProperty(TAB_COLOUR_MODE_PROPERTY, TAB_COLOUR_DEFAULT)) || 0),
+        TAB_COLOUR_DEFAULT,
+        TAB_COLOUR_COLUMNS_UI_SELECTED
+    );
+}
+
+function storedCustomTabColour() {
+    return opaqueColour(window.GetProperty(TAB_CUSTOM_COLOUR_PROPERTY, DOJSP3.colours.buttonNormal));
+}
+
+function tabAccentColour() {
+    var mode = tabColourMode();
+    if (mode === TAB_COLOUR_CUSTOM) return storedCustomTabColour();
+    if (mode === TAB_COLOUR_COLUMNS_UI_SELECTED) {
+        return opaqueColour(window.GetColourCUI(4));
+    }
+    return DOJSP3.colours.buttonNormal;
+}
+
+function repaintTabArea() {
+    window.RepaintRect(0, tabY, ww, tabAreaHeight);
+}
+
+function setTabColourMode(mode) {
+    window.SetProperty(
+        TAB_COLOUR_MODE_PROPERTY,
+        DOJSP3.clamp(Math.round(Number(mode) || 0), TAB_COLOUR_DEFAULT, TAB_COLOUR_COLUMNS_UI_SELECTED)
+    );
+    repaintTabArea();
+}
+
+function setCustomTabColour() {
+    var current = storedCustomTabColour();
+    var chosen = null;
+    var pickerInvoked = false;
+
+    // JSplitter's native picker requires two arguments. The first window-id
+    // parameter is currently unused by the component, but it must still be
+    // supplied; JScript Panel's one-argument signature is not compatible here.
+    try {
+        if (utils && typeof utils.ColourPicker === 'function') {
+            pickerInvoked = true;
+            chosen = utils.ColourPicker(0, current);
+        }
+    } catch (e) {
+        pickerInvoked = false;
+        chosen = null;
+    }
+
+    // Retain manual entry only as a compatibility fallback when the native
+    // picker could not be invoked. Cancelling a successfully opened picker must
+    // not immediately replace it with an InputBox.
+    if (!pickerInvoked) {
+        try {
+            var entered = utils.InputBox(
+                'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #298FCC or 41,143,204',
+                window.Name,
+                colourToHex(current)
+            );
+            chosen = parseOpaqueColour(entered);
+        } catch (e2) {
+            chosen = null;
+        }
+    }
+
+    if (chosen === null || typeof chosen === 'undefined' || isNaN(Number(chosen))) return;
+
+    window.SetProperty(TAB_CUSTOM_COLOUR_PROPERTY, opaqueColour(chosen));
+    setTabColourMode(TAB_COLOUR_CUSTOM);
+}
+
+function setBackgroundMode(mode) {
+    window.SetProperty(BACKGROUND_MODE_PROPERTY, mode);
+    window.Repaint();
+}
+
+function setCustomBackgroundColour() {
+    try {
+        var current = Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818));
+        var entered = utils.InputBox(
+            'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #000000 or 24,24,24',
+            window.Name,
+            colourToHex(current)
+        );
+        var parsed = parseOpaqueColour(entered);
+        if (parsed === null) {
+            fb.ShowPopupMessage('That colour could not be parsed. Use #RRGGBB or R,G,B.', 'DarkOneJSP3');
+            return;
+        }
+        window.SetProperty(BACKGROUND_COLOUR_PROPERTY, parsed);
+        setBackgroundMode(BACKGROUND_CUSTOM);
+    } catch (e) {}
+}
+
+function on_colours_changed() {
+    window.Repaint();
+}
+
+function on_size(width, height) {
+    ww = width;
+    wh = height;
+    layoutInfoStack();
+    if (!dividerMenuStateKnown) requestDividerState();
+    if (!startupMenuStateKnown) requestStartupControlState();
+}
+
+function on_paint(gr) {
+    var mode = backgroundMode();
+    if (mode !== BACKGROUND_TRANSPARENT) {
+        gr.FillSolidRect(0, 0, ww, wh, backgroundColour());
+    }
+
+    var visible = visibleIndexes();
+    if (!visible.length) return;
+
+    var baseWidth = Math.floor(ww / visible.length);
+    for (var slot = 0; slot < visible.length; slot++) {
+        var index = visible[slot];
+        var x = slot * baseWidth;
+        var width = slot === visible.length - 1 ? ww - x : baseWidth;
+        var colour = index === activeIndex
+            ? DOJSP3.colours.buttonActive
+            : (index === hoverIndex ? DOJSP3.colours.buttonHover : tabAccentColour());
+        gr.GdiDrawText(tabLabel(index), font, colour, x, tabY, width, tabAreaHeight, TAB_TEXT_FLAGS);
+    }
+}
+
+function on_mouse_move(x, y) {
+    var next = tabFromPoint(x, y);
+    if (next !== hoverIndex) {
+        hoverIndex = next;
+        window.SetCursor(hoverIndex >= 0 ? CURSOR_HAND : CURSOR_ARROW);
+        window.RepaintRect(0, tabY, ww, tabAreaHeight);
+    }
+}
+
+function on_mouse_leave() {
+    if (hoverIndex !== -1) {
+        hoverIndex = -1;
+        window.SetCursor(CURSOR_ARROW);
+        window.RepaintRect(0, tabY, ww, tabAreaHeight);
+    }
+}
+
+function on_mouse_lbtn_up(x, y) {
+    var index = tabFromPoint(x, y);
+    if (index >= 0) selectPanel(index, true);
+}
+
+function on_mouse_rbtn_up(x, y) {
+    if (y < tabY) return false;
+
+    var targetIndex = tabFromPoint(x, y);
+    if (targetIndex < 0) targetIndex = activeIndex;
+
+    var menu = window.CreatePopupMenu();
+    var selectMenu = window.CreatePopupMenu();
+    var visibilityMenu = window.CreatePopupMenu();
+    var titlesMenu = window.CreatePopupMenu();
+    var fontMenu = window.CreatePopupMenu();
+    var tabColourMenu = window.CreatePopupMenu();
+    var areaMenu = window.CreatePopupMenu();
+    var backgroundMenu = window.CreatePopupMenu();
+    var dividerMenu = window.CreatePopupMenu();
+    var startupMenu = window.CreatePopupMenu();
+    var startupTransitionMenu = window.CreatePopupMenu();
+
+    if (!dividerMenuStateKnown) requestDividerState();
+    if (!startupMenuStateKnown) requestStartupControlState();
+
+    var i;
+    for (i = 0; i < INFO_PANELS.length; i++) {
+        selectMenu.AppendMenuItem(isTabVisible(i) ? MENU_STRING : MENU_GRAYED, 100 + i, menuLabel(tabLabel(i)));
+        visibilityMenu.AppendMenuItem(MENU_STRING, 300 + i, menuLabel(tabLabel(i)));
+        visibilityMenu.CheckMenuItem(300 + i, isTabVisible(i));
+        titlesMenu.AppendMenuItem(MENU_STRING, 400 + i, 'Rename ' + menuLabel(tabLabel(i)) + '...');
+    }
+    selectMenu.CheckMenuRadioItem(100, 100 + INFO_PANELS.length - 1, 100 + activeIndex);
+
+    titlesMenu.AppendMenuSeparator();
+    titlesMenu.AppendMenuItem(MENU_STRING, 450, 'Use Title Case defaults');
+    titlesMenu.AppendMenuItem(MENU_STRING, 451, 'Use UPPERCASE defaults');
+    titlesMenu.AppendMenuItem(MENU_STRING, 452, 'Reset ' + menuLabel(tabLabel(targetIndex)) + ' to default');
+    titlesMenu.AppendMenuItem(MENU_STRING, 453, 'Reset all titles to defaults');
+
+    fontMenu.AppendMenuItem(MENU_STRING, 200, 'Automatic tab font size');
+    fontMenu.CheckMenuItem(200, Number(window.GetProperty(FONT_PROPERTY, 0)) === 0);
+    fontMenu.AppendMenuItem(MENU_STRING, 201, 'Set fixed tab font size...');
+    fontMenu.AppendMenuSeparator();
+    fontMenu.AppendMenuItem(
+        MENU_STRING,
+        202,
+        'Set automatic base scale... (' + automaticFontScale() + '%)'
+    );
+    fontMenu.AppendMenuItem(
+        automaticFontScale() === 100 ? MENU_GRAYED : MENU_STRING,
+        203,
+        'Reset automatic base scale'
+    );
+
+    tabColourMenu.AppendMenuItem(MENU_STRING, 800, 'Default - DarkOne blue');
+    tabColourMenu.AppendMenuItem(MENU_STRING, 802, 'Columns UI selected-item background');
+    tabColourMenu.AppendMenuItem(
+        MENU_STRING,
+        801,
+        'Custom colour... (' + colourToHex(storedCustomTabColour()) + ')'
+    );
+    var selectedTabColourId = tabColourMode() === TAB_COLOUR_CUSTOM
+        ? 801
+        : (tabColourMode() === TAB_COLOUR_COLUMNS_UI_SELECTED ? 802 : 800);
+    tabColourMenu.CheckMenuRadioItem(800, 802, selectedTabColourId);
+
+    var configuredArea = configuredTabAreaHeight();
+    areaMenu.AppendMenuItem(MENU_STRING, 600, 'Automatic height (follows tab font sizing)');
+    areaMenu.CheckMenuItem(600, configuredArea === 0);
+    areaMenu.AppendMenuItem(MENU_STRING, 601, 'Set fixed tab area height...');
+
+    backgroundMenu.AppendMenuItem(MENU_STRING, 700, 'Transparent / inherit parent');
+    backgroundMenu.AppendMenuItem(MENU_STRING, 701, 'Black');
+    backgroundMenu.AppendMenuItem(MENU_STRING, 702, 'DarkOne grey');
+    backgroundMenu.AppendMenuItem(MENU_STRING, 703, 'DarkOne dark grey');
+    backgroundMenu.AppendMenuItem(MENU_STRING, 705, 'Columns UI global background');
+    backgroundMenu.AppendMenuItem(MENU_STRING, 704, 'Custom colour... (' + colourToHex(Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818))) + ')');
+    var selectedBackgroundId = backgroundMode() === BACKGROUND_CUSTOM
+        ? 704
+        : (backgroundMode() === BACKGROUND_DARKONE_DARK
+            ? 703
+            : (backgroundMode() === BACKGROUND_COLUMNS_UI
+                ? 705
+                : 700 + backgroundMode()));
+    backgroundMenu.CheckMenuRadioItem(700, 705, selectedBackgroundId);
+
+    dividerMenu.AppendMenuItem(MENU_STRING, 900, 'Transparent / inherit parent');
+    dividerMenu.AppendMenuItem(MENU_STRING, 901, 'Black');
+    dividerMenu.AppendMenuItem(MENU_STRING, 902, 'DarkOne grey');
+    dividerMenu.AppendMenuItem(MENU_STRING, 903, 'DarkOne dark grey');
+    dividerMenu.AppendMenuItem(MENU_STRING, 905, 'Columns UI global background');
+    dividerMenu.AppendMenuItem(
+        MENU_STRING,
+        904,
+        'Custom colour... (' + colourToHex(dividerMenuCustomColour) + ')'
+    );
+    var selectedDividerId = dividerMenuMode === DIVIDER_CUSTOM
+        ? 904
+        : (dividerMenuMode === DIVIDER_DARKONE_DARK
+            ? 903
+            : (dividerMenuMode === DIVIDER_COLUMNS_UI
+                ? 905
+                : 900 + dividerMenuMode));
+    dividerMenu.CheckMenuRadioItem(900, 905, selectedDividerId);
+
+    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1000, 'Off');
+    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1001, 'Black reveal');
+    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1002, 'Staged reveal');
+    startupTransitionMenu.CheckMenuRadioItem(
+        1000,
+        1002,
+        1000 + startupMenuTransition
+    );
+    startupTransitionMenu.AppendTo(startupMenu, MENU_POPUP, 'Transition');
+    startupMenu.AppendMenuItem(
+        MENU_STRING,
+        1010,
+        'Minimum black hold... (' + startupMenuMinimumDelay + ' ms)'
+    );
+    startupMenu.AppendMenuItem(
+        MENU_STRING,
+        1011,
+        'Layout-readiness timeout... (' +
+            startupMenuReadinessTimeout + ' ms)'
+    );
+    startupMenu.AppendMenuSeparator();
+    startupMenu.AppendMenuItem(
+        startupMenuTransition === STARTUP_OFF ? MENU_GRAYED : MENU_STRING,
+        1012,
+        'Preview startup transition'
+    );
+    startupMenu.AppendMenuItem(MENU_STRING, 1013, 'Restore startup defaults');
+
+    selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');
+    visibilityMenu.AppendTo(menu, MENU_POPUP, 'Visible tabs');
+    titlesMenu.AppendTo(menu, MENU_POPUP, 'Tab titles');
+    fontMenu.AppendTo(menu, MENU_POPUP, 'Tab font size');
+    tabColourMenu.AppendTo(menu, MENU_POPUP, 'Tab font colour');
+    areaMenu.AppendTo(menu, MENU_POPUP, 'Tab area');
+    backgroundMenu.AppendTo(menu, MENU_POPUP, 'InfoStack backing colour');
+    dividerMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');
+    startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');
+
+    // JSplitter's MenuObject is released by the host and does not expose
+    // the JSP3/SMP Dispose() method. Calling it aborts command handling.
+    var id = menu.TrackPopupMenu(x, y);
+
+    if (id >= 100 && id < 100 + INFO_PANELS.length) {
+        selectPanel(id - 100, true);
+    } else if (id === 200) {
+        window.SetProperty(FONT_PROPERTY, 0);
+        layoutInfoStack();
+        window.Repaint();
+    } else if (id === 201) {
+        try {
+            var current = Number(window.GetProperty(FONT_PROPERTY, 0)) || automaticFontSize();
+            var entered = Number(utils.InputBox(
+                'Enter the fixed tab font size in pixels. Enter 0 to return to automatic scaling.',
+                window.Name,
+                current
+            ));
+            if (!isNaN(entered)) {
+                window.SetProperty(
+                    FONT_PROPERTY,
+                    entered <= 0 ? 0 : DOJSP3.clamp(Math.round(entered), 8, 48)
+                );
+                layoutInfoStack();
+                window.Repaint();
+            }
+        } catch (e) {}
+    } else if (id === 202) {
+        try {
+            var enteredScale = Number(utils.InputBox(
+                'Adjust the responsive automatic font calculation as a percentage.\n\n' +
+                '100% preserves the normal DarkOne scaling. Suggested range: 75% to 150%.',
+                window.Name,
+                automaticFontScale()
+            ));
+            if (!isNaN(enteredScale)) {
+                window.SetProperty(
+                    AUTO_FONT_SCALE_PROPERTY,
+                    DOJSP3.clamp(Math.round(enteredScale), 50, 200)
+                );
+                layoutInfoStack();
+                window.Repaint();
+            }
+        } catch (e2) {}
+    } else if (id === 203) {
+        window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
+        layoutInfoStack();
+        window.Repaint();
+    } else if (id === 800) {
+        setTabColourMode(TAB_COLOUR_DEFAULT);
+    } else if (id === 801) {
+        setCustomTabColour();
+    } else if (id === 802) {
+        setTabColourMode(TAB_COLOUR_COLUMNS_UI_SELECTED);
+    } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
+        var visibilityIndex = id - 300;
+        setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));
+    } else if (id >= 400 && id < 400 + INFO_PANELS.length) {
+        renameTab(id - 400);
+    } else if (id === 450) {
+        applyLabelPreset(true);
+    } else if (id === 451) {
+        applyLabelPreset(false);
+    } else if (id === 452) {
+        setTabLabel(targetIndex, '');
+    } else if (id === 453) {
+        resetAllLabels();
+    } else if (id === 600) {
+        setTabAreaHeight(0);
+    } else if (id === 601) {
+        try {
+            var currentHeight = configuredTabAreaHeight() || Math.round(tabAreaHeight || automaticTabAreaHeight());
+            var enteredHeight = Number(utils.InputBox(
+                'Enter a fixed tab-area height in pixels. Enter 0 to restore automatic height.\n\n' +
+                'The minimum height automatically expands when required to fit the selected tab font.',
+                window.Name,
+                currentHeight
+            ));
+            if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
+        } catch (e) {}
+    } else if (id === 700) {
+        setBackgroundMode(BACKGROUND_TRANSPARENT);
+    } else if (id === 701) {
+        setBackgroundMode(BACKGROUND_BLACK);
+    } else if (id === 702) {
+        setBackgroundMode(BACKGROUND_DARKONE);
+    } else if (id === 703) {
+        setBackgroundMode(BACKGROUND_DARKONE_DARK);
+    } else if (id === 704) {
+        setCustomBackgroundColour();
+    } else if (id === 705) {
+        setBackgroundMode(BACKGROUND_COLUMNS_UI);
+    } else if (id === 900) {
+        setDividerState(DIVIDER_TRANSPARENT);
+    } else if (id === 901) {
+        setDividerState(DIVIDER_BLACK);
+    } else if (id === 902) {
+        setDividerState(DIVIDER_DARKONE);
+    } else if (id === 903) {
+        setDividerState(DIVIDER_DARKONE_DARK);
+    } else if (id === 904) {
+        chooseCustomDividerColour();
+    } else if (id === 905) {
+        setDividerState(DIVIDER_COLUMNS_UI);
+    } else if (id === 1000 || id === 1001 || id === 1002) {
+        setStartupTransition(id - 1000);
+    } else if (id === 1010) {
+        setStartupTiming(
+            'minimum-delay',
+            'DarkOneJSP3 minimum black hold',
+            startupMenuMinimumDelay,
+            0,
+            5000
+        );
+    } else if (id === 1011) {
+        setStartupTiming(
+            'readiness-timeout',
+            'DarkOneJSP3 layout-readiness timeout',
+            startupMenuReadinessTimeout,
+            500,
+            10000
+        );
+    } else if (id === 1012) {
+        sendStartupControlCommand('preview');
+    } else if (id === 1013) {
+        restoreStartupControlDefaults();
+    }
+    return true;
+}
+
+function on_notify_data(name, data) {
+    if (name === STARTUP_CONTROL_STATE_NOTIFICATION) {
+        var startupState = parseStartupControlState(data);
+        if (startupState) applyStartupMenuState(startupState);
+        return;
+    }
+
+    if (name === DIVIDER_STATE_NOTIFICATION) {
+        var receivedState = parseDividerStateMessage(data);
+        if (receivedState) {
+            dividerMenuMode = receivedState.mode;
+            dividerMenuCustomColour = receivedState.customColour;
+            dividerMenuStateKnown = true;
+        }
+        return;
+    }
+
+    if (darkOneJsp3HandleReset(name, data)) return;
+    if (name === 'DarkOneJSP3.InfoStack.Select') {
+        selectPanel(data, false);
+    } else if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
+        signalStartupReady();
+    }
+}

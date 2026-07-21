@@ -1,0 +1,55 @@
+DarkOneJSP3 v0.7.34 Validation Report
+=====================================
+
+Scope
+-----
+This report covers the files evaluated by the bundled release validator. Its
+scope includes package structure, runtime scripts, configuration and reset
+behaviour, metadata, documentation and intentional compatibility mirrors.
+
+Checks
+------
+- Required project, documentation, controller and sample files are present.
+- Temporary, backup, empty and case-colliding package files are rejected.
+- Build metadata and the layout manifest identify the same release version.
+- Active scripts use the current DarkOneJSP3 namespace and supported panel
+  titles.
+- Local @import paths resolve inside the distributed package.
+- JavaScript modules and active .txt entry scripts pass Node syntax checks.
+- Python maintenance tools pass py_compile.
+- Intentional compatibility mirror files remain byte-for-byte identical.
+- Every reset callback imports its registry and bridge dependencies.
+- Coordinated resets use serialised payloads while retaining legacy payload
+  compatibility.
+- Startup settings remain owned by the root controller and preserve the tested
+  reveal timing and first-layout safeguards.
+- Biography, Last.fm, Album Notes, Queue and Properties use the shared Page
+  background colour implementation and coordinated reset defaults.
+- InfoStack, page, side-divider and waveform palettes preserve their documented
+  defaults, saved mode values and Columns UI global-background behaviour.
+- InfoStack tab labels and the centre-display accent preserve their existing
+  Default and Custom modes and can follow the Columns UI selected-item
+  background colour.
+- Upper-divider colour controls retain established geometry and do not alter
+  the lower control dividers.
+- Album Notes provider settings, caching controls and embedded MusicBrainz
+  settings are included in coordinated reset coverage.
+- Managed AllMusic activation completes or fails closed without leaving a
+  provider request indefinitely pending.
+- JS Playlist and Playlist Manager refresh, scrolling and appearance defaults
+  are covered by the canonical registry.
+- Playlist Manager clears all tracked timers during script unload.
+- Public documentation uses current project identifiers and contains only the
+  current package version outside CHANGELOG.txt.
+- Documentation headings, numbered sections and README links are internally
+  consistent.
+- Troubleshooting guidance describes current behaviour without development
+  upgrade instructions.
+- CHANGELOG.txt contains one document title and a correctly formatted entry for
+  the current release.
+
+Result
+------
+Run the bundled validator from the package root to reproduce these checks:
+
+  python DarkOneJSP3\tools\validate_release.py .

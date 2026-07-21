@@ -1,0 +1,40 @@
+// ==PREPROCESSOR==
+// @name "JS Playlist - DarkOneJSP3 Enhanced"
+// @version "0.4.7"
+// @author "Br3tt aka Falstaff / DeViLhoOD"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
+// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
+// @import "%fb2k_component_path%samples\jsplaylist\topbar.js"
+// @import "%fb2k_component_path%samples\jsplaylist\scrollbar.js"
+// @import "%fb2k_component_path%samples\jsplaylist\headerbar.js"
+// @import "%fb2k_component_path%samples\jsplaylist\playlist.js"
+// @import "%fb2k_component_path%samples\jsplaylist\playlistmanager.js"
+// @import "%fb2k_component_path%samples\jsplaylist\settings.js"
+// @import "%fb2k_component_path%samples\jsplaylist\main.js"
+// ==/PREPROCESSOR==
+
+/*
+DarkOneJSP3 enhancements
+-----------------------
+- Restored the smooth row-transition system present in the final DarkOne2021 build.
+- Configurable high-refresh repaint timing (8/10/12/16 ms or custom).
+- Configurable wheel throttle, smoothness divisor and wheel row step.
+- Optional free pixel scrolling with row snapping disabled.
+- Independent row-snapping control for scrollbar-thumb dragging.
+- Free wheel distance supports custom values up to 240 pixels.
+- Faster scrollbar-drag repainting.
+- Explicit unload cleanup for timers and wallpaper resources.
+- Single-silhouette, anti-aliased Panel Settings back arrow at every UI scale.
+- Uniform normal/hover opacity with no overlapping-stroke darkening.
+
+Right-click the playlist and open "Smooth scrolling" to configure these options.
+Defaults: enabled, 8 ms refresh, divisor 2, wheel and scrollbar snapping enabled, 3 rows per notch.
+*/
+
+// https://jscript-panel.github.io/gallery/jsplaylist/
+
+function on_notify_data(name, info) {
+    darkOneJsp3HandleSampleReset(name, info, "js-playlist");
+}

@@ -1,0 +1,20 @@
+// ==PREPROCESSOR==
+// @name "VU Meter"
+// @author "Case"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\vu_meter.js"
+// ==/PREPROCESSOR==
+
+// Original version, resize to show/hide labels, horizontal only
+
+var timer_interval = 1000 / 60; // in ms (default: 60 fps update rate)
+var rms_window = 50 / 1000; // in seconds (default: 50 ms)
+var peak_hold = 20; // in frames
+var peak_fall_mul = 0.99;
+var peak_bar_width = 1; // in pixels
+var minDB = -60; // minimum dB on the meter (meter range)
+var maxDB = 5; // maximum dB on the meter (meter range)
+
+init();

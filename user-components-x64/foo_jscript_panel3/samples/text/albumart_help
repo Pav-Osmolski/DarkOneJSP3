@@ -1,0 +1,17 @@
+The following types are supported:
+
+front_embedded
+front_default
+front_stub
+back_embedded
+back_default
+back_stub
+disc_embedded
+disc_default
+disc_stub
+icon_embedded
+artist_embedded
+aritst_default
+artist_stub
+
+Add/remove/rearrange the order to suit your needs. _default and _stub come from the main foobar2000 album art preferences.

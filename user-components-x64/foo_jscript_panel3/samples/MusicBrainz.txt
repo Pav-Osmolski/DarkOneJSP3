@@ -1,0 +1,109 @@
+// ==PREPROCESSOR==
+// @name "MusicBrainz - DarkOneJSP3 Enhanced"
+// @version "0.6.3"
+// @author "marc2003 / DeViLhoOD"
+// @import "lodash"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
+// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\js\common.js"
+// @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\darkone_network.js"
+// @import "%fb2k_component_path%samples\js\musicbrainz.js"
+// ==/PREPROCESSOR==
+
+// DarkOneJSP3 enhancements:
+// - artist/album-artist selection
+// - optional artist-ID resolution when MusicBrainz tags are missing
+// - MusicBrainz-compliant request scheduling and HTTP status handling
+// - configurable cache age, release limit, sorting and link labels
+// - dynamic release-group categories, persistent scroll position and cache tools
+
+var panel = new _panel();
+var musicbrainz = new _musicbrainz(LM, TM, 0, 0);
+
+panel.item_focus_change();
+
+function on_colours_changed() {
+	panel.colours_changed();
+	window.Repaint();
+}
+
+function on_font_changed() {
+	panel.font_changed();
+	window.Repaint();
+}
+
+function on_http_request_done(task_id, success, response_text, status, response_headers) {
+	musicbrainz.http_request_done(task_id, success, response_text, status, response_headers);
+}
+
+function on_item_focus_change() {
+	if (panel.prefer_playing())
+		return;
+
+	panel.item_focus_change();
+}
+
+function on_key_down(k) {
+	musicbrainz.key_down(k);
+}
+
+function on_metadb_changed(handles, fromhook) {
+	if (fromhook)
+		return;
+
+	musicbrainz.metadb_changed();
+}
+
+function on_mouse_lbtn_up(x, y) {
+	musicbrainz.lbtn_up(x, y);
+}
+
+function on_mouse_move(x, y) {
+	musicbrainz.move(x, y);
+}
+
+function on_notify_data(name, info) {
+	if (darkOneJsp3HandleSampleReset(name, info, "musicbrainz")) return;
+	musicbrainz.notify_data(name, info);
+}
+
+function on_mouse_rbtn_up(x, y) {
+	return panel.rbtn_up(x, y, musicbrainz);
+}
+
+function on_mouse_wheel(s) {
+	musicbrainz.wheel(s);
+}
+
+function on_paint(gr) {
+	panel.paint(gr);
+	panel.draw_header(gr, musicbrainz.header_text());
+	musicbrainz.paint(gr);
+}
+
+function on_playback_new_track() {
+	panel.item_focus_change();
+}
+
+function on_playback_stop(reason) {
+	if (reason != 2) {
+		panel.item_focus_change();
+	}
+}
+
+function on_playlist_switch() {
+	on_item_focus_change();
+}
+
+function on_script_unload() {
+	musicbrainz.dispose();
+}
+
+function on_size() {
+	panel.size();
+	musicbrainz.w = panel.w - (LM * 2);
+	musicbrainz.h = panel.h - TM;
+	musicbrainz.size();
+}

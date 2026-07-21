@@ -1,0 +1,2 @@
+window.DrawMode = 1;
+include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\04_art_spectrum.js');
