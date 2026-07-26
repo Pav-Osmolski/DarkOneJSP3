@@ -1,5 +1,5 @@
 {
-  "version": "0.8.0",
+  "version": "0.8.1",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -626,7 +626,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -634,7 +634,11 @@
       "required_paths_data_driven": true,
       "module_versions_data_driven": true,
       "command_line_invocation_unchanged": true,
-      "runtime_scripts_unchanged": true
+      "runtime_scripts_unchanged": true,
+      "manifest_inventory_checked": true,
+      "runtime_assets_checked": true,
+      "repository_assets_checked_when_present": true,
+      "manual_fcl_excluded": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

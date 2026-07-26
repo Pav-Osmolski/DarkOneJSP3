@@ -1,6 +1,23 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.8.1 - Post-consolidation release hardening
+---------------------------------------------
+
+- Added manifest-driven validation for every scripted JSplitter controller and
+  panel source, preventing incomplete layouts from passing release checks.
+- Expanded required-file coverage for controller loaders, runtime wrappers,
+  shared dependencies and DarkOneJSP3 bitmap assets.
+- Completed data-driven build-module version checks for MusicBrainz, Playlist
+  Manager, network headers and both consolidated JSplitter controllers.
+- Made repository artwork links validate whenever the repository assets folder
+  is present while keeping promotional artwork optional in runtime archives.
+- Corrected validator reporting so the manually maintained FCL is explicitly
+  excluded from the audited-file count and all validation logic.
+- Clarified that the supplied scripted Queue Viewer is the default and the
+  native Queue Viewer component is an optional alternative.
+- Kept all foobar2000 runtime scripts and saved-setting contracts unchanged.
+
 v0.8.0 - Modular release-validator consolidation
 ------------------------------------------------
 

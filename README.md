@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.8.0
+  <strong>Current stable release:</strong> v0.8.1
 </p>
 
 > [!IMPORTANT]
@@ -65,7 +65,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.8.0** is the current stable release.
+**DarkOneJSP3 v0.8.1** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -83,10 +83,13 @@ starting layout.
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
 * [JSplitter 4.x, tested with 4.1.11](https://github.com/dima-lur/jsplitter/releases)
-* [Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)
 * [Quick Search Toolbar](https://www.foobar2000.org/components/view/foo_quicksearch)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
+
+The supplied scripted Queue Viewer is used by default. The native
+[Queue Viewer](https://marc2k3.github.io/component/queue-viewer/) component
+is optional and may be used as an alternative.
 
 Third-party component binaries are not included. Install compatible versions
 from their official project pages or trusted foobar2000 component sources

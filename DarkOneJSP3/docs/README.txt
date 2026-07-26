@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.0
+DarkOneJSP3 v0.8.1
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021

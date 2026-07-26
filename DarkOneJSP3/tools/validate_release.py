@@ -26,11 +26,12 @@ def main(argv: list[str] | None = None) -> int:
 
     count = sum(
         1 for path in root.rglob('*')
-        if path.is_file() and '__pycache__' not in path.parts
+        if path.is_file() and '__pycache__' not in path.parts and
+        path.suffix.lower() != '.fcl'
     )
     print(
         f'DarkOneJSP3 v{ctx.version} validation passed: '
-        f'{count} files, zero warnings.'
+        f'{count} audited files, zero warnings; FCL excluded.'
     )
     return 0
 

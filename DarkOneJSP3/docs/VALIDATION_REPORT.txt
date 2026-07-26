@@ -1,17 +1,25 @@
-DarkOneJSP3 v0.8.0 Validation Report
+DarkOneJSP3 v0.8.1 Validation Report
 ====================================
 
 Scope
 -----
 This report covers the files evaluated by the bundled release validator. Its
 scope includes package structure, runtime scripts, configuration and reset
-behaviour, metadata, documentation and intentional compatibility mirrors.
+behaviour, metadata, documentation and intentional compatibility mirrors. The
+maintainer-managed DarkOneJSP3.fcl is deliberately excluded from inspection,
+validation and the audited-file count.
 
 Checks
 ------
-- Required project, documentation, controller and sample files are present.
+- Required project, documentation, controller, loader, wrapper, sample and
+  runtime bitmap files are present.
+- Every scripted JSplitter and panel source declared by the layout manifest
+  resolves to a distributed file; native-component entries are identified
+  explicitly.
 - Temporary, backup, empty and case-colliding package files are rejected.
 - Build metadata and the layout manifest identify the same release version.
+- Every fixed module version recorded by build metadata matches its maintained
+  data-driven expectation.
 - The validator entry point delegates to focused static and runtime check
   modules through a shared validation context.
 - Required package paths and fixed module-version expectations are maintained
@@ -62,7 +70,8 @@ Checks
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.
 - Documentation headings, numbered sections and README links are internally
-  consistent.
+  consistent; repository artwork is checked whenever an assets folder is
+  present.
 - Troubleshooting guidance describes current behaviour without development
   upgrade instructions.
 - CHANGELOG.txt contains one document title and a correctly formatted entry for

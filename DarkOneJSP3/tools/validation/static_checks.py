@@ -129,12 +129,90 @@ def run(ctx: ValidationContext) -> None:
             manifest = {}
         if str(manifest.get('version', '')) != version:
             errors.append('Layout manifest version does not match build-info.json')
+
+
+        # The manifest is the authoritative inventory for the scripted layout.
+        # Validate every declared controller and panel source instead of relying
+        # on later token checks that may silently skip a missing file.
+        jsplitters = manifest.get('jsplitters', [])
+        if not isinstance(jsplitters, list) or len(jsplitters) != 6:
+            errors.append('Layout manifest must declare exactly six JSplitters')
+            jsplitters = []
+        jsplitter_numbers = []
+        jsplitter_titles = []
+        jsplitter_scripts = []
+        for item in jsplitters:
+            if not isinstance(item, dict):
+                errors.append('Layout manifest contains an invalid JSplitter entry')
+                continue
+            number = item.get('number')
+            title = str(item.get('title', '')).strip()
+            script = str(item.get('script', '')).strip()
+            if isinstance(number, int) and not isinstance(number, bool):
+                jsplitter_numbers.append(number)
+            else:
+                errors.append('Layout manifest JSplitter number is invalid')
+            jsplitter_titles.append(title)
+            jsplitter_scripts.append(script)
+            if not title or not script:
+                errors.append('Layout manifest JSplitter entry is incomplete')
+                continue
+            target = project / 'jsplitter' / script
+            if not target.is_file():
+                errors.append(
+                    'Layout manifest JSplitter source is missing: ' + rel(target)
+                )
+        if sorted(jsplitter_numbers) != list(range(1, 7)):
+            errors.append('Layout manifest JSplitter numbers must be unique 1-6')
+        if len(set(jsplitter_titles)) != len(jsplitter_titles):
+            errors.append('Layout manifest contains duplicate JSplitter titles')
+        if len(set(jsplitter_scripts)) != len(jsplitter_scripts):
+            errors.append('Layout manifest contains duplicate JSplitter scripts')
+
+        panels = manifest.get('panels', [])
+        if not isinstance(panels, list) or len(panels) != 14:
+            errors.append('Layout manifest must declare exactly fourteen panels')
+            panels = []
+        panel_numbers = []
+        panel_titles_list = []
+        for item in panels:
+            if not isinstance(item, dict):
+                errors.append('Layout manifest contains an invalid panel entry')
+                continue
+            number = item.get('number')
+            title = str(item.get('title', '')).strip()
+            source = str(item.get('source', '')).strip()
+            if isinstance(number, int) and not isinstance(number, bool):
+                panel_numbers.append(number)
+            else:
+                errors.append('Layout manifest panel number is invalid')
+            panel_titles_list.append(title)
+            if not title or not source:
+                errors.append('Layout manifest panel entry is incomplete')
+                continue
+            if source == 'native component':
+                continue
+            if source.startswith('samples/'):
+                target = samples / source[len('samples/'):]
+            elif source.startswith('DarkOneJSP3/'):
+                target = root / source
+            else:
+                errors.append('Layout manifest panel source is unsupported: ' + source)
+                continue
+            if not target.is_file():
+                errors.append(
+                    'Layout manifest panel source is missing: ' + rel(target)
+                )
+        if sorted(panel_numbers) != list(range(1, 15)):
+            errors.append('Layout manifest panel numbers must be unique 1-14')
+        if len(set(panel_titles_list)) != len(panel_titles_list):
+            errors.append('Layout manifest contains duplicate panel titles')
         validation_tooling = manifest.get('enhancements', {}).get(
             'validation_tooling', {})
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.2.0',
+            'version': '0.2.1',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -143,6 +221,10 @@ def run(ctx: ValidationContext) -> None:
             'module_versions_data_driven': True,
             'command_line_invocation_unchanged': True,
             'runtime_scripts_unchanged': True,
+            'manifest_inventory_checked': True,
+            'runtime_assets_checked': True,
+            'repository_assets_checked_when_present': True,
+            'manual_fcl_excluded': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -796,16 +878,23 @@ def run(ctx: ValidationContext) -> None:
     readme_path = root / 'README.md'
     if readme_path.exists():
         readme_body = text(readme_path)
-        # The canonical repository README references promotional artwork maintained
-        # alongside the GitHub repository rather than the runtime release payload.
+        # Promotional artwork is maintained in the GitHub repository and may be
+        # omitted from runtime release archives. When an assets folder is present,
+        # however, every referenced repository image must also be present.
         repository_only_assets = {
             'assets/darkonejsp3-logo.png',
             'assets/darkonejsp3-screenshot-main.jpg',
             'assets/darkonejsp3-screenshot-albumnotes.jpg',
         }
-        for target in re.findall(r'\[[^\]]+\]\(([^)]+)\)', readme_body):
-            if '://' in target or target.startswith('#') or \
-                    target in repository_only_assets:
+        readme_targets = re.findall(r'\[[^\]]+\]\(([^)]+)\)', readme_body)
+        readme_targets += re.findall(r'<img\s+[^>]*src=["\']([^"\']+)', readme_body, re.I)
+        repository_assets_present = (root / 'assets').is_dir()
+        for target in readme_targets:
+            if '://' in target or target.startswith('#'):
+                continue
+            if Path(target).suffix.lower() == '.fcl':
+                continue
+            if target in repository_only_assets and not repository_assets_present:
                 continue
             resolved = (root / target.replace('/', os.sep)).resolve()
             if not resolved.exists():
