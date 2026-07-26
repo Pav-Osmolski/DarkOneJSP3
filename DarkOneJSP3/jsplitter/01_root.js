@@ -1,5 +1,8 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+// v0.7.36 centralises startup-control serialisation, notification names and
+// readiness handshakes in the shared JSplitter protocol helper.
+
 var DARKONEJSP3_RESET_ROLE = "root";
 
 // Replaces Panel Stack Splitter 01.
@@ -22,28 +25,13 @@ var STARTUP_TRANSITION_PROPERTY = 'DARKONEJSP3.STARTUP.TRANSITION';
 var STARTUP_MINIMUM_DELAY_PROPERTY = 'DARKONEJSP3.STARTUP.MINIMUM.DELAY';
 var STARTUP_SAFETY_TIMEOUT_PROPERTY = 'DARKONEJSP3.STARTUP.SAFETY.TIMEOUT';
 
-var STARTUP_OFF = 0;
-var STARTUP_BLACK_REVEAL = 1;
-var STARTUP_STAGED_REVEAL = 2;
+var STARTUP_PROTOCOL = DarkOneProtocol.startup;
+var STARTUP_OFF = STARTUP_PROTOCOL.transitions.off;
+var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;
+var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;
 var STARTUP_STAGE_GAP_MS = 125;
 var STARTUP_PREPAINT_DELAY_MS = 150;
-
-
-var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';
-var STARTUP_CONTROL_QUERY_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.Query';
-var STARTUP_CONTROL_COMMAND_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.Command';
-var STARTUP_CONTROL_STATE_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.State';
-
-var STARTUP_CONTROLLERS = [
-    'MainColumns',
-    'InfoStack',
-    'ArtSpectrum',
-    'BottomControls',
-    'DisplayWaveform'
-];
+var STARTUP_CONTROLLERS = STARTUP_PROTOCOL.controllers;
 
 var ww = 0;
 var wh = 0;
@@ -60,26 +48,32 @@ var rootMainVisible = false;
 var rootControlsVisible = false;
 
 function startupTransition() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(STARTUP_TRANSITION_PROPERTY, STARTUP_OFF)) || 0),
-        STARTUP_OFF,
-        STARTUP_STAGED_REVEAL
+    return STARTUP_PROTOCOL.normaliseValue(
+        'transition',
+        window.GetProperty(
+            STARTUP_TRANSITION_PROPERTY,
+            STARTUP_PROTOCOL.defaults.transition
+        )
     );
 }
 
 function startupMinimumDelay() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(STARTUP_MINIMUM_DELAY_PROPERTY, 250)) || 0),
-        0,
-        5000
+    return STARTUP_PROTOCOL.normaliseValue(
+        'minimum-delay',
+        window.GetProperty(
+            STARTUP_MINIMUM_DELAY_PROPERTY,
+            STARTUP_PROTOCOL.defaults.minimumDelay
+        )
     );
 }
 
 function startupSafetyTimeout() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(STARTUP_SAFETY_TIMEOUT_PROPERTY, 2000)) || 0),
-        500,
-        10000
+    return STARTUP_PROTOCOL.normaliseValue(
+        'readiness-timeout',
+        window.GetProperty(
+            STARTUP_SAFETY_TIMEOUT_PROPERTY,
+            STARTUP_PROTOCOL.defaults.readinessTimeout
+        )
     );
 }
 
@@ -222,7 +216,7 @@ function beginStartupGate(preview) {
 
     // Ask controllers that may have completed before the root's first size
     // callback to repeat their readiness notification.
-    window.NotifyOthers('DarkOneJSP3.Startup.QueryReady', true);
+    window.NotifyOthers(STARTUP_PROTOCOL.notifications.queryReady, true);
 
     var effectiveSafety = Math.max(startupSafetyTimeout(), minimum + 250);
     safetyTimer = setTimeout(function () {
@@ -250,19 +244,23 @@ function layoutRoot() {
     DOJSP3.show(controls, rootControlsVisible);
 }
 
+function startupPropertyKey(name) {
+    if (name === STARTUP_TRANSITION_PROPERTY) return 'transition';
+    if (name === STARTUP_MINIMUM_DELAY_PROPERTY) return 'minimum-delay';
+    if (name === STARTUP_SAFETY_TIMEOUT_PROPERTY) return 'readiness-timeout';
+    return '';
+}
+
+function startupPropertyForKey(key) {
+    if (key === 'transition') return STARTUP_TRANSITION_PROPERTY;
+    if (key === 'minimum-delay') return STARTUP_MINIMUM_DELAY_PROPERTY;
+    if (key === 'readiness-timeout') return STARTUP_SAFETY_TIMEOUT_PROPERTY;
+    return '';
+}
+
 function normaliseStartupProperty(name, value) {
-    value = Math.round(Number(value));
-    if (!isFinite(value)) return null;
-    if (name === STARTUP_TRANSITION_PROPERTY) {
-        return DOJSP3.clamp(value, STARTUP_OFF, STARTUP_STAGED_REVEAL);
-    }
-    if (name === STARTUP_MINIMUM_DELAY_PROPERTY) {
-        return DOJSP3.clamp(value, 0, 5000);
-    }
-    if (name === STARTUP_SAFETY_TIMEOUT_PROPERTY) {
-        return DOJSP3.clamp(value, 500, 10000);
-    }
-    return null;
+    var key = startupPropertyKey(name);
+    return key ? STARTUP_PROTOCOL.normaliseValue(key, value) : null;
 }
 
 function applyStartupProperty(name, value) {
@@ -283,53 +281,42 @@ function applyStartupProperty(name, value) {
     return true;
 }
 
-function startupControlStateMessage() {
-    return STARTUP_CONTROL_MESSAGE_VERSION + '|state|' +
-        String(startupTransition()) + '|' +
-        String(startupMinimumDelay()) + '|' +
-        String(startupSafetyTimeout());
+function startupControlState() {
+    return STARTUP_PROTOCOL.state(
+        startupTransition(),
+        startupMinimumDelay(),
+        startupSafetyTimeout()
+    );
 }
 
 function broadcastStartupControlState() {
     window.NotifyOthers(
-        STARTUP_CONTROL_STATE_NOTIFICATION,
-        startupControlStateMessage()
+        STARTUP_PROTOCOL.notifications.stateControls,
+        STARTUP_PROTOCOL.serialiseState(startupControlState())
     );
 }
 
-function parseStartupControlCommand(data) {
-    var parts = String(data || '').split('|');
-    if (parts[0] !== STARTUP_CONTROL_MESSAGE_VERSION) return null;
-
-    var action = String(parts[1] || '');
-    if (action === 'preview' || action === 'restore') {
-        return parts.length === 2 ? { action: action } : null;
-    }
-    if (action !== 'set' || parts.length !== 4) return null;
-
-    var key = String(parts[2] || '');
-    var property = key === 'transition' ? STARTUP_TRANSITION_PROPERTY :
-        key === 'minimum-delay' ? STARTUP_MINIMUM_DELAY_PROPERTY :
-        key === 'readiness-timeout' ? STARTUP_SAFETY_TIMEOUT_PROPERTY : '';
-    if (!property) return null;
-
-    var value = normaliseStartupProperty(property, parts[3]);
-    if (value === null) return null;
-    return { action: action, property: property, value: value };
-}
-
 function restoreStartupDefaults() {
-    applyStartupProperty(STARTUP_TRANSITION_PROPERTY, STARTUP_OFF);
-    applyStartupProperty(STARTUP_MINIMUM_DELAY_PROPERTY, 250);
-    applyStartupProperty(STARTUP_SAFETY_TIMEOUT_PROPERTY, 2000);
+    applyStartupProperty(
+        STARTUP_TRANSITION_PROPERTY,
+        STARTUP_PROTOCOL.defaults.transition
+    );
+    applyStartupProperty(
+        STARTUP_MINIMUM_DELAY_PROPERTY,
+        STARTUP_PROTOCOL.defaults.minimumDelay
+    );
+    applyStartupProperty(
+        STARTUP_SAFETY_TIMEOUT_PROPERTY,
+        STARTUP_PROTOCOL.defaults.readinessTimeout
+    );
 }
 
 function handleStartupControlCommand(data) {
-    var command = parseStartupControlCommand(data);
+    var command = STARTUP_PROTOCOL.parseCommand(data);
     if (!command) return false;
 
     if (command.action === 'set') {
-        applyStartupProperty(command.property, command.value);
+        applyStartupProperty(startupPropertyForKey(command.key), command.value);
         broadcastStartupControlState();
         return true;
     }
@@ -368,19 +355,17 @@ function on_paint(gr) {
 }
 
 function on_notify_data(name, data) {
-    if (name === STARTUP_CONTROL_QUERY_NOTIFICATION) {
-        if (String(data || '') === STARTUP_CONTROL_MESSAGE_VERSION) {
-            broadcastStartupControlState();
-        }
+    if (name === STARTUP_PROTOCOL.notifications.queryControls) {
+        if (STARTUP_PROTOCOL.isVersion(data)) broadcastStartupControlState();
         return;
     }
-    if (name === STARTUP_CONTROL_COMMAND_NOTIFICATION) {
+    if (name === STARTUP_PROTOCOL.notifications.commandControls) {
         handleStartupControlCommand(data);
         return;
     }
 
     if (darkOneJsp3HandleReset(name, data)) return;
-    if (name === 'DarkOneJSP3.Startup.Ready') {
+    if (name === STARTUP_PROTOCOL.notifications.ready) {
         var controller = String(data || '');
         if (STARTUP_CONTROLLERS.indexOf(controller) >= 0) {
             startupReady[controller] = true;

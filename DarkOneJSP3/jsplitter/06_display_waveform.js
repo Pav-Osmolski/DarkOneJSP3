@@ -15,13 +15,10 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // v0.3.8 consolidates background-mode validation, menu mapping and custom
 // colour picking through the shared DarkOneJSP3 colour helper.
 
-var STARTUP_CONTROLLER_NAME = 'DisplayWaveform';
-var startupLayoutReady = false;
-
-function signalStartupReady() {
-    startupLayoutReady = true;
-    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
-}
+var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
+    window,
+    'DisplayWaveform'
+);
 
 var ww = 0;
 var wh = 0;
@@ -198,7 +195,9 @@ function layoutDisplayWaveform() {
     DOJSP3.show(waveform, desiredWaveformVisibility);
     waveformVisible = desiredWaveformVisibility;
 
-    if (!startupLayoutReady && display && waveform) signalStartupReady();
+    if (!startupReadiness.isReady() && display && waveform) {
+        startupReadiness.signal();
+    }
 }
 
 function on_colours_changed() {
@@ -260,9 +259,7 @@ function on_playback_stop(reason) {
 
 function on_notify_data(name, data) {
     if (darkOneJsp3HandleReset(name, data)) return;
-    if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
-        signalStartupReady();
-    }
+    startupReadiness.handle(name);
 }
 
 function on_script_unload() {

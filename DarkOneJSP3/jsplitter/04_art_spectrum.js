@@ -3,15 +3,12 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 
 // Replaces Panel Stack Splitter 04.
 
-var STARTUP_CONTROLLER_NAME = 'ArtSpectrum';
-var startupLayoutReady = false;
+var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
+    window,
+    'ArtSpectrum'
+);
 var ww = 0;
 var wh = 0;
-
-function signalStartupReady() {
-    startupLayoutReady = true;
-    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
-}
 
 function layoutArtSpectrum() {
     if (ww <= 0 || wh <= 0) return;
@@ -31,7 +28,9 @@ function layoutArtSpectrum() {
     DOJSP3.show(art, true);
     DOJSP3.show(spectrum, true);
 
-    if (!startupLayoutReady && art && spectrum) signalStartupReady();
+    if (!startupReadiness.isReady() && art && spectrum) {
+        startupReadiness.signal();
+    }
 }
 
 function on_size(width, height) {
@@ -46,7 +45,5 @@ function on_paint(gr) {
 
 function on_notify_data(name, data) {
     if (darkOneJsp3HandleReset(name, data)) return;
-    if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
-        signalStartupReady();
-    }
+    startupReadiness.handle(name);
 }

@@ -39,6 +39,7 @@ required = [
     project / 'darkonejsp3-layout-manifest.json',
     project / 'shared' / 'reset_defaults.js',
     project / 'shared' / 'colour_utils.js',
+    project / 'shared' / 'jsplitter_protocols.js',
     project / 'jsplitter' / 'shared.js',
     docs / 'README.txt',
     docs / 'INSTALLATION.txt',
@@ -104,8 +105,8 @@ if (project / 'build-info.json').exists():
         module_version = str(modules.get(module_name, '')).strip()
         if not re.fullmatch(r'\d+\.\d+\.\d+', module_version):
             errors.append('build-info ' + module_name + ' version is invalid')
-    if modules.get('info_stack_controller') != '0.6.23':
-        errors.append('build-info InfoStack controller version is not 0.6.23')
+    if modules.get('info_stack_controller') != '0.6.24':
+        errors.append('build-info InfoStack controller version is not 0.6.24')
     if modules.get('display') != '3.0.11-jsp3-3.8.5':
         errors.append('build-info Display module version is not 3.0.11-jsp3-3.8.5')
     if modules.get('queue_viewer') != '0.5.2':
@@ -114,6 +115,8 @@ if (project / 'build-info.json').exists():
         errors.append('build-info page-background module version is not 0.1.2')
     if modules.get('colour_helpers') != '0.1.0':
         errors.append('build-info colour-helper module version is not 0.1.0')
+    if modules.get('jsplitter_protocols') != '0.1.0':
+        errors.append('build-info JSplitter-protocol module version is not 0.1.0')
 
 # Active runtime namespace checks.
 legacy_runtime = re.compile(r'(?<!DarkOne)DOJS3|DARKONEJS3|DarkOneJS3')
@@ -212,6 +215,28 @@ if manifest_path.exists():
     for host in ['JSplitter', 'JScript Panel 3']:
         if host not in colour_consolidation.get('hosts', []):
             errors.append('Manifest colour helper host is missing: ' + host)
+    protocol_consolidation = manifest.get('enhancements', {}).get(
+        'jsplitter_protocol_consolidation', {})
+    expected_protocol_consolidation = {
+        'shared_helper': 'DarkOneJSP3/shared/jsplitter_protocols.js',
+        'version': '0.1.0',
+        'startup_notifications_centralised': True,
+        'startup_state_serialisation_centralised': True,
+        'startup_command_serialisation_centralised': True,
+        'startup_readiness_bridge_shared_by_controllers': True,
+        'divider_notifications_centralised': True,
+        'divider_state_serialisation_centralised': True,
+        'divider_menu_mapping_centralised': True,
+        'property_ownership_unchanged': True,
+        'saved_values_unchanged': True,
+        'runtime_bridge_tests': True,
+    }
+    for key, expected in expected_protocol_consolidation.items():
+        if protocol_consolidation.get(key) != expected:
+            errors.append('Manifest JSplitter-protocol field is incorrect: ' + key)
+    if protocol_consolidation.get('protocol_versions') != {
+            'startup_controls': 'v1', 'divider_state': 'v1'}:
+        errors.append('Manifest JSplitter protocol versions are incorrect')
     for feature_name in [
             'display_accent', 'info_stack_tab_colour',
             'art_spectrum_dividers', 'info_stack_page_background']:
@@ -332,7 +357,7 @@ if manifest_path.exists():
             'InfoStack tab context menu', 'upper divider strips']:
         errors.append('Manifest upper divider menu locations are incorrect')
     if divider_manifest.get('communication') != \
-            'serialised JSplitter-to-JSplitter v1 messages':
+            'shared serialised JSplitter-to-JSplitter v1 protocol':
         errors.append('Manifest upper divider communication is incorrect')
     if divider_manifest.get('album_art_jscript_panel_bridge_removed') is not True:
         errors.append('Manifest does not record removal of the Album Art bridge')
@@ -349,7 +374,7 @@ if manifest_path.exists():
     expected_startup = {
         'property_owner': 'DOJSP3.Root',
         'menu_location': 'InfoStack tab context menu',
-        'communication': 'serialised JSplitter-to-JSplitter v1 messages',
+        'communication': 'shared serialised JSplitter-to-JSplitter v1 protocol',
         'jsscript_panel_startup_menu_removed': True,
         'state_query_before_menu_display': True,
         'layout_readiness_timeout_label': True,
@@ -930,13 +955,14 @@ if root_controller.exists():
         'var STARTUP_STAGE_GAP_MS = 125;',
         'setRootVisibility(false, false);',
         'window.Repaint();',
-        "var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';",
-        "'DarkOneJSP3.Startup.Controls.Query'",
-        "'DarkOneJSP3.Startup.Controls.Command'",
-        "'DarkOneJSP3.Startup.Controls.State'",
-        'function startupControlStateMessage()',
-        'function handleStartupControlCommand(data)',
-        "key === 'readiness-timeout'",
+        'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
+        'var STARTUP_CONTROLLERS = STARTUP_PROTOCOL.controllers;',
+        'STARTUP_PROTOCOL.serialiseState(startupControlState())',
+        'STARTUP_PROTOCOL.parseCommand(data)',
+        'STARTUP_PROTOCOL.notifications.queryControls',
+        'STARTUP_PROTOCOL.notifications.commandControls',
+        'STARTUP_PROTOCOL.notifications.ready',
+        "if (key === 'readiness-timeout') return STARTUP_SAFETY_TIMEOUT_PROPERTY;",
         'function restoreStartupDefaults()',
     ]:
         if token not in body:
@@ -967,22 +993,22 @@ if info_stack.exists():
         "'Automatic height (follows tab font sizing)'",
         "'Set fixed tab area height...'",
         "'Side divider colour'",
-        "var DIVIDER_MESSAGE_VERSION = 'v1';",
-        "var DIVIDER_DARKONE_DARK = 4;",
-        "var DIVIDER_COLUMNS_UI = 5;",
-        "{ id: 903, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' }",
-        "{ id: 905, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' }",
-        "DIVIDER_QUERY_NOTIFICATION",
-        "DIVIDER_SET_NOTIFICATION",
-        "DIVIDER_STATE_NOTIFICATION",
-        "serialiseDividerState(dividerMenuMode, dividerMenuCustomColour)",
+        'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
+        'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
+        'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
+        'var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);',
+        'DIVIDER_PROTOCOL.notifications.query',
+        'DIVIDER_PROTOCOL.notifications.set',
+        'DIVIDER_PROTOCOL.notifications.state',
+        'DIVIDER_PROTOCOL.serialiseState(',
+        'DIVIDER_PROTOCOL.parseState(data)',
         "DarkOneColour.pickJsplitter(",
         "DarkOneColour.appendRadioOptions(",
-        "var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';",
-        "'DarkOneJSP3.Startup.Controls.Query'",
-        "'DarkOneJSP3.Startup.Controls.Command'",
-        "'DarkOneJSP3.Startup.Controls.State'",
-        'function parseStartupControlState(data)',
+        'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
+        'STARTUP_PROTOCOL.notifications.queryControls',
+        'STARTUP_PROTOCOL.notifications.commandControls',
+        'STARTUP_PROTOCOL.notifications.stateControls',
+        'STARTUP_PROTOCOL.parseState(data)',
         'function requestStartupControlState()',
         'function sendStartupControlCommand(action, key, value)',
         "'Layout-readiness timeout... ('",
@@ -1037,16 +1063,16 @@ if main_columns.exists():
         'if (dividerMode() === DIVIDER_TRANSPARENT) return;',
         'gr.FillSolidRect(metrics.left, 0, metrics.width, wh, colour);',
         'gr.FillSolidRect(metrics.right, 0, metrics.width, wh, colour);',
-        "'DarkOneJSP3.ArtSpectrum.Divider.Query'",
-        "'DarkOneJSP3.ArtSpectrum.Divider.Set'",
+        'DIVIDER_PROTOCOL.notifications.query',
+        'DIVIDER_PROTOCOL.notifications.set',
         "'Side divider colour'",
-        "{ id: 103, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' }",
-        "{ id: 105, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' }",
+        'var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(100);',
+        'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
+        'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
         'DarkOneColour.pickJsplitter(',
         'DarkOneColour.appendRadioOptions(',
-        "var DIVIDER_MESSAGE_VERSION = 'v1';",
-        'serialiseDividerState(dividerState())',
-        'parseDividerStateMessage(data)',
+        'DIVIDER_PROTOCOL.serialiseState(dividerState())',
+        'DIVIDER_PROTOCOL.parseState(data)',
         'var targetWidth = Math.max(10, metrics.width);',
     ]:
         if token not in body:
@@ -1116,6 +1142,36 @@ if colour_helper.exists():
         if token not in body:
             errors.append('Shared colour helper is missing: ' + token)
 
+jsplitter_shared = project / 'jsplitter' / 'shared.js'
+if jsplitter_shared.exists() and \
+        'DarkOneJSP3\\\\shared\\\\jsplitter_protocols.js' not in text(jsplitter_shared):
+    errors.append('JSplitter shared loader does not import the protocol helper')
+
+protocol_helper = project / 'shared' / 'jsplitter_protocols.js'
+if protocol_helper.exists():
+    body = text(protocol_helper)
+    for token in [
+        'var DarkOneProtocol = (function () {',
+        "queryControls: 'DarkOneJSP3.Startup.Controls.Query'",
+        "commandControls: 'DarkOneJSP3.Startup.Controls.Command'",
+        "stateControls: 'DarkOneJSP3.Startup.Controls.State'",
+        "ready: 'DarkOneJSP3.Startup.Ready'",
+        "queryReady: 'DarkOneJSP3.Startup.QueryReady'",
+        'serialiseState: serialiseStartupState',
+        'parseState: parseStartupState',
+        'serialiseCommand: serialiseStartupCommand',
+        'parseCommand: parseStartupCommand',
+        'createReadinessBridge: createReadinessBridge',
+        "query: 'DarkOneJSP3.ArtSpectrum.Divider.Query'",
+        "set: 'DarkOneJSP3.ArtSpectrum.Divider.Set'",
+        "state: 'DarkOneJSP3.ArtSpectrum.Divider.State'",
+        'serialiseState: serialiseDividerState',
+        'parseState: parseDividerState',
+        'menuOptions: dividerMenuOptions',
+    ]:
+        if token not in body:
+            errors.append('Shared JSplitter protocol helper is missing: ' + token)
+
 for path in [
     project / 'jsplitter' / '02_main_columns.js',
     project / 'jsplitter' / '03_info_stack_tabs.js',
@@ -1129,6 +1185,28 @@ for path in [
     for duplicate in ['function colourToHex(', 'function parseOpaqueColour(', 'function opaqueColour(']:
         if duplicate in body:
             errors.append(rel(path) + ' retains duplicate colour helper: ' + duplicate)
+
+for path in [
+    project / 'jsplitter' / '01_root.js',
+    project / 'jsplitter' / '02_main_columns.js',
+    project / 'jsplitter' / '03_info_stack_tabs.js',
+    project / 'jsplitter' / '04_art_spectrum.js',
+    project / 'jsplitter' / '05_bottom_controls.js',
+    project / 'jsplitter' / '06_display_waveform.js',
+]:
+    if not path.exists():
+        continue
+    body = text(path)
+    for duplicate in [
+        "var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';",
+        "var DIVIDER_MESSAGE_VERSION = 'v1';",
+        'function parseStartupControlState(',
+        'function parseDividerStateMessage(',
+        'function serialiseDividerState(',
+        'function signalStartupReady(',
+    ]:
+        if duplicate in body:
+            errors.append(rel(path) + ' retains duplicate JSplitter protocol code: ' + duplicate)
 
 adapted_colour_entries = [
     samples / 'Last.fm Bio.txt',
@@ -1255,11 +1333,81 @@ assert((colour.pickJscript(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
         errors.append('Shared colour-helper runtime smoke test failed: ' +
                       (result.stdout + result.stderr).strip())
 
+    # Exercise the shared startup/divider protocol independently from the
+    # controller bridge tests so malformed messages and readiness re-queries
+    # remain covered at the helper boundary.
+    protocol_helper_smoke = f"""
+const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+const factory = new Function('utils', colourSource + '\\n' + protocolSource +
+    '\\nreturn {{ DarkOneColour, DarkOneProtocol }};');
+const api = factory({{}});
+const startup = api.DarkOneProtocol.startup;
+const divider = api.DarkOneProtocol.divider;
+function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+assert(startup.serialiseState({{transition: 2, minimumDelay: 5000,
+    readinessTimeout: 7000}}) === 'v1|state|2|5000|7000',
+    'Startup state serialisation changed');
+const state = startup.parseState('v1|state|9|-1|99999');
+assert(state && state.transition === 2 && state.minimumDelay === 0 &&
+    state.readinessTimeout === 10000, 'Startup state clamping failed');
+assert(startup.parseState('v2|state|0|250|2000') === null,
+    'Startup accepted an unsupported state version');
+assert(startup.serialiseCommand('set', 'minimum-delay', 9999) ===
+    'v1|set|minimum-delay|5000', 'Startup command clamping failed');
+const command = startup.parseCommand('v1|set|readiness-timeout|7000');
+assert(command && command.key === 'readiness-timeout' && command.value === 7000,
+    'Startup command parsing failed');
+assert(startup.parseCommand('v1|set|unknown|1') === null,
+    'Startup accepted an unknown command key');
+assert(startup.parseCommand('v1|set|minimum-delay|not-a-number') === null,
+    'Startup accepted a non-numeric command value');
+assert(startup.serialiseCommand('set', 'minimum-delay', Infinity) === null,
+    'Startup serialised a non-finite command value');
+assert(startup.parseState('v1|state|0|Infinity|2000') === null,
+    'Startup accepted a non-finite state value');
+const dividerMessage = divider.serialiseState(4, 0xff123456);
+assert(dividerMessage === 'v1|4|4279383126',
+    'Divider state serialisation changed');
+const dividerState = divider.parseState(dividerMessage);
+assert(dividerState && dividerState.mode === 4 &&
+    (dividerState.customColour >>> 0) === 0xff123456,
+    'Divider state round-trip failed');
+assert(divider.parseState('v1|99|4278190080').mode === 1,
+    'Divider invalid-mode fallback changed');
+assert(divider.parseState('v1|4|Infinity') === null,
+    'Divider accepted a non-finite colour value');
+const options = divider.menuOptions(900);
+assert(options.map(item => item.id + ':' + item.mode).join(',') ===
+    '900:0,901:1,902:2,903:4,905:5,904:3',
+    'Divider menu mapping changed');
+const events = [];
+const readiness = startup.createReadinessBridge(
+    {{NotifyOthers(name, data) {{ events.push([name, data]); }}}},
+    'InfoStack'
+);
+assert(readiness.handle(startup.notifications.queryReady) === false &&
+    events.length === 0, 'Unready controller answered a readiness query');
+readiness.signal();
+assert(readiness.isReady() && events.length === 1,
+    'Readiness signal was not recorded');
+assert(readiness.handle(startup.notifications.queryReady) === true &&
+    events.length === 2 && events[1][1] === 'InfoStack',
+    'Ready controller did not repeat its readiness signal');
+"""
+    result = subprocess.run([node, '-e', protocol_helper_smoke],
+                            capture_output=True, text=True)
+    if result.returncode:
+        errors.append('Shared JSplitter-protocol runtime smoke test failed: ' +
+                      (result.stdout + result.stderr).strip())
+
     # Exercise the InfoStack tab-colour modes. Existing Custom mode 1 must
     # remain intact while mode 2 follows Columns UI selected-item background.
     tab_colour_smoke = f"""
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1274,7 +1422,7 @@ const DOJSP3Mock = {{
     clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }}
 }};
 const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
-    colourSource + '\\n' + source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
+    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
 const controller = factory(windowMock, {{ProfilePath:''}}, function(){{}}, {{Font(){{return {{}};}}}}, DOJSP3Mock, {{}}, function(){{return false;}});
 if (controller.tabColourMode() !== 0 || (controller.tabAccentColour() >>> 0) !== 0xff298fcc)
     throw new Error('Default tab font accent changed');
@@ -1386,6 +1534,7 @@ if ((panel.page_background_colour() >>> 0) !== 0xff445566)
     info_stack_background_smoke = f"""
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1416,7 +1565,7 @@ const DOJSP3Mock = {{
 const factory = new Function(
     'window', 'fb', 'include', 'gdi', 'DOJSP3', 'utils',
     'darkOneJsp3HandleReset',
-    colourSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour }};'
+    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour }};'
 );
 const controller = factory(
     windowMock,
@@ -1454,6 +1603,7 @@ if (controller.backgroundMode() !== 5 ||
     waveform_background_smoke = f"""
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '06_display_waveform.js'))}, 'utf8');
 const properties = new Map();
 let repaintCount = 0;
@@ -1473,7 +1623,7 @@ const DOJSP3Mock = {{
 }};
 const factory = new Function(
     'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils',
-    colourSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour, on_colours_changed }};'
+    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour, on_colours_changed }};'
 );
 const controller = factory(
     windowMock,
@@ -1513,6 +1663,7 @@ if (repaintCount !== 1)
     divider_smoke = f"""
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '02_main_columns.js'))}, 'utf8');
 const properties = new Map();
 const notifications = [];
@@ -1534,7 +1685,7 @@ const DOJSP3Mock = {{
 }};
 const factory = new Function(
     'window', 'fb', 'include', 'utils', 'DOJSP3', 'darkOneJsp3HandleReset',
-    colourSource + '\\n' + source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, serialiseDividerState, parseDividerStateMessage, isDividerPoint, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
+    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, parseDividerState: DarkOneProtocol.divider.parseState, isDividerPoint, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
 );
 const controller = factory(
     windowMock,
@@ -1578,7 +1729,7 @@ controller.on_notify_data('DarkOneJSP3.ArtSpectrum.Divider.Query', null);
 const stateEvents = notifications.filter(item => item[0] === 'DarkOneJSP3.ArtSpectrum.Divider.State');
 if (!stateEvents.length || typeof stateEvents[stateEvents.length - 1][1] !== 'string')
     throw new Error('Divider state query did not return a serialised state');
-const returnedState = controller.parseDividerStateMessage(stateEvents[stateEvents.length - 1][1]);
+const returnedState = controller.parseDividerState(stateEvents[stateEvents.length - 1][1]);
 if (!returnedState || returnedState.mode !== 5 ||
         (returnedState.customColour >>> 0) !== 0xff123456)
     throw new Error('Divider state query did not return the stored state');
@@ -1594,6 +1745,7 @@ if (!controller.isDividerPoint(635) || controller.isDividerPoint(630))
     startup_bridge_smoke = f"""
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const rootSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '01_root.js'))}, 'utf8');
 const infoSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const rootProperties = new Map();
@@ -1652,11 +1804,11 @@ const infoWindow = {{
 const rootFactory = new Function(
     'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset',
     'setTimeout','clearTimeout','console',
-    rootSource + '\\nreturn {{on_size,on_notify_data,startupTransition,startupMinimumDelay,startupSafetyTimeout}};'
+    colourSource + '\\n' + protocolSource + '\\n' + rootSource + '\\nreturn {{on_size,on_notify_data,startupTransition,startupMinimumDelay,startupSafetyTimeout}};'
 );
 const infoFactory = new Function(
     'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
-    colourSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerStateMessage,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
+    colourSource + '\\n' + protocolSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
 );
 const root = rootFactory(rootWindow, {{ProfilePath:''}}, function(){{}}, {{}}, DOJSP3,
     function(){{return false;}}, fakeSetTimeout, fakeClearTimeout, console);
@@ -1668,7 +1820,7 @@ infoNotify = info.on_notify_data;
 function assert(condition, message) {{ if (!condition) throw new Error(message); }}
 info.requestStartupControlState();
 assert(info.getState().join(',') === '0,250,2000,true', 'Initial root state did not reach InfoStack');
-const darkDividerState = info.parseDividerStateMessage('v1|4|4279383126');
+const darkDividerState = info.parseDividerState('v1|4|4279383126');
 assert(darkDividerState && darkDividerState.mode === 4,
     'InfoStack clamped DarkOne-dark-grey divider mode 4');
 info.sendStartupControlCommand('set', 'transition', 1);

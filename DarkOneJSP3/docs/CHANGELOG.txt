@@ -1,6 +1,22 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.7.36 - Shared JSplitter protocol consolidation
+-------------------------------------------------
+
+- Added a shared JSplitter protocol helper for versioned startup-control and
+  upper-divider communication.
+- Centralised startup notification names, state and command serialisation,
+  validation defaults and the five-controller layout-readiness handshake.
+- Centralised upper-divider notification names, saved mode values, state
+  serialisation and the shared menu mapping used by Main Columns and InfoStack.
+- Preserved root ownership of startup properties, Main Columns ownership of
+  divider properties, all existing notification names and every saved value.
+- Removed repeated parsing, serialisation and readiness functions from the six
+  JSplitter controllers.
+- Expanded static and runtime validation for malformed messages, clamping,
+  menu mappings, state round-trips and readiness re-notification.
+
 v0.7.35 - Shared colour-menu consolidation
 ------------------------------------------
 

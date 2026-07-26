@@ -5,6 +5,7 @@
 // each host independently.
 
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\colour_utils.js');
+include(fb.ProfilePath + 'DarkOneJSP3\\shared\\jsplitter_protocols.js');
 
 var DOJSP3 = Object.freeze({
     colours: Object.freeze({

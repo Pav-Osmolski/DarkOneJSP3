@@ -1,5 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+//
+// v0.7.36 centralises divider state serialisation, notifications, mode values
+// and menu mapping in the shared JSplitter protocol helper.
+
 var DARKONEJSP3_RESET_ROLE = "main-columns";
 
 // Replaces Panel Stack Splitter 02: left information stack, centre artwork /
@@ -8,8 +12,10 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 // v0.7.35 consolidates divider mode validation, menu mapping and custom
 // colour picking through the shared DarkOneJSP3 colour helper.
 
-var STARTUP_CONTROLLER_NAME = 'MainColumns';
-var startupLayoutReady = false;
+var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
+    window,
+    'MainColumns'
+);
 var dividerStateBroadcast = false;
 var ww = 0;
 var wh = 0;
@@ -18,50 +24,24 @@ var DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE';
 var DIVIDER_CUSTOM_COLOUR_PROPERTY =
     'DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR';
 
-// 0 = transparent / inherit parent, 1 = black, 2 = DarkOne grey,
-// 3 = custom (legacy), 4 = DarkOne dark grey, 5 = Columns UI global
-// background. Keeping custom at 3 preserves existing properties.
-var DIVIDER_TRANSPARENT = 0;
-var DIVIDER_BLACK = 1;
-var DIVIDER_DARKONE = 2;
-var DIVIDER_CUSTOM = 3;
-var DIVIDER_DARKONE_DARK = 4;
-var DIVIDER_COLUMNS_UI = 5;
-var DIVIDER_MODES = [
-    DIVIDER_TRANSPARENT,
-    DIVIDER_BLACK,
-    DIVIDER_DARKONE,
-    DIVIDER_CUSTOM,
-    DIVIDER_DARKONE_DARK,
-    DIVIDER_COLUMNS_UI
-];
-var DIVIDER_MENU_OPTIONS = [
-    { id: 100, mode: DIVIDER_TRANSPARENT, label: 'Transparent / inherit parent' },
-    { id: 101, mode: DIVIDER_BLACK, label: 'Black' },
-    { id: 102, mode: DIVIDER_DARKONE, label: 'DarkOne grey' },
-    { id: 103, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' },
-    { id: 105, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' },
-    { id: 104, mode: DIVIDER_CUSTOM, custom: true }
-];
+// Saved divider mode numbers are owned by the shared protocol. Custom remains
+// mode 3 for compatibility with existing properties.
+var DIVIDER_PROTOCOL = DarkOneProtocol.divider;
+var DIVIDER_TRANSPARENT = DIVIDER_PROTOCOL.modes.transparent;
+var DIVIDER_BLACK = DIVIDER_PROTOCOL.modes.black;
+var DIVIDER_DARKONE = DIVIDER_PROTOCOL.modes.darkOne;
+var DIVIDER_CUSTOM = DIVIDER_PROTOCOL.modes.custom;
+var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;
+var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;
+var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(100);
 
 var MENU_STRING = 0x00000000;
 var MENU_POPUP = 0x00000010;
 
-var DIVIDER_MESSAGE_VERSION = 'v1';
-var DIVIDER_QUERY_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Query';
-var DIVIDER_SET_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Set';
-var DIVIDER_STATE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.State';
-
-function signalStartupReady() {
-    startupLayoutReady = true;
-    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
-}
 
 function dividerMode() {
-    return DarkOneColour.normaliseMode(
-        window.GetProperty(DIVIDER_MODE_PROPERTY, DIVIDER_BLACK),
-        DIVIDER_MODES,
-        DIVIDER_BLACK
+    return DIVIDER_PROTOCOL.normaliseMode(
+        window.GetProperty(DIVIDER_MODE_PROPERTY, DIVIDER_BLACK)
     );
 }
 
@@ -83,60 +63,19 @@ function dividerColour() {
 }
 
 function dividerState() {
-    return {
-        mode: dividerMode(),
-        customColour: dividerCustomColour()
-    };
-}
-
-function serialiseDividerState(state) {
-    return DIVIDER_MESSAGE_VERSION + '|' +
-        String(state.mode) + '|' +
-        String(state.customColour >>> 0);
-}
-
-function parseDividerStateMessage(data) {
-    // JSplitter-to-JSplitter notifications are deliberately serialised. This
-    // avoids relying on component-specific object marshalling and keeps the
-    // state bridge independent from JScript Panel notification behaviour.
-    if (data && typeof data === 'object') {
-        return {
-            mode: DarkOneColour.normaliseMode(
-                data.mode,
-                DIVIDER_MODES,
-                DIVIDER_BLACK
-            ),
-            customColour: DarkOneColour.opaque(data.customColour)
-        };
-    }
-
-    var parts = String(data || '').split('|');
-    if (parts.length !== 3 || parts[0] !== DIVIDER_MESSAGE_VERSION) return null;
-
-    var mode = Number(parts[1]);
-    var colour = Number(parts[2]);
-    if (isNaN(mode) || isNaN(colour)) return null;
-
-    return {
-        mode: DarkOneColour.normaliseMode(
-            mode,
-            DIVIDER_MODES,
-            DIVIDER_BLACK
-        ),
-        customColour: DarkOneColour.opaque(colour)
-    };
+    return DIVIDER_PROTOCOL.state(dividerMode(), dividerCustomColour());
 }
 
 function broadcastDividerState() {
     dividerStateBroadcast = true;
     window.NotifyOthers(
-        DIVIDER_STATE_NOTIFICATION,
-        serialiseDividerState(dividerState())
+        DIVIDER_PROTOCOL.notifications.state,
+        DIVIDER_PROTOCOL.serialiseState(dividerState())
     );
 }
 
 function setDividerMode(mode) {
-    mode = DarkOneColour.normaliseMode(mode, DIVIDER_MODES, DIVIDER_BLACK);
+    mode = DIVIDER_PROTOCOL.normaliseMode(mode);
     window.SetProperty(DIVIDER_MODE_PROPERTY, mode);
     window.Repaint();
     broadcastDividerState();
@@ -195,7 +134,9 @@ function layoutMainColumns() {
     DOJSP3.show(playlist, true);
 
     if (!dividerStateBroadcast) broadcastDividerState();
-    if (!startupLayoutReady && info && art && playlist) signalStartupReady();
+    if (!startupReadiness.isReady() && info && art && playlist) {
+        startupReadiness.signal();
+    }
 }
 
 function dividerMetrics() {
@@ -242,13 +183,13 @@ function on_paint(gr) {
 }
 
 function on_notify_data(name, data) {
-    if (name === DIVIDER_QUERY_NOTIFICATION) {
+    if (name === DIVIDER_PROTOCOL.notifications.query) {
         broadcastDividerState();
         return;
     }
 
-    if (name === DIVIDER_SET_NOTIFICATION) {
-        var requestedState = parseDividerStateMessage(data);
+    if (name === DIVIDER_PROTOCOL.notifications.set) {
+        var requestedState = DIVIDER_PROTOCOL.parseState(data);
         if (requestedState) {
             window.SetProperty(
                 DIVIDER_CUSTOM_COLOUR_PROPERTY,
@@ -265,9 +206,7 @@ function on_notify_data(name, data) {
     }
 
     if (darkOneJsp3HandleReset(name, data)) return;
-    if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
-        signalStartupReady();
-    }
+    startupReadiness.handle(name);
 }
 
 function on_mouse_rbtn_up(x, y) {

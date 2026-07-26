@@ -3,19 +3,16 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 
 // Replaces Panel Stack Splitter 05.
 
-var STARTUP_CONTROLLER_NAME = 'BottomControls';
-var startupLayoutReady = false;
+var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
+    window,
+    'BottomControls'
+);
 var ww = 0;
 var wh = 0;
 var qsX = 0;
 var qsY = 0;
 var qsW = 1;
 var qsH = 1;
-
-function signalStartupReady() {
-    startupLayoutReady = true;
-    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
-}
 
 function layoutBottomControls() {
     if (ww <= 0 || wh <= 0) return;
@@ -85,7 +82,9 @@ function layoutBottomControls() {
     DOJSP3.show(displayStack, true);
     DOJSP3.show(right, true);
 
-    if (!startupLayoutReady && left && quickSearch && displayStack && right) signalStartupReady();
+    if (!startupReadiness.isReady() && left && quickSearch && displayStack && right) {
+        startupReadiness.signal();
+    }
 }
 
 function on_size(width, height) {
@@ -119,7 +118,5 @@ function on_paint(gr) {
 
 function on_notify_data(name, data) {
     if (darkOneJsp3HandleReset(name, data)) return;
-    if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
-        signalStartupReady();
-    }
+    startupReadiness.handle(name);
 }

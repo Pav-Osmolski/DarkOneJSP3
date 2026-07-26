@@ -1,5 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+//
+// v0.6.24 centralises divider/startup serialisation, notifications and the
+// layout-readiness handshake through the shared JSplitter protocol helper.
+
 var DARKONEJSP3_RESET_ROLE = "info-stack";
 
 // Replaces Panel Stack Splitter 03.
@@ -78,13 +82,11 @@ var INFO_PANELS = [
     { key: 'Properties', title: DOJSP3.titles.properties,      defaultLabel: 'Properties', uppercaseLabel: 'PROPERTIES' }
 ];
 
-var STARTUP_CONTROLLER_NAME = 'InfoStack';
-var startupLayoutReady = false;
-
-function signalStartupReady() {
-    startupLayoutReady = true;
-    window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
-}
+var STARTUP_PROTOCOL = DarkOneProtocol.startup;
+var startupReadiness = STARTUP_PROTOCOL.createReadinessBridge(
+    window,
+    'InfoStack'
+);
 
 function hideInfoChildrenBeforeFirstLayout() {
     // The exported FCL may leave a child visible while JSplitter is still
@@ -110,52 +112,25 @@ var LABEL_DEFAULTS_VERSION_PROPERTY = 'DarkOneJSP3.InfoStack.LabelDefaultsVersio
 var TAB_COLOUR_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.TabColourMode';
 var TAB_CUSTOM_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.TabCustomColour';
 
-var DIVIDER_MESSAGE_VERSION = 'v1';
-var DIVIDER_QUERY_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Query';
-var DIVIDER_SET_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.Set';
-var DIVIDER_STATE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Divider.State';
-
-var DIVIDER_TRANSPARENT = 0;
-var DIVIDER_BLACK = 1;
-var DIVIDER_DARKONE = 2;
-var DIVIDER_CUSTOM = 3;
-var DIVIDER_DARKONE_DARK = 4;
-var DIVIDER_COLUMNS_UI = 5;
-var DIVIDER_MODES = [
-    DIVIDER_TRANSPARENT,
-    DIVIDER_BLACK,
-    DIVIDER_DARKONE,
-    DIVIDER_CUSTOM,
-    DIVIDER_DARKONE_DARK,
-    DIVIDER_COLUMNS_UI
-];
-var DIVIDER_MENU_OPTIONS = [
-    { id: 900, mode: DIVIDER_TRANSPARENT, label: 'Transparent / inherit parent' },
-    { id: 901, mode: DIVIDER_BLACK, label: 'Black' },
-    { id: 902, mode: DIVIDER_DARKONE, label: 'DarkOne grey' },
-    { id: 903, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' },
-    { id: 905, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' },
-    { id: 904, mode: DIVIDER_CUSTOM, custom: true }
-];
+var DIVIDER_PROTOCOL = DarkOneProtocol.divider;
+var DIVIDER_TRANSPARENT = DIVIDER_PROTOCOL.modes.transparent;
+var DIVIDER_BLACK = DIVIDER_PROTOCOL.modes.black;
+var DIVIDER_DARKONE = DIVIDER_PROTOCOL.modes.darkOne;
+var DIVIDER_CUSTOM = DIVIDER_PROTOCOL.modes.custom;
+var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;
+var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;
+var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);
 var dividerMenuMode = DIVIDER_BLACK;
 var dividerMenuCustomColour = 0xff000000;
 var dividerMenuStateKnown = false;
 
 
-var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';
-var STARTUP_CONTROL_QUERY_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.Query';
-var STARTUP_CONTROL_COMMAND_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.Command';
-var STARTUP_CONTROL_STATE_NOTIFICATION =
-    'DarkOneJSP3.Startup.Controls.State';
-
-var STARTUP_OFF = 0;
-var STARTUP_BLACK_REVEAL = 1;
-var STARTUP_STAGED_REVEAL = 2;
-var startupMenuTransition = STARTUP_OFF;
-var startupMenuMinimumDelay = 250;
-var startupMenuReadinessTimeout = 2000;
+var STARTUP_OFF = STARTUP_PROTOCOL.transitions.off;
+var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;
+var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;
+var startupMenuTransition = STARTUP_PROTOCOL.defaults.transition;
+var startupMenuMinimumDelay = STARTUP_PROTOCOL.defaults.minimumDelay;
+var startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;
 var startupMenuStateKnown = false;
 
 // Background modes:
@@ -372,7 +347,9 @@ function layoutInfoStack() {
         DOJSP3.move(child, 0, 0, ww, contentHeight);
     }
     applyVisibility();
-    if (!startupLayoutReady && allChildrenAvailable) signalStartupReady();
+    if (!startupReadiness.isReady() && allChildrenAvailable) {
+        startupReadiness.signal();
+    }
 }
 
 function selectPanel(index, notify) {
@@ -502,47 +479,25 @@ function backgroundColour() {
     return 0x00000000;
 }
 
-function serialiseDividerState(mode, customColour) {
-    return DIVIDER_MESSAGE_VERSION + '|' +
-        String(mode) + '|' +
-        String(DarkOneColour.opaque(customColour) >>> 0);
-}
-
-function parseDividerStateMessage(data) {
-    var parts = String(data || '').split('|');
-    if (parts.length !== 3 || parts[0] !== DIVIDER_MESSAGE_VERSION) return null;
-
-    var mode = Number(parts[1]);
-    var colour = Number(parts[2]);
-    if (isNaN(mode) || isNaN(colour)) return null;
-
-    return {
-        mode: DarkOneColour.normaliseMode(
-            mode,
-            DIVIDER_MODES,
-            DIVIDER_BLACK
-        ),
-        customColour: DarkOneColour.opaque(colour)
-    };
-}
-
 function requestDividerState() {
-    window.NotifyOthers(DIVIDER_QUERY_NOTIFICATION, DIVIDER_MESSAGE_VERSION);
+    window.NotifyOthers(
+        DIVIDER_PROTOCOL.notifications.query,
+        DIVIDER_PROTOCOL.version
+    );
 }
 
 function setDividerState(mode, customColour) {
-    dividerMenuMode = DarkOneColour.normaliseMode(
-        mode,
-        DIVIDER_MODES,
-        DIVIDER_BLACK
-    );
+    dividerMenuMode = DIVIDER_PROTOCOL.normaliseMode(mode);
     if (typeof customColour !== 'undefined') {
         dividerMenuCustomColour = DarkOneColour.opaque(customColour);
     }
     dividerMenuStateKnown = true;
     window.NotifyOthers(
-        DIVIDER_SET_NOTIFICATION,
-        serialiseDividerState(dividerMenuMode, dividerMenuCustomColour)
+        DIVIDER_PROTOCOL.notifications.set,
+        DIVIDER_PROTOCOL.serialiseState(
+            dividerMenuMode,
+            dividerMenuCustomColour
+        )
     );
 }
 
@@ -556,33 +511,6 @@ function chooseCustomDividerColour() {
     setDividerState(DIVIDER_CUSTOM, chosen);
 }
 
-function parseStartupControlState(data) {
-    var parts = String(data || '').split('|');
-    if (parts.length !== 5 ||
-            parts[0] !== STARTUP_CONTROL_MESSAGE_VERSION ||
-            parts[1] !== 'state') return null;
-
-    var transition = Number(parts[2]);
-    var minimumDelay = Number(parts[3]);
-    var readinessTimeout = Number(parts[4]);
-    if (isNaN(transition) || isNaN(minimumDelay) ||
-            isNaN(readinessTimeout)) return null;
-
-    return {
-        transition: DOJSP3.clamp(
-            Math.round(transition),
-            STARTUP_OFF,
-            STARTUP_STAGED_REVEAL
-        ),
-        minimumDelay: DOJSP3.clamp(Math.round(minimumDelay), 0, 5000),
-        readinessTimeout: DOJSP3.clamp(
-            Math.round(readinessTimeout),
-            500,
-            10000
-        )
-    };
-}
-
 function applyStartupMenuState(state) {
     startupMenuTransition = state.transition;
     startupMenuMinimumDelay = state.minimumDelay;
@@ -592,24 +520,22 @@ function applyStartupMenuState(state) {
 
 function requestStartupControlState() {
     window.NotifyOthers(
-        STARTUP_CONTROL_QUERY_NOTIFICATION,
-        STARTUP_CONTROL_MESSAGE_VERSION
+        STARTUP_PROTOCOL.notifications.queryControls,
+        STARTUP_PROTOCOL.version
     );
 }
 
 function sendStartupControlCommand(action, key, value) {
-    var message = STARTUP_CONTROL_MESSAGE_VERSION + '|' + String(action);
-    if (action === 'set') {
-        message += '|' + String(key) + '|' + String(Math.round(value));
-    }
-    window.NotifyOthers(STARTUP_CONTROL_COMMAND_NOTIFICATION, message);
+    var message = STARTUP_PROTOCOL.serialiseCommand(action, key, value);
+    if (message === null) return false;
+    window.NotifyOthers(STARTUP_PROTOCOL.notifications.commandControls, message);
+    return true;
 }
 
 function setStartupTransition(mode) {
-    startupMenuTransition = DOJSP3.clamp(
-        Math.round(Number(mode) || 0),
-        STARTUP_OFF,
-        STARTUP_STAGED_REVEAL
+    startupMenuTransition = STARTUP_PROTOCOL.normaliseValue(
+        'transition',
+        mode
     );
     startupMenuStateKnown = true;
     sendStartupControlCommand('set', 'transition', startupMenuTransition);
@@ -641,9 +567,9 @@ function setStartupTiming(key, title, current, minimum, maximum) {
 }
 
 function restoreStartupControlDefaults() {
-    startupMenuTransition = STARTUP_OFF;
-    startupMenuMinimumDelay = 250;
-    startupMenuReadinessTimeout = 2000;
+    startupMenuTransition = STARTUP_PROTOCOL.defaults.transition;
+    startupMenuMinimumDelay = STARTUP_PROTOCOL.defaults.minimumDelay;
+    startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;
     startupMenuStateKnown = true;
     sendStartupControlCommand('restore');
 }
@@ -1002,14 +928,14 @@ function on_mouse_rbtn_up(x, y) {
 }
 
 function on_notify_data(name, data) {
-    if (name === STARTUP_CONTROL_STATE_NOTIFICATION) {
-        var startupState = parseStartupControlState(data);
+    if (name === STARTUP_PROTOCOL.notifications.stateControls) {
+        var startupState = STARTUP_PROTOCOL.parseState(data);
         if (startupState) applyStartupMenuState(startupState);
         return;
     }
 
-    if (name === DIVIDER_STATE_NOTIFICATION) {
-        var receivedState = parseDividerStateMessage(data);
+    if (name === DIVIDER_PROTOCOL.notifications.state) {
+        var receivedState = DIVIDER_PROTOCOL.parseState(data);
         if (receivedState) {
             dividerMenuMode = receivedState.mode;
             dividerMenuCustomColour = receivedState.customColour;
@@ -1021,7 +947,7 @@ function on_notify_data(name, data) {
     if (darkOneJsp3HandleReset(name, data)) return;
     if (name === 'DarkOneJSP3.InfoStack.Select') {
         selectPanel(data, false);
-    } else if (name === 'DarkOneJSP3.Startup.QueryReady' && startupLayoutReady) {
-        signalStartupReady();
+    } else {
+        startupReadiness.handle(name);
     }
 }

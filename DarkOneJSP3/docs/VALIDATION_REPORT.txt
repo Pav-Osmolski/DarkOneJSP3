@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.7.35 Validation Report
+DarkOneJSP3 v0.7.36 Validation Report
 =====================================
 
 Scope
@@ -29,6 +29,8 @@ Checks
   defaults, saved mode values and Columns UI global-background behaviour.
 - Shared colour conversion, parsing and Columns UI lookup are used by the
   consolidated colour implementations rather than duplicated local helpers.
+- Shared JSplitter startup/divider protocols preserve notification names,
+  message versions, saved values, property ownership and readiness behaviour.
 - Declarative menu mappings preserve the established menu-id-to-mode behaviour,
   including the legacy Custom mode positions.
 - JSplitter and JScript Panel native colour-picker signatures are tested
