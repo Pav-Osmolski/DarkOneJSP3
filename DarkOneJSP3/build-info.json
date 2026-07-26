@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "0.7.38",
+  "version": "0.8.0",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -25,8 +25,9 @@
     "jsplitter_protocols": "0.1.0",
     "optional_button_menu": "0.1.0",
     "info_stack_colours": "0.1.0",
-    "info_stack_bridges": "0.1.0"
+    "info_stack_bridges": "0.1.0",
+    "release_validator": "0.2.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v0.7.38"
+  "release": "DarkOneJSP3 v0.8.0"
 }

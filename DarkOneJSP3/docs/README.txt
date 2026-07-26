@@ -1,5 +1,5 @@
-DarkOneJSP3 v0.7.38
-===================
+DarkOneJSP3 v0.8.0
+==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
 JScript Panel 2.8.8 build. It preserves the DarkOne layout and visual identity while replacing the
@@ -75,7 +75,7 @@ DarkOneJSP3\
   jsplitter\             Six controllers, loader scripts and InfoStack helpers
   reference\             Original DarkOne2021 PSS reference material
   shared\                Shared colour utilities and reset defaults
-  tools\                 Release validator and mirror-sync utility
+  tools\                 Release-validator entry point, modules and mirror-sync utility
 
 user-components-x64\foo_jscript_panel3\samples\
   DarkOneJSP3-enhanced JScript Panel 3 sample tree.

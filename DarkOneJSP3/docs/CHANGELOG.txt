@@ -1,6 +1,20 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.8.0 - Modular release-validator consolidation
+------------------------------------------------
+
+- Reorganised the release validator into a thin command-line entry point and
+  focused static/runtime validation modules.
+- Added a shared validation context for package paths, file reading, relative
+  path reporting, version state and accumulated errors.
+- Moved required package paths and fixed module-version expectations into a
+  data-driven expectations module.
+- Preserved the existing validator command, checks, runtime smoke tests and
+  zero-warning failure behaviour.
+- Kept all foobar2000 runtime scripts and saved-setting contracts unchanged.
+- Adopted the revised repository README as the maintained public baseline.
+
 v0.7.38 - InfoStack controller decomposition
 --------------------------------------------
 

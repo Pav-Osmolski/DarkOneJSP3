@@ -1,5 +1,5 @@
-DarkOneJSP3 v0.7.38 Validation Report
-=====================================
+DarkOneJSP3 v0.8.0 Validation Report
+====================================
 
 Scope
 -----
@@ -12,6 +12,10 @@ Checks
 - Required project, documentation, controller and sample files are present.
 - Temporary, backup, empty and case-colliding package files are rejected.
 - Build metadata and the layout manifest identify the same release version.
+- The validator entry point delegates to focused static and runtime check
+  modules through a shared validation context.
+- Required package paths and fixed module-version expectations are maintained
+  as data rather than repeated conditional checks.
 - Active scripts use the current DarkOneJSP3 namespace and supported panel
   titles.
 - Local @import paths resolve inside the distributed package.
