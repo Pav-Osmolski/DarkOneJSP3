@@ -1,6 +1,21 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.7.38 - InfoStack controller decomposition
+--------------------------------------------
+
+- Split InfoStack-only colour state and menu handling into
+  `jsplitter/info_stack_colours.js`.
+- Split startup-transition and upper-divider menu state, notification handling
+  and protocol adapters into `jsplitter/info_stack_bridges.js`.
+- Kept tab layout, child visibility, painting, mouse interaction and the main
+  context-menu flow in `03_info_stack_tabs.js`.
+- Preserved every menu ID, saved property, colour mode, notification name,
+  protocol version and external property owner.
+- Reduced the main InfoStack controller from more than one thousand lines to
+  roughly six hundred and expanded static/runtime validation for the helper
+  boundaries and existing colour/protocol behaviour.
+
 v0.7.37 - Shared optional-button menu consolidation
 ---------------------------------------------------
 

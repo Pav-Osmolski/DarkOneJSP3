@@ -1,8 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
-// v0.6.24 centralises divider/startup serialisation, notifications and the
-// layout-readiness handshake through the shared JSplitter protocol helper.
+// v0.6.25 separates InfoStack-only colour state and controller bridges into
+// focused include helpers while preserving the established script context,
+// menu IDs, saved properties and notification behaviour.
 
 var DARKONEJSP3_RESET_ROLE = "info-stack";
 
@@ -82,11 +83,6 @@ var INFO_PANELS = [
     { key: 'Properties', title: DOJSP3.titles.properties,      defaultLabel: 'Properties', uppercaseLabel: 'PROPERTIES' }
 ];
 
-var STARTUP_PROTOCOL = DarkOneProtocol.startup;
-var startupReadiness = STARTUP_PROTOCOL.createReadinessBridge(
-    window,
-    'InfoStack'
-);
 
 function hideInfoChildrenBeforeFirstLayout() {
     // The exported FCL may leave a child visible while JSplitter is still
@@ -112,69 +108,9 @@ var LABEL_DEFAULTS_VERSION_PROPERTY = 'DarkOneJSP3.InfoStack.LabelDefaultsVersio
 var TAB_COLOUR_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.TabColourMode';
 var TAB_CUSTOM_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.TabCustomColour';
 
-var DIVIDER_PROTOCOL = DarkOneProtocol.divider;
-var DIVIDER_TRANSPARENT = DIVIDER_PROTOCOL.modes.transparent;
-var DIVIDER_BLACK = DIVIDER_PROTOCOL.modes.black;
-var DIVIDER_DARKONE = DIVIDER_PROTOCOL.modes.darkOne;
-var DIVIDER_CUSTOM = DIVIDER_PROTOCOL.modes.custom;
-var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;
-var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;
-var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);
-var dividerMenuMode = DIVIDER_BLACK;
-var dividerMenuCustomColour = 0xff000000;
-var dividerMenuStateKnown = false;
+include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_colours.js');
+include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_bridges.js');
 
-
-var STARTUP_OFF = STARTUP_PROTOCOL.transitions.off;
-var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;
-var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;
-var startupMenuTransition = STARTUP_PROTOCOL.defaults.transition;
-var startupMenuMinimumDelay = STARTUP_PROTOCOL.defaults.minimumDelay;
-var startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;
-var startupMenuStateKnown = false;
-
-// Background modes:
-// 0 = transparent, 1 = black, 2 = DarkOne grey, 3 = custom (legacy),
-// 4 = DarkOne dark grey, 5 = Columns UI global background. Keeping custom at
-// 3 preserves existing properties.
-var BACKGROUND_TRANSPARENT = 0;
-var BACKGROUND_BLACK = 1;
-var BACKGROUND_DARKONE = 2;
-var BACKGROUND_CUSTOM = 3;
-var BACKGROUND_DARKONE_DARK = 4;
-var BACKGROUND_COLUMNS_UI = 5;
-var BACKGROUND_MODES = [
-    BACKGROUND_TRANSPARENT,
-    BACKGROUND_BLACK,
-    BACKGROUND_DARKONE,
-    BACKGROUND_CUSTOM,
-    BACKGROUND_DARKONE_DARK,
-    BACKGROUND_COLUMNS_UI
-];
-var BACKGROUND_MENU_OPTIONS = [
-    { id: 700, mode: BACKGROUND_TRANSPARENT, label: 'Transparent / inherit parent' },
-    { id: 701, mode: BACKGROUND_BLACK, label: 'Black' },
-    { id: 702, mode: BACKGROUND_DARKONE, label: 'DarkOne grey' },
-    { id: 703, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' },
-    { id: 705, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' },
-    { id: 704, mode: BACKGROUND_CUSTOM, custom: true }
-];
-
-// Tab font-colour modes. Only the normal/inactive label uses this accent; the
-// selected label stays white and the hovered label stays grey.
-var TAB_COLOUR_DEFAULT = 0;
-var TAB_COLOUR_CUSTOM = 1;
-var TAB_COLOUR_COLUMNS_UI_SELECTED = 2;
-var TAB_COLOUR_MODES = [
-    TAB_COLOUR_DEFAULT,
-    TAB_COLOUR_CUSTOM,
-    TAB_COLOUR_COLUMNS_UI_SELECTED
-];
-var TAB_COLOUR_MENU_OPTIONS = [
-    { id: 800, mode: TAB_COLOUR_DEFAULT, label: 'Default - DarkOne blue' },
-    { id: 802, mode: TAB_COLOUR_COLUMNS_UI_SELECTED, label: 'Columns UI selected-item background' },
-    { id: 801, mode: TAB_COLOUR_CUSTOM, custom: true }
-];
 
 var activeIndex = DOJSP3.clamp(Number(window.GetProperty(ACTIVE_PROPERTY, 0)) || 0, 0, INFO_PANELS.length - 1);
 var hoverIndex = -1;
@@ -456,192 +392,6 @@ function tabFromPoint(x, y) {
     return visible[slot];
 }
 
-function backgroundMode() {
-    return DarkOneColour.normaliseMode(
-        window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE_DARK),
-        BACKGROUND_MODES,
-        BACKGROUND_DARKONE_DARK
-    );
-}
-
-function backgroundColour() {
-    var mode = backgroundMode();
-    if (mode === BACKGROUND_BLACK) return 0xff000000;
-    if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
-    if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;
-    if (mode === BACKGROUND_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
-    if (mode === BACKGROUND_CUSTOM) {
-        return DarkOneColour.opaque(window.GetProperty(
-            BACKGROUND_COLOUR_PROPERTY,
-            DOJSP3.colours.separator
-        ));
-    }
-    return 0x00000000;
-}
-
-function requestDividerState() {
-    window.NotifyOthers(
-        DIVIDER_PROTOCOL.notifications.query,
-        DIVIDER_PROTOCOL.version
-    );
-}
-
-function setDividerState(mode, customColour) {
-    dividerMenuMode = DIVIDER_PROTOCOL.normaliseMode(mode);
-    if (typeof customColour !== 'undefined') {
-        dividerMenuCustomColour = DarkOneColour.opaque(customColour);
-    }
-    dividerMenuStateKnown = true;
-    window.NotifyOthers(
-        DIVIDER_PROTOCOL.notifications.set,
-        DIVIDER_PROTOCOL.serialiseState(
-            dividerMenuMode,
-            dividerMenuCustomColour
-        )
-    );
-}
-
-function chooseCustomDividerColour() {
-    var chosen = DarkOneColour.pickJsplitter(
-        dividerMenuCustomColour,
-        window.Name,
-        'Enter a side-divider colour as #RRGGBB or R,G,B.'
-    );
-    if (chosen === null) return;
-    setDividerState(DIVIDER_CUSTOM, chosen);
-}
-
-function applyStartupMenuState(state) {
-    startupMenuTransition = state.transition;
-    startupMenuMinimumDelay = state.minimumDelay;
-    startupMenuReadinessTimeout = state.readinessTimeout;
-    startupMenuStateKnown = true;
-}
-
-function requestStartupControlState() {
-    window.NotifyOthers(
-        STARTUP_PROTOCOL.notifications.queryControls,
-        STARTUP_PROTOCOL.version
-    );
-}
-
-function sendStartupControlCommand(action, key, value) {
-    var message = STARTUP_PROTOCOL.serialiseCommand(action, key, value);
-    if (message === null) return false;
-    window.NotifyOthers(STARTUP_PROTOCOL.notifications.commandControls, message);
-    return true;
-}
-
-function setStartupTransition(mode) {
-    startupMenuTransition = STARTUP_PROTOCOL.normaliseValue(
-        'transition',
-        mode
-    );
-    startupMenuStateKnown = true;
-    sendStartupControlCommand('set', 'transition', startupMenuTransition);
-}
-
-function setStartupTiming(key, title, current, minimum, maximum) {
-    try {
-        var entered = Math.round(Number(utils.InputBox(
-            'Enter a value from ' + minimum + ' to ' + maximum +
-                ' milliseconds.',
-            title,
-            String(current)
-        )));
-        if (!isFinite(entered) || entered < minimum || entered > maximum) {
-            try {
-                fb.ShowPopupMessage(
-                    'Enter a value from ' + minimum + ' to ' + maximum +
-                        ' milliseconds.',
-                    title
-                );
-            } catch (e) {}
-            return;
-        }
-        if (key === 'minimum-delay') startupMenuMinimumDelay = entered;
-        else startupMenuReadinessTimeout = entered;
-        startupMenuStateKnown = true;
-        sendStartupControlCommand('set', key, entered);
-    } catch (e2) {}
-}
-
-function restoreStartupControlDefaults() {
-    startupMenuTransition = STARTUP_PROTOCOL.defaults.transition;
-    startupMenuMinimumDelay = STARTUP_PROTOCOL.defaults.minimumDelay;
-    startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;
-    startupMenuStateKnown = true;
-    sendStartupControlCommand('restore');
-}
-
-function tabColourMode() {
-    return DarkOneColour.normaliseMode(
-        window.GetProperty(TAB_COLOUR_MODE_PROPERTY, TAB_COLOUR_DEFAULT),
-        TAB_COLOUR_MODES,
-        TAB_COLOUR_DEFAULT
-    );
-}
-
-function storedCustomTabColour() {
-    return DarkOneColour.opaque(window.GetProperty(
-        TAB_CUSTOM_COLOUR_PROPERTY,
-        DOJSP3.colours.buttonNormal
-    ));
-}
-
-function tabAccentColour() {
-    var mode = tabColourMode();
-    if (mode === TAB_COLOUR_CUSTOM) return storedCustomTabColour();
-    if (mode === TAB_COLOUR_COLUMNS_UI_SELECTED) {
-        return DarkOneColour.columnsUi(4, DOJSP3.colours.buttonNormal);
-    }
-    return DOJSP3.colours.buttonNormal;
-}
-
-function repaintTabArea() {
-    window.RepaintRect(0, tabY, ww, tabAreaHeight);
-}
-
-function setTabColourMode(mode) {
-    window.SetProperty(
-        TAB_COLOUR_MODE_PROPERTY,
-        DarkOneColour.normaliseMode(mode, TAB_COLOUR_MODES, TAB_COLOUR_DEFAULT)
-    );
-    repaintTabArea();
-}
-
-function setCustomTabColour() {
-    var chosen = DarkOneColour.pickJsplitter(
-        storedCustomTabColour(),
-        window.Name,
-        'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #298FCC or 41,143,204'
-    );
-    if (chosen === null) return;
-
-    window.SetProperty(TAB_CUSTOM_COLOUR_PROPERTY, chosen);
-    setTabColourMode(TAB_COLOUR_CUSTOM);
-}
-
-function setBackgroundMode(mode) {
-    window.SetProperty(
-        BACKGROUND_MODE_PROPERTY,
-        DarkOneColour.normaliseMode(mode, BACKGROUND_MODES, BACKGROUND_DARKONE_DARK)
-    );
-    window.Repaint();
-}
-
-function setCustomBackgroundColour() {
-    var chosen = DarkOneColour.pickJsplitter(
-        window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.separator),
-        window.Name,
-        'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #000000 or 24,24,24'
-    );
-    if (chosen === null) return;
-
-    window.SetProperty(BACKGROUND_COLOUR_PROPERTY, chosen);
-    setBackgroundMode(BACKGROUND_CUSTOM);
-}
-
 function on_colours_changed() {
     window.Repaint();
 }
@@ -650,8 +400,7 @@ function on_size(width, height) {
     ww = width;
     wh = height;
     layoutInfoStack();
-    if (!dividerMenuStateKnown) requestDividerState();
-    if (!startupMenuStateKnown) requestStartupControlState();
+    requestInfoStackBridgeStates();
 }
 
 function on_paint(gr) {
@@ -715,8 +464,7 @@ function on_mouse_rbtn_up(x, y) {
     var startupMenu = window.CreatePopupMenu();
     var startupTransitionMenu = window.CreatePopupMenu();
 
-    if (!dividerMenuStateKnown) requestDividerState();
-    if (!startupMenuStateKnown) requestStartupControlState();
+    requestInfoStackBridgeStates();
 
     var i;
     for (i = 0; i < INFO_PANELS.length; i++) {
@@ -748,62 +496,18 @@ function on_mouse_rbtn_up(x, y) {
         'Reset automatic base scale'
     );
 
-    DarkOneColour.appendRadioOptions(
-        tabColourMenu,
-        TAB_COLOUR_MENU_OPTIONS,
-        tabColourMode(),
-        storedCustomTabColour(),
-        MENU_STRING
-    );
+    appendInfoStackTabColourMenu(tabColourMenu);
 
     var configuredArea = configuredTabAreaHeight();
     areaMenu.AppendMenuItem(MENU_STRING, 600, 'Automatic height (follows tab font sizing)');
     areaMenu.CheckMenuItem(600, configuredArea === 0);
     areaMenu.AppendMenuItem(MENU_STRING, 601, 'Set fixed tab area height...');
 
-    DarkOneColour.appendRadioOptions(
-        backgroundMenu,
-        BACKGROUND_MENU_OPTIONS,
-        backgroundMode(),
-        window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.separator),
-        MENU_STRING
-    );
+    appendInfoStackBackgroundMenu(backgroundMenu);
 
-    DarkOneColour.appendRadioOptions(
-        dividerMenu,
-        DIVIDER_MENU_OPTIONS,
-        dividerMenuMode,
-        dividerMenuCustomColour,
-        MENU_STRING
-    );
+    appendInfoStackDividerMenu(dividerMenu);
 
-    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1000, 'Off');
-    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1001, 'Black reveal');
-    startupTransitionMenu.AppendMenuItem(MENU_STRING, 1002, 'Staged reveal');
-    startupTransitionMenu.CheckMenuRadioItem(
-        1000,
-        1002,
-        1000 + startupMenuTransition
-    );
-    startupTransitionMenu.AppendTo(startupMenu, MENU_POPUP, 'Transition');
-    startupMenu.AppendMenuItem(
-        MENU_STRING,
-        1010,
-        'Minimum black hold... (' + startupMenuMinimumDelay + ' ms)'
-    );
-    startupMenu.AppendMenuItem(
-        MENU_STRING,
-        1011,
-        'Layout-readiness timeout... (' +
-            startupMenuReadinessTimeout + ' ms)'
-    );
-    startupMenu.AppendMenuSeparator();
-    startupMenu.AppendMenuItem(
-        startupMenuTransition === STARTUP_OFF ? MENU_GRAYED : MENU_STRING,
-        1012,
-        'Preview startup transition'
-    );
-    startupMenu.AppendMenuItem(MENU_STRING, 1013, 'Restore startup defaults');
+    appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);
 
     selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');
     visibilityMenu.AppendTo(menu, MENU_POPUP, 'Visible tabs');
@@ -863,10 +567,7 @@ function on_mouse_rbtn_up(x, y) {
         window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
         layoutInfoStack();
         window.Repaint();
-    } else if (DarkOneColour.optionForId(TAB_COLOUR_MENU_OPTIONS, id)) {
-        var selectedTabColour = DarkOneColour.optionForId(TAB_COLOUR_MENU_OPTIONS, id);
-        if (selectedTabColour.custom) setCustomTabColour();
-        else setTabColourMode(selectedTabColour.mode);
+    } else if (handleInfoStackColourMenu(id)) {
     } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
         var visibilityIndex = id - 300;
         setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));
@@ -893,61 +594,15 @@ function on_mouse_rbtn_up(x, y) {
             ));
             if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
         } catch (e) {}
-    } else if (DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id)) {
-        var selectedBackground = DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id);
-        if (selectedBackground.custom) setCustomBackgroundColour();
-        else setBackgroundMode(selectedBackground.mode);
-    } else if (DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id)) {
-        var selectedDivider = DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id);
-        if (selectedDivider.custom) chooseCustomDividerColour();
-        else setDividerState(selectedDivider.mode);
-    } else if (id === 1000 || id === 1001 || id === 1002) {
-        setStartupTransition(id - 1000);
-    } else if (id === 1010) {
-        setStartupTiming(
-            'minimum-delay',
-            'DarkOneJSP3 minimum black hold',
-            startupMenuMinimumDelay,
-            0,
-            5000
-        );
-    } else if (id === 1011) {
-        setStartupTiming(
-            'readiness-timeout',
-            'DarkOneJSP3 layout-readiness timeout',
-            startupMenuReadinessTimeout,
-            500,
-            10000
-        );
-    } else if (id === 1012) {
-        sendStartupControlCommand('preview');
-    } else if (id === 1013) {
-        restoreStartupControlDefaults();
+    } else if (handleInfoStackBridgeMenu(id)) {
     }
     return true;
 }
 
 function on_notify_data(name, data) {
-    if (name === STARTUP_PROTOCOL.notifications.stateControls) {
-        var startupState = STARTUP_PROTOCOL.parseState(data);
-        if (startupState) applyStartupMenuState(startupState);
-        return;
-    }
-
-    if (name === DIVIDER_PROTOCOL.notifications.state) {
-        var receivedState = DIVIDER_PROTOCOL.parseState(data);
-        if (receivedState) {
-            dividerMenuMode = receivedState.mode;
-            dividerMenuCustomColour = receivedState.customColour;
-            dividerMenuStateKnown = true;
-        }
-        return;
-    }
-
+    if (handleInfoStackBridgeNotification(name, data)) return;
     if (darkOneJsp3HandleReset(name, data)) return;
     if (name === 'DarkOneJSP3.InfoStack.Select') {
         selectPanel(data, false);
-    } else {
-        startupReadiness.handle(name);
     }
 }

@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.7.37
+DarkOneJSP3 v0.7.38
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -72,7 +72,7 @@ DarkOneJSP3\
   fcl\                   Optional maintainer-exported Columns UI layout
   images\                DarkOne bitmaps and display/icon source sheets
   jscript\               DarkOne JScript Panel 3 wrappers and modules
-  jsplitter\             Six JSplitter controllers and loader scripts
+  jsplitter\             Six controllers, loader scripts and InfoStack helpers
   reference\             Original DarkOne2021 PSS reference material
   shared\                Shared colour utilities and reset defaults
   tools\                 Release validator and mirror-sync utility
@@ -105,6 +105,8 @@ Current highlights
   user settings.
 - Shared declarative colour menus preserve established saved modes while
   keeping JSplitter and JScript Panel picker behaviour consistent.
+- Focused InfoStack colour and bridge helpers keep layout, painting and tab
+  interaction in the controller while isolating menu state and protocol plumbing.
 
 Recovery
 --------

@@ -40,6 +40,8 @@ required = [
     project / 'shared' / 'reset_defaults.js',
     project / 'shared' / 'colour_utils.js',
     project / 'shared' / 'jsplitter_protocols.js',
+    project / 'jsplitter' / 'info_stack_colours.js',
+    project / 'jsplitter' / 'info_stack_bridges.js',
     project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js',
     project / 'jsplitter' / 'shared.js',
     docs / 'README.txt',
@@ -106,8 +108,12 @@ if (project / 'build-info.json').exists():
         module_version = str(modules.get(module_name, '')).strip()
         if not re.fullmatch(r'\d+\.\d+\.\d+', module_version):
             errors.append('build-info ' + module_name + ' version is invalid')
-    if modules.get('info_stack_controller') != '0.6.24':
-        errors.append('build-info InfoStack controller version is not 0.6.24')
+    if modules.get('info_stack_controller') != '0.6.25':
+        errors.append('build-info InfoStack controller version is not 0.6.25')
+    if modules.get('info_stack_colours') != '0.1.0':
+        errors.append('build-info InfoStack colour helper version is not 0.1.0')
+    if modules.get('info_stack_bridges') != '0.1.0':
+        errors.append('build-info InfoStack bridge helper version is not 0.1.0')
     if modules.get('display') != '3.0.11-jsp3-3.8.5':
         errors.append('build-info Display module version is not 3.0.11-jsp3-3.8.5')
     if modules.get('queue_viewer') != '0.5.2':
@@ -265,6 +271,22 @@ if manifest_path.exists():
     for key, expected in expected_optional_menu_consolidation.items():
         if optional_menu_consolidation.get(key) != expected:
             errors.append('Manifest optional-button-menu field is incorrect: ' + key)
+    info_stack_split = manifest.get('enhancements', {}).get(
+        'info_stack_controller_split', {})
+    expected_info_stack_split = {
+        'colour_helper': 'DarkOneJSP3/jsplitter/info_stack_colours.js',
+        'bridge_helper': 'DarkOneJSP3/jsplitter/info_stack_bridges.js',
+        'version': '0.1.0',
+        'layout_and_painting_remain_in_controller': True,
+        'menu_ids_unchanged': True,
+        'saved_properties_unchanged': True,
+        'notification_names_unchanged': True,
+        'property_ownership_unchanged': True,
+        'runtime_tests': True,
+    }
+    for key, expected in expected_info_stack_split.items():
+        if info_stack_split.get(key) != expected:
+            errors.append('Manifest InfoStack split field is incorrect: ' + key)
     if manifest.get('enhancements', {}).get('control_buttons', {}).get(
             'shared_optional_menu') is not True:
         errors.append('Manifest control-button settings omit the shared optional menu')
@@ -930,8 +952,35 @@ if troubleshooting.exists():
             errors.append('Troubleshooting current-state guidance is missing: ' + phrase)
 
 info_stack_controller = project / 'jsplitter' / '03_info_stack_tabs.js'
+info_stack_colours = project / 'jsplitter' / 'info_stack_colours.js'
+info_stack_bridges = project / 'jsplitter' / 'info_stack_bridges.js'
 if info_stack_controller.exists():
     body = text(info_stack_controller)
+    for token in [
+        r"include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_colours.js');",
+        r"include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_bridges.js');",
+        'appendInfoStackTabColourMenu(tabColourMenu);',
+        'appendInfoStackBackgroundMenu(backgroundMenu);',
+        'appendInfoStackDividerMenu(dividerMenu);',
+        'appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);',
+        'handleInfoStackColourMenu(id)',
+        'handleInfoStackBridgeMenu(id)',
+        'handleInfoStackBridgeNotification(name, data)',
+        'requestInfoStackBridgeStates();',
+    ]:
+        if token not in body:
+            errors.append('InfoStack helper integration is missing: ' + token)
+    for obsolete in [
+        'function backgroundMode()',
+        'function requestDividerState()',
+        'function applyStartupMenuState(state)',
+        'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
+        'var BACKGROUND_TRANSPARENT = 0;',
+    ]:
+        if obsolete in body:
+            errors.append('InfoStack controller retains extracted logic: ' + obsolete)
+if info_stack_colours.exists():
+    body = text(info_stack_colours)
     for token in [
         'var BACKGROUND_CUSTOM = 3;',
         'var BACKGROUND_DARKONE_DARK = 4;',
@@ -939,7 +988,6 @@ if info_stack_controller.exists():
         "{ id: 703, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' }",
         "{ id: 705, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' }",
         "{ id: 704, mode: BACKGROUND_CUSTOM, custom: true }",
-        "'InfoStack backing colour'",
         'var TAB_COLOUR_COLUMNS_UI_SELECTED = 2;',
         "{ id: 802, mode: TAB_COLOUR_COLUMNS_UI_SELECTED, label: 'Columns UI selected-item background' }",
         "{ id: 801, mode: TAB_COLOUR_CUSTOM, custom: true }",
@@ -947,9 +995,34 @@ if info_stack_controller.exists():
         'DarkOneColour.appendRadioOptions(',
         'DarkOneColour.pickJsplitter(',
         'DarkOneColour.columnsUi(4, DOJSP3.colours.buttonNormal)',
+        'function handleInfoStackColourMenu(id)',
     ]:
         if token not in body:
-            errors.append('InfoStack colour consolidation is missing: ' + token)
+            errors.append('InfoStack colour helper is missing: ' + token)
+if info_stack_bridges.exists():
+    body = text(info_stack_bridges)
+    for token in [
+        'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
+        'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
+        'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
+        'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
+        'var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);',
+        'DIVIDER_PROTOCOL.notifications.query',
+        'DIVIDER_PROTOCOL.notifications.set',
+        'DIVIDER_PROTOCOL.notifications.state',
+        'DIVIDER_PROTOCOL.serialiseState(',
+        'DIVIDER_PROTOCOL.parseState(data)',
+        'STARTUP_PROTOCOL.notifications.queryControls',
+        'STARTUP_PROTOCOL.notifications.commandControls',
+        'STARTUP_PROTOCOL.notifications.stateControls',
+        'STARTUP_PROTOCOL.parseState(data)',
+        'function requestStartupControlState()',
+        'function sendStartupControlCommand(action, key, value)',
+        'function handleInfoStackBridgeMenu(id)',
+        'function handleInfoStackBridgeNotification(name, data)',
+    ]:
+        if token not in body:
+            errors.append('InfoStack bridge helper is missing: ' + token)
 
 display_system_path = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
 if display_system_path.exists():
@@ -1024,28 +1097,14 @@ if info_stack.exists():
         "'Automatic height (follows tab font sizing)'",
         "'Set fixed tab area height...'",
         "'Side divider colour'",
-        'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
-        'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
-        'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
-        'var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);',
-        'DIVIDER_PROTOCOL.notifications.query',
-        'DIVIDER_PROTOCOL.notifications.set',
-        'DIVIDER_PROTOCOL.notifications.state',
-        'DIVIDER_PROTOCOL.serialiseState(',
-        'DIVIDER_PROTOCOL.parseState(data)',
-        "DarkOneColour.pickJsplitter(",
-        "DarkOneColour.appendRadioOptions(",
-        'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
-        'STARTUP_PROTOCOL.notifications.queryControls',
-        'STARTUP_PROTOCOL.notifications.commandControls',
-        'STARTUP_PROTOCOL.notifications.stateControls',
-        'STARTUP_PROTOCOL.parseState(data)',
-        'function requestStartupControlState()',
-        'function sendStartupControlCommand(action, key, value)',
-        "'Layout-readiness timeout... ('",
-        "startupMenu.AppendTo(menu, MENU_POPUP, 'Startup')",
-        "sendStartupControlCommand('preview')",
-        "sendStartupControlCommand('restore')",
+        r"include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_colours.js');",
+        r"include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_bridges.js');",
+        'appendInfoStackTabColourMenu(tabColourMenu);',
+        'appendInfoStackBackgroundMenu(backgroundMenu);',
+        'appendInfoStackDividerMenu(dividerMenu);',
+        'appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);',
+        'requestInfoStackBridgeStates();',
+        'handleInfoStackBridgeNotification(name, data)',
     ]:
         if token not in body:
             errors.append('InfoStack automatic-font scale is missing: ' + token)
@@ -1686,6 +1745,8 @@ assert(popupMenus[0].children.map(item => item[1]).join(',') ===
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
+const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1700,7 +1761,7 @@ const DOJSP3Mock = {{
     clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }}
 }};
 const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
-    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
+    colourSource + '\\n' + protocolSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
 const controller = factory(windowMock, {{ProfilePath:''}}, function(){{}}, {{Font(){{return {{}};}}}}, DOJSP3Mock, {{}}, function(){{return false;}});
 if (controller.tabColourMode() !== 0 || (controller.tabAccentColour() >>> 0) !== 0xff298fcc)
     throw new Error('Default tab font accent changed');
@@ -1813,6 +1874,8 @@ if ((panel.page_background_colour() >>> 0) !== 0xff445566)
 const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
+const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1843,7 +1906,7 @@ const DOJSP3Mock = {{
 const factory = new Function(
     'window', 'fb', 'include', 'gdi', 'DOJSP3', 'utils',
     'darkOneJsp3HandleReset',
-    colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour }};'
+    colourSource + '\\n' + protocolSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour }};'
 );
 const controller = factory(
     windowMock,
@@ -2025,6 +2088,8 @@ const fs = require('fs');
 const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 const rootSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '01_root.js'))}, 'utf8');
+const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
+const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
 const infoSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const rootProperties = new Map();
 const infoProperties = new Map();
@@ -2086,7 +2151,7 @@ const rootFactory = new Function(
 );
 const infoFactory = new Function(
     'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
-    colourSource + '\\n' + protocolSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
+    colourSource + '\\n' + protocolSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
 );
 const root = rootFactory(rootWindow, {{ProfilePath:''}}, function(){{}}, {{}}, DOJSP3,
     function(){{return false;}}, fakeSetTimeout, fakeClearTimeout, console);
