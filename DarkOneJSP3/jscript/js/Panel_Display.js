@@ -1,11 +1,12 @@
 // =========================================================================================================
-// Panel: Display - v2.0build20191019-jscript-panel3-phase2-v0616
+// Panel: Display - v2.0build20191019-jscript-panel3-phase2-v0617
 // =========================================================================================================
 
-function displayAccentHex(colour) {
-	var value = Number(colour) >>> 0;
-	return "#" + ("000000" + (value & 0x00ffffff).toString(16).toUpperCase()).slice(-6);
-}
+var DARKONE_DISPLAY_ACCENT_MENU_OPTIONS = [
+	{ id : 20, mode : DARKONE_DISPLAY_ACCENT_DEFAULT, label : "Default - DarkOne blue" },
+	{ id : 22, mode : DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED, label : "Columns UI selected-item background" },
+	{ id : 21, mode : DARKONE_DISPLAY_ACCENT_CUSTOM, custom : true }
+];
 
 // ----- DRAW -----
 function on_paint(gr) {
@@ -24,13 +25,13 @@ function on_mouse_rbtn_up(x, y) {
 		a[1].AppendMenuItem(MF_STRING, 2, "Dot Matrix");
 		a[1].CheckMenuRadioItem(1, 2, display_system.display_style + 1);
 
-		a[2].AppendMenuItem(MF_STRING, 20, "Default - DarkOne blue");
-		a[2].AppendMenuItem(MF_STRING, 22, "Columns UI selected-item background");
-		a[2].AppendMenuItem(MF_STRING, 21, "Custom colour... (" + displayAccentHex(display_system.custom_accent_colour) + ")");
-		var selected_accent_id = display_system.accent_mode == DARKONE_DISPLAY_ACCENT_CUSTOM
-			? 21
-			: (display_system.accent_mode == DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED ? 22 : 20);
-		a[2].CheckMenuRadioItem(20, 22, selected_accent_id);
+		DarkOneColour.appendRadioOptions(
+			a[2],
+			DARKONE_DISPLAY_ACCENT_MENU_OPTIONS,
+			display_system.accent_mode,
+			display_system.custom_accent_colour,
+			MF_STRING
+		);
 
 		a[1].AppendTo(a[0], MF_STRING, "Display Style");
 		a[2].AppendTo(a[0], MF_STRING, "Display accent colour");
@@ -50,18 +51,23 @@ function on_mouse_rbtn_up(x, y) {
 				break;
 
 			case 20:
-				display_system.setAccent(DARKONE_DISPLAY_ACCENT_DEFAULT);
-				window.Repaint();
-				break;
-
 			case 21:
-				var chosen = utils.ColourPicker(display_system.custom_accent_colour);
-				display_system.setAccent(DARKONE_DISPLAY_ACCENT_CUSTOM, chosen);
-				window.Repaint();
-				break;
-
 			case 22:
-				display_system.setAccent(DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED);
+				var accent_option = DarkOneColour.optionForId(
+					DARKONE_DISPLAY_ACCENT_MENU_OPTIONS,
+					idx
+				);
+				if (accent_option.custom) {
+					var chosen = DarkOneColour.pickJscript(
+						display_system.custom_accent_colour,
+						window.Name,
+						'Enter a display accent colour as #RRGGBB or R,G,B.'
+					);
+					if (chosen === null) break;
+					display_system.setAccent(accent_option.mode, chosen);
+				} else {
+					display_system.setAccent(accent_option.mode);
+				}
 				window.Repaint();
 				break;
 

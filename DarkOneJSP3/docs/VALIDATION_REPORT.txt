@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.7.34 Validation Report
+DarkOneJSP3 v0.7.35 Validation Report
 =====================================
 
 Scope
@@ -27,6 +27,14 @@ Checks
   background colour implementation and coordinated reset defaults.
 - InfoStack, page, side-divider and waveform palettes preserve their documented
   defaults, saved mode values and Columns UI global-background behaviour.
+- Shared colour conversion, parsing and Columns UI lookup are used by the
+  consolidated colour implementations rather than duplicated local helpers.
+- Declarative menu mappings preserve the established menu-id-to-mode behaviour,
+  including the legacy Custom mode positions.
+- JSplitter and JScript Panel native colour-picker signatures are tested
+  separately, including JScript Panel's error-on-cancel flag; cancellation
+  preserves the existing mode and colour, while text
+  entry remains an availability fallback only.
 - InfoStack tab labels and the centre-display accent preserve their existing
   Default and Custom modes and can follow the Columns UI selected-item
   background colour.

@@ -4,6 +4,8 @@
 // Each JSplitter has its own JavaScript context, so this file is included by
 // each host independently.
 
+include(fb.ProfilePath + 'DarkOneJSP3\\shared\\colour_utils.js');
+
 var DOJSP3 = Object.freeze({
     colours: Object.freeze({
         bar: 0xff202020,

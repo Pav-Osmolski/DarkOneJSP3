@@ -38,6 +38,7 @@ required = [
     project / 'build-info.json',
     project / 'darkonejsp3-layout-manifest.json',
     project / 'shared' / 'reset_defaults.js',
+    project / 'shared' / 'colour_utils.js',
     project / 'jsplitter' / 'shared.js',
     docs / 'README.txt',
     docs / 'INSTALLATION.txt',
@@ -103,14 +104,16 @@ if (project / 'build-info.json').exists():
         module_version = str(modules.get(module_name, '')).strip()
         if not re.fullmatch(r'\d+\.\d+\.\d+', module_version):
             errors.append('build-info ' + module_name + ' version is invalid')
-    if modules.get('info_stack_controller') != '0.6.22':
-        errors.append('build-info InfoStack controller version is not 0.6.22')
-    if modules.get('display') != '3.0.10-jsp3-3.8.5':
-        errors.append('build-info Display module version is not 3.0.10-jsp3-3.8.5')
+    if modules.get('info_stack_controller') != '0.6.23':
+        errors.append('build-info InfoStack controller version is not 0.6.23')
+    if modules.get('display') != '3.0.11-jsp3-3.8.5':
+        errors.append('build-info Display module version is not 3.0.11-jsp3-3.8.5')
     if modules.get('queue_viewer') != '0.5.2':
         errors.append('build-info Queue Viewer module version is not 0.5.2')
-    if modules.get('page_background') != '0.1.1':
-        errors.append('build-info page-background module version is not 0.1.1')
+    if modules.get('page_background') != '0.1.2':
+        errors.append('build-info page-background module version is not 0.1.2')
+    if modules.get('colour_helpers') != '0.1.0':
+        errors.append('build-info colour-helper module version is not 0.1.0')
 
 # Active runtime namespace checks.
 legacy_runtime = re.compile(r'(?<!DarkOne)DOJS3|DARKONEJS3|DarkOneJS3')
@@ -181,6 +184,41 @@ if manifest_path.exists():
     if tab_accent.get('columns_ui_selected_item_background') is not True or \
             tab_accent.get('columns_ui_colour_index') != 4:
         errors.append('Manifest omits the Columns UI selected-item tab accent')
+
+    colour_consolidation = manifest.get('enhancements', {}).get(
+        'colour_consolidation', {})
+    expected_colour_consolidation = {
+        'shared_helper': 'DarkOneJSP3/shared/colour_utils.js',
+        'version': '0.1.0',
+        'declarative_menu_mapping': True,
+        'explicit_menu_id_to_mode_mapping': True,
+        'jsplitter_picker_signature':
+            'utils.ColourPicker(window_id, default_colour)',
+        'jscript_panel_picker_signature':
+            'utils.ColourPicker(default_colour, true)',
+        'cancel_preserves_existing_colour': True,
+        'text_fallback_only_when_native_picker_unavailable': True,
+        'saved_property_names_unchanged': True,
+        'saved_mode_values_unchanged': True,
+    }
+    for key, expected in expected_colour_consolidation.items():
+        if colour_consolidation.get(key) != expected:
+            errors.append('Manifest colour-consolidation field is incorrect: ' + key)
+    for operation in [
+            'opaque conversion', 'hex formatting', 'text parsing',
+            'mode validation']:
+        if operation not in colour_consolidation.get('pure_operations', []):
+            errors.append('Manifest colour helper operation is missing: ' + operation)
+    for host in ['JSplitter', 'JScript Panel 3']:
+        if host not in colour_consolidation.get('hosts', []):
+            errors.append('Manifest colour helper host is missing: ' + host)
+    for feature_name in [
+            'display_accent', 'info_stack_tab_colour',
+            'art_spectrum_dividers', 'info_stack_page_background']:
+        feature = manifest.get('enhancements', {}).get(feature_name, {})
+        if feature.get('shared_colour_helper') is not True:
+            errors.append('Manifest does not mark shared colour-helper use for: ' +
+                          feature_name)
     mb = manifest.get('enhancements', {}).get('musicbrainz', {})
     if mb.get('infostack_host') != 'DOJSP3.AlbumNotes':
         errors.append('Manifest does not identify Album Notes as MusicBrainz host')
@@ -721,8 +759,16 @@ if changelog.exists():
 readme_path = root / 'README.md'
 if readme_path.exists():
     readme_body = text(readme_path)
+    # The canonical repository README references promotional artwork maintained
+    # alongside the GitHub repository rather than the runtime release payload.
+    repository_only_assets = {
+        'assets/darkonejsp3-logo.png',
+        'assets/darkonejsp3-screenshot-main.jpg',
+        'assets/darkonejsp3-screenshot-albumnotes.jpg',
+    }
     for target in re.findall(r'\[[^\]]+\]\(([^)]+)\)', readme_body):
-        if '://' in target or target.startswith('#'):
+        if '://' in target or target.startswith('#') or \
+                target in repository_only_assets:
             continue
         resolved = (root / target.replace('/', os.sep)).resolve()
         if not resolved.exists():
@@ -834,30 +880,30 @@ if info_stack_controller.exists():
         'var BACKGROUND_CUSTOM = 3;',
         'var BACKGROUND_DARKONE_DARK = 4;',
         'var BACKGROUND_COLUMNS_UI = 5;',
-        'BACKGROUND_COLUMNS_UI',
-        "return DOJSP3.colours.separator;",
-        'return columnsUiBackgroundColour();',
-        "'DarkOne dark grey'",
-        "'Columns UI global background'",
+        "{ id: 703, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' }",
+        "{ id: 705, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' }",
+        "{ id: 704, mode: BACKGROUND_CUSTOM, custom: true }",
         "'InfoStack backing colour'",
         'var TAB_COLOUR_COLUMNS_UI_SELECTED = 2;',
-        'return opaqueColour(window.GetColourCUI(4));',
-        "'Columns UI selected-item background'",
-        'tabColourMenu.CheckMenuRadioItem(800, 802, selectedTabColourId);',
+        "{ id: 802, mode: TAB_COLOUR_COLUMNS_UI_SELECTED, label: 'Columns UI selected-item background' }",
+        "{ id: 801, mode: TAB_COLOUR_CUSTOM, custom: true }",
+        'DarkOneColour.normaliseMode(',
+        'DarkOneColour.appendRadioOptions(',
+        'DarkOneColour.pickJsplitter(',
+        'DarkOneColour.columnsUi(4, DOJSP3.colours.buttonNormal)',
     ]:
         if token not in body:
-            errors.append('InfoStack backing-colour hardening is missing: ' + token)
-    if 'backgroundMenu.CheckMenuRadioItem(700, 705, selectedBackgroundId);' not in body:
-        errors.append('InfoStack background menu does not preserve legacy mode mapping')
+            errors.append('InfoStack colour consolidation is missing: ' + token)
 
 display_system_path = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
 if display_system_path.exists():
     body = text(display_system_path)
     for token in [
         'var DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED = 2;',
-        'Number(window.GetColourCUI(4))',
+        'var DARKONE_DISPLAY_ACCENT_MODES = [',
+        'DarkOneColour.normaliseMode(',
+        'DarkOneColour.columnsUi(4, DARKONE_DISPLAY_DEFAULT_BLUE)',
         'if (this.accent_mode == DARKONE_DISPLAY_ACCENT_DEFAULT) return;',
-        'mode != DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED',
     ]:
         if token not in body:
             errors.append('Display selected-item accent is missing: ' + token)
@@ -866,12 +912,14 @@ display_panel_path = project / 'jscript' / 'js' / 'Panel_Display.js'
 if display_panel_path.exists():
     body = text(display_panel_path)
     for token in [
-        '"Columns UI selected-item background"',
+        'var DARKONE_DISPLAY_ACCENT_MENU_OPTIONS = [',
         'DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED',
-        'CheckMenuRadioItem(20, 22, selected_accent_id)',
+        'DarkOneColour.appendRadioOptions(',
+        'DarkOneColour.pickJscript(',
+        'if (chosen === null) break;',
     ]:
         if token not in body:
-            errors.append('Display selected-item accent menu is missing: ' + token)
+            errors.append('Display accent menu consolidation is missing: ' + token)
 
 # Established startup and layout invariants.
 root_controller = project / 'jsplitter' / '01_root.js'
@@ -922,13 +970,14 @@ if info_stack.exists():
         "var DIVIDER_MESSAGE_VERSION = 'v1';",
         "var DIVIDER_DARKONE_DARK = 4;",
         "var DIVIDER_COLUMNS_UI = 5;",
-        "dividerMenu.AppendMenuItem(MENU_STRING, 903, 'DarkOne dark grey');",
-        "dividerMenu.AppendMenuItem(MENU_STRING, 905, 'Columns UI global background');",
+        "{ id: 903, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' }",
+        "{ id: 905, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' }",
         "DIVIDER_QUERY_NOTIFICATION",
         "DIVIDER_SET_NOTIFICATION",
         "DIVIDER_STATE_NOTIFICATION",
         "serialiseDividerState(dividerMenuMode, dividerMenuCustomColour)",
-        "utils.ColourPicker(0, dividerMenuCustomColour)",
+        "DarkOneColour.pickJsplitter(",
+        "DarkOneColour.appendRadioOptions(",
         "var STARTUP_CONTROL_MESSAGE_VERSION = 'v1';",
         "'DarkOneJSP3.Startup.Controls.Query'",
         "'DarkOneJSP3.Startup.Controls.Command'",
@@ -983,7 +1032,7 @@ if main_columns.exists():
         'if (mode === DIVIDER_BLACK) return 0xff000000;',
         'if (mode === DIVIDER_DARKONE) return DOJSP3.colours.bar;',
         'if (mode === DIVIDER_DARKONE_DARK) return DOJSP3.colours.separator;',
-        'if (mode === DIVIDER_COLUMNS_UI) return columnsUiBackgroundColour();',
+        'if (mode === DIVIDER_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);',
         'if (mode === DIVIDER_CUSTOM) return dividerCustomColour();',
         'if (dividerMode() === DIVIDER_TRANSPARENT) return;',
         'gr.FillSolidRect(metrics.left, 0, metrics.width, wh, colour);',
@@ -991,9 +1040,10 @@ if main_columns.exists():
         "'DarkOneJSP3.ArtSpectrum.Divider.Query'",
         "'DarkOneJSP3.ArtSpectrum.Divider.Set'",
         "'Side divider colour'",
-        "colourMenu.AppendMenuItem(MENU_STRING, 103, 'DarkOne dark grey');",
-        "colourMenu.AppendMenuItem(MENU_STRING, 105, 'Columns UI global background');",
-        'utils.ColourPicker(0, current)',
+        "{ id: 103, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' }",
+        "{ id: 105, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' }",
+        'DarkOneColour.pickJsplitter(',
+        'DarkOneColour.appendRadioOptions(',
         "var DIVIDER_MESSAGE_VERSION = 'v1';",
         'serialiseDividerState(dividerState())',
         'parseDividerStateMessage(data)',
@@ -1027,15 +1077,15 @@ if display_waveform.exists():
         'var BACKGROUND_CUSTOM = 3;',
         'var BACKGROUND_DARKONE_DARK = 4;',
         'var BACKGROUND_COLUMNS_UI = 5;',
-        'BACKGROUND_TRANSPARENT,\n        BACKGROUND_COLUMNS_UI',
-        'function columnsUiBackgroundColour()',
+        'var BACKGROUND_MODES = [',
+        "{ id: 104, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' }",
+        "{ id: 105, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' }",
+        "{ id: 103, mode: BACKGROUND_CUSTOM, custom: true }",
         'if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;',
-        'if (mode === BACKGROUND_COLUMNS_UI) return columnsUiBackgroundColour();',
-        "backgroundMenu.AppendMenuItem(MENU_STRING, 104, 'DarkOne dark grey');",
-        "backgroundMenu.AppendMenuItem(MENU_STRING, 105, 'Columns UI global background');",
-        'backgroundMenu.CheckMenuRadioItem(100, 105, 100 + backgroundMode());',
-        'setBackgroundMode(BACKGROUND_DARKONE_DARK);',
-        'setBackgroundMode(BACKGROUND_COLUMNS_UI);',
+        'if (mode === BACKGROUND_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);',
+        'DarkOneColour.normaliseMode(',
+        'DarkOneColour.appendRadioOptions(',
+        'DarkOneColour.pickJsplitter(',
         'function on_colours_changed()',
     ]:
         if token not in body:
@@ -1048,6 +1098,49 @@ if art_spectrum.exists():
         errors.append('Album Art/Spectrum controller does not use zero inset')
     if 'var width = Math.max(1, ww);' not in body:
         errors.append('Album Art/Spectrum controller does not fill its host')
+
+colour_helper = project / 'shared' / 'colour_utils.js'
+if colour_helper.exists():
+    body = text(colour_helper)
+    for token in [
+        'var DarkOneColour = Object.freeze({',
+        'opaque: function (colour)',
+        'toHex: function (colour)',
+        'columnsUi: function (index, fallback)',
+        'parseOpaque: function (value)',
+        'normaliseMode: function (value, allowedModes, fallback)',
+        'appendRadioOptions: function (menu, options, selectedMode, customColour, flags)',
+        'pickJsplitter: function (current, title, prompt)',
+        'pickJscript: function (current, title, prompt)',
+    ]:
+        if token not in body:
+            errors.append('Shared colour helper is missing: ' + token)
+
+for path in [
+    project / 'jsplitter' / '02_main_columns.js',
+    project / 'jsplitter' / '03_info_stack_tabs.js',
+    project / 'jsplitter' / '06_display_waveform.js',
+    samples / 'js' / 'panel.js',
+    project / 'jscript' / 'js' / 'Panel_Display.js',
+]:
+    if not path.exists():
+        continue
+    body = text(path)
+    for duplicate in ['function colourToHex(', 'function parseOpaqueColour(', 'function opaqueColour(']:
+        if duplicate in body:
+            errors.append(rel(path) + ' retains duplicate colour helper: ' + duplicate)
+
+adapted_colour_entries = [
+    samples / 'Last.fm Bio.txt',
+    samples / 'Last.fm Artist Info + User Info.txt',
+    samples / 'Album Notes.txt',
+    samples / 'Properties.txt',
+    project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt',
+    project / 'jscript' / 'DarkOneJSP3 - Display Panel.txt',
+]
+for path in adapted_colour_entries:
+    if path.exists() and 'DarkOneJSP3\\shared\\colour_utils.js' not in text(path):
+        errors.append(rel(path) + ' does not import the shared colour helper')
 
 # Resolve local JScript Panel preprocessor imports.
 import_re = re.compile(r'^//\s*@import\s+"([^"]+)"', re.M)
@@ -1097,10 +1190,76 @@ else:
                 errors.append('Entry-script syntax failed for ' + rel(path) + ': ' +
                               result.stderr.strip())
 
+    # Exercise the shared colour conversions, declarative menu mapping and
+    # host-specific picker cancellation/fallback behaviour.
+    colour_helper_smoke = f"""
+const fs = require('fs');
+const source = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+let pickerCalls = [];
+let inputCalls = 0;
+const utilsMock = {{
+    ColourPicker() {{ pickerCalls.push([...arguments]); return null; }},
+    InputBox() {{ inputCalls++; return '#123456'; }}
+}};
+const factory = new Function('utils', source + '\\nreturn DarkOneColour;');
+const colour = factory(utilsMock);
+function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+assert((colour.opaque(0x00123456) >>> 0) === 0xff123456, 'Opaque conversion failed');
+assert(colour.toHex(0xff123456) === '#123456', 'Hex conversion failed');
+assert((colour.parseOpaque('18, 52, 86') >>> 0) === 0xff123456, 'RGB parsing failed');
+assert((colour.parseOpaque('300, 0, 86') >>> 0) === 0xffff0056, 'RGB channel clamping failed');
+assert(colour.normaliseMode(4, [0, 1, 2, 4, 5, 3], 1) === 4, 'Sparse mode 4 was rejected');
+assert(colour.normaliseMode(99, [0, 1, 2, 4, 5, 3], 1) === 1, 'Invalid mode fallback failed');
+const options = [
+    {{id: 10, mode: 0, label: 'Default'}},
+    {{id: 12, mode: 2, label: 'Global'}},
+    {{id: 11, mode: 1, custom: true}}
+];
+const menu = {{
+    items: [], radio: null,
+    AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
+    CheckMenuRadioItem(minimum, maximum, selected) {{ this.radio = [minimum, maximum, selected]; }}
+}};
+colour.appendRadioOptions(menu, options, 1, 0xff123456, 0);
+assert(menu.radio.join(',') === '10,12,11', 'Declarative menu selected the wrong id');
+assert(menu.items[2][2] === 'Custom colour... (#123456)', 'Custom menu label is wrong');
+assert(colour.optionForId(options, 12).mode === 2, 'Menu id did not resolve to mode');
+assert(colour.pickJsplitter(0xff112233, 'Test', 'Prompt') === null,
+    'Cancelling the JSplitter picker changed the colour');
+assert(inputCalls === 0 && pickerCalls[0].length === 2,
+    'JSplitter cancel incorrectly opened fallback or used wrong signature');
+delete utilsMock.ColourPicker;
+assert((colour.pickJsplitter(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
+    'JSplitter text fallback failed when the native picker was unavailable');
+utilsMock.ColourPicker = function() {{ pickerCalls.push([...arguments]); return null; }};
+inputCalls = 0;
+assert(colour.pickJscript(0xff112233, 'Test', 'Prompt') === null,
+    'Cancelling the JScript Panel picker changed the colour');
+assert(inputCalls === 0 && pickerCalls[pickerCalls.length - 1].length === 2 &&
+    pickerCalls[pickerCalls.length - 1][1] === true,
+    'JScript Panel cancel incorrectly opened fallback or used wrong signature');
+utilsMock.ColourPicker = function() {{ throw new Error('cancel'); }};
+inputCalls = 0;
+assert(colour.pickJscript(0xff112233, 'Test', 'Prompt') === null && inputCalls === 0,
+    'JScript Panel picker exception incorrectly opened the text fallback');
+utilsMock.ColourPicker = function() {{ throw new Error('cancel'); }};
+assert(colour.pickJsplitter(0xff112233, 'Test', 'Prompt') === null && inputCalls === 0,
+    'JSplitter picker exception incorrectly opened the text fallback');
+delete utilsMock.ColourPicker;
+assert((colour.pickJscript(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
+    'JScript Panel text fallback failed when the native picker was unavailable');
+"""
+    result = subprocess.run([node, '-e', colour_helper_smoke],
+                            capture_output=True, text=True)
+    if result.returncode:
+        errors.append('Shared colour-helper runtime smoke test failed: ' +
+                      (result.stdout + result.stderr).strip())
+
     # Exercise the InfoStack tab-colour modes. Existing Custom mode 1 must
     # remain intact while mode 2 follows Columns UI selected-item background.
     tab_colour_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1115,7 +1274,7 @@ const DOJSP3Mock = {{
     clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }}
 }};
 const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
-    source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
+    colourSource + '\\n' + source + '\\nreturn {{ tabColourMode, tabAccentColour, setTabColourMode }};');
 const controller = factory(windowMock, {{ProfilePath:''}}, function(){{}}, {{Font(){{return {{}};}}}}, DOJSP3Mock, {{}}, function(){{return false;}});
 if (controller.tabColourMode() !== 0 || (controller.tabAccentColour() >>> 0) !== 0xff298fcc)
     throw new Error('Default tab font accent changed');
@@ -1135,6 +1294,7 @@ if (controller.tabColourMode() !== 2 || (controller.tabAccentColour() >>> 0) !==
     # Exercise display-accent mode compatibility and selected-item resolution.
     display_accent_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
 const start = source.indexOf('function DisplaySystem()');
 if (start < 0) throw new Error('DisplaySystem constructor not found');
@@ -1151,7 +1311,7 @@ const factory = new Function('window','fb','safeGdiImage','utils','disposeImage'
     'tf_display_tracknumber_exists','tf_display_totaltracks_exists','tf_display_tracknumber','tf_display_totaltracks','tf_display_bitrate',
     'imgPath','DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL',
     'darkOneCreateFont','evalTitleFormat','TimeFmt','pad','pad_right','clearPanelTimer','section',
-    source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
+    colourSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
 const api = factory(windowMock, {{IsPlaying:false, PlaybackLength:0, PlaybackTime:0}}, function(){{return null;}},
     {{CreateImage(){{return noopImage;}}}}, function(){{}}, function(){{return 0xff000000;}}, 0xff000000, 0xffffffff,
     '', '', '', '', '', '', '', '', '', '', '', '', 900, 400, function(){{return {{}};}}, function(){{return ''; }}, function(){{return ''; }},
@@ -1176,6 +1336,7 @@ if (display.accent_mode !== 2 || (display.active_colour >>> 0) !== 0xff556677)
     # explicit restoration of the historical Columns UI global background.
     page_background_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(samples / 'js' / 'panel.js'))}, 'utf8');
 function property(name, fallback) {{ this.name = name; this.value = fallback; }}
 const windowMock = {{
@@ -1192,7 +1353,7 @@ const windowMock = {{
 const underscore = {{ invoke() {{}}, forEach() {{}}, first(a) {{ return a[0]; }}, last(a) {{ return a[a.length - 1]; }} }};
 const factory = new Function(
     'window', 'fb', '_p', '_scale', '_', 'RGB', 'blendColours',
-    source + '\\nreturn _panel;'
+    colourSource + '\\n' + source + '\\nreturn _panel;'
 );
 const Panel = factory(
     windowMock,
@@ -1224,6 +1385,7 @@ if ((panel.page_background_colour() >>> 0) !== 0xff445566)
     # the legacy custom mode 3 and must not be clamped back to mode 3.
     info_stack_background_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const properties = new Map();
 const windowMock = {{
@@ -1254,7 +1416,7 @@ const DOJSP3Mock = {{
 const factory = new Function(
     'window', 'fb', 'include', 'gdi', 'DOJSP3', 'utils',
     'darkOneJsp3HandleReset',
-    source + '\\nreturn {{ backgroundMode, backgroundColour }};'
+    colourSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour }};'
 );
 const controller = factory(
     windowMock,
@@ -1291,6 +1453,7 @@ if (controller.backgroundMode() !== 5 ||
     # Exercise the waveform-host background range and colour resolution.
     waveform_background_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '06_display_waveform.js'))}, 'utf8');
 const properties = new Map();
 let repaintCount = 0;
@@ -1310,7 +1473,7 @@ const DOJSP3Mock = {{
 }};
 const factory = new Function(
     'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils',
-    source + '\\nreturn {{ backgroundMode, backgroundColour, on_colours_changed }};'
+    colourSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour, on_colours_changed }};'
 );
 const controller = factory(
     windowMock,
@@ -1349,6 +1512,7 @@ if (repaintCount !== 1)
     # Exercise upper-divider mode persistence, painting and notifications.
     divider_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '02_main_columns.js'))}, 'utf8');
 const properties = new Map();
 const notifications = [];
@@ -1370,7 +1534,7 @@ const DOJSP3Mock = {{
 }};
 const factory = new Function(
     'window', 'fb', 'include', 'utils', 'DOJSP3', 'darkOneJsp3HandleReset',
-    source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, serialiseDividerState, parseDividerStateMessage, isDividerPoint, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
+    colourSource + '\\n' + source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, serialiseDividerState, parseDividerStateMessage, isDividerPoint, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
 );
 const controller = factory(
     windowMock,
@@ -1429,6 +1593,7 @@ if (!controller.isDividerPoint(635) || controller.isDividerPoint(630))
     # Exercise the real JSplitter startup-control bridge and timing state.
     startup_bridge_smoke = f"""
 const fs = require('fs');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
 const rootSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '01_root.js'))}, 'utf8');
 const infoSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
 const rootProperties = new Map();
@@ -1491,7 +1656,7 @@ const rootFactory = new Function(
 );
 const infoFactory = new Function(
     'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
-    infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerStateMessage,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
+    colourSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerStateMessage,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
 );
 const root = rootFactory(rootWindow, {{ProfilePath:''}}, function(){{}}, {{}}, DOJSP3,
     function(){{return false;}}, fakeSetTimeout, fakeClearTimeout, console);

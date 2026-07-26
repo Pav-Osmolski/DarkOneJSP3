@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.7.34
+  <strong>Current stable release:</strong> v0.7.35
 </p>
 
 > [!IMPORTANT]
@@ -65,7 +65,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.7.34** is the first public release and establishes the stable
+**DarkOneJSP3 v0.7.35** is the first public release and establishes the stable
 baseline for future updates.
 
 The documented panel map is the recommended setup method. A maintainer-exported

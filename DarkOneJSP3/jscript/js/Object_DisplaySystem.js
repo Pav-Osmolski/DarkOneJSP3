@@ -1,5 +1,5 @@
 // =========================================================================================================
-// DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0616
+// DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0617
 // =========================================================================================================
 
 var g_matrix = safeGdiImage(imgPath + "dot_matrix.png");
@@ -8,6 +8,11 @@ var g_icons = safeGdiImage(imgPath + "sac_pbo.png");
 var DARKONE_DISPLAY_ACCENT_DEFAULT = 0;
 var DARKONE_DISPLAY_ACCENT_CUSTOM = 1;
 var DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED = 2;
+var DARKONE_DISPLAY_ACCENT_MODES = [
+	DARKONE_DISPLAY_ACCENT_DEFAULT,
+	DARKONE_DISPLAY_ACCENT_CUSTOM,
+	DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED
+];
 var DARKONE_DISPLAY_ACCENT_MODE_PROPERTY = "DARKONEJSP3.DISPLAY.ACCENT.MODE";
 var DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY = "DARKONEJSP3.DISPLAY.ACCENT.CUSTOM.COLOUR";
 var DARKONE_DISPLAY_DEFAULT_BLUE = -14053428; // #298FCC
@@ -342,11 +347,11 @@ function DisplaySystem() {
 		var mode = window.GetProperty(DARKONE_DISPLAY_ACCENT_MODE_PROPERTY, null);
 		var custom_colour = window.GetProperty(DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY, null);
 
-		mode = Math.round(Number(mode));
-		if (mode != DARKONE_DISPLAY_ACCENT_CUSTOM &&
-				mode != DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED) {
-			mode = DARKONE_DISPLAY_ACCENT_DEFAULT;
-		}
+		mode = DarkOneColour.normaliseMode(
+			mode,
+			DARKONE_DISPLAY_ACCENT_MODES,
+			DARKONE_DISPLAY_ACCENT_DEFAULT
+		);
 		custom_colour = Number(custom_colour == null ? DARKONE_DISPLAY_DEFAULT_BLUE : custom_colour);
 		if (!isFinite(custom_colour)) custom_colour = DARKONE_DISPLAY_DEFAULT_BLUE;
 
@@ -355,17 +360,18 @@ function DisplaySystem() {
 		this.active_colour = mode == DARKONE_DISPLAY_ACCENT_CUSTOM
 			? custom_colour
 			: (mode == DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED
-				? (0xff000000 | (Number(window.GetColourCUI(4)) & 0x00ffffff))
+				? DarkOneColour.columnsUi(4, DARKONE_DISPLAY_DEFAULT_BLUE)
 				: DARKONE_DISPLAY_DEFAULT_BLUE);
 		this.inactive_colour = combColours(p_backcol, -1, 0.02);
 		this.refreshAccentSprites();
 	}
 
 	this.setAccent = function(mode, custom_colour) {
-		if (mode != DARKONE_DISPLAY_ACCENT_CUSTOM &&
-				mode != DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED) {
-			mode = DARKONE_DISPLAY_ACCENT_DEFAULT;
-		}
+		mode = DarkOneColour.normaliseMode(
+			mode,
+			DARKONE_DISPLAY_ACCENT_MODES,
+			DARKONE_DISPLAY_ACCENT_DEFAULT
+		);
 		window.SetProperty(DARKONE_DISPLAY_ACCENT_MODE_PROPERTY, mode);
 		if (custom_colour != null) window.SetProperty(DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY, Number(custom_colour));
 		this.InitColours();

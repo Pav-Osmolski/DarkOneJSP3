@@ -23,8 +23,9 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // existing selection and hover feedback are preserved.
 //
 // v0.6.12 fixes the JSplitter-specific native colour-picker call. JSplitter
-// requires utils.ColourPicker(window_id, default_colour), unlike JScript Panel's
-// one-argument form. Cancelling the native picker now exits cleanly instead of
+// requires utils.ColourPicker(window_id, default_colour), while JScript Panel
+// takes the default colour first and supports an error-on-cancel flag. Cancelling
+// the native picker now exits cleanly instead of
 // falling through to the manual text-entry fallback.
 
 //
@@ -64,6 +65,9 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // v0.6.22 adds Columns UI selected-item background as a live inactive-tab
 // font-colour source. Existing Default and Custom modes remain values 0 and 1;
 // the new Columns UI mode uses value 2.
+//
+// v0.6.23 consolidates colour conversion, menu mapping and picker behaviour
+// through the shared DarkOneJSP3 colour helper without changing saved modes.
 
 var INFO_PANELS = [
     { key: 'Playlists',  title: DOJSP3.titles.playlistManager, defaultLabel: 'Playlists',  uppercaseLabel: 'PLAYLISTS' },
@@ -117,6 +121,22 @@ var DIVIDER_DARKONE = 2;
 var DIVIDER_CUSTOM = 3;
 var DIVIDER_DARKONE_DARK = 4;
 var DIVIDER_COLUMNS_UI = 5;
+var DIVIDER_MODES = [
+    DIVIDER_TRANSPARENT,
+    DIVIDER_BLACK,
+    DIVIDER_DARKONE,
+    DIVIDER_CUSTOM,
+    DIVIDER_DARKONE_DARK,
+    DIVIDER_COLUMNS_UI
+];
+var DIVIDER_MENU_OPTIONS = [
+    { id: 900, mode: DIVIDER_TRANSPARENT, label: 'Transparent / inherit parent' },
+    { id: 901, mode: DIVIDER_BLACK, label: 'Black' },
+    { id: 902, mode: DIVIDER_DARKONE, label: 'DarkOne grey' },
+    { id: 903, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' },
+    { id: 905, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' },
+    { id: 904, mode: DIVIDER_CUSTOM, custom: true }
+];
 var dividerMenuMode = DIVIDER_BLACK;
 var dividerMenuCustomColour = 0xff000000;
 var dividerMenuStateKnown = false;
@@ -148,12 +168,38 @@ var BACKGROUND_DARKONE = 2;
 var BACKGROUND_CUSTOM = 3;
 var BACKGROUND_DARKONE_DARK = 4;
 var BACKGROUND_COLUMNS_UI = 5;
+var BACKGROUND_MODES = [
+    BACKGROUND_TRANSPARENT,
+    BACKGROUND_BLACK,
+    BACKGROUND_DARKONE,
+    BACKGROUND_CUSTOM,
+    BACKGROUND_DARKONE_DARK,
+    BACKGROUND_COLUMNS_UI
+];
+var BACKGROUND_MENU_OPTIONS = [
+    { id: 700, mode: BACKGROUND_TRANSPARENT, label: 'Transparent / inherit parent' },
+    { id: 701, mode: BACKGROUND_BLACK, label: 'Black' },
+    { id: 702, mode: BACKGROUND_DARKONE, label: 'DarkOne grey' },
+    { id: 703, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' },
+    { id: 705, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' },
+    { id: 704, mode: BACKGROUND_CUSTOM, custom: true }
+];
 
 // Tab font-colour modes. Only the normal/inactive label uses this accent; the
 // selected label stays white and the hovered label stays grey.
 var TAB_COLOUR_DEFAULT = 0;
 var TAB_COLOUR_CUSTOM = 1;
 var TAB_COLOUR_COLUMNS_UI_SELECTED = 2;
+var TAB_COLOUR_MODES = [
+    TAB_COLOUR_DEFAULT,
+    TAB_COLOUR_CUSTOM,
+    TAB_COLOUR_COLUMNS_UI_SELECTED
+];
+var TAB_COLOUR_MENU_OPTIONS = [
+    { id: 800, mode: TAB_COLOUR_DEFAULT, label: 'Default - DarkOne blue' },
+    { id: 802, mode: TAB_COLOUR_COLUMNS_UI_SELECTED, label: 'Columns UI selected-item background' },
+    { id: 801, mode: TAB_COLOUR_CUSTOM, custom: true }
+];
 
 var activeIndex = DOJSP3.clamp(Number(window.GetProperty(ACTIVE_PROPERTY, 0)) || 0, 0, INFO_PANELS.length - 1);
 var hoverIndex = -1;
@@ -434,10 +480,10 @@ function tabFromPoint(x, y) {
 }
 
 function backgroundMode() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE_DARK)) || 0),
-        BACKGROUND_TRANSPARENT,
-        BACKGROUND_COLUMNS_UI
+    return DarkOneColour.normaliseMode(
+        window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE_DARK),
+        BACKGROUND_MODES,
+        BACKGROUND_DARKONE_DARK
     );
 }
 
@@ -446,55 +492,20 @@ function backgroundColour() {
     if (mode === BACKGROUND_BLACK) return 0xff000000;
     if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
     if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;
-    if (mode === BACKGROUND_COLUMNS_UI) return columnsUiBackgroundColour();
+    if (mode === BACKGROUND_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
     if (mode === BACKGROUND_CUSTOM) {
-        return Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818));
+        return DarkOneColour.opaque(window.GetProperty(
+            BACKGROUND_COLOUR_PROPERTY,
+            DOJSP3.colours.separator
+        ));
     }
     return 0x00000000;
-}
-
-function colourToHex(colour) {
-    var rgb = Number(colour) % 0x1000000;
-    if (rgb < 0) rgb += 0x1000000;
-    var text = rgb.toString(16).toUpperCase();
-    while (text.length < 6) text = '0' + text;
-    return '#' + text;
-}
-
-function parseOpaqueColour(value) {
-    value = String(value || '').replace(/^\s+|\s+$/g, '');
-    var match;
-
-    match = value.match(/^#?([0-9a-f]{6})$/i);
-    if (match) return 0xff000000 + parseInt(match[1], 16);
-
-    match = value.match(/^\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*$/);
-    if (match) {
-        var r = DOJSP3.clamp(parseInt(match[1], 10), 0, 255);
-        var g = DOJSP3.clamp(parseInt(match[2], 10), 0, 255);
-        var b = DOJSP3.clamp(parseInt(match[3], 10), 0, 255);
-        return 0xff000000 + (r * 0x10000) + (g * 0x100) + b;
-    }
-
-    return null;
-}
-
-function opaqueColour(colour) {
-    return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
-}
-
-function columnsUiBackgroundColour() {
-    try {
-        return opaqueColour(window.GetColourCUI(3));
-    } catch (e) {
-        return DOJSP3.colours.bar;
-    }
 }
 
 function serialiseDividerState(mode, customColour) {
     return DIVIDER_MESSAGE_VERSION + '|' +
         String(mode) + '|' +
-        String(opaqueColour(customColour) >>> 0);
+        String(DarkOneColour.opaque(customColour) >>> 0);
 }
 
 function parseDividerStateMessage(data) {
@@ -506,12 +517,12 @@ function parseDividerStateMessage(data) {
     if (isNaN(mode) || isNaN(colour)) return null;
 
     return {
-        mode: DOJSP3.clamp(
-            Math.round(mode),
-            DIVIDER_TRANSPARENT,
-            DIVIDER_COLUMNS_UI
+        mode: DarkOneColour.normaliseMode(
+            mode,
+            DIVIDER_MODES,
+            DIVIDER_BLACK
         ),
-        customColour: opaqueColour(colour)
+        customColour: DarkOneColour.opaque(colour)
     };
 }
 
@@ -520,13 +531,13 @@ function requestDividerState() {
 }
 
 function setDividerState(mode, customColour) {
-    dividerMenuMode = DOJSP3.clamp(
-        Math.round(Number(mode) || 0),
-        DIVIDER_TRANSPARENT,
-        DIVIDER_COLUMNS_UI
+    dividerMenuMode = DarkOneColour.normaliseMode(
+        mode,
+        DIVIDER_MODES,
+        DIVIDER_BLACK
     );
     if (typeof customColour !== 'undefined') {
-        dividerMenuCustomColour = opaqueColour(customColour);
+        dividerMenuCustomColour = DarkOneColour.opaque(customColour);
     }
     dividerMenuStateKnown = true;
     window.NotifyOthers(
@@ -536,16 +547,12 @@ function setDividerState(mode, customColour) {
 }
 
 function chooseCustomDividerColour() {
-    var chosen = null;
-    try {
-        if (utils && typeof utils.ColourPicker === 'function') {
-            chosen = utils.ColourPicker(0, dividerMenuCustomColour);
-        }
-    } catch (e) {
-        chosen = null;
-    }
-    if (chosen === null || typeof chosen === 'undefined' ||
-            isNaN(Number(chosen))) return;
+    var chosen = DarkOneColour.pickJsplitter(
+        dividerMenuCustomColour,
+        window.Name,
+        'Enter a side-divider colour as #RRGGBB or R,G,B.'
+    );
+    if (chosen === null) return;
     setDividerState(DIVIDER_CUSTOM, chosen);
 }
 
@@ -642,22 +649,25 @@ function restoreStartupControlDefaults() {
 }
 
 function tabColourMode() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(TAB_COLOUR_MODE_PROPERTY, TAB_COLOUR_DEFAULT)) || 0),
-        TAB_COLOUR_DEFAULT,
-        TAB_COLOUR_COLUMNS_UI_SELECTED
+    return DarkOneColour.normaliseMode(
+        window.GetProperty(TAB_COLOUR_MODE_PROPERTY, TAB_COLOUR_DEFAULT),
+        TAB_COLOUR_MODES,
+        TAB_COLOUR_DEFAULT
     );
 }
 
 function storedCustomTabColour() {
-    return opaqueColour(window.GetProperty(TAB_CUSTOM_COLOUR_PROPERTY, DOJSP3.colours.buttonNormal));
+    return DarkOneColour.opaque(window.GetProperty(
+        TAB_CUSTOM_COLOUR_PROPERTY,
+        DOJSP3.colours.buttonNormal
+    ));
 }
 
 function tabAccentColour() {
     var mode = tabColourMode();
     if (mode === TAB_COLOUR_CUSTOM) return storedCustomTabColour();
     if (mode === TAB_COLOUR_COLUMNS_UI_SELECTED) {
-        return opaqueColour(window.GetColourCUI(4));
+        return DarkOneColour.columnsUi(4, DOJSP3.colours.buttonNormal);
     }
     return DOJSP3.colours.buttonNormal;
 }
@@ -669,72 +679,41 @@ function repaintTabArea() {
 function setTabColourMode(mode) {
     window.SetProperty(
         TAB_COLOUR_MODE_PROPERTY,
-        DOJSP3.clamp(Math.round(Number(mode) || 0), TAB_COLOUR_DEFAULT, TAB_COLOUR_COLUMNS_UI_SELECTED)
+        DarkOneColour.normaliseMode(mode, TAB_COLOUR_MODES, TAB_COLOUR_DEFAULT)
     );
     repaintTabArea();
 }
 
 function setCustomTabColour() {
-    var current = storedCustomTabColour();
-    var chosen = null;
-    var pickerInvoked = false;
+    var chosen = DarkOneColour.pickJsplitter(
+        storedCustomTabColour(),
+        window.Name,
+        'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #298FCC or 41,143,204'
+    );
+    if (chosen === null) return;
 
-    // JSplitter's native picker requires two arguments. The first window-id
-    // parameter is currently unused by the component, but it must still be
-    // supplied; JScript Panel's one-argument signature is not compatible here.
-    try {
-        if (utils && typeof utils.ColourPicker === 'function') {
-            pickerInvoked = true;
-            chosen = utils.ColourPicker(0, current);
-        }
-    } catch (e) {
-        pickerInvoked = false;
-        chosen = null;
-    }
-
-    // Retain manual entry only as a compatibility fallback when the native
-    // picker could not be invoked. Cancelling a successfully opened picker must
-    // not immediately replace it with an InputBox.
-    if (!pickerInvoked) {
-        try {
-            var entered = utils.InputBox(
-                'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #298FCC or 41,143,204',
-                window.Name,
-                colourToHex(current)
-            );
-            chosen = parseOpaqueColour(entered);
-        } catch (e2) {
-            chosen = null;
-        }
-    }
-
-    if (chosen === null || typeof chosen === 'undefined' || isNaN(Number(chosen))) return;
-
-    window.SetProperty(TAB_CUSTOM_COLOUR_PROPERTY, opaqueColour(chosen));
+    window.SetProperty(TAB_CUSTOM_COLOUR_PROPERTY, chosen);
     setTabColourMode(TAB_COLOUR_CUSTOM);
 }
 
 function setBackgroundMode(mode) {
-    window.SetProperty(BACKGROUND_MODE_PROPERTY, mode);
+    window.SetProperty(
+        BACKGROUND_MODE_PROPERTY,
+        DarkOneColour.normaliseMode(mode, BACKGROUND_MODES, BACKGROUND_DARKONE_DARK)
+    );
     window.Repaint();
 }
 
 function setCustomBackgroundColour() {
-    try {
-        var current = Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818));
-        var entered = utils.InputBox(
-            'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #000000 or 24,24,24',
-            window.Name,
-            colourToHex(current)
-        );
-        var parsed = parseOpaqueColour(entered);
-        if (parsed === null) {
-            fb.ShowPopupMessage('That colour could not be parsed. Use #RRGGBB or R,G,B.', 'DarkOneJSP3');
-            return;
-        }
-        window.SetProperty(BACKGROUND_COLOUR_PROPERTY, parsed);
-        setBackgroundMode(BACKGROUND_CUSTOM);
-    } catch (e) {}
+    var chosen = DarkOneColour.pickJsplitter(
+        window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.separator),
+        window.Name,
+        'Enter a colour as #RRGGBB or R,G,B.\n\nExamples: #000000 or 24,24,24'
+    );
+    if (chosen === null) return;
+
+    window.SetProperty(BACKGROUND_COLOUR_PROPERTY, chosen);
+    setBackgroundMode(BACKGROUND_CUSTOM);
 }
 
 function on_colours_changed() {
@@ -843,56 +822,34 @@ function on_mouse_rbtn_up(x, y) {
         'Reset automatic base scale'
     );
 
-    tabColourMenu.AppendMenuItem(MENU_STRING, 800, 'Default - DarkOne blue');
-    tabColourMenu.AppendMenuItem(MENU_STRING, 802, 'Columns UI selected-item background');
-    tabColourMenu.AppendMenuItem(
-        MENU_STRING,
-        801,
-        'Custom colour... (' + colourToHex(storedCustomTabColour()) + ')'
+    DarkOneColour.appendRadioOptions(
+        tabColourMenu,
+        TAB_COLOUR_MENU_OPTIONS,
+        tabColourMode(),
+        storedCustomTabColour(),
+        MENU_STRING
     );
-    var selectedTabColourId = tabColourMode() === TAB_COLOUR_CUSTOM
-        ? 801
-        : (tabColourMode() === TAB_COLOUR_COLUMNS_UI_SELECTED ? 802 : 800);
-    tabColourMenu.CheckMenuRadioItem(800, 802, selectedTabColourId);
 
     var configuredArea = configuredTabAreaHeight();
     areaMenu.AppendMenuItem(MENU_STRING, 600, 'Automatic height (follows tab font sizing)');
     areaMenu.CheckMenuItem(600, configuredArea === 0);
     areaMenu.AppendMenuItem(MENU_STRING, 601, 'Set fixed tab area height...');
 
-    backgroundMenu.AppendMenuItem(MENU_STRING, 700, 'Transparent / inherit parent');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 701, 'Black');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 702, 'DarkOne grey');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 703, 'DarkOne dark grey');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 705, 'Columns UI global background');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 704, 'Custom colour... (' + colourToHex(Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, 0xff181818))) + ')');
-    var selectedBackgroundId = backgroundMode() === BACKGROUND_CUSTOM
-        ? 704
-        : (backgroundMode() === BACKGROUND_DARKONE_DARK
-            ? 703
-            : (backgroundMode() === BACKGROUND_COLUMNS_UI
-                ? 705
-                : 700 + backgroundMode()));
-    backgroundMenu.CheckMenuRadioItem(700, 705, selectedBackgroundId);
-
-    dividerMenu.AppendMenuItem(MENU_STRING, 900, 'Transparent / inherit parent');
-    dividerMenu.AppendMenuItem(MENU_STRING, 901, 'Black');
-    dividerMenu.AppendMenuItem(MENU_STRING, 902, 'DarkOne grey');
-    dividerMenu.AppendMenuItem(MENU_STRING, 903, 'DarkOne dark grey');
-    dividerMenu.AppendMenuItem(MENU_STRING, 905, 'Columns UI global background');
-    dividerMenu.AppendMenuItem(
-        MENU_STRING,
-        904,
-        'Custom colour... (' + colourToHex(dividerMenuCustomColour) + ')'
+    DarkOneColour.appendRadioOptions(
+        backgroundMenu,
+        BACKGROUND_MENU_OPTIONS,
+        backgroundMode(),
+        window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.separator),
+        MENU_STRING
     );
-    var selectedDividerId = dividerMenuMode === DIVIDER_CUSTOM
-        ? 904
-        : (dividerMenuMode === DIVIDER_DARKONE_DARK
-            ? 903
-            : (dividerMenuMode === DIVIDER_COLUMNS_UI
-                ? 905
-                : 900 + dividerMenuMode));
-    dividerMenu.CheckMenuRadioItem(900, 905, selectedDividerId);
+
+    DarkOneColour.appendRadioOptions(
+        dividerMenu,
+        DIVIDER_MENU_OPTIONS,
+        dividerMenuMode,
+        dividerMenuCustomColour,
+        MENU_STRING
+    );
 
     startupTransitionMenu.AppendMenuItem(MENU_STRING, 1000, 'Off');
     startupTransitionMenu.AppendMenuItem(MENU_STRING, 1001, 'Black reveal');
@@ -980,12 +937,10 @@ function on_mouse_rbtn_up(x, y) {
         window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
         layoutInfoStack();
         window.Repaint();
-    } else if (id === 800) {
-        setTabColourMode(TAB_COLOUR_DEFAULT);
-    } else if (id === 801) {
-        setCustomTabColour();
-    } else if (id === 802) {
-        setTabColourMode(TAB_COLOUR_COLUMNS_UI_SELECTED);
+    } else if (DarkOneColour.optionForId(TAB_COLOUR_MENU_OPTIONS, id)) {
+        var selectedTabColour = DarkOneColour.optionForId(TAB_COLOUR_MENU_OPTIONS, id);
+        if (selectedTabColour.custom) setCustomTabColour();
+        else setTabColourMode(selectedTabColour.mode);
     } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
         var visibilityIndex = id - 300;
         setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));
@@ -1012,30 +967,14 @@ function on_mouse_rbtn_up(x, y) {
             ));
             if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
         } catch (e) {}
-    } else if (id === 700) {
-        setBackgroundMode(BACKGROUND_TRANSPARENT);
-    } else if (id === 701) {
-        setBackgroundMode(BACKGROUND_BLACK);
-    } else if (id === 702) {
-        setBackgroundMode(BACKGROUND_DARKONE);
-    } else if (id === 703) {
-        setBackgroundMode(BACKGROUND_DARKONE_DARK);
-    } else if (id === 704) {
-        setCustomBackgroundColour();
-    } else if (id === 705) {
-        setBackgroundMode(BACKGROUND_COLUMNS_UI);
-    } else if (id === 900) {
-        setDividerState(DIVIDER_TRANSPARENT);
-    } else if (id === 901) {
-        setDividerState(DIVIDER_BLACK);
-    } else if (id === 902) {
-        setDividerState(DIVIDER_DARKONE);
-    } else if (id === 903) {
-        setDividerState(DIVIDER_DARKONE_DARK);
-    } else if (id === 904) {
-        chooseCustomDividerColour();
-    } else if (id === 905) {
-        setDividerState(DIVIDER_COLUMNS_UI);
+    } else if (DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id)) {
+        var selectedBackground = DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id);
+        if (selectedBackground.custom) setCustomBackgroundColour();
+        else setBackgroundMode(selectedBackground.mode);
+    } else if (DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id)) {
+        var selectedDivider = DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id);
+        if (selectedDivider.custom) chooseCustomDividerColour();
+        else setDividerState(selectedDivider.mode);
     } else if (id === 1000 || id === 1001 || id === 1002) {
         setStartupTransition(id - 1000);
     } else if (id === 1010) {

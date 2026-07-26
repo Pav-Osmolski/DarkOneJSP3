@@ -4,6 +4,9 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 
 // Replaces Panel Stack Splitter 02: left information stack, centre artwork /
 // spectrum column, and right playlist column.
+//
+// v0.7.35 consolidates divider mode validation, menu mapping and custom
+// colour picking through the shared DarkOneJSP3 colour helper.
 
 var STARTUP_CONTROLLER_NAME = 'MainColumns';
 var startupLayoutReady = false;
@@ -24,6 +27,22 @@ var DIVIDER_DARKONE = 2;
 var DIVIDER_CUSTOM = 3;
 var DIVIDER_DARKONE_DARK = 4;
 var DIVIDER_COLUMNS_UI = 5;
+var DIVIDER_MODES = [
+    DIVIDER_TRANSPARENT,
+    DIVIDER_BLACK,
+    DIVIDER_DARKONE,
+    DIVIDER_CUSTOM,
+    DIVIDER_DARKONE_DARK,
+    DIVIDER_COLUMNS_UI
+];
+var DIVIDER_MENU_OPTIONS = [
+    { id: 100, mode: DIVIDER_TRANSPARENT, label: 'Transparent / inherit parent' },
+    { id: 101, mode: DIVIDER_BLACK, label: 'Black' },
+    { id: 102, mode: DIVIDER_DARKONE, label: 'DarkOne grey' },
+    { id: 103, mode: DIVIDER_DARKONE_DARK, label: 'DarkOne dark grey' },
+    { id: 105, mode: DIVIDER_COLUMNS_UI, label: 'Columns UI global background' },
+    { id: 104, mode: DIVIDER_CUSTOM, custom: true }
+];
 
 var MENU_STRING = 0x00000000;
 var MENU_POPUP = 0x00000010;
@@ -38,38 +57,16 @@ function signalStartupReady() {
     window.NotifyOthers('DarkOneJSP3.Startup.Ready', STARTUP_CONTROLLER_NAME);
 }
 
-function opaqueColour(colour) {
-    return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
-}
-
-function colourToHex(colour) {
-    var rgb = (Number(colour) >>> 0) & 0x00ffffff;
-    var value = rgb.toString(16).toUpperCase();
-    while (value.length < 6) value = '0' + value;
-    return '#' + value;
-}
-
 function dividerMode() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(
-            DIVIDER_MODE_PROPERTY,
-            DIVIDER_BLACK
-        )) || 0),
-        DIVIDER_TRANSPARENT,
-        DIVIDER_COLUMNS_UI
+    return DarkOneColour.normaliseMode(
+        window.GetProperty(DIVIDER_MODE_PROPERTY, DIVIDER_BLACK),
+        DIVIDER_MODES,
+        DIVIDER_BLACK
     );
 }
 
-function columnsUiBackgroundColour() {
-    try {
-        return opaqueColour(window.GetColourCUI(3));
-    } catch (e) {
-        return DOJSP3.colours.bar;
-    }
-}
-
 function dividerCustomColour() {
-    return opaqueColour(window.GetProperty(
+    return DarkOneColour.opaque(window.GetProperty(
         DIVIDER_CUSTOM_COLOUR_PROPERTY,
         0xff000000
     ));
@@ -80,7 +77,7 @@ function dividerColour() {
     if (mode === DIVIDER_BLACK) return 0xff000000;
     if (mode === DIVIDER_DARKONE) return DOJSP3.colours.bar;
     if (mode === DIVIDER_DARKONE_DARK) return DOJSP3.colours.separator;
-    if (mode === DIVIDER_COLUMNS_UI) return columnsUiBackgroundColour();
+    if (mode === DIVIDER_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
     if (mode === DIVIDER_CUSTOM) return dividerCustomColour();
     return null;
 }
@@ -104,12 +101,12 @@ function parseDividerStateMessage(data) {
     // state bridge independent from JScript Panel notification behaviour.
     if (data && typeof data === 'object') {
         return {
-            mode: DOJSP3.clamp(
-                Math.round(Number(data.mode) || 0),
-                DIVIDER_TRANSPARENT,
-                DIVIDER_COLUMNS_UI
+            mode: DarkOneColour.normaliseMode(
+                data.mode,
+                DIVIDER_MODES,
+                DIVIDER_BLACK
             ),
-            customColour: opaqueColour(data.customColour)
+            customColour: DarkOneColour.opaque(data.customColour)
         };
     }
 
@@ -121,12 +118,12 @@ function parseDividerStateMessage(data) {
     if (isNaN(mode) || isNaN(colour)) return null;
 
     return {
-        mode: DOJSP3.clamp(
-            Math.round(mode),
-            DIVIDER_TRANSPARENT,
-            DIVIDER_COLUMNS_UI
+        mode: DarkOneColour.normaliseMode(
+            mode,
+            DIVIDER_MODES,
+            DIVIDER_BLACK
         ),
-        customColour: opaqueColour(colour)
+        customColour: DarkOneColour.opaque(colour)
     };
 }
 
@@ -139,11 +136,7 @@ function broadcastDividerState() {
 }
 
 function setDividerMode(mode) {
-    mode = DOJSP3.clamp(
-        Math.round(Number(mode) || 0),
-        DIVIDER_TRANSPARENT,
-        DIVIDER_COLUMNS_UI
-    );
+    mode = DarkOneColour.normaliseMode(mode, DIVIDER_MODES, DIVIDER_BLACK);
     window.SetProperty(DIVIDER_MODE_PROPERTY, mode);
     window.Repaint();
     broadcastDividerState();
@@ -152,23 +145,18 @@ function setDividerMode(mode) {
 function setCustomDividerColour(colour) {
     window.SetProperty(
         DIVIDER_CUSTOM_COLOUR_PROPERTY,
-        opaqueColour(colour)
+        DarkOneColour.opaque(colour)
     );
     setDividerMode(DIVIDER_CUSTOM);
 }
 
 function chooseCustomDividerColour() {
-    var current = dividerCustomColour();
-    var chosen = null;
-    try {
-        if (utils && typeof utils.ColourPicker === 'function') {
-            chosen = utils.ColourPicker(0, current);
-        }
-    } catch (e) {
-        chosen = null;
-    }
-    if (chosen === null || typeof chosen === 'undefined' ||
-            isNaN(Number(chosen))) return;
+    var chosen = DarkOneColour.pickJsplitter(
+        dividerCustomColour(),
+        window.Name,
+        'Enter a side-divider colour as #RRGGBB or R,G,B.'
+    );
+    if (chosen === null) return;
     setCustomDividerColour(chosen);
 }
 
@@ -290,33 +278,21 @@ function on_mouse_rbtn_up(x, y) {
     var menu = window.CreatePopupMenu();
     var colourMenu = window.CreatePopupMenu();
 
-    colourMenu.AppendMenuItem(MENU_STRING, 100, 'Transparent / inherit parent');
-    colourMenu.AppendMenuItem(MENU_STRING, 101, 'Black');
-    colourMenu.AppendMenuItem(MENU_STRING, 102, 'DarkOne grey');
-    colourMenu.AppendMenuItem(MENU_STRING, 103, 'DarkOne dark grey');
-    colourMenu.AppendMenuItem(MENU_STRING, 105, 'Columns UI global background');
-    colourMenu.AppendMenuItem(
-        MENU_STRING,
-        104,
-        'Custom colour... (' + colourToHex(dividerCustomColour()) + ')'
+    DarkOneColour.appendRadioOptions(
+        colourMenu,
+        DIVIDER_MENU_OPTIONS,
+        dividerMode(),
+        dividerCustomColour(),
+        MENU_STRING
     );
-    var selectedDividerId = dividerMode() === DIVIDER_CUSTOM
-        ? 104
-        : (dividerMode() === DIVIDER_DARKONE_DARK
-            ? 103
-            : (dividerMode() === DIVIDER_COLUMNS_UI
-                ? 105
-                : 100 + dividerMode()));
-    colourMenu.CheckMenuRadioItem(100, 105, selectedDividerId);
     colourMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');
 
     var id = menu.TrackPopupMenu(x, y);
-    if (id === 100) setDividerMode(DIVIDER_TRANSPARENT);
-    else if (id === 101) setDividerMode(DIVIDER_BLACK);
-    else if (id === 102) setDividerMode(DIVIDER_DARKONE);
-    else if (id === 103) setDividerMode(DIVIDER_DARKONE_DARK);
-    else if (id === 104) chooseCustomDividerColour();
-    else if (id === 105) setDividerMode(DIVIDER_COLUMNS_UI);
+    var selected = DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id);
+    if (selected) {
+        if (selected.custom) chooseCustomDividerColour();
+        else setDividerMode(selected.mode);
+    }
 
     return true;
 }

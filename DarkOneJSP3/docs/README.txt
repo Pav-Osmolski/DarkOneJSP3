@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.7.34
+DarkOneJSP3 v0.7.35
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -74,7 +74,7 @@ DarkOneJSP3\
   jscript\               DarkOne JScript Panel 3 wrappers and modules
   jsplitter\             Six JSplitter controllers and loader scripts
   reference\             Original DarkOne2021 PSS reference material
-  shared\                Canonical project-wide reset defaults
+  shared\                Shared colour utilities and reset defaults
   tools\                 Release validator and mirror-sync utility
 
 user-components-x64\foo_jscript_panel3\samples\
@@ -90,7 +90,8 @@ Current highlights
 - Configurable waveform-host background for the spacer and hidden-waveform
   area, with transparent, black, both DarkOne greys, Columns UI global and
   custom choices.
-- Default or custom display accent shared by Plain Font and Dot Matrix modes.
+- Default, Columns UI selected-item or custom display accent shared by Plain
+  Font and Dot Matrix modes.
 - Root-owned startup transition defaults to Off, with optional Black reveal
   and Staged reveal modes controlled from the InfoStack tab-strip menu.
 - Consolidated Album Notes with configurable providers, caching, diagnostics,
@@ -102,6 +103,8 @@ Current highlights
   provider cache files or unrelated upstream sample customisation.
 - Exact-title JSplitter controllers with cached child lookups and persistent
   user settings.
+- Shared declarative colour menus preserve established saved modes while
+  keeping JSplitter and JScript Panel picker behaviour consistent.
 
 Recovery
 --------

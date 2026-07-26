@@ -1,7 +1,31 @@
+var DARKONE_PAGE_BACKGROUND_TRANSPARENT = 0;
+var DARKONE_PAGE_BACKGROUND_BLACK = 1;
+var DARKONE_PAGE_BACKGROUND_GREY = 2;
+var DARKONE_PAGE_BACKGROUND_DARK_GREY = 3;
+var DARKONE_PAGE_BACKGROUND_CUSTOM = 4;
+var DARKONE_PAGE_BACKGROUND_COLUMNS_UI = 5;
+var DARKONE_PAGE_BACKGROUND_MODES = [
+	DARKONE_PAGE_BACKGROUND_TRANSPARENT,
+	DARKONE_PAGE_BACKGROUND_BLACK,
+	DARKONE_PAGE_BACKGROUND_GREY,
+	DARKONE_PAGE_BACKGROUND_DARK_GREY,
+	DARKONE_PAGE_BACKGROUND_CUSTOM,
+	DARKONE_PAGE_BACKGROUND_COLUMNS_UI
+];
+var DARKONE_PAGE_BACKGROUND_MENU_OPTIONS = [
+	{ id : 130, mode : DARKONE_PAGE_BACKGROUND_TRANSPARENT, label : 'Transparent / inherit parent' },
+	{ id : 131, mode : DARKONE_PAGE_BACKGROUND_BLACK, label : 'Black' },
+	{ id : 132, mode : DARKONE_PAGE_BACKGROUND_GREY, label : 'DarkOne grey' },
+	{ id : 133, mode : DARKONE_PAGE_BACKGROUND_DARK_GREY, label : 'DarkOne dark grey' },
+	{ id : 135, mode : DARKONE_PAGE_BACKGROUND_COLUMNS_UI, label : 'Columns UI global background' },
+	{ id : 134, mode : DARKONE_PAGE_BACKGROUND_CUSTOM, custom : true }
+];
+
 function _panel(options) {
 	// Optional DarkOneJSP3 information-page background support is enabled only
 	// by the adapted Biography, Last.fm, Album Notes, Queue and Properties
 	// entry scripts. Generic JScript Panel samples retain their normal behaviour.
+	// Shared menu mapping and picker handling keep saved page modes unchanged.
 	this.create_font = function (size, weight) {
 		return JSON.stringify({
 			Name : this.fonts.name,
@@ -78,28 +102,29 @@ function _panel(options) {
 		on_metadb_changed();
 	}
 
+	this.page_background_mode = function () {
+		return DarkOneColour.normaliseMode(
+			this.page_background.mode.value,
+			DARKONE_PAGE_BACKGROUND_MODES,
+			DARKONE_PAGE_BACKGROUND_DARK_GREY
+		);
+	}
+
 	this.page_background_colour = function () {
-		switch (this.page_background.mode.value) {
-		case 0:
+		switch (this.page_background_mode()) {
+		case DARKONE_PAGE_BACKGROUND_TRANSPARENT:
 			return 0x00000000;
-		case 1:
+		case DARKONE_PAGE_BACKGROUND_BLACK:
 			return RGB(0, 0, 0);
-		case 2:
+		case DARKONE_PAGE_BACKGROUND_GREY:
 			return RGB(32, 32, 32);
-		case 4:
-			return this.page_background.custom.value;
-		case 5:
-			return this.colours.background;
+		case DARKONE_PAGE_BACKGROUND_CUSTOM:
+			return DarkOneColour.opaque(this.page_background.custom.value);
+		case DARKONE_PAGE_BACKGROUND_COLUMNS_UI:
+			return DarkOneColour.opaque(this.colours.background);
 		default:
 			return RGB(24, 24, 24);
 		}
-	}
-
-	this.page_background_hex = function () {
-		var value = Number(this.page_background.custom.value) & 0x00ffffff;
-		var text = value.toString(16).toUpperCase();
-		while (text.length < 6) text = '0' + text;
-		return '#' + text;
 	}
 
 	this.paint = function (gr) {
@@ -153,13 +178,13 @@ function _panel(options) {
 		}
 
 		if (this.darkonejsp3_page_background) {
-			this.s15.AppendMenuItem(MF_STRING, 130, 'Transparent / inherit parent');
-			this.s15.AppendMenuItem(MF_STRING, 131, 'Black');
-			this.s15.AppendMenuItem(MF_STRING, 132, 'DarkOne grey');
-			this.s15.AppendMenuItem(MF_STRING, 133, 'DarkOne dark grey');
-			this.s15.AppendMenuItem(MF_STRING, 135, 'Columns UI global background');
-			this.s15.AppendMenuItem(MF_STRING, 134, 'Custom colour... (' + this.page_background_hex() + ')');
-			this.s15.CheckMenuRadioItem(130, 135, this.page_background.mode.value + 130);
+			DarkOneColour.appendRadioOptions(
+				this.s15,
+				DARKONE_PAGE_BACKGROUND_MENU_OPTIONS,
+				this.page_background_mode(),
+				this.page_background.custom.value,
+				MF_STRING
+			);
 			this.s15.AppendTo(this.m, MF_STRING, 'Page background colour');
 			this.m.AppendMenuSeparator();
 		} else if (this.custom_background) {
@@ -212,21 +237,22 @@ function _panel(options) {
 		case idx == 120:
 			window.ShowConfigure();
 			break;
-		case idx >= 130 && idx <= 133:
-			this.page_background.mode.value = idx - 130;
-			window.Repaint();
-			break;
-		case idx == 135:
-			this.page_background.mode.value = 5;
-			window.Repaint();
-			break;
-		case idx == 134:
-			var chosen = utils.ColourPicker(this.page_background.custom.value);
-			if (chosen !== null && typeof chosen !== 'undefined' && !isNaN(Number(chosen))) {
+		case Boolean(DarkOneColour.optionForId(DARKONE_PAGE_BACKGROUND_MENU_OPTIONS, idx)):
+			var background_option = DarkOneColour.optionForId(
+				DARKONE_PAGE_BACKGROUND_MENU_OPTIONS,
+				idx
+			);
+			if (background_option.custom) {
+				var chosen = DarkOneColour.pickJscript(
+					this.page_background.custom.value,
+					window.Name,
+					'Enter a page background colour as #RRGGBB or R,G,B.'
+				);
+				if (chosen === null) break;
 				this.page_background.custom.value = chosen;
-				this.page_background.mode.value = 4;
-				window.Repaint();
 			}
+			this.page_background.mode.value = background_option.mode;
+			window.Repaint();
 			break;
 		case idx > 999:
 			if (object) {

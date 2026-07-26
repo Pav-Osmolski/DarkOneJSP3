@@ -214,7 +214,8 @@ InfoStack backing colour
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Controls the JSplitter backing behind the information pages and the tab strip.
 Choose Transparent / inherit parent, Black, DarkOne grey, DarkOne dark grey,
-Columns UI global background or a custom colour. DarkOne dark grey
+Columns UI global background or Custom colour... The custom option opens
+JSplitter's native Windows colour picker. DarkOne dark grey
 (RGB 24, 24, 24) is the default.
 
 Page background colour
@@ -330,7 +331,7 @@ Host background choices:
 - DarkOne grey: RGB 32, 32, 32 (default)
 - DarkOne dark grey: RGB 24, 24, 24
 - Columns UI global background: follows the active Columns UI background colour
-- Custom colour...: accepts #RRGGBB or R,G,B
+- Custom colour...: opens JSplitter's native Windows colour picker
 
 Other controls:
 - Force blank waveform when playback stops

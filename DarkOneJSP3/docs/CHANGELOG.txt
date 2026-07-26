@@ -1,6 +1,24 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.7.35 - Shared colour-menu consolidation
+------------------------------------------
+
+- Added a shared colour utility for opaque conversion, hexadecimal formatting,
+  text parsing, Columns UI colour lookup and saved-mode validation.
+- Replaced repeated colour-menu construction with explicit declarative
+  menu-id-to-mode mappings in InfoStack, Main Columns, Display/Waveform and the
+  adapted JScript Panel information pages.
+- Standardised custom-colour selection across JSplitter and JScript Panel while
+  preserving their different native ColourPicker signatures.
+- Made native-picker cancellation leave the current colour and mode unchanged;
+  text entry is now used only when the native picker cannot be invoked.
+- Fixed Display accent cancellation so cancelling Custom colour no longer
+  switches the display to the previously stored custom value.
+- Preserved every existing property name, default and saved mode number.
+- Expanded static and runtime validation for shared helpers, sparse mode maps,
+  menu selection, picker signatures, cancellation and fallback behaviour.
+
 v0.7.34 - Columns UI selected-item accent colours
 -------------------------------------------------
 

@@ -11,6 +11,9 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // v0.3.7 keeps the child hidden briefly when playback starts from a stopped
 // state, preventing Waveform Minibar's previous cached waveform flashing before
 // the newly selected track has been processed.
+//
+// v0.3.8 consolidates background-mode validation, menu mapping and custom
+// colour picking through the shared DarkOneJSP3 colour helper.
 
 var STARTUP_CONTROLLER_NAME = 'DisplayWaveform';
 var startupLayoutReady = false;
@@ -43,28 +46,32 @@ var BACKGROUND_DARKONE = 2;
 var BACKGROUND_CUSTOM = 3;
 var BACKGROUND_DARKONE_DARK = 4;
 var BACKGROUND_COLUMNS_UI = 5;
+var BACKGROUND_MODES = [
+    BACKGROUND_TRANSPARENT,
+    BACKGROUND_BLACK,
+    BACKGROUND_DARKONE,
+    BACKGROUND_CUSTOM,
+    BACKGROUND_DARKONE_DARK,
+    BACKGROUND_COLUMNS_UI
+];
+var BACKGROUND_MENU_OPTIONS = [
+    { id: 100, mode: BACKGROUND_TRANSPARENT, label: 'Transparent / inherit parent' },
+    { id: 101, mode: BACKGROUND_BLACK, label: 'Black' },
+    { id: 102, mode: BACKGROUND_DARKONE, label: 'DarkOne grey' },
+    { id: 104, mode: BACKGROUND_DARKONE_DARK, label: 'DarkOne dark grey' },
+    { id: 105, mode: BACKGROUND_COLUMNS_UI, label: 'Columns UI global background' },
+    { id: 103, mode: BACKGROUND_CUSTOM, custom: true }
+];
 
 var MENU_STRING = 0x00000000;
 var MENU_POPUP = 0x00000010;
 
 function backgroundMode() {
-    return DOJSP3.clamp(
-        Math.round(Number(window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE)) || 0),
-        BACKGROUND_TRANSPARENT,
-        BACKGROUND_COLUMNS_UI
+    return DarkOneColour.normaliseMode(
+        window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE),
+        BACKGROUND_MODES,
+        BACKGROUND_DARKONE
     );
-}
-
-function opaqueColour(colour) {
-    return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
-}
-
-function columnsUiBackgroundColour() {
-    try {
-        return opaqueColour(window.GetColourCUI(3));
-    } catch (e) {
-        return DOJSP3.colours.bar;
-    }
 }
 
 function backgroundColour() {
@@ -72,9 +79,9 @@ function backgroundColour() {
     if (mode === BACKGROUND_BLACK) return 0xff000000;
     if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
     if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;
-    if (mode === BACKGROUND_COLUMNS_UI) return columnsUiBackgroundColour();
+    if (mode === BACKGROUND_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
     if (mode === BACKGROUND_CUSTOM) {
-        return opaqueColour(window.GetProperty(
+        return DarkOneColour.opaque(window.GetProperty(
             BACKGROUND_COLOUR_PROPERTY,
             DOJSP3.colours.bar
         ));
@@ -101,51 +108,25 @@ function cancelWaveformReveal() {
     }
 }
 
-function colourToHex(colour) {
-    var rgb = Number(colour) % 0x1000000;
-    if (rgb < 0) rgb += 0x1000000;
-    var text = rgb.toString(16).toUpperCase();
-    while (text.length < 6) text = '0' + text;
-    return '#' + text;
-}
-
-function parseOpaqueColour(value) {
-    value = String(value || '').replace(/^\s+|\s+$/g, '');
-    var match = value.match(/^#?([0-9a-f]{6})$/i);
-    if (match) return 0xff000000 + parseInt(match[1], 16);
-
-    match = value.match(/^\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*$/);
-    if (match) {
-        var r = DOJSP3.clamp(parseInt(match[1], 10), 0, 255);
-        var g = DOJSP3.clamp(parseInt(match[2], 10), 0, 255);
-        var b = DOJSP3.clamp(parseInt(match[3], 10), 0, 255);
-        return 0xff000000 + (r * 0x10000) + (g * 0x100) + b;
-    }
-    return null;
-}
-
 function setBackgroundMode(mode) {
-    window.SetProperty(BACKGROUND_MODE_PROPERTY, mode);
+    window.SetProperty(
+        BACKGROUND_MODE_PROPERTY,
+        DarkOneColour.normaliseMode(mode, BACKGROUND_MODES, BACKGROUND_DARKONE)
+    );
     window.Repaint();
 }
 
 function setCustomBackgroundColour() {
-    try {
-        var current = Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar));
-        var entered = utils.InputBox(
-            'Enter a host background colour as #RRGGBB or R,G,B.\n\n' +
-            'This controls the spacer and the area exposed when the waveform is hidden.',
-            window.Name,
-            colourToHex(current)
-        );
-        var parsed = parseOpaqueColour(entered);
-        if (parsed === null) {
-            fb.ShowPopupMessage('That colour could not be parsed. Use #RRGGBB or R,G,B.', 'DarkOneJSP3');
-            return;
-        }
-        window.SetProperty(BACKGROUND_COLOUR_PROPERTY, parsed);
-        setBackgroundMode(BACKGROUND_CUSTOM);
-    } catch (e) {}
+    var current = window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar);
+    var chosen = DarkOneColour.pickJsplitter(
+        current,
+        window.Name,
+        'Enter a host background colour as #RRGGBB or R,G,B.\n\n' +
+            'This controls the spacer and the area exposed when the waveform is hidden.'
+    );
+    if (chosen === null) return;
+    window.SetProperty(BACKGROUND_COLOUR_PROPERTY, chosen);
+    setBackgroundMode(BACKGROUND_CUSTOM);
 }
 
 function waveformShouldBeVisible(playbackActive) {
@@ -298,17 +279,13 @@ function on_mouse_rbtn_up(x, y) {
     var menu = window.CreatePopupMenu();
     var backgroundMenu = window.CreatePopupMenu();
 
-    backgroundMenu.AppendMenuItem(MENU_STRING, 100, 'Transparent / inherit parent');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 101, 'Black');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 102, 'DarkOne grey');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 104, 'DarkOne dark grey');
-    backgroundMenu.AppendMenuItem(MENU_STRING, 105, 'Columns UI global background');
-    backgroundMenu.AppendMenuItem(
-        MENU_STRING,
-        103,
-        'Custom colour... (' + colourToHex(Number(window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar))) + ')'
+    DarkOneColour.appendRadioOptions(
+        backgroundMenu,
+        BACKGROUND_MENU_OPTIONS,
+        backgroundMode(),
+        window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar),
+        MENU_STRING
     );
-    backgroundMenu.CheckMenuRadioItem(100, 105, 100 + backgroundMode());
     backgroundMenu.AppendTo(menu, MENU_POPUP, 'Host background');
 
     menu.AppendMenuItem(MENU_STRING, 200, 'Force blank waveform when playback stops');
@@ -323,18 +300,10 @@ function on_mouse_rbtn_up(x, y) {
 
     var id = menu.TrackPopupMenu(x, y);
 
-    if (id === 100) {
-        setBackgroundMode(BACKGROUND_TRANSPARENT);
-    } else if (id === 101) {
-        setBackgroundMode(BACKGROUND_BLACK);
-    } else if (id === 102) {
-        setBackgroundMode(BACKGROUND_DARKONE);
-    } else if (id === 104) {
-        setBackgroundMode(BACKGROUND_DARKONE_DARK);
-    } else if (id === 105) {
-        setBackgroundMode(BACKGROUND_COLUMNS_UI);
-    } else if (id === 103) {
-        setCustomBackgroundColour();
+    var selectedBackground = DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id);
+    if (selectedBackground) {
+        if (selectedBackground.custom) setCustomBackgroundColour();
+        else setBackgroundMode(selectedBackground.mode);
     } else if (id === 200) {
         var enabled = !hideWhenStopped();
         window.SetProperty(HIDE_ON_STOP_PROPERTY, enabled);

@@ -1,5 +1,5 @@
 {
-  "version": "0.7.34",
+  "version": "0.7.35",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -418,7 +418,9 @@
         "default": 0,
         "custom": 1,
         "columns_ui_selected_item_background": 2
-      }
+      },
+      "shared_colour_helper": true,
+      "cancel_preserves_existing_colour": true
     },
     "info_stack_tab_colour": {
       "menu": "Tab font colour",
@@ -442,7 +444,8 @@
         "default": 0,
         "custom": 1,
         "columns_ui_selected_item_background": 2
-      }
+      },
+      "shared_colour_helper": true
     },
     "refinement_hardening": {
       "settings_notifications": "single batched notification with category-aware panel refresh",
@@ -515,7 +518,8 @@
       ],
       "communication": "serialised JSplitter-to-JSplitter v1 messages",
       "album_art_jscript_panel_bridge_removed": true,
-      "minimum_context_hit_target_px": 10
+      "minimum_context_hit_target_px": 10,
+      "shared_colour_helper": true
     },
     "info_stack_page_background": {
       "menu": "Page background colour",
@@ -542,7 +546,30 @@
         "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR"
       ],
       "factory_reset_covered": true,
-      "generic_samples_unchanged_unless_opted_in": true
+      "generic_samples_unchanged_unless_opted_in": true,
+      "shared_colour_helper": true
+    },
+    "colour_consolidation": {
+      "shared_helper": "DarkOneJSP3/shared/colour_utils.js",
+      "version": "0.1.0",
+      "pure_operations": [
+        "opaque conversion",
+        "hex formatting",
+        "text parsing",
+        "mode validation"
+      ],
+      "declarative_menu_mapping": true,
+      "explicit_menu_id_to_mode_mapping": true,
+      "hosts": [
+        "JSplitter",
+        "JScript Panel 3"
+      ],
+      "jsplitter_picker_signature": "utils.ColourPicker(window_id, default_colour)",
+      "jscript_panel_picker_signature": "utils.ColourPicker(default_colour, true)",
+      "cancel_preserves_existing_colour": true,
+      "text_fallback_only_when_native_picker_unavailable": true,
+      "saved_property_names_unchanged": true,
+      "saved_mode_values_unchanged": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",
@@ -591,7 +618,8 @@
         "waveform spacer",
         "area exposed while Waveform Minibar is hidden"
       ],
-      "factory_reset_covered": true
+      "factory_reset_covered": true,
+      "shared_colour_helper": true
     }
   }
 }
