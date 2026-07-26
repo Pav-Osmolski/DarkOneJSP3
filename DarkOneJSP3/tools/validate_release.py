@@ -40,6 +40,7 @@ required = [
     project / 'shared' / 'reset_defaults.js',
     project / 'shared' / 'colour_utils.js',
     project / 'shared' / 'jsplitter_protocols.js',
+    project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js',
     project / 'jsplitter' / 'shared.js',
     docs / 'README.txt',
     docs / 'INSTALLATION.txt',
@@ -117,6 +118,12 @@ if (project / 'build-info.json').exists():
         errors.append('build-info colour-helper module version is not 0.1.0')
     if modules.get('jsplitter_protocols') != '0.1.0':
         errors.append('build-info JSplitter-protocol module version is not 0.1.0')
+    if modules.get('control_left') != '3.0.12-jsp3-3.8.5':
+        errors.append('build-info Control Left module version is not 3.0.12-jsp3-3.8.5')
+    if modules.get('control_right') != '3.0.12-jsp3-3.8.5':
+        errors.append('build-info Control Right module version is not 3.0.12-jsp3-3.8.5')
+    if modules.get('optional_button_menu') != '0.1.0':
+        errors.append('build-info optional-button menu module version is not 0.1.0')
 
 # Active runtime namespace checks.
 legacy_runtime = re.compile(r'(?<!DarkOne)DOJS3|DARKONEJS3|DarkOneJS3')
@@ -237,6 +244,30 @@ if manifest_path.exists():
     if protocol_consolidation.get('protocol_versions') != {
             'startup_controls': 'v1', 'divider_state': 'v1'}:
         errors.append('Manifest JSplitter protocol versions are incorrect')
+    optional_menu_consolidation = manifest.get('enhancements', {}).get(
+        'optional_button_menu_consolidation', {})
+    expected_optional_menu_consolidation = {
+        'shared_helper': 'DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js',
+        'version': '0.1.0',
+        'panels': ['Control Left', 'Control Right'],
+        'optional_button_toggle_centralised': True,
+        'command_setup_centralised': True,
+        'command_redetection_centralised': True,
+        'command_guide_centralised': True,
+        'darkone_tools_entry_centralised': True,
+        'roundness_menu_centralised': True,
+        'panel_specific_layouts_unchanged': True,
+        'left_style_and_depth_menus_remain_local': True,
+        'saved_properties_unchanged': True,
+        'menu_ids_unchanged': True,
+        'runtime_tests': True,
+    }
+    for key, expected in expected_optional_menu_consolidation.items():
+        if optional_menu_consolidation.get(key) != expected:
+            errors.append('Manifest optional-button-menu field is incorrect: ' + key)
+    if manifest.get('enhancements', {}).get('control_buttons', {}).get(
+            'shared_optional_menu') is not True:
+        errors.append('Manifest control-button settings omit the shared optional menu')
     for feature_name in [
             'display_accent', 'info_stack_tab_colour',
             'art_spectrum_dividers', 'info_stack_page_background']:
@@ -1220,6 +1251,72 @@ for path in adapted_colour_entries:
     if path.exists() and 'DarkOneJSP3\\shared\\colour_utils.js' not in text(path):
         errors.append(rel(path) + ' does not import the shared colour helper')
 
+optional_button_helper = project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js'
+if optional_button_helper.exists():
+    body = text(optional_button_helper)
+    for token in [
+        'var DARKONE_CONTROL_BUTTON_MENU = {',
+        'function darkOneOptionalButtonEditId(buttonNames)',
+        'function darkOneAppendOptionalButtonMenu(menu, buttonNames, buttonProperties)',
+        'function darkOneAppendButtonRoundnessMenu(menu)',
+        'function darkOneConfigureOptionalButton(buttonIndex, buttonNames, buttonProperties)',
+        'function darkOneHandleControlButtonMenuSelection(index, options)',
+        'function darkOneShowControlButtonMenu(x, y, options)',
+        "optionalFirstId: 101",
+        "redetectId: 120",
+        "guideId: 121",
+        "roundnessFirstId: 401",
+        "roundnessCustomId: 407",
+        "toolsId: 900",
+        "roundnessValues: [-1, 0, 20, 33, 60, 100]",
+    ]:
+        if token not in body:
+            errors.append('Shared optional-button menu helper is missing: ' + token)
+
+control_entries = [
+    project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt',
+    project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt',
+]
+for path in control_entries:
+    if not path.exists():
+        continue
+    body = text(path)
+    if 'DarkOneJSP3\\jscript\\js\\Buttons_OptionalMenu.js' not in body:
+        errors.append(rel(path) + ' does not import the shared optional-button menu')
+    if '@version "3.0.12-jsp3-3.8.5"' not in body:
+        errors.append(rel(path) + ' has the wrong consolidated control-panel version')
+
+control_panels = [
+    project / 'jscript' / 'js' / 'Panel_Control_Left.js',
+    project / 'jscript' / 'js' / 'Panel_Control_Right.js',
+]
+for path in control_panels:
+    if not path.exists():
+        continue
+    body = text(path)
+    if 'darkOneShowControlButtonMenu(x, y, {' not in body:
+        errors.append(rel(path) + ' does not use the shared optional-button menu')
+    for duplicate in [
+        "Enter your main menu, context menu or trusted local JavaScript command here:",
+        'Re-detect command types',
+        'Command guide...',
+        'Custom roundness...',
+        'var round_values = [-1, 0, 20, 33, 60, 100];',
+    ]:
+        if duplicate in body:
+            errors.append(rel(path) + ' retains duplicated optional-button menu logic: ' + duplicate)
+left_control_panel = project / 'jscript' / 'js' / 'Panel_Control_Left.js'
+if left_control_panel.exists():
+    body = text(left_control_panel)
+    for token in [
+        'appendExtraMenus: function (rootMenu)',
+        'styleMenu.AppendTo(rootMenu, 0 | 16, "Button style")',
+        'depthMenu.AppendTo(rootMenu, 0 | 16, "Button depth")',
+        'handleExtraSelection: function (index)',
+    ]:
+        if token not in body:
+            errors.append('Control Left lost its panel-specific menu behaviour: ' + token)
+
 # Resolve local JScript Panel preprocessor imports.
 import_re = re.compile(r'^//\s*@import\s+"([^"]+)"', re.M)
 entry_scripts = sorted(samples.glob('*.txt')) + sorted((project / 'jscript').glob('*.txt'))
@@ -1400,6 +1497,187 @@ assert(readiness.handle(startup.notifications.queryReady) === true &&
                             capture_output=True, text=True)
     if result.returncode:
         errors.append('Shared JSplitter-protocol runtime smoke test failed: ' +
+                      (result.stdout + result.stderr).strip())
+
+    # Exercise the shared left/right optional-button menu independently from
+    # the panel layouts. IDs and saved properties must remain compatible.
+    optional_button_menu_smoke = f"""
+const fs = require('fs');
+const source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js'))}, 'utf8');
+const properties = new Map();
+let reloads = 0;
+let repaints = 0;
+let shownProperties = 0;
+let resetNames = null;
+let guideCalls = 0;
+let toolsCalls = [];
+let roundness = 33;
+let roundnessSet = null;
+let customRoundness = false;
+let refreshCalls = [];
+let inputValues = [];
+let popupMenus = [];
+let trackedIndex = 0;
+function createPopupMenu() {{
+    const value = {{
+        items: [], checked: [], separators: 0, children: [], disposed: false,
+        AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
+        AppendMenuSeparator() {{ this.separators++; }},
+        CheckMenuItem(id, checked) {{ if (checked) this.checked.push(id); }},
+        CheckMenuRadioItem(minimum, maximum, selected) {{ this.radio = [minimum, maximum, selected]; }},
+        AppendTo(parent, flags, label) {{ parent.children.push([flags, label, this]); }},
+        TrackPopupMenu() {{ return trackedIndex; }},
+        Dispose() {{ this.disposed = true; }}
+    }};
+    popupMenus.push(value);
+    return value;
+}}
+const windowMock = {{
+    GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
+    SetProperty(name, value) {{ properties.set(name, value); }},
+    Reload() {{ reloads++; }},
+    Repaint() {{ repaints++; }},
+    ShowProperties() {{ shownProperties++; }},
+    CreatePopupMenu: createPopupMenu
+}};
+const utilsMock = {{
+    InputBox() {{
+        if (!inputValues.length) throw new Error('cancel');
+        const value = inputValues.shift();
+        if (value instanceof Error) throw value;
+        return value;
+    }},
+    MessageBox() {{ return 1; }}
+}};
+const factory = new Function(
+    'window', 'utils', 'MB_OK', 'MB_ICONASTERISK',
+    'resetOptionalButtonCommandStyles', 'showOptionalButtonCommandGuide',
+    'darkOneToolsMenu', 'darkOneButtonRoundness', 'darkOneSetButtonRoundness',
+    'darkOneInputButtonRoundness', 'buttonsOptions', 'buttonsSizes',
+    'buttonsRefresh', source + '\\nreturn {{ DARKONE_CONTROL_BUTTON_MENU,' +
+    'darkOneOptionalButtonEditId, darkOneAppendOptionalButtonMenu,' +
+    'darkOneAppendButtonRoundnessMenu, darkOneConfigureOptionalButton,' +
+    'darkOneHandleControlButtonMenuSelection, darkOneShowControlButtonMenu }};'
+);
+const api = factory(
+    windowMock, utilsMock, 0, 64,
+    names => {{ resetNames = names.slice(); }},
+    () => {{ guideCalls++; }},
+    (x, y) => {{ toolsCalls.push([x, y]); }},
+    () => roundness,
+    value => {{ roundnessSet = value; roundness = value; return true; }},
+    () => customRoundness,
+    () => refreshCalls.push('options'),
+    () => refreshCalls.push('sizes'),
+    () => refreshCalls.push('refresh')
+);
+function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+function menu() {{
+    return {{
+        items: [], checked: [], separators: 0,
+        AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
+        AppendMenuSeparator() {{ this.separators++; }},
+        CheckMenuItem(id, checked) {{ if (checked) this.checked.push(id); }}
+    }};
+}}
+const leftNames = Array.from({{length: 8}}, (_, i) => 'Button ' + String(i + 1).padStart(2, '0'));
+const rightNames = Array.from({{length: 10}}, (_, i) => 'Button ' + String(i + 1).padStart(2, '0'));
+const leftButtons = leftNames.map((name, i) => ({{Exists: i === 1, Text: i === 0 ? 'FIRST' : ''}}));
+let optionalMenu = menu();
+api.darkOneAppendOptionalButtonMenu(optionalMenu, leftNames, leftButtons);
+assert(api.darkOneOptionalButtonEditId(leftNames) === 109, 'Control Left edit id changed');
+assert(api.darkOneOptionalButtonEditId(rightNames) === 111, 'Control Right edit id changed');
+assert(optionalMenu.items[0][1] === 101 && optionalMenu.items[0][2] === 'FIRST',
+    'Optional-button first item changed');
+assert(optionalMenu.items[1][0] === 8 && optionalMenu.items[8][1] === 109,
+    'Optional-button checked/edit mapping changed');
+assert(optionalMenu.items[9][1] === 120 && optionalMenu.items[10][1] === 121,
+    'Optional-button utility ids changed');
+let roundMenu = menu();
+api.darkOneAppendButtonRoundnessMenu(roundMenu);
+assert(roundMenu.items.map(item => item[1]).join(',') === '401,402,403,404,405,406,407',
+    'Roundness menu ids changed');
+assert(roundMenu.checked.join(',') === '404', 'Current roundness check changed');
+
+inputValues = ['View/Console', 'ABCDEFGHIJKL'];
+api.darkOneConfigureOptionalButton(0, leftNames, leftButtons);
+assert(properties.get('Button 01') === true, 'Optional button was not enabled');
+assert(properties.get('Button 01 command string') === 'View/Console',
+    'Optional command was not stored');
+assert(properties.get('Button 01 name (up to 10 letters)') === 'ABCDEFGHIJ',
+    'Optional label truncation changed');
+assert(properties.get('Button 01 command style') === 0 && reloads === 1,
+    'Optional command style/reload behaviour changed');
+
+leftButtons[0].Exists = true;
+properties.set('Button 01 command string', 'View/Console');
+api.darkOneConfigureOptionalButton(0, leftNames, leftButtons);
+assert(properties.get('Button 01') === false && reloads === 2,
+    'Disabling an existing optional button changed');
+
+leftButtons[2].Exists = false;
+inputValues = [new Error('cancel')];
+api.darkOneConfigureOptionalButton(2, leftNames, leftButtons);
+assert(properties.get('Button 03') === false && reloads === 2,
+    'Cancelled optional-button setup did not roll back');
+
+const options = {{buttonNames: leftNames, buttonProperties: leftButtons, x: 12, y: 34}};
+assert(api.darkOneHandleControlButtonMenuSelection(120, options),
+    'Re-detect command menu id was not handled');
+assert(resetNames.length === 8, 'Re-detect did not receive every left button');
+assert(api.darkOneHandleControlButtonMenuSelection(121, options) && guideCalls === 1,
+    'Command guide menu id changed');
+assert(api.darkOneHandleControlButtonMenuSelection(900, options) &&
+    toolsCalls[0].join(',') === '12,34', 'DarkOne Tools menu id changed');
+refreshCalls = [];
+assert(api.darkOneHandleControlButtonMenuSelection(405, options) && roundnessSet === 60,
+    'Roundness preset mapping changed');
+assert(refreshCalls.join(',') === 'options,sizes,refresh' && repaints === 1,
+    'Roundness refresh sequence changed');
+refreshCalls = [];
+customRoundness = false;
+assert(api.darkOneHandleControlButtonMenuSelection(407, options) && refreshCalls.length === 0,
+    'Cancelled custom roundness refreshed the panel');
+assert(api.darkOneHandleControlButtonMenuSelection(999, options) === false,
+    'Unknown control-menu id was consumed');
+
+popupMenus = [];
+trackedIndex = 0;
+api.darkOneShowControlButtonMenu(5, 6, {{
+    buttonNames: rightNames,
+    buttonProperties: rightNames.map(() => ({{Exists: false, Text: ''}}))
+}});
+assert(popupMenus.length === 3 && popupMenus.every(item => item.disposed),
+    'Shared right control menu did not dispose every popup');
+assert(popupMenus[0].children.map(item => item[1]).join(',') ===
+    'Optional buttons,Button roundness', 'Shared right control menu order changed');
+assert(popupMenus[0].items.some(item => item[1] === 900),
+    'Shared right control menu lost DarkOne Tools');
+
+popupMenus = [];
+trackedIndex = 999;
+let extraHandled = 0;
+api.darkOneShowControlButtonMenu(7, 8, {{
+    buttonNames: leftNames,
+    buttonProperties: leftButtons,
+    appendExtraMenus(root) {{
+        const extra = createPopupMenu();
+        extra.AppendTo(root, 16, 'Button style');
+        return [extra];
+    }},
+    handleExtraSelection(index) {{ if (index === 999) extraHandled++; }}
+}});
+assert(extraHandled === 1 && popupMenus.length === 4 &&
+    popupMenus.every(item => item.disposed),
+    'Shared left control menu did not delegate or dispose extra menus');
+assert(popupMenus[0].children.map(item => item[1]).join(',') ===
+    'Optional buttons,Button style,Button roundness',
+    'Shared left control menu extension order changed');
+"""
+    result = subprocess.run([node, '-e', optional_button_menu_smoke],
+                            capture_output=True, text=True)
+    if result.returncode:
+        errors.append('Shared optional-button-menu runtime smoke test failed: ' +
                       (result.stdout + result.stderr).strip())
 
     # Exercise the InfoStack tab-colour modes. Existing Custom mode 1 must

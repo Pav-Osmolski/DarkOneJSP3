@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.7.36 Validation Report
+DarkOneJSP3 v0.7.37 Validation Report
 =====================================
 
 Scope
@@ -31,6 +31,9 @@ Checks
   consolidated colour implementations rather than duplicated local helpers.
 - Shared JSplitter startup/divider protocols preserve notification names,
   message versions, saved values, property ownership and readiness behaviour.
+- Shared left/right control-panel menu logic preserves optional-button IDs,
+  command setup, command re-detection, DarkOne Tools access and button
+  roundness behaviour while leaving panel-specific layouts local.
 - Declarative menu mappings preserve the established menu-id-to-mode behaviour,
   including the legacy Custom mode positions.
 - JSplitter and JScript Panel native colour-picker signatures are tested

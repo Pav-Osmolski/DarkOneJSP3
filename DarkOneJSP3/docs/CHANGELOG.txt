@@ -1,6 +1,21 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.7.37 - Shared optional-button menu consolidation
+---------------------------------------------------
+
+- Added a shared menu helper for the left and right control panels.
+- Centralised optional-button toggling, first-time command/name setup, command
+  re-detection, the command guide, DarkOne Tools access and button-roundness
+  selection.
+- Preserved the established menu IDs, saved properties, command behaviour and
+  left/right optional-button counts.
+- Kept the left panel's Button style and Button depth menus local, together
+  with both panels' distinct button layouts and runtime controls.
+- Advanced the two control-panel entry versions and added static/runtime
+  validation for menu construction, edit IDs, setup cancellation and refresh
+  behaviour.
+
 v0.7.36 - Shared JSplitter protocol consolidation
 -------------------------------------------------
 

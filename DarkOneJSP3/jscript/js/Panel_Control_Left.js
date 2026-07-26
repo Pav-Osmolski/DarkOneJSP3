@@ -1,5 +1,5 @@
 // =========================================================================================================
-// Panel: Control Left - v2.0build20191004-jscript-panel3-v0615
+// Panel: Control Left - v2.0build20191004-jscript-panel3-v0616
 // =========================================================================================================
 
 var g_btns = safeGdiImage(imgPath + "buttons.png");
@@ -26,128 +26,51 @@ function buttonsRefresh() {
 // ----- CREATE BUTTON MENU -----
 
 function getButtonMenu(x, y) {
-	var a = {}
-	for (var i = 0; i < 5; i++) a[i] = window.CreatePopupMenu();
+	darkOneShowControlButtonMenu(x, y, {
+		buttonNames: b_name,
+		buttonProperties: b_btns,
+		appendExtraMenus: function (rootMenu) {
+			var styleMenu = window.CreatePopupMenu();
+			var depthMenu = window.CreatePopupMenu();
 
-	for (var j = 0; j < 8; j++) a[1].AppendMenuItem(b_btns[j].Exists ? 8 : 0, j + 101, b_btns[j].Text ? b_btns[j].Text : b_name[j]);
-	a[1].AppendMenuSeparator();
-	a[1].AppendMenuItem(0, 109, "Edit buttons");
-	a[1].AppendMenuItem(0, 120, "Re-detect command types");
-	a[1].AppendMenuItem(0, 121, "Command guide...");
+			for (var i = 1; i <= presetCount; i++)
+				styleMenu.AppendMenuItem(0, i + 200, "Preset " + i);
+			styleMenu.CheckMenuRadioItem(201, 200 + presetCount, appPreset + 200);
 
-	for (var k = 1; k >= 1 && k <= presetCount; k++) a[2].AppendMenuItem(0, k + 200, "Preset " + k);
-	a[2].CheckMenuRadioItem(201, 200 + presetCount, appPreset + 200);
+			var depthLabels = ["Flat", "Soft", "Medium", "Strong"];
+			for (var j = 0; j < depthLabels.length; j++)
+				depthMenu.AppendMenuItem(0, j + 301, depthLabels[j]);
+			depthMenu.CheckMenuRadioItem(301, 304, depthPreset + 301);
 
-	var tmp_arr = ["Flat", "Soft", "Medium", "Strong"];
-	for (var l = 0; l < 4; l++) a[3].AppendMenuItem(0, l + 301, tmp_arr[l]);
-	a[3].CheckMenuRadioItem(301, 304, depthPreset + 301);
-
-	var roundness = typeof darkOneButtonRoundness == "function" ? darkOneButtonRoundness() : -1;
-	var round_values = [-1, 0, 20, 33, 60, 100];
-	var round_labels = [
-		"Automatic / follow button style",
-		"Square (0%)",
-		"Subtle (20%)",
-		"Classic DarkOne (33%)",
-		"Rounded (60%)",
-		"Maximum / pill (100%)"
-	];
-	for (var r = 0; r < round_values.length; r++) {
-		a[4].AppendMenuItem(0, 401 + r, round_labels[r]);
-		if (roundness == round_values[r]) a[4].CheckMenuItem(401 + r, true);
-	}
-	a[4].AppendMenuSeparator();
-	a[4].AppendMenuItem(0, 407, "Custom roundness...");
-	if (round_values.indexOf(roundness) == -1) a[4].CheckMenuItem(407, true);
-
-	a[1].AppendTo(a[0], 0 | 16, "Optional buttons");
-	a[0].AppendMenuSeparator();
-	a[0].AppendMenuItem(0, 900, "DarkOne Tools...");
-	a[0].AppendMenuSeparator();
-	a[2].AppendTo(a[0], 0 | 16, "Button style");
-	a[3].AppendTo(a[0], 0 | 16, "Button depth");
-	a[4].AppendTo(a[0], 0 | 16, "Button roundness");
-
-	var idx = a[0].TrackPopupMenu(x, y);
-
-	switch (true) {
-		case idx >= 101 && idx <= 108:
-			var button_index = idx - 101;
-			var was_enabled = b_btns[button_index].Exists;
-			window.SetProperty(b_name[button_index], !was_enabled);
-			if (was_enabled || window.GetProperty(b_name[button_index] + " command string", "")) {
-				window.Reload();
-				return true;
-			}
-			try {
-				var c = utils.InputBox("Enter your main menu, context menu or trusted local JavaScript command here:", "Button command", "", true);
-				var d = utils.InputBox("Enter the name for the button here\n(up to 10 letters):", "Button name", "");
-				window.SetProperty(b_name[button_index] + " command string", c);
-				d && window.SetProperty(b_name[button_index] + " name (up to 10 letters)", String(d).substring(0, 10));
-				window.SetProperty(b_name[button_index] + " command style", 0);
-				window.Reload();
-				return true;
-			} catch (e) {
-				window.SetProperty(b_name[button_index], false);
-			}
-			break;
-
-		case idx == 109:
-			window.ShowProperties();
-			break;
-
-		case idx == 120:
-			resetOptionalButtonCommandStyles(b_name);
-			utils.MessageBox("Stored optional-button command types were reset. They will be detected again on the next click.", "DarkOneJSP3 optional buttons", MB_OK | MB_ICONASTERISK);
-			break;
-
-		case idx == 121:
-			showOptionalButtonCommandGuide();
-			break;
-
-		case idx == 900:
-			darkOneToolsMenu(x, y);
-			break;
-
-		case idx >= 201 && idx <= 200 + presetCount:
-			window.SetProperty("Buttons appearance preset", idx - 200);
-			appPreset = window.GetProperty("Buttons appearance preset");
-			window.NotifyOthers("ButtonPreset", appPreset);
-			buttonsOptions();
-			buttonsSizes();
-			buttonsRefresh();
-			window.Repaint();
-			break;
-
-		case idx >= 301 && idx <= 304:
-			window.SetProperty("Buttons depth preset", idx - 301);
-			depthPreset = window.GetProperty("Buttons depth preset");
-			window.NotifyOthers("DepthPreset", depthPreset);
-			buttonsOptions();
-			buttonsRefresh();
-			window.Repaint();
-			break;
-
-		case idx >= 401 && idx <= 406:
-			var round_values = [-1, 0, 20, 33, 60, 100];
-			darkOneSetButtonRoundness(round_values[idx - 401]);
-			buttonsOptions();
-			buttonsSizes();
-			buttonsRefresh();
-			window.Repaint();
-			break;
-
-		case idx == 407:
-			if (darkOneInputButtonRoundness()) {
+			styleMenu.AppendTo(rootMenu, 0 | 16, "Button style");
+			depthMenu.AppendTo(rootMenu, 0 | 16, "Button depth");
+			return [styleMenu, depthMenu];
+		},
+		handleExtraSelection: function (index) {
+			if (index >= 201 && index <= 200 + presetCount) {
+				window.SetProperty("Buttons appearance preset", index - 200);
+				appPreset = window.GetProperty("Buttons appearance preset");
+				window.NotifyOthers("ButtonPreset", appPreset);
 				buttonsOptions();
 				buttonsSizes();
 				buttonsRefresh();
 				window.Repaint();
+				return true;
 			}
-			break;
-	}
 
-	for (var m = 0; m < 5; m++) a[m].Dispose();
+			if (index >= 301 && index <= 304) {
+				window.SetProperty("Buttons depth preset", index - 301);
+				depthPreset = window.GetProperty("Buttons depth preset");
+				window.NotifyOthers("DepthPreset", depthPreset);
+				buttonsOptions();
+				buttonsRefresh();
+				window.Repaint();
+				return true;
+			}
+
+			return false;
+		}
+	});
 }
 
 // ----- CREATE TIMESWITCH OPTION -----

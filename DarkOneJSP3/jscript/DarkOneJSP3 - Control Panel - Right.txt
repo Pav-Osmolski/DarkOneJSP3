@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Control Panel - Right"
-// @version "3.0.11-jsp3-3.8.5"
+// @version "3.0.12-jsp3-3.8.5"
 // @author "tedGo / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
@@ -10,6 +10,7 @@
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Object_Volumeknob.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Buttons_CommonButtonOptions.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Buttons_Function_OptBtnCmd.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Buttons_OptionalMenu.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Buttons_Function_getOpenMenu.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Buttons_Function_getPBOMenu.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Panel_Control_Right.js"
