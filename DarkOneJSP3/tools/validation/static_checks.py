@@ -212,7 +212,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.2.1',
+            'version': '0.2.2',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -383,6 +383,19 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest does not identify the reset-aware Queue wrapper')
         if queue_manifest.get('generic_sample_participates_in_factory_reset') is not False:
             errors.append('Manifest incorrectly marks the generic Queue sample reset-aware')
+        if queue_manifest.get('recommended_component') != 'native Queue Viewer':
+            errors.append('Manifest does not recommend the native Queue Viewer')
+        if queue_manifest.get('native_component_full_editing') is not True:
+            errors.append('Manifest omits native Queue Viewer editing support')
+        if queue_manifest.get('scripted_viewer_optional') is not True or                 queue_manifest.get('scripted_mutation_support') is not False:
+            errors.append('Manifest does not describe the scripted Queue Viewer limitation')
+        for flag in ['scripted_multi_selection', 'scripted_keyboard_navigation']:
+            if queue_manifest.get(flag) is not True:
+                errors.append('Manifest Queue Viewer enhancement is missing: ' + flag)
+        queue_panel = next((panel for panel in manifest.get('panels', [])
+                            if isinstance(panel, dict) and panel.get('title') == 'DOJSP3.Queue'), None)
+        if not queue_panel or queue_panel.get('type') != 'Queue Viewer' or                 queue_panel.get('source') != 'native component':
+            errors.append('Manifest does not use the native Queue Viewer for DOJSP3.Queue')
         allmusic_manifest = manifest.get('enhancements', {}).get('allmusic', {})
         for flag in [
             'managed_same_album_reactivation',
@@ -547,12 +560,42 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.5.2"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.5.2')
+        if '// @version "0.6.0"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.0')
         if 'darkOneJsp3HandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if reset_import not in body or bridge_import not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset bridge imports are incomplete')
+
+    generic_queue_entry = samples / 'Queue Viewer.txt'
+    if generic_queue_entry.exists() and '// @version "0.6.0"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.0')
+
+    queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
+    if queue_source.exists():
+        body = text(queue_source)
+        for token in [
+            'this.selected_indices = []',
+            'this.select_range = function',
+            'this.select_all = function',
+            'case VK_PGUP:',
+            'case VK_PGDN:',
+            "handles.RunContextCommand('Properties')",
+            'plman.ExecutePlaylistDefaultAction',
+            'utils.SetClipboardText',
+            'this.restore_selection(this.pending_selection)',
+            "case 1407:",
+        ]:
+            if token not in body:
+                errors.append('Queue Viewer navigation/command support is missing: ' + token)
+        for forbidden in [
+            'FlushPlaybackQueue',
+            'RemoveItemFromPlaybackQueue',
+            'RemoveItemsFromPlaybackQueue',
+            'GetPlaybackQueueHandles',
+        ]:
+            if forbidden in body:
+                errors.append('Queue Viewer uses unsupported queue API: ' + forbidden)
 
     common = samples / 'js' / 'common.js'
     if common.exists():

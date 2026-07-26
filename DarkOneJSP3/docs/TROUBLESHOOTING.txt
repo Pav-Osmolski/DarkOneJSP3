@@ -188,12 +188,13 @@ Playlist Manager position does not restore as expected
 - A taller panel may make the former top row physically impossible to retain;
   the position then clamps to the nearest valid scroll limit.
 
-Queue scan appears delayed
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-The supplied queue viewer begins its incremental %queue_indexes% scan after the
-Queue tab receives a paint callback. Open the Queue tab. Use native
-foo_queue_viewer instead when editing or reordering is required. For coordinated
-factory reset, use the DarkOneJSP3 wrapper rather than the generic sample entry.
+Scripted Queue scan appears delayed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The optional scripted queue viewer begins its incremental %queue_indexes% scan
+after the Queue tab receives a paint callback. Open the Queue tab and allow the
+scan to complete. Use the native Queue Viewer component for full editing,
+including adding, removing and reordering entries. When using the script, load
+the DarkOneJSP3 wrapper rather than the generic sample entry.
 
 Queue Viewer reports darkOneJsp3HandleSampleReset is undefined
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

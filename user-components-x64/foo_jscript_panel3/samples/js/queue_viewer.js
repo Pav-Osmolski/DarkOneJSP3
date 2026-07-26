@@ -21,6 +21,118 @@ function _queue_viewer(x, y, w, h) {
         return index >= this.offset && index < Math.min(this.count, this.offset + this.rows) ? index : -1;
     }
 
+    this.valid_index = function (index) {
+        return index >= 0 && index < this.count;
+    }
+
+    this.is_selected = function (index) {
+        return this.selected_indices.indexOf(index) !== -1;
+    }
+
+    this.normalise_selection = function (indices) {
+        var result = [];
+        for (var i = 0; i < indices.length; i++) {
+            var index = Math.round(Number(indices[i]));
+            if (this.valid_index(index) && result.indexOf(index) === -1) result.push(index);
+        }
+        result.sort(function (a, b) { return a - b; });
+        return result;
+    }
+
+    this.set_selection = function (indices, focus_index, anchor_index, ensure_visible) {
+        var selected = this.normalise_selection(indices || []);
+        this.selected_indices = selected;
+
+        if (selected.length === 0) {
+            this.selected_index = -1;
+            this.anchor_index = -1;
+        } else {
+            this.selected_index = selected.indexOf(focus_index) !== -1
+                ? focus_index
+                : selected[selected.length - 1];
+            this.anchor_index = this.valid_index(anchor_index)
+                ? anchor_index
+                : this.selected_index;
+            if (ensure_visible !== false) this.ensure_visible(this.selected_index);
+        }
+        window.RepaintRect(this.x, this.y, this.w, this.h);
+    }
+
+    this.select_only = function (index, ensure_visible) {
+        if (!this.valid_index(index)) {
+            this.clear_selection();
+            return false;
+        }
+        this.set_selection([index], index, index, ensure_visible);
+        return true;
+    }
+
+    this.clear_selection = function () {
+        if (!this.selected_indices.length && this.selected_index === -1) return false;
+        this.selected_indices = [];
+        this.selected_index = -1;
+        this.anchor_index = -1;
+        window.RepaintRect(this.x, this.y, this.w, this.h);
+        return true;
+    }
+
+    this.toggle_selection = function (index) {
+        if (!this.valid_index(index)) return false;
+        var selected = this.selected_indices.slice();
+        var position = selected.indexOf(index);
+        if (position === -1) selected.push(index);
+        else selected.splice(position, 1);
+        var focus = selected.length ? (selected.indexOf(index) !== -1 ? index : selected[selected.length - 1]) : -1;
+        this.set_selection(selected, focus, index, true);
+        return true;
+    }
+
+    this.range_indices = function (from, to) {
+        var result = [];
+        var minimum = Math.min(from, to);
+        var maximum = Math.max(from, to);
+        for (var i = minimum; i <= maximum; i++) result.push(i);
+        return result;
+    }
+
+    this.select_range = function (index, additive) {
+        if (!this.valid_index(index)) return false;
+        var anchor = this.valid_index(this.anchor_index)
+            ? this.anchor_index
+            : (this.valid_index(this.selected_index) ? this.selected_index : index);
+        var selected = this.range_indices(anchor, index);
+        if (additive) selected = this.selected_indices.concat(selected);
+        this.set_selection(selected, index, anchor, true);
+        return true;
+    }
+
+    this.select_all = function () {
+        if (!this.count) return false;
+        var selected = [];
+        for (var i = 0; i < this.count; i++) selected.push(i);
+        this.set_selection(selected, this.valid_index(this.selected_index) ? this.selected_index : 0, 0, true);
+        return true;
+    }
+
+    this.ensure_visible = function (index) {
+        if (!this.valid_index(index)) return false;
+        var next = this.offset;
+        if (index < this.offset) next = index;
+        else if (index >= this.offset + this.rows) next = index - this.rows + 1;
+        next = Math.max(0, Math.min(Math.max(0, this.count - this.rows), next));
+        if (next === this.offset) return false;
+        this.offset = next;
+        this.hover_index = -1;
+        return true;
+    }
+
+    this.move_selection = function (target, extend) {
+        if (!this.count) return false;
+        target = Math.max(0, Math.min(this.count - 1, target));
+        if (extend) return this.select_range(target, false);
+        return this.select_only(target, true);
+    }
+
     this.release_scan_items = function (state) {
         state = state || this.scan_state;
         if (state && state.items) {
@@ -40,24 +152,144 @@ function _queue_viewer(x, y, w, h) {
         return 'Queue Viewer';
     }
 
-    this.focus_row = function (index) {
-        if (index < 0 || index >= this.count) return false;
+    this.source_row_valid = function (index) {
+        if (!this.valid_index(index)) return false;
         var row = this.data[index];
         try {
-            if (row.playlist_index < 0 || row.playlist_index >= plman.PlaylistCount) return false;
-            if (row.playlist_item_index < 0 || row.playlist_item_index >= plman.GetPlaylistItemCount(row.playlist_index)) return false;
+            return row.playlist_index >= 0 && row.playlist_index < plman.PlaylistCount &&
+                row.playlist_item_index >= 0 &&
+                row.playlist_item_index < plman.GetPlaylistItemCount(row.playlist_index);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    this.active_row_index = function () {
+        if (this.valid_index(this.selected_index)) return this.selected_index;
+        if (this.valid_index(this.hover_index)) return this.hover_index;
+        return -1;
+    }
+
+    this.selected_row_indices = function () {
+        if (this.selected_indices.length) return this.selected_indices.slice();
+        var active = this.active_row_index();
+        return active >= 0 ? [active] : [];
+    }
+
+    this.source_handle_list = function (indices) {
+        var handles = fb.CreateHandleList();
+        var lists = {};
+        try {
+            for (var i = 0; i < indices.length; i++) {
+                var index = indices[i];
+                if (!this.source_row_valid(index)) continue;
+                var row = this.data[index];
+                if (!lists[row.playlist_index]) lists[row.playlist_index] = plman.GetPlaylistItems(row.playlist_index);
+                handles.AddItem(lists[row.playlist_index].GetItem(row.playlist_item_index));
+            }
+        } catch (e) {
+            console.log('[DarkOneJSP3 Queue Viewer] Could not read selected source items: ' + e.message);
+        } finally {
+            for (var key in lists) {
+                if (!Object.prototype.hasOwnProperty.call(lists, key)) continue;
+                try { lists[key].Dispose(); } catch (disposeError) {}
+            }
+        }
+        return handles;
+    }
+
+    this.active_source_path = function () {
+        var index = this.active_row_index();
+        if (!this.source_row_valid(index)) return '';
+        var handles = this.source_handle_list([index]);
+        var path = '';
+        try {
+            if (handles.Count) path = handles.GetItem(0).Path || '';
+        } catch (e) {}
+        try { handles.Dispose(); } catch (disposeError) {}
+        return path;
+    }
+
+    this.focus_row = function (index) {
+        if (!this.source_row_valid(index)) return false;
+        var row = this.data[index];
+        try {
             plman.ActivePlaylist = row.playlist_index;
             plman.ClearPlaylistSelection(row.playlist_index);
             plman.SetPlaylistSelectionSingle(row.playlist_index, row.playlist_item_index, true);
             plman.SetPlaylistFocusItem(row.playlist_index, row.playlist_item_index);
-            this.selected_index = index;
-            window.RepaintRect(this.x, this.y, this.w, this.h);
+            if (!this.is_selected(index)) this.select_only(index, true);
+            else {
+                this.selected_index = index;
+                this.ensure_visible(index);
+                window.RepaintRect(this.x, this.y, this.w, this.h);
+            }
             return true;
         } catch (e) {
             console.log('[DarkOneJSP3 Queue Viewer] Could not focus source playlist item: ' + e.message);
             this.request_scan(false, 0);
             return false;
         }
+    }
+
+    this.play_row = function (index) {
+        if (!this.source_row_valid(index)) return false;
+        var row = this.data[index];
+        try {
+            plman.ActivePlaylist = row.playlist_index;
+            plman.ExecutePlaylistDefaultAction(row.playlist_index, row.playlist_item_index);
+            if (!this.is_selected(index)) this.select_only(index, true);
+            return true;
+        } catch (e) {
+            console.log('[DarkOneJSP3 Queue Viewer] Could not play source playlist item: ' + e.message);
+            this.request_scan(false, 0);
+            return false;
+        }
+    }
+
+    this.show_properties = function () {
+        var handles = this.source_handle_list(this.selected_row_indices());
+        var result = false;
+        try {
+            if (handles.Count) result = handles.RunContextCommand('Properties');
+        } catch (e) {
+            console.log('[DarkOneJSP3 Queue Viewer] Could not open item properties: ' + e.message);
+        }
+        try { handles.Dispose(); } catch (disposeError) {}
+        return result;
+    }
+
+    this.copy_titles = function () {
+        var indices = this.selected_row_indices();
+        var values = [];
+        for (var i = 0; i < indices.length; i++) values.push(this.data[indices[i]].text);
+        if (!values.length) return false;
+        utils.SetClipboardText(values.join('\r\n'));
+        return true;
+    }
+
+    this.copy_paths = function () {
+        var handles = this.source_handle_list(this.selected_row_indices());
+        var values = [];
+        try {
+            for (var i = 0; i < handles.Count; i++) {
+                var path = handles.GetItem(i).Path || '';
+                if (path) values.push(path);
+            }
+        } catch (e) {
+            console.log('[DarkOneJSP3 Queue Viewer] Could not copy source paths: ' + e.message);
+        }
+        try { handles.Dispose(); } catch (disposeError) {}
+        if (!values.length) return false;
+        utils.SetClipboardText(values.join('\r\n'));
+        return true;
+    }
+
+    this.open_containing_folder = function () {
+        var path = this.active_source_path();
+        if (!utils.IsFile(path)) return false;
+        _explorer(path);
+        return true;
     }
 
     this.scroll_by = function (rows) {
@@ -71,13 +303,30 @@ function _queue_viewer(x, y, w, h) {
     }
 
     this.key_down = function (k) {
+        var ctrl = utils.IsKeyPressed(VK_CONTROL);
+        var shift = utils.IsKeyPressed(VK_SHIFT);
+        if (ctrl && k === 0x41) return this.select_all();
+
+        var current = this.valid_index(this.selected_index)
+            ? this.selected_index
+            : Math.max(0, Math.min(this.count - 1, this.offset));
         switch (k) {
         case VK_UP:
-            return this.scroll_by(-1);
+            return this.move_selection(current - 1, shift);
         case VK_DOWN:
-            return this.scroll_by(1);
+            return this.move_selection(current + 1, shift);
+        case VK_HOME:
+            return this.move_selection(0, shift);
+        case VK_END:
+            return this.move_selection(this.count - 1, shift);
+        case VK_PGUP:
+            return this.move_selection(current - Math.max(1, this.rows - 1), shift);
+        case VK_PGDN:
+            return this.move_selection(current + Math.max(1, this.rows - 1), shift);
         case VK_RETURN:
-            return this.focus_row(this.selected_index >= 0 ? this.selected_index : this.offset);
+            return this.focus_row(current);
+        case VK_ESCAPE:
+            return this.clear_selection();
         default:
             return false;
         }
@@ -95,10 +344,12 @@ function _queue_viewer(x, y, w, h) {
         this.up_btn.lbtn_up(x, y);
         this.down_btn.lbtn_up(x, y);
         var row = this.row_at(x, y);
-        if (row >= 0 && row !== this.selected_index) {
-            this.selected_index = row;
-            window.RepaintRect(this.x, this.y, this.w, this.h);
-        }
+        if (row < 0) return true;
+        var ctrl = utils.IsKeyPressed(VK_CONTROL);
+        var shift = utils.IsKeyPressed(VK_SHIFT);
+        if (shift) this.select_range(row, ctrl);
+        else if (ctrl) this.toggle_selection(row);
+        else this.select_only(row, false);
         return true;
     }
 
@@ -141,13 +392,15 @@ function _queue_viewer(x, y, w, h) {
                 var index = i + this.offset;
                 var row = this.data[index];
                 var rowY = this.y + _scale(12) + (i * panel.row_height);
-                if (index === this.selected_index) {
-                    gr.FillRectangle(this.x, rowY, this.w, panel.row_height, setAlpha(panel.colours.highlight, 34));
+                var selected = this.is_selected(index);
+                if (selected) {
+                    gr.FillRectangle(this.x, rowY, this.w, panel.row_height,
+                        setAlpha(panel.colours.highlight, index === this.selected_index ? 42 : 30));
                 } else if (index === this.hover_index) {
                     gr.FillRectangle(this.x, rowY, this.w, panel.row_height, setAlpha(panel.colours.highlight, 20));
                 }
                 gr.WriteTextSimple(row.queue_index + '.  ' + row.text, panel.fonts.normal,
-                    index === this.hover_index || index === this.selected_index ? panel.colours.highlight : panel.colours.text,
+                    selected || index === this.hover_index ? panel.colours.highlight : panel.colours.text,
                     this.x, rowY, this.w, panel.row_height,
                     DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER,
                     DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
@@ -163,10 +416,37 @@ function _queue_viewer(x, y, w, h) {
         window.Repaint();
     }
 
-    this.rbtn_up = function () {
+    this.rbtn_up = function (x, y) {
+        var row = this.row_at(x, y);
+        if (row >= 0) {
+            if (!this.is_selected(row)) this.select_only(row, false);
+            else {
+                this.selected_index = row;
+                window.RepaintRect(this.x, this.y, this.w, this.h);
+            }
+        }
+
+        var active = this.active_row_index();
+        var selected_rows = this.selected_row_indices();
+        var selected_count = selected_rows.length;
+        var valid_source_count = 0;
+        for (var i = 0; i < selected_rows.length; i++) {
+            if (this.source_row_valid(selected_rows[i])) valid_source_count++;
+        }
+        var has_selection = selected_count > 0;
+        var active_valid = this.source_row_valid(active);
+        var active_path = active_valid ? this.active_source_path() : '';
+
+        panel.m.AppendMenuItem(EnableMenuIf(active_valid), 1402, 'Show source playlist item');
+        panel.m.AppendMenuItem(EnableMenuIf(active_valid), 1403, 'Play source item now');
+        panel.m.AppendMenuItem(EnableMenuIf(active_valid && utils.IsFile(active_path)), 1404, 'Open containing folder');
+        panel.m.AppendMenuItem(EnableMenuIf(valid_source_count > 0), 1405, selected_count > 1 ? 'Properties for selected items' : 'Properties');
+        panel.m.AppendMenuSeparator();
+        panel.m.AppendMenuItem(EnableMenuIf(has_selection), 1406, selected_count > 1 ? 'Copy item titles' : 'Copy item title');
+        panel.m.AppendMenuItem(EnableMenuIf(valid_source_count > 0), 1407, selected_count > 1 ? 'Copy file paths' : 'Copy file path');
+        panel.m.AppendMenuSeparator();
         panel.m.AppendMenuItem(MF_STRING, 1400, 'Item display title formatting...');
         panel.m.AppendMenuItem(MF_STRING, 1401, 'Re-scan playback queue');
-        panel.m.AppendMenuItem(EnableMenuIf(this.selected_index >= 0 || this.hover_index >= 0), 1402, 'Show source playlist item');
         panel.m.AppendMenuSeparator();
     }
 
@@ -186,7 +466,22 @@ function _queue_viewer(x, y, w, h) {
             this.request_scan(true, 0);
             break;
         case 1402:
-            this.focus_row(this.hover_index >= 0 ? this.hover_index : this.selected_index);
+            this.focus_row(this.active_row_index());
+            break;
+        case 1403:
+            this.play_row(this.active_row_index());
+            break;
+        case 1404:
+            this.open_containing_folder();
+            break;
+        case 1405:
+            this.show_properties();
+            break;
+        case 1406:
+            this.copy_titles();
+            break;
+        case 1407:
+            this.copy_paths();
             break;
         }
     }
@@ -199,6 +494,87 @@ function _queue_viewer(x, y, w, h) {
         this.down_btn.x = this.up_btn.x;
         this.up_btn.y = this.y;
         this.down_btn.y = this.y + this.h - _scale(12);
+    }
+
+    this.selection_key = function (row) {
+        return row.playlist_index + ':' + row.playlist_item_index + ':' + row.queue_index;
+    }
+
+    this.selection_source_key = function (row) {
+        return row.playlist_index + ':' + row.playlist_item_index;
+    }
+
+    this.capture_selection = function () {
+        var snapshot = { exact: [], source: [], active_exact: '', active_source: '' };
+        for (var i = 0; i < this.selected_indices.length; i++) {
+            var index = this.selected_indices[i];
+            if (!this.valid_index(index)) continue;
+            snapshot.exact.push(this.selection_key(this.data[index]));
+            snapshot.source.push(this.selection_source_key(this.data[index]));
+        }
+        if (this.valid_index(this.selected_index)) {
+            snapshot.active_exact = this.selection_key(this.data[this.selected_index]);
+            snapshot.active_source = this.selection_source_key(this.data[this.selected_index]);
+        }
+        return snapshot;
+    }
+
+    this.restore_selection = function (snapshot) {
+        if (!snapshot || (!snapshot.exact.length && !snapshot.source.length)) {
+            this.selected_indices = [];
+            this.selected_index = -1;
+            this.anchor_index = -1;
+            return;
+        }
+
+        var selected = [];
+        var used = [];
+        for (var i = 0; i < snapshot.exact.length; i++) {
+            var exact = snapshot.exact[i];
+            var found = -1;
+            for (var n = 0; n < this.data.length; n++) {
+                if (used.indexOf(n) === -1 && this.selection_key(this.data[n]) === exact) {
+                    found = n;
+                    break;
+                }
+            }
+            if (found === -1) {
+                var source = snapshot.source[i];
+                for (var m = 0; m < this.data.length; m++) {
+                    if (used.indexOf(m) === -1 && this.selection_source_key(this.data[m]) === source) {
+                        found = m;
+                        break;
+                    }
+                }
+            }
+            if (found !== -1) {
+                used.push(found);
+                selected.push(found);
+            }
+        }
+
+        var active = -1;
+        for (var a = 0; a < this.data.length; a++) {
+            if (this.selection_key(this.data[a]) === snapshot.active_exact) {
+                active = a;
+                break;
+            }
+        }
+        if (active === -1) {
+            for (var b = 0; b < this.data.length; b++) {
+                if (this.selection_source_key(this.data[b]) === snapshot.active_source) {
+                    active = b;
+                    break;
+                }
+            }
+        }
+        selected = this.normalise_selection(selected);
+        this.selected_indices = selected;
+        this.selected_index = selected.indexOf(active) !== -1
+            ? active
+            : (selected.length ? selected[selected.length - 1] : -1);
+        this.anchor_index = this.selected_index;
+        if (this.selected_index >= 0) this.ensure_visible(this.selected_index);
     }
 
     this.cancel_scan = function () {
@@ -214,6 +590,7 @@ function _queue_viewer(x, y, w, h) {
     }
 
     this.request_scan = function (force_log, delay) {
+        this.pending_selection = this.capture_selection();
         this.dirty = true;
         this.force_log = this.force_log || !!force_log;
         this.cancel_scan();
@@ -339,7 +716,8 @@ function _queue_viewer(x, y, w, h) {
         this.count = this.data.length;
         this.offset = Math.min(this.offset, Math.max(0, this.count - this.rows));
         this.hover_index = -1;
-        this.selected_index = this.count ? Math.min(Math.max(0, this.selected_index), this.count - 1) : -1;
+        this.restore_selection(this.pending_selection);
+        this.pending_selection = null;
         this.has_scanned = true;
         this.dirty = false;
         this.scanning = false;
@@ -372,6 +750,9 @@ function _queue_viewer(x, y, w, h) {
         this.cancel_scan();
         this.data = [];
         this.count = 0;
+        this.selected_indices = [];
+        this.selected_index = -1;
+        this.anchor_index = -1;
     }
 
     panel.list_objects.push(this);
@@ -386,7 +767,10 @@ function _queue_viewer(x, y, w, h) {
     this.count = 0;
     this.data = [];
     this.hover_index = -1;
+    this.selected_indices = [];
     this.selected_index = -1;
+    this.anchor_index = -1;
+    this.pending_selection = null;
     this.dirty = true;
     this.has_scanned = false;
     this.scanning = false;

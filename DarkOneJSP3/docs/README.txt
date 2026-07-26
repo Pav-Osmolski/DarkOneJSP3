@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.1
+DarkOneJSP3 v0.8.2
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -11,6 +11,7 @@ Supported environment
 - Columns UI
 - JScript Panel 3.8.5
 - JSplitter 4.x, developed and tested with 4.1.11
+- Queue Viewer
 - Quick Search Toolbar
 - Enhanced Spectrum Analyser
 - Waveform Minibar (mod)
@@ -96,8 +97,11 @@ Current highlights
   and Staged reveal modes controlled from the InfoStack tab-strip menu.
 - Consolidated Album Notes with configurable providers, caching, diagnostics,
   same-album provider reactivation and MusicBrainz Releases and Links views.
-- Enhanced playlist scrolling, playlist-manager filtering, optional row
-  shading and queue viewing.
+- Enhanced playlist scrolling, playlist-manager filtering and optional row
+  shading.
+- Native Queue Viewer support as the recommended full editor, with an optional
+  scripted viewer providing multi-selection, keyboard navigation and safe
+  source-item commands.
 - Coordinated per-panel factory defaults for DarkOneJSP3-managed settings,
   including enhanced playlist refresh and scrolling options, without deleting
   provider cache files or unrelated upstream sample customisation.

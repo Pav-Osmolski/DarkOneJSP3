@@ -300,15 +300,48 @@ navigation, scrollbar arrows/page clicks and drag-autoscroll remain row-aligned.
 
 6. Queue Viewer
 ---------------
-The supplied queue script reconstructs queue order from %queue_indexes%.
-It scans incrementally when the Queue tab is first painted and supports
-duplicate queue positions. It is a styled viewer, not a complete queue editor.
-
-For coordinated factory reset, load the DarkOneJSP3 Queue Viewer wrapper under
-DarkOneJSP3\jscript rather than the generic samples\Queue Viewer.txt entry. A
-native foo_queue_viewer panel may be used instead. Its custom title must remain:
+The native Queue Viewer component is the recommended Queue tab because it
+provides complete playback-queue editing, including adding, removing and
+reordering entries. Give the component the exact custom title:
 
   DOJSP3.Queue
+
+Optional scripted viewer
+~~~~~~~~~~~~~~~~~~~~~~~~
+DarkOneJSP3 also supplies a JScript Panel 3 queue viewer as a lightweight
+fallback. The DarkOneJSP3 Queue Viewer wrapper adds coordinated reset
+support. Load this reset-aware wrapper rather than the generic sample entry:
+
+  DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+
+The script reconstructs queue order from %queue_indexes%, scans incrementally
+when the Queue tab is painted and supports duplicate queue positions.
+
+Selection and navigation:
+- Click: select one row
+- Ctrl+click: toggle individual rows
+- Shift+click: select a range
+- Ctrl+Shift+click: add a range to the selection
+- Ctrl+A: select all rows
+- Up/Down: move the active selection
+- Shift+Up/Down: extend the selection
+- Home/End: move to the first or last row
+- Page Up/Page Down: move by the visible page
+- Enter or double-click: show the source playlist item
+- Escape: clear the selection
+
+Row commands:
+- Show source playlist item
+- Play source item now
+- Open containing folder
+- Properties
+- Copy item title or selected item titles
+- Copy file path or selected file paths
+- Re-scan playback queue
+
+JScript Panel 3 no longer exposes the playback-queue mutation functions needed
+to add, remove, reorder or clear entries. The scripted viewer therefore remains
+a viewer and source-item navigator rather than a complete queue editor.
 
 7. Quick Search Toolbar
 -----------------------

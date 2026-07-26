@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.1 Validation Report
+DarkOneJSP3 v0.8.2 Validation Report
 ====================================
 
 Scope
@@ -66,6 +66,10 @@ Checks
   provider request indefinitely pending.
 - JS Playlist and Playlist Manager refresh, scrolling and appearance defaults
   are covered by the canonical registry.
+- The native Queue Viewer is identified as the recommended DOJSP3.Queue panel,
+  while the optional scripted viewer is verified for multi-selection, keyboard
+  navigation, source-item commands and the absence of unsupported mutation API
+  calls.
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.

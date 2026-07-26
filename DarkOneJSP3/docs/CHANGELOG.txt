@@ -1,6 +1,26 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.8.2 - Queue navigation and native-editor prioritisation
+----------------------------------------------------------
+
+- Made the native Queue Viewer component the recommended DOJSP3.Queue panel and
+  restored it to the documented requirements for the complete editing
+  experience.
+- Repositioned the bundled JScript Panel Queue Viewer as an optional lightweight
+  fallback because JScript Panel 3 does not expose playback-queue mutation
+  functions for adding, removing, reordering or clearing entries.
+- Added Ctrl/Shift multi-selection, Ctrl+A, Home/End, Page Up/Page Down,
+  selection-aware arrow navigation, Enter activation and Escape clearing to the
+  scripted viewer.
+- Added source-item commands for showing or playing the playlist item, opening
+  its containing folder, opening Properties and copying selected titles or file
+  paths.
+- Preserved scripted selections across queue re-scans where matching source
+  items remain available.
+- Expanded queue-viewer runtime validation and updated package metadata,
+  manifest guidance and current-facing documentation.
+
 v0.8.1 - Post-consolidation release hardening
 ---------------------------------------------
 

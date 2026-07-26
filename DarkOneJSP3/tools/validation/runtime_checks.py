@@ -1288,6 +1288,136 @@ def run(ctx: ValidationContext) -> None:
             errors.append('JSplitter reset smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
+        # Exercise scripted Queue Viewer selection, keyboard navigation and
+        # source-item commands without relying on unsupported queue mutation APIs.
+        queue_viewer_smoke = f"""
+    const fs = require('fs');
+    const source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Queue_Viewer.js'))}, 'utf8');
+    let pressed = {{}};
+    let clipboard = '';
+    let played = null;
+    let focused = null;
+    let propertiesRuns = 0;
+    let explored = '';
+    const sourceItems = [
+        {{Path: 'C:/Music/a.flac'}},
+        {{Path: 'C:/Music/b.flac'}},
+        {{Path: 'C:/Music/c.flac'}},
+        {{Path: 'C:/Music/d.flac'}}
+    ];
+    function HandleList(initial) {{
+        this.items = initial ? initial.slice() : [];
+        Object.defineProperty(this, 'Count', {{get: () => this.items.length}});
+    }}
+    HandleList.prototype.AddItem = function(handle) {{ this.items.push(handle); }};
+    HandleList.prototype.GetItem = function(index) {{ return this.items[index]; }};
+    HandleList.prototype.RunContextCommand = function(command) {{
+        if (command === 'Properties') {{ propertiesRuns++; return true; }}
+        return false;
+    }};
+    HandleList.prototype.Dispose = function() {{}};
+    const playlistItems = new HandleList(sourceItems);
+    const panel = {{
+        list_objects: [], row_height: 20,
+        fonts: {{normal: {{}}}}, colours: {{text: 1, highlight: 2}},
+        m: {{AppendMenuItem() {{}}, AppendMenuSeparator() {{}}}}
+    }};
+    const windowMock = {{
+        Name: 'Queue', RepaintRect() {{}}, Repaint() {{}}, SetCursor() {{}},
+        SetTimeout() {{ return 1; }}, ClearTimeout() {{}}
+    }};
+    const plman = {{
+        PlaylistCount: 1, ActivePlaylist: 0,
+        GetPlaylistItemCount() {{ return sourceItems.length; }},
+        GetPlaylistItems() {{ return playlistItems; }},
+        ClearPlaylistSelection() {{}}, SetPlaylistSelectionSingle() {{}},
+        SetPlaylistFocusItem(playlist, item) {{ focused = [playlist, item]; }},
+        ExecutePlaylistDefaultAction(playlist, item) {{ played = [playlist, item]; }}
+    }};
+    const fb = {{
+        CreateHandleList(handle) {{ return new HandleList(handle ? [handle] : []); }},
+        TitleFormat() {{ return {{EvalPlaylistItem() {{ return ''; }}}}; }}
+    }};
+    const utils = {{
+        IsKeyPressed(key) {{ return !!pressed[key]; }},
+        SetClipboardText(value) {{ clipboard = value; }},
+        IsFile(path) {{ return !!path; }}, InputBox() {{ return ''; }}
+    }};
+    function ScrollButton() {{
+        this.lbtn_up = function() {{}};
+        this.move = function() {{ return false; }};
+        this.paint = function() {{}};
+    }}
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    const factory = new Function(
+        'panel', 'window', 'plman', 'fb', 'utils', '_scale', '_sb', 'chars', '_',
+        'setAlpha', 'EnableMenuIf', 'MF_STRING', 'VK_CONTROL', 'VK_SHIFT',
+        'VK_UP', 'VK_DOWN', 'VK_HOME', 'VK_END', 'VK_PGUP', 'VK_PGDN',
+        'VK_RETURN', 'VK_ESCAPE', 'IDC_ARROW', 'DWRITE_TEXT_ALIGNMENT_CENTER',
+        'DWRITE_PARAGRAPH_ALIGNMENT_CENTER', 'DWRITE_WORD_WRAPPING_NO_WRAP',
+        'DWRITE_TRIMMING_GRANULARITY_CHARACTER', 'DWRITE_TEXT_ALIGNMENT_LEADING',
+        '_p', 'console', '_explorer', source + '\\nreturn _queue_viewer;'
+    );
+    const QueueViewer = factory(
+        panel, windowMock, plman, fb, utils, value => value, ScrollButton,
+        {{up: 'u', down: 'd'}}, {{bind: (fn, context) => fn.bind(context)}},
+        colour => colour, () => 0, 0, 0x11, 0x10, 0x26, 0x28, 0x24, 0x23,
+        0x21, 0x22, 0x0d, 0x1b, 0, 0, 0, 0, 0, 0,
+        function(name, value) {{ this.value = value; }}, console,
+        path => {{ explored = path; }}
+    );
+    const queue = new QueueViewer(0, 0, 200, 200);
+    queue.rows = 4;
+    queue.data = [
+        {{queue_index: 1, playlist_index: 0, playlist_item_index: 0, text: 'A'}},
+        {{queue_index: 2, playlist_index: 0, playlist_item_index: 1, text: 'B'}},
+        {{queue_index: 3, playlist_index: 0, playlist_item_index: 2, text: 'C'}},
+        {{queue_index: 4, playlist_index: 0, playlist_item_index: 3, text: 'D'}}
+    ];
+    queue.count = queue.data.length;
+    queue.select_only(1);
+    queue.toggle_selection(3);
+    assert(queue.selected_indices.join(',') === '1,3', 'Ctrl-style queue selection failed');
+    queue.anchor_index = 1;
+    queue.select_range(2, false);
+    assert(queue.selected_indices.join(',') === '1,2', 'Queue range selection failed');
+    pressed[0x11] = true;
+    queue.key_down(0x41);
+    pressed = {{}};
+    assert(queue.selected_indices.join(',') === '0,1,2,3', 'Queue Ctrl+A failed');
+    queue.key_down(0x1b);
+    assert(queue.selected_indices.length === 0, 'Queue Escape did not clear selection');
+    queue.select_only(1);
+    queue.key_down(0x28);
+    assert(queue.selected_index === 2, 'Queue Down navigation failed');
+    pressed[0x10] = true;
+    queue.key_down(0x26);
+    pressed = {{}};
+    assert(queue.selected_indices.join(',') === '1,2', 'Queue Shift+Up range failed');
+    queue.copy_titles();
+    assert(clipboard === 'B\\r\\nC', 'Queue title copying failed');
+    queue.copy_paths();
+    assert(clipboard === 'C:/Music/b.flac\\r\\nC:/Music/c.flac', 'Queue path copying failed');
+    queue.show_properties();
+    assert(propertiesRuns === 1, 'Queue Properties command failed');
+    queue.play_row(2);
+    assert(played && played[1] === 2, 'Queue source playback failed');
+    queue.focus_row(1);
+    assert(focused && focused[1] === 1, 'Queue source navigation failed');
+    queue.open_containing_folder();
+    assert(explored === 'C:/Music/b.flac', 'Queue containing-folder command failed');
+    const snapshot = queue.capture_selection();
+    queue.selected_indices = [];
+    queue.selected_index = -1;
+    queue.restore_selection(snapshot);
+    assert(queue.selected_indices.join(',') === '1,2', 'Queue selection restore failed');
+    """
+        result = subprocess.run([node, '-e', queue_viewer_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Queue Viewer runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
     with tempfile.TemporaryDirectory() as cache:
         for path in sorted(project.rglob('*.py')):
             result = subprocess.run(

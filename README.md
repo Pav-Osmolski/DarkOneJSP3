@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.8.1
+  <strong>Current stable release:</strong> v0.8.2
 </p>
 
 > [!IMPORTANT]
@@ -60,12 +60,14 @@ workflow of the original theme.
 * Consolidated Album Notes panel with configurable providers, source priority,
   caching, diagnostics and dedicated MusicBrainz Releases and Links views.
 * Improved playlist scrolling, playlist-manager filtering and queue handling.
+* Enhanced optional scripted Queue Viewer with multi-selection, keyboard
+  navigation and source-item commands.
 * Optional startup transitions with native-window reveal hardening.
 * Release validation, compatibility-mirror checking and maintenance utilities.
 
 ## Current release
 
-**DarkOneJSP3 v0.8.1** is the current stable release.
+**DarkOneJSP3 v0.8.2** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -83,13 +85,17 @@ starting layout.
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
 * [JSplitter 4.x, tested with 4.1.11](https://github.com/dima-lur/jsplitter/releases)
+* [Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)
 * [Quick Search Toolbar](https://www.foobar2000.org/components/view/foo_quicksearch)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
 
-The supplied scripted Queue Viewer is used by default. The native
-[Queue Viewer](https://marc2k3.github.io/component/queue-viewer/) component
-is optional and may be used as an alternative.
+The native Queue Viewer component is recommended because it provides complete
+playback-queue editing. A bundled JScript Panel Queue Viewer script is included
+as an optional lightweight fallback with selection, keyboard navigation and
+source-item commands. JScript Panel 3 no longer exposes the playback-queue
+mutation functions required to add, remove, reorder or clear entries from a
+scripted panel.
 
 Third-party component binaries are not included. Install compatible versions
 from their official project pages or trusted foobar2000 component sources

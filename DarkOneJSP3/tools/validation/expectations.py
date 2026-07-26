@@ -71,7 +71,7 @@ EXPECTED_MODULE_VERSIONS = {
     'control_left': ('3.0.12-jsp3-3.8.5', 'Control Left'),
     'control_right': ('3.0.12-jsp3-3.8.5', 'Control Right'),
     'display': ('3.0.11-jsp3-3.8.5', 'Display'),
-    'queue_viewer': ('0.5.2', 'Queue Viewer'),
+    'queue_viewer': ('0.6.0', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.3', 'MusicBrainz'),
     'js_playlist': ('0.4.7', 'JS Playlist'),
@@ -87,7 +87,7 @@ EXPECTED_MODULE_VERSIONS = {
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.2.1', 'release-validator module'),
+    'release_validator': ('0.2.2', 'release-validator module'),
 }
 
 SEMVER_MODULES = ()

@@ -1,5 +1,5 @@
 {
-  "version": "0.8.1",
+  "version": "0.8.2",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -65,8 +65,8 @@
     {
       "number": 5,
       "title": "DOJSP3.Queue",
-      "type": "JScript Panel 3",
-      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt"
+      "type": "Queue Viewer",
+      "source": "native component"
     },
     {
       "number": 6,
@@ -289,7 +289,22 @@
       "progress_repaint_throttle_ms": 75,
       "source_playlist_navigation": true,
       "factory_reset_wrapper": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt",
-      "generic_sample_participates_in_factory_reset": false
+      "generic_sample_participates_in_factory_reset": false,
+      "recommended_component": "native Queue Viewer",
+      "native_component_full_editing": true,
+      "scripted_viewer_optional": true,
+      "scripted_mutation_support": false,
+      "scripted_multi_selection": true,
+      "scripted_keyboard_navigation": true,
+      "scripted_source_item_commands": [
+        "show source playlist item",
+        "play source item now",
+        "open containing folder",
+        "properties",
+        "copy item titles",
+        "copy file paths"
+      ],
+      "scripted_limitation": "JScript Panel 3 does not expose playback-queue mutation functions"
     },
     "optional_buttons": {
       "configuration_retained_when_disabled": true,
@@ -626,7 +641,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",

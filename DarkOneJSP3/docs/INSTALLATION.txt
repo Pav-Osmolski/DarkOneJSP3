@@ -18,6 +18,7 @@ Install these components before building or restoring the layout:
 - foobar2000 v2 x64 with Columns UI
 - JScript Panel 3.8.5
 - JSplitter 4.x
+- Queue Viewer
 - Quick Search Toolbar
 - Enhanced Spectrum Analyser
 - Waveform Minibar (mod)
@@ -100,6 +101,28 @@ When no FCL is present, or when an imported layout does not match the installed
 components, use the manual layout method above. After confirming either method,
 export a fresh local FCL for backup.
 
+Recommended queue panel
+~~~~~~~~~~~~~~~~~~~~~~~
+Use the native Queue Viewer component as the fifth child of DOJSP3.InfoStack
+and give it the exact custom title:
+
+  DOJSP3.Queue
+
+The native component provides complete playback-queue editing, including
+adding, removing and reordering entries.
+
+Optional scripted queue fallback
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A JScript Panel 3 fallback is supplied at:
+
+  DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+
+It provides DarkOne styling, multi-selection, keyboard navigation and safe
+commands for the source playlist items. JScript Panel 3 no longer exposes the
+playback-queue mutation functions required for scripted add, remove, reorder or
+clear operations, so this fallback is not a complete queue editor. Its custom
+title must still be DOJSP3.Queue.
+
 Required Album Notes title
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 The fourth child of DOJSP3.InfoStack must:
@@ -115,8 +138,8 @@ as the consolidated InfoStack child.
 1. Restart foobar2000.
 2. Confirm that all six InfoStack tabs can be selected.
 3. Confirm that Album Notes opens without a child-panel error.
-4. Confirm that DOJSP3.Queue loads the DarkOneJSP3 Queue Viewer wrapper when
-   coordinated factory reset is wanted.
+4. Confirm that DOJSP3.Queue contains the native Queue Viewer component, or
+   deliberately uses the optional DarkOneJSP3 scripted fallback.
 5. Confirm that both upper dividers (Black by default) and the lower dividers
    align.
 6. Confirm that the display and waveform occupy the lower centre area.
