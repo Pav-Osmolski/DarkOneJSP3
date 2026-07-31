@@ -10,6 +10,7 @@ from .expectations import (
     REQUIRED_PATHS,
     EXPECTED_MODULE_VERSIONS,
     SEMVER_MODULES,
+    MENU_DOCUMENTATION_EXPECTATIONS,
 )
 
 
@@ -212,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.2.2',
+            'version': '0.2.4',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -225,6 +226,7 @@ def run(ctx: ValidationContext) -> None:
             'runtime_assets_checked': True,
             'repository_assets_checked_when_present': True,
             'manual_fcl_excluded': True,
+            'configuration_guide_heading_spacing_checked': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -958,6 +960,8 @@ def run(ctx: ValidationContext) -> None:
             contents_index = -1
         if contents_index >= 0:
             i = contents_index + 2
+            while i < len(lines) and not lines[i].strip():
+                i += 1
             while i < len(lines) and lines[i].strip():
                 match = re.fullmatch(r'(\d+)\. (.+)', lines[i])
                 if match:
@@ -995,37 +999,72 @@ def run(ctx: ValidationContext) -> None:
     config_guide = docs / 'CONFIGURATION_GUIDE.txt'
     if config_guide.exists():
         body = text(config_guide)
-        if '12. Resetting DarkOneJSP3' not in body:
+        guide_lines = body.splitlines()
+        for i in range(len(guide_lines) - 1):
+            if not (
+                    is_heading_underline(guide_lines[i + 1]) and
+                    len(guide_lines[i]) == len(guide_lines[i + 1])):
+                continue
+            if i > 0 and guide_lines[i - 1] != '':
+                errors.append(
+                    'Configuration guide heading lacks a blank line before line ' +
+                    str(i + 1)
+                )
+            if i + 2 < len(guide_lines) and guide_lines[i + 2] != '':
+                errors.append(
+                    'Configuration guide heading lacks a blank line after line ' +
+                    str(i + 2)
+                )
+        if '13. Resetting DarkOneJSP3' not in body:
             errors.append('Configuration guide contents omit the reset section')
         if body.count('Album Notes cache files and downloaded provider data') > 1:
             errors.append('Configuration guide repeats cache-preservation guidance')
         for phrase in [
             'The enhanced JS Playlist participates in behaviour and full resets',
-            'Full reset additionally',
-            'clears its saved scroll anchors',
-            'Set automatic base scale adjusts that calculation',
-            'When tab-area height is also automatic',
+            'additionally clears its saved scroll anchors',
+            'Automatic base scale ranges from 50% to 200%',
+            'size bypasses responsive calculation',
             'Alternating row shading',
             'DarkOneJSP3-managed defaults',
             'DarkOne dark grey: RGB 24, 24, 24',
-            'Generic upstream sample customisation',
-            'DarkOneJSP3 Queue Viewer',
+            'Generic upstream',
+            'Optional scripted Queue Viewer',
             'Album Art/Spectrum side dividers',
             'Side divider colour',
             'InfoStack tab strip',
-            'generic Album Art JScript Panel does not own this setting',
+            'generic image panel rather than an InfoStack text page',
             'Transparent / inherit parent',
-            'The lower control-panel dividers are not changed',
+            'The lower control-panel dividers',
             'Page background colour',
             'DarkOne dark grey: RGB 24, 24, 24 (default)',
-            'Each page remembers its own setting independently',
+            'Each panel instance stores its choice independently',
         ]:
             if phrase not in body:
                 errors.append('Configuration guide playlist reset coverage is missing: ' + phrase)
+
+
+        for expectation in MENU_DOCUMENTATION_EXPECTATIONS:
+            source_path = root / expectation['source']
+            if not source_path.exists():
+                errors.append(
+                    'Menu documentation source is missing: ' + expectation['source']
+                )
+                continue
+            source_body = text(source_path)
+            for label in expectation['labels']:
+                if label not in source_body:
+                    errors.append(
+                        expectation['name'] + ' source menu label is missing: ' + label
+                    )
+                if label not in body:
+                    errors.append(
+                        'Configuration guide omits ' + expectation['name'] +
+                        ' menu label: ' + label
+                    )
     troubleshooting = docs / 'TROUBLESHOOTING.txt'
     if troubleshooting.exists():
         body = text(troubleshooting)
-        if '7. Factory reset' not in body or '8. Diagnostics to include in a bug report' not in body:
+        if '8. Factory reset' not in body or '9. Diagnostics to include in a bug report' not in body:
             errors.append('Troubleshooting sections are not in the expected order')
         if re.search(r'\bv\d+\.\d+\.\d+\b', body) or 'Install v' in body:
             errors.append('Troubleshooting contains development-version upgrade advice')

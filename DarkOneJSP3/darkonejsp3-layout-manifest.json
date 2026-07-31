@@ -1,5 +1,5 @@
 {
-  "version": "0.8.2",
+  "version": "0.8.4",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -143,7 +143,7 @@
       "panel_settings_back_arrow_uniform_alpha": true,
       "panel_settings_back_arrow_coverage_antialiasing": true
     },
-    "documentation": "structured index, current-state configuration and topic-based troubleshooting",
+    "documentation": "complete supported-layout context-menu map, current-state configuration, topic-based troubleshooting and source-backed menu coverage validation",
     "playlist_manager": {
       "playlist_name_filter": true,
       "filter_visible_default": true,
@@ -641,7 +641,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.2.2",
+      "version": "0.2.4",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -653,7 +653,8 @@
       "manifest_inventory_checked": true,
       "runtime_assets_checked": true,
       "repository_assets_checked_when_present": true,
-      "manual_fcl_excluded": true
+      "manual_fcl_excluded": true,
+      "configuration_guide_heading_spacing_checked": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

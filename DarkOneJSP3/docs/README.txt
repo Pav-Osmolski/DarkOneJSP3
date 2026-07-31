@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.2
+DarkOneJSP3 v0.8.4
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -28,7 +28,7 @@ LAYOUT_AND_PANEL_MAP.txt
   Exact Columns UI hierarchy, DOJSP3.* titles and script assignments.
 
 CONFIGURATION_GUIDE.txt
-  User-facing menus, defaults, panel options and persistent settings.
+  Complete context-menu map, panel settings, defaults and persistent properties.
 
 TROUBLESHOOTING.txt
   Topic-based fixes for startup, layout, display, waveform, playlists, queue

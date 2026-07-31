@@ -9,8 +9,9 @@ Contents
 4. Playlists and queue
 5. Quick Search and waveform
 6. Album Notes, AllMusic and MusicBrainz
-7. Factory reset
-8. Diagnostics to include in a bug report
+7. Finding panel menus and settings
+8. Factory reset
+9. Diagnostics to include in a bug report
 
 1. Before troubleshooting
 -------------------------
@@ -117,12 +118,13 @@ font is Arial Black with DirectWrite Black/900 weight.
 
 Information page background does not match the tab strip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Right-click inside Biography, Last.fm, Album Notes, Queue or Properties and open
-Page background colour. Choose Transparent / inherit parent to reveal the
-InfoStack backing colour, Columns UI global background to follow the active
-Columns UI background colour, or select an explicit colour for that page. Each
-page remembers its own value. The Playlists page uses its separate Playlist
-Manager appearance settings.
+Right-click inside Biography, Last.fm, Album Notes, Properties or the optional
+scripted Queue Viewer and open Page background colour. Choose Transparent /
+inherit parent to reveal the InfoStack backing colour, Columns UI global
+background to follow the active Columns UI background colour, or select an
+explicit colour for that page. Each JScript Panel page remembers its own value.
+The native Queue Viewer and Playlists page use their own component or panel
+appearance settings.
 
 InfoStack labels sit too high or low
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -342,7 +344,41 @@ Do not use a divider menu added to the generic Album Art JScript Panel. That
 cross-component notification path is not reliable. Restart or reload InfoStack
 and Main Columns if code was copied over while foobar2000 remained open.
 
-7. Factory reset
+7. Finding panel menus and settings
+-----------------------------------
+Playlist Manager shows playlist operations instead of settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Right-clicking a playlist row opens operations for that playlist. Right-click
+empty panel space or the scrollbar to open Header Bar, Playlist filter,
+Colours, Background Wallpaper, DarkOneJSP3 smooth scrolling, Playlist row
+spacing and Configure....
+
+Main JS Playlist Panel Settings cannot be found
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Right-click a track or empty playlist area and choose Panel Settings.... The
+playlist header bar has a separate right-click menu for Groups, Columns and
+Double Track Line.
+
+Biography, Last.fm or Properties menu cannot be found
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Right-click empty content space inside the page. Panel-specific commands appear
+first, followed by the shared Font size, Page background colour, Selection mode
+and Configure... controls. Clicking directly on selectable text or a link can
+invoke that object's action instead.
+
+Page background colour is missing from Queue
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The recommended native Queue Viewer is not a JScript Panel and therefore does
+not expose DarkOneJSP3's Page background colour menu. That menu belongs to the
+optional scripted Queue Viewer fallback. Configure the native component through
+its own component menu.
+
+Waveform host settings do not appear
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Right-click the narrow JSplitter spacer around the Waveform Minibar child. A
+right-click inside the waveform opens the native component's menu instead.
+
+8. Factory reset
 ----------------
 Factory reset appears to only reload panels
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -363,7 +399,7 @@ JS Playlist and Smooth Playlist Manager must import the project reset bridge.
 Behaviour reset restores their custom refresh and scroll settings; full reset
 also clears the playlist manager's saved scroll anchors.
 
-8. Diagnostics to include in a bug report
+9. Diagnostics to include in a bug report
 -----------------------------------------
 Include:
 - DarkOneJSP3 package version from build-info.json;

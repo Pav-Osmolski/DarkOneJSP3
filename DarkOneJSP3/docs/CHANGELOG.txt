@@ -1,6 +1,36 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.8.4 - Configuration Guide formatting hardening
+-------------------------------------------------
+
+- Corrected missing blank lines around section and subsection headings in
+  CONFIGURATION_GUIDE.txt.
+- Applied consistent heading spacing throughout the complete guide rather than
+  patching only the two reported locations.
+- Added validator coverage so Configuration Guide headings must remain separated
+  from surrounding paragraphs and lists.
+- Made no foobar2000 runtime changes and left DarkOneJSP3.fcl untouched.
+
+v0.8.3 - Complete configuration-menu documentation audit
+--------------------------------------------------------
+
+- Audited every user-facing menu and settings surface in the supported layout
+  against the current source implementation.
+- Expanded the Configuration Guide with complete menu maps for Playlist
+  Manager, JS Playlist and Panel Settings, InfoStack, Biography, Last.fm,
+  Properties, Album Art, controls, display, waveform and the optional scripted
+  Queue Viewer.
+- Documented the difference between row-specific and empty-space context menus,
+  including Playlist Manager, JS Playlist and information pages.
+- Expanded Album Notes documentation with AllMusic recovery tools and detailed
+  MusicBrainz Releases/Links controls.
+- Clarified which menus belong to native components and which are owned by
+  DarkOneJSP3.
+- Added troubleshooting guidance for locating context menus and validator checks
+  that keep principal source menu labels represented in the guide.
+- Made no foobar2000 runtime changes and left DarkOneJSP3.fcl untouched.
+
 v0.8.2 - Queue navigation and native-editor prioritisation
 ----------------------------------------------------------
 

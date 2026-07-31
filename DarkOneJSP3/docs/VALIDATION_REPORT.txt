@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.2 Validation Report
+DarkOneJSP3 v0.8.4 Validation Report
 ====================================
 
 Scope
@@ -35,8 +35,9 @@ Checks
   compatibility.
 - Startup settings remain owned by the root controller and preserve the tested
   reveal timing and first-layout safeguards.
-- Biography, Last.fm, Album Notes, Queue and Properties use the shared Page
-  background colour implementation and coordinated reset defaults.
+- Biography, Last.fm, Album Notes, Properties and the optional scripted Queue
+  Viewer use the shared Page background colour implementation and coordinated
+  reset defaults.
 - InfoStack, page, side-divider and waveform palettes preserve their documented
   defaults, saved mode values and Columns UI global-background behaviour.
 - Shared colour conversion, parsing and Columns UI lookup are used by the
@@ -73,9 +74,14 @@ Checks
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.
+- The Configuration Guide documents the principal user-facing menu surfaces
+  in the supported layout, with selected labels checked against both source and
+  guide so renamed or omitted menu entries fail validation.
+- Native component-owned menus are identified explicitly rather than presented
+  as DarkOneJSP3-owned settings.
 - Documentation headings, numbered sections and README links are internally
-  consistent; repository artwork is checked whenever an assets folder is
-  present.
+  consistent; Configuration Guide headings require blank-line separation, and
+  repository artwork is checked whenever an assets folder is present.
 - Troubleshooting guidance describes current behaviour without development
   upgrade instructions.
 - CHANGELOG.txt contains one document title and a correctly formatted entry for
