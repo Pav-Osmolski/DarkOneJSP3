@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.14 Validation Report
+DarkOneJSP3 v0.9.15 Validation Report
 =====================================
 
 Scope
@@ -15,6 +15,9 @@ Checks
   runtime bitmap files are present.
 - Volume-knob cleanup uses the supported repaint-scheduler `cancel()` API and
   rejects invalid `stop()` calls on repaint schedulers.
+- The volume knob uses the mouse-held drag state for its active highlight and
+  clears that highlight immediately on button release; the Centre Display retains
+  its independent three-second volume readout.
 - Every scripted JSplitter and panel source declared by the layout manifest
   resolves to a distributed file; native-component entries are identified
   explicitly.

@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Control Panel - Right"
-// @version "3.0.17-jsp3-3.8.5"
+// @version "3.0.18-jsp3-3.8.5"
 // @author "tedGo / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"

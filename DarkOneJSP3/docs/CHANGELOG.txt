@@ -1,6 +1,20 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.15 - Immediate volume-knob release state
+---------------------------------------------
+
+- Decoupled the volume knob's active indicator from the trailing three-second
+  volume-change display state.
+- The knob now uses its actual mouse-held drag state: it highlights immediately
+  on button-down and returns to its inactive colour immediately on button-up.
+- Retained the Centre Display's independent three-second volume readout after a
+  volume change.
+- Removed the obsolete Control Right volume-change deadline and its redundant
+  repaint work.
+- Added validation preventing the delayed knob-selection state from returning.
+- Advanced Control Right to 3.0.18-jsp3-3.8.5 and validator to 0.4.4.
+
 v0.9.14 - Dot Matrix image inheritance hotfix
 ---------------------------------------------
 

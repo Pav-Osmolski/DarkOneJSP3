@@ -1,8 +1,8 @@
 // =========================================================================================================
-// Volumeknob Object - v2.0build20191019-jscript-panel3-opt4
+// Volumeknob Object - v2.0build20191019-jscript-panel3-opt5
 // =========================================================================================================
 
-var vknobOptions = {}, v_change = false, v_drag = false;
+var vknobOptions = {}, v_drag = false;
 
 function VolumeKnob(x, y, w, h, options) {
 	this.left = x;
@@ -70,7 +70,7 @@ function VolumeKnob(x, y, w, h, options) {
 		var posX = (this.left + (this.w / 2) - this.w / 20) - (cosinusA * g_R);
 		var posY = (this.top + (this.h / 2) - this.w / 20) - (sinusA * g_R);
 
-		var x_col = visual_volume == -100 ? -65536 : v_change ? this.active_colour : this.inactive_colour;
+		var x_col = visual_volume == -100 ? -65536 : v_drag ? this.active_colour : this.inactive_colour;
 		this.colour_l && this.line_width > 0 && darkOneDrawEllipse(gr, posX - this.line_width / 2, posY - this.line_width / 2, this.w / 10 + this.line_width, this.w / 10 + this.line_width, this.line_width, this.line_normal);
 		this.inactive_colour && this.active_colour && this.line_width && darkOneFillEllipse(gr, posX , posY, this.w / 10, this.w / 10, x_col);
 	}
@@ -106,7 +106,10 @@ function VolumeKnob(x, y, w, h, options) {
 
 	this.on_mouse_lbtn_down = function(x, y) {
 		v_drag = this.traceMouse(x, y);
-		if (v_drag) this.preview_volume = fb.Volume;
+		if (v_drag) {
+			this.preview_volume = fb.Volume;
+			this.Repaint();
+		}
 	}
 
 	this.on_mouse_lbtn_up = function(x, y) {

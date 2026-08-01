@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.3',
+            'version': '0.4.4',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -1760,7 +1760,7 @@ def run(ctx: ValidationContext) -> None:
 
     control_entries = {
         project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.13-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.17-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.18-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():
@@ -1817,6 +1817,9 @@ def run(ctx: ValidationContext) -> None:
             'volume_writer.request(v)',
             'volume_writer.flush()',
             'volume_writer.cancel()',
+            'v_drag ? this.active_colour : this.inactive_colour',
+            'if (v_drag) {',
+            'this.Repaint();',
         ]:
             if token not in body:
                 errors.append('Volume knob drag coalescing is missing: ' + token)
@@ -1824,6 +1827,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Volume knob still writes every raw mouse-move value directly')
         if 'preview_repaint.stop()' in body:
             errors.append('Volume knob calls unsupported repaint-scheduler stop(); use cancel()')
+        if 'v_change ? this.active_colour' in body:
+            errors.append('Volume knob still uses the trailing volume-change state as its pressed highlight')
         for token in ['preview_repaint.cancel()', 'volume_writer.cancel()']:
             if token not in body:
                 errors.append('Volume knob cleanup is missing: ' + token)
@@ -1833,14 +1838,15 @@ def run(ctx: ValidationContext) -> None:
         body = text(right_control)
         for token in [
             'DarkOnePerformance.createRepaintScheduler',
-            'DarkOnePerformance.createTrailingDeadline',
-            'volume_change_deadline.touch()',
-            'volume_knob_repaint.request()',
+            'if (!v_drag) volume_knob_repaint.request()',
         ]:
             if token not in body:
                 errors.append('Control Right volume update coalescing is missing: ' + token)
         if 'v_timer = clearPanelTimer(v_timer)' in body:
             errors.append('Control Right still recreates its three-second volume timer for every callback')
+        for forbidden in ['volume_change_deadline', 'v_change = true']:
+            if forbidden in body:
+                errors.append('Control Right still retains a delayed knob-selection state: ' + forbidden)
 
     display_system_source = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
     if display_system_source.exists():

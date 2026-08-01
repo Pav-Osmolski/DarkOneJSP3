@@ -1,5 +1,5 @@
 // =========================================================================================================
-// Panel: Control Right - v2.0build20191004-jscript-panel3-v0618
+// Panel: Control Right - v2.0build20191004-jscript-panel3-v0619
 // =========================================================================================================
 
 var g_btns = safeBitmapImage(imgPath + "buttons.png");
@@ -37,13 +37,6 @@ function darkOneSetVolumeDragMode(mode) {
 volume_knob_repaint = DarkOnePerformance.createRepaintScheduler(window, {
 	getDelay: darkOneGetVolumeDragInterval,
 	repaint: function() { if (volknob) volknob.Repaint(); }
-});
-var volume_change_deadline = DarkOnePerformance.createTrailingDeadline(window, {
-	delay: 3000,
-	onExpire: function() {
-		v_change = false;
-		if (volknob) volknob.Repaint();
-	}
 });
 
 var a_name = ";;;;;;;STOP A. C.;PB. ORDER".split(";");
@@ -122,8 +115,6 @@ function on_size() {
 }
 
 function on_volume_change(val) {
-	v_change = true;
-	volume_change_deadline.touch();
 	if (!v_drag) volume_knob_repaint.request();
 }
 
@@ -175,7 +166,6 @@ function on_colours_changed() {
 
 function on_script_unload() {
 	if (darkOneVolumeCadenceOwner) darkOneVolumeCadenceOwner.dispose();
-	volume_change_deadline.cancel();
 	volume_knob_repaint.cancel();
 	volknob && volknob.dispose();
 	volknob && volknob.on_mouse_leave();
