@@ -94,14 +94,14 @@ function PlaylistScrollBar() {
 		case "lbtn_down":
 			this.buttons[0] && this.buttons[0].checkstate(event, x, y);
 			if (this.ishover) {
-				stop_smooth_scroll();
-				stop_free_wheel_scroll();
+				cancel_playlist_scrollbar_drag();
 				if (cList.scrollbar_snap)
 					reset_free_wheel_scroll();
 				else if (!cList.free_scroll_active) {
 					cList.free_scroll_position = p.list.offset * cRow.playlist_h;
 					cList.free_scroll_target = cList.free_scroll_position;
 				}
+				begin_playlist_scrollbar_drag(cList.scrollbar_snap);
 				this.cursorClickX = x;
 				this.cursorClickY = y;
 				this.cursorDrag = true;
@@ -113,15 +113,14 @@ function PlaylistScrollBar() {
 			this.buttons[0] && this.buttons[0].checkstate(event, x, y);
 			if (this.cursorDrag) {
 				if (cList.scrollbar_snap) {
-					p.list.offset = this.setOffsetFromCursorPos();
-					p.list.setItems(false);
+					var final_row = this.setOffsetFromCursorPos();
+					finish_playlist_scrollbar_drag(final_row * Math.max(1, cRow.playlist_h), true);
 					p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset);
 				} else {
-					apply_free_wheel_position(this.setPixelPositionFromCursorPos(), true);
-					cList.free_scroll_target = cList.free_scroll_position;
-					cList.free_scroll_active = cList.free_scroll_offset > 0;
+					var final_position = this.setPixelPositionFromCursorPos();
+					finish_playlist_scrollbar_drag(final_position, false);
+					p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset, final_position);
 				}
-				full_repaint();
 			}
 			this.cursorClickX = 0;
 			this.cursorClickY = 0;
@@ -140,17 +139,10 @@ function PlaylistScrollBar() {
 				}
 
 				if (cList.scrollbar_snap) {
-					p.list.offset = this.setOffsetFromCursorPos();
-					if (!g_mouse_wheel_timeout) {
-						g_mouse_wheel_timeout = window.SetTimeout(function () {
-							g_mouse_wheel_timeout = false;
-							p.list.setItems(false);
-							full_repaint();
-						}, cList.repaint_interval);
-					}
+					var target_row = this.setOffsetFromCursorPos();
+					update_playlist_scrollbar_drag(target_row * Math.max(1, cRow.playlist_h), true);
 				} else {
-					apply_free_wheel_position(this.setPixelPositionFromCursorPos(), true);
-					cList.free_scroll_target = cList.free_scroll_position;
+					update_playlist_scrollbar_drag(this.setPixelPositionFromCursorPos(), false);
 				}
 			}
 			break;

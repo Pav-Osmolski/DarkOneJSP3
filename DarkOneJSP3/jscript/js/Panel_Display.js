@@ -43,11 +43,7 @@ function on_mouse_rbtn_up(x, y) {
 		switch (idx) {
 			case 1:
 			case 2:
-				window.SetProperty("Display Style", idx - 1);
-				display_system.display_style = window.GetProperty("Display Style");
-				display_system.InitImages();
-				display_system.init();
-				window.Repaint();
+				display_system.setDisplayStyle(idx - 1);
 				break;
 
 			case 20:

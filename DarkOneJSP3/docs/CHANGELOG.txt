@@ -1,6 +1,172 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.7 - Dot Matrix display-style rendering hotfix
+--------------------------------------------------
+
+- Fixed switching the Centre Display from Plain Font to Dot Matrix leaving the
+  dot-matrix values unchanged or blank after the Direct2D bitmap optimisation.
+- Separated immutable panel rendering from mutable off-screen sprite
+  composition: panel painting continues to use cached IJSBitmap resources,
+  while generated number, time, bitrate and volume images compose glyphs from
+  IJSImage sources through DrawImage.
+- Added a single validated display-style setter that updates the saved property,
+  rebuilds style-specific render images, refreshes formatted values and repaints
+  immediately.
+- Preserved display accent colours, status-icon bitmap rendering and the v0.9.x
+  performance improvements.
+- Added validation coverage for display-style switching and the required split
+  between off-screen IJSImage composition and final IJSBitmap painting.
+- Advanced the Display Panel to 3.0.13-jsp3-3.8.5 and the release validator to
+  0.3.7.
+
+v0.9.6 - JS Playlist scrollbar-drag interpolation correction
+------------------------------------------------------------
+
+- Replaced the input-driven one-shot scrollbar-drag throttle with a dedicated
+  demand-driven frame loop that follows the latest cursor-derived target.
+- Fixed 8 ms and 16 ms dragging appearing identical when JScript Panel mouse
+  movement callbacks arrived at approximately 16 ms intervals. The drag loop
+  now renders genuine intermediate positions between those callbacks.
+- Added time-based interpolation so response speed remains consistent across
+  refresh rates: 8 ms produces more frames while 16 ms reaches the same
+  position over the same elapsed time with fewer frames.
+- Preserved row-snapped dragging by rendering snapped positions when that option
+  is enabled; free-position dragging retains continuous pixel offsets.
+- Flushes the exact cursor-derived destination on mouse release, while disabling
+  smooth scrolling restores immediate input-driven dragging.
+- Added runtime coverage that simulates 16 ms mouse-input callbacks and verifies
+  two distinct 8 ms frames versus one 16 ms frame, equal elapsed-time response,
+  exact final snapping and the direct non-smooth path.
+- Advanced JS Playlist to 0.5.5 and the release validator to 0.3.6.
+
+v0.9.5 - JS Playlist scrollbar-drag cadence hotfix
+--------------------------------------------------
+
+- Fixed row-snapped scrollbar dragging applying the selected refresh interval
+  twice: once before rebuilding visible rows and again through full_repaint().
+  An 8 ms selection could therefore present at approximately 16 ms.
+- Separated scrollbar-drag repaint throttling from the mouse-wheel throttle
+  timer so the two input paths cannot block or delay one another.
+- Added a dedicated single-stage drag-frame scheduler shared by snapped-row and
+  free-position scrollbar dragging. It rebuilds rows when required and paints
+  directly after exactly one selected interval.
+- Flushes the final drag position immediately on mouse release and preserves a
+  pending repaint safely while the panel is hidden.
+- Preserved demand-driven idle behaviour, wheel scrolling, saved settings,
+  scrollbar snapping and live refresh-rate changes.
+- Added validator coverage for drag scheduling, coalescing, cancellation, final
+  flushing, selected-delay use and removal of the old double-delay path.
+- Advanced JS Playlist to 0.5.4 and the release validator to 0.3.5.
+
+v0.9.4 - JS Playlist frame-loop timing correction
+-------------------------------------------------
+
+- Replaced JS Playlist's remaining raw SetInterval smooth-scroll timers with
+  the same demand-driven recursive frame-loop helper used by Smooth Playlist
+  Manager.
+- Fixed 8 ms and 16 ms choices potentially collapsing to the same effective
+  cadence when native interval callbacks were coalesced by the host/runtime.
+- Routed snapped-row and free-wheel scrolling through one interval-aware
+  update-and-paint cycle, with the selected refresh value read before every
+  frame is scheduled.
+- Animation frames now repaint directly after their position update instead of
+  passing through a second timer, while ordinary non-animation repaints remain
+  coalesced and demand-driven.
+- Preserved live rate changes, hidden-panel throttling, idle shutdown, saved
+  properties, smoothness settings and both wheel-scrolling modes.
+- Added validator coverage that rejects raw JS Playlist scroll intervals and
+  exercises the shared frame-loop start, reschedule, update, repaint and stop
+  paths.
+- Advanced JS Playlist to 0.5.3 and the release validator to 0.3.4.
+
+v0.9.3 - JS Playlist repaint-cadence hotfix
+-------------------------------------------
+
+- Fixed JS Playlist smooth-scroll refresh choices being visually bypassed by
+  the demand-driven repaint scheduler requesting every repaint after a fixed
+  1 ms delay.
+- Restored the intended behaviour where general/input repaint requests use the
+  selected 8, 10, 12, 16 ms or custom interval instead of bypassing it.
+- Animation ticks remain interval-governed and request only a coalesced immediate
+  paint after each completed tick, preserving responsive frame presentation
+  without creating extra animation frames.
+- Retained demand-driven idle behaviour: no permanent high-frequency repaint
+  timer has been reintroduced.
+- Preserved immediate live rate changes and active snapped-row/free-scroll timer
+  rescheduling from the previous hotfix.
+- Added validator coverage that executes the real full_repaint function and
+  rejects any fixed-delay repaint bypass.
+- Advanced JS Playlist to 0.5.2 and the release validator to 0.3.3.
+
+v0.9.2 - Smooth-scroll refresh-rate hotfix
+------------------------------------------
+
+- Fixed Smooth Playlist Manager refresh-rate choices so the live
+  ppt.refreshRate value is updated immediately instead of relying on a panel
+  reload. The active demand-driven frame loop is now rescheduled in place.
+- Fixed JS Playlist refresh-rate changes so active snapped-row and free-scroll
+  animation timers are rebuilt with the newly selected interval without
+  resetting their current positions or targets.
+- Routed preset, custom and factory-default playlist refresh choices through a
+  single validated setter, preserving the existing 7-40 ms range and saved
+  property name.
+- Added documentation clarifying that both panels apply refresh-rate changes
+  immediately while retaining demand-driven idle behaviour.
+- Added validator coverage for live rate updates, active timer rescheduling and
+  dynamic frame-loop delay changes.
+- Advanced JS Playlist and Smooth Playlist Manager to 0.5.1 and the release
+  validator to 0.3.2.
+
+v0.9.1 - JScript native-method compatibility hotfix
+---------------------------------------------------
+
+- Fixed immediate Type mismatch errors in JS Playlist cover rendering and the
+  centre Display status-icon renderer introduced by the v0.9.0 bitmap path.
+- Corrected the shared performance helper so native JScript Panel COM methods
+  are called directly inside try/catch instead of requiring typeof ==
+  "function"; JScript can report valid native methods as "unknown".
+- Covered CreateBitmap, LoadBitmap, LoadImage, Dispose and CreateProfiler with
+  the corrected native-call handling.
+- Added validator guards preventing typeof checks from being reintroduced for
+  these native methods, plus runtime coverage for bitmap fallback, disposal and
+  profiler creation.
+- Advanced performance_utils.js to 0.1.1 and the release validator to 0.3.1.
+- Preserved all optimisation settings, render-cache behaviour and saved
+  properties from v0.9.0.
+
+v0.9.0 - Rendering and playlist performance optimisation
+--------------------------------------------------------
+
+- Replaced the permanent 8 ms repaint loops in JS Playlist and Smooth Playlist
+  Manager with demand-driven schedulers that stop completely while idle and
+  retain pending repaint work while hidden.
+- Added a bounded JS Playlist row-render cache for primary/secondary title
+  formatting and Last.fm loved state, with invalidation for playlist, affected
+  metadata rows, queue, playback and column-format changes.
+- Added volatile-pattern handling: playing-row values are reused within each
+  playback update, clock fields refresh once per second, and static fields
+  remain cached. Cross-column $puts/$get dependencies retain combined-pattern
+  evaluation when needed.
+- Added one-per-frame playback state snapshots and removed duplicate playlist
+  selection/state queries from track painting.
+- Converted playlist album art, control button sheets, display source sprites,
+  tinted accent sprites and rendered Dot Matrix values to reusable Direct2D
+  bitmap paths.
+- Added dirty-state caching for JS Playlist column geometry and local repainting
+  for focus and Playlist Manager count changes where safe.
+- Cached Playlist Manager auto-playlist and lock flags instead of querying them
+  for every visible row on every frame.
+- Hoisted static Display labels and retained editable off-screen images only
+  where glyph generation still requires drawing access.
+- Added optional utils.CreateProfiler diagnostics for JS Playlist and Playlist
+  Manager, disabled by default.
+- Added shared performance_utils.js and jsplaylist/render_cache.js modules,
+  reset defaults, documentation, manifest metadata and runtime regression tests.
+- Advanced JS Playlist and Smooth Playlist Manager to 0.5.0, control panels to
+  3.0.13, Display to 3.0.12 and the release validator to 0.3.0.
+- Preserved existing saved properties, visual behaviour and refresh choices.
+
 v0.8.4 - Configuration Guide formatting hardening
 -------------------------------------------------
 

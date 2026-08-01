@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.8.2
+  <strong>Current stable release:</strong> v0.9.7
 </p>
 
 > [!IMPORTANT]
@@ -52,8 +52,8 @@ workflow of the original theme.
 * Modern six-controller JSplitter layout with persistent panel settings.
 * JScript Panel 3 control, display, queue and information panels.
 * Configurable InfoStack tabs, titles, dimensions, backgrounds and tab colours.
-* Independent page backgrounds for Biography, Last.fm, Album Notes, Queue and
-  Properties.
+* Independent page backgrounds for Biography, Last.fm, Album Notes, Properties
+  and the optional scripted Queue Viewer.
 * Coordinated background palettes for the InfoStack backing, upper side
   dividers and waveform host.
 * Default or custom display accent colour.
@@ -63,11 +63,13 @@ workflow of the original theme.
 * Enhanced optional scripted Queue Viewer with multi-selection, keyboard
   navigation and source-item commands.
 * Optional startup transitions with native-window reveal hardening.
+* Demand-driven playlist rendering with cached title formatting and Direct2D
+  bitmap reuse.
 * Release validation, compatibility-mirror checking and maintenance utilities.
 
 ## Current release
 
-**DarkOneJSP3 v0.8.2** is the current stable release.
+**DarkOneJSP3 v0.9.7** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a

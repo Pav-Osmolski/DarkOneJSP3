@@ -1,14 +1,16 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - DarkOneJSP3 Enhanced"
-// @version "0.4.7"
+// @version "0.5.5"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
 // @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
 // @import "%fb2k_component_path%samples\jsplaylist\topbar.js"
 // @import "%fb2k_component_path%samples\jsplaylist\scrollbar.js"
 // @import "%fb2k_component_path%samples\jsplaylist\headerbar.js"
+// @import "%fb2k_component_path%samples\jsplaylist\render_cache.js"
 // @import "%fb2k_component_path%samples\jsplaylist\playlist.js"
 // @import "%fb2k_component_path%samples\jsplaylist\playlistmanager.js"
 // @import "%fb2k_component_path%samples\jsplaylist\settings.js"
@@ -20,14 +22,19 @@ DarkOneJSP3 enhancements
 -----------------------
 - Restored the smooth row-transition system present in the final DarkOne2021 build.
 - Configurable high-refresh repaint timing (8/10/12/16 ms or custom).
+- The selected interval governs the shared demand-driven animation and paint frame loop.
 - Configurable wheel throttle, smoothness divisor and wheel row step.
 - Optional free pixel scrolling with row snapping disabled.
 - Independent row-snapping control for scrollbar-thumb dragging.
 - Free wheel distance supports custom values up to 240 pixels.
-- Faster scrollbar-drag repainting.
+- Interval-aware, time-based scrollbar-drag interpolation.
 - Explicit unload cleanup for timers and wallpaper resources.
 - Single-silhouette, anti-aliased Panel Settings back arrow at every UI scale.
 - Uniform normal/hover opacity with no overlapping-stroke darkening.
+- Demand-driven repaint scheduling with no permanent idle refresh timer.
+- Cached row title-format rendering with selective invalidation.
+- Direct2D bitmap caching for album covers and immutable artwork.
+- Optional performance diagnostics through panel properties.
 
 Right-click the playlist and open "Smooth scrolling" to configure these options.
 Defaults: enabled, 8 ms refresh, divisor 2, wheel and scrollbar snapping enabled, 3 rows per notch.

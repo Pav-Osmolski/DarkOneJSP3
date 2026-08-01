@@ -1,5 +1,5 @@
 {
-  "version": "0.8.4",
+  "version": "0.9.7",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -141,7 +141,20 @@
       "free_scrollbar_dragging": true,
       "panel_settings_back_arrow_single_silhouette": true,
       "panel_settings_back_arrow_uniform_alpha": true,
-      "panel_settings_back_arrow_coverage_antialiasing": true
+      "panel_settings_back_arrow_coverage_antialiasing": true,
+      "demand_driven_repaint_scheduler": true,
+      "permanent_idle_repaint_timer": false,
+      "render_cache": true,
+      "render_cache_default_rows": 768,
+      "render_cache_selective_invalidation": true,
+      "volatile_title_format_detection": true,
+      "album_art_direct2d_bitmap_cache": true,
+      "column_geometry_dirty_tracking": true,
+      "per_frame_playback_state_snapshot": true,
+      "optional_performance_profiling": true,
+      "render_cache_playback_generation_reuse": true,
+      "render_cache_clock_second_reuse": true,
+      "render_cache_cross_column_state_compatibility": true
     },
     "documentation": "complete supported-layout context-menu map, current-state configuration, topic-based troubleshooting and source-backed menu coverage validation",
     "playlist_manager": {
@@ -160,13 +173,18 @@
       "alternating_row_shading_default": true,
       "explicit_timer_cleanup": true,
       "tracked_timer_groups": [
-        "repaint interval",
+        "demand-driven frame loop",
         "initial population timeout",
         "drag auto-scroll interval",
         "scrollbar repeat interval",
         "scroll-state save timeout",
         "text cursor and delayed input timers"
-      ]
+      ],
+      "demand_driven_frame_loop": true,
+      "permanent_idle_repaint_timer": false,
+      "playlist_type_lock_flag_cache": true,
+      "local_count_repaint": true,
+      "optional_performance_profiling": true
     },
     "control_buttons": {
       "roundness_control": true,
@@ -641,7 +659,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.2.4",
+      "version": "0.3.7",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -649,12 +667,42 @@
       "required_paths_data_driven": true,
       "module_versions_data_driven": true,
       "command_line_invocation_unchanged": true,
-      "runtime_scripts_unchanged": true,
+      "runtime_scripts_unchanged": false,
       "manifest_inventory_checked": true,
       "runtime_assets_checked": true,
       "repository_assets_checked_when_present": true,
       "manual_fcl_excluded": true,
-      "configuration_guide_heading_spacing_checked": true
+      "configuration_guide_heading_spacing_checked": true,
+      "performance_scheduler_tests": true,
+      "playlist_render_cache_tests": true,
+      "bitmap_rendering_checks": true,
+      "playlist_dynamic_generation_tests": true,
+      "bitmap_loader_fallback_tests": true,
+      "native_com_method_type_guards": true,
+      "smooth_scroll_rate_live_update_tests": true,
+      "playlist_repaint_cadence_tests": true,
+      "scrollbar_drag_cadence_tests": true,
+      "scrollbar_drag_interpolation_tests": true,
+      "display_style_runtime_tests": true,
+      "offscreen_sprite_composition_checks": true
+    },
+    "rendering_optimisation": {
+      "version": "0.1.1",
+      "shared_helper": "DarkOneJSP3/shared/performance_utils.js",
+      "demand_driven_schedulers": true,
+      "direct2d_bitmap_reuse": true,
+      "control_sprite_bitmap_cache": true,
+      "display_sprite_bitmap_cache": true,
+      "display_static_allocations_hoisted": true,
+      "saved_properties_compatible": true,
+      "runtime_smoke_tests": true,
+      "display_label_measurement_cache": true,
+      "native_com_methods_called_without_typeof_function_gate": true,
+      "playlist_refresh_interval_controls_repaint_cadence": true,
+      "playlist_scrollbar_drag_interpolation": true,
+      "scrollbar_drag_input_cadence_independent": true,
+      "display_offscreen_composition_uses_ijsimage": true,
+      "display_panel_paint_uses_ijsbitmap": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

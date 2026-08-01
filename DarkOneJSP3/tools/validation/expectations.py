@@ -9,6 +9,7 @@ REQUIRED_PATHS = (
     'DarkOneJSP3/images/dot_matrix.png',
     'DarkOneJSP3/images/sac_pbo.png',
     'DarkOneJSP3/shared/reset_defaults.js',
+    'DarkOneJSP3/shared/performance_utils.js',
     'DarkOneJSP3/shared/colour_utils.js',
     'DarkOneJSP3/shared/jsplitter_protocols.js',
     'DarkOneJSP3/jsplitter/shared.js',
@@ -65,17 +66,18 @@ REQUIRED_PATHS = (
     'user-components-x64/foo_jscript_panel3/samples/js/musicbrainz.js',
     'user-components-x64/foo_jscript_panel3/samples/js/panel.js',
     'user-components-x64/foo_jscript_panel3/samples/js/queue_viewer.js',
+    'user-components-x64/foo_jscript_panel3/samples/jsplaylist/render_cache.js',
 )
 
 EXPECTED_MODULE_VERSIONS = {
-    'control_left': ('3.0.12-jsp3-3.8.5', 'Control Left'),
-    'control_right': ('3.0.12-jsp3-3.8.5', 'Control Right'),
-    'display': ('3.0.11-jsp3-3.8.5', 'Display'),
+    'control_left': ('3.0.13-jsp3-3.8.5', 'Control Left'),
+    'control_right': ('3.0.13-jsp3-3.8.5', 'Control Right'),
+    'display': ('3.0.13-jsp3-3.8.5', 'Display'),
     'queue_viewer': ('0.6.0', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.3', 'MusicBrainz'),
-    'js_playlist': ('0.4.7', 'JS Playlist'),
-    'playlist_manager': ('0.4.10', 'Playlist Manager'),
+    'js_playlist': ('0.5.5', 'JS Playlist'),
+    'playlist_manager': ('0.5.1', 'Playlist Manager'),
     'network_headers': ('0.6.2', 'network-header identity'),
     'album_notes': ('0.6.7', 'Album Notes'),
     'info_stack_controller': ('0.6.25', 'InfoStack controller'),
@@ -83,11 +85,13 @@ EXPECTED_MODULE_VERSIONS = {
     'main_columns_controller': ('0.7.36', 'Main Columns controller'),
     'page_background': ('0.1.2', 'page-background module'),
     'colour_helpers': ('0.1.0', 'colour-helper module'),
+    'performance_helpers': ('0.1.1', 'performance-helper module'),
+    'playlist_render_cache': ('0.1.0', 'playlist render-cache module'),
     'jsplitter_protocols': ('0.1.0', 'JSplitter-protocol module'),
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.2.4', 'release-validator module'),
+    'release_validator': ('0.3.7', 'release-validator module'),
 }
 
 SEMVER_MODULES = ()

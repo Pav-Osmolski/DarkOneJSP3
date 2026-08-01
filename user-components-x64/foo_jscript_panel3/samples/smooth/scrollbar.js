@@ -196,11 +196,13 @@ function oScrollbar() {
 							this.buttonClick = true;
 							scroll = scroll - scroll_step;
 							scroll = check_scroll(scroll);
+							brw.repaint();
 							if (!cScrollBar.timerID) {
 								cScrollBar.timerID = window.SetInterval(function () {
 									if (cScrollBar.timerCounter > 6) {
 										scroll = scroll - scroll_step;
 										scroll = check_scroll(scroll);
+										brw.repaint();
 									} else {
 										cScrollBar.timerCounter++;
 									}
@@ -214,11 +216,13 @@ function oScrollbar() {
 							this.buttonClick = true;
 							scroll = scroll + scroll_step;
 							scroll = check_scroll(scroll);
+							brw.repaint();
 							if (!cScrollBar.timerID) {
 								cScrollBar.timerID = window.SetInterval(function () {
 									if (cScrollBar.timerCounter > 6) {
 										scroll = scroll + scroll_step;
 										scroll = check_scroll(scroll);
+										brw.repaint();
 									} else {
 										cScrollBar.timerCounter++;
 									}
@@ -233,11 +237,13 @@ function oScrollbar() {
 						this.buttonClick = true;
 						scroll = scroll - scroll_step_page;
 						scroll = check_scroll(scroll);
+						brw.repaint();
 						if (!cScrollBar.timerID) {
 							cScrollBar.timerID = window.SetInterval(function () {
 								if (cScrollBar.timerCounter > 6 && m_y < brw.scrollbar.cursory) {
 									scroll = scroll - scroll_step_page;
 									scroll = check_scroll(scroll);
+									brw.repaint();
 								} else {
 									cScrollBar.timerCounter++;
 								}
@@ -247,11 +253,13 @@ function oScrollbar() {
 						this.buttonClick = true;
 						scroll = scroll + scroll_step_page;
 						scroll = check_scroll(scroll);
+						brw.repaint();
 						if (!cScrollBar.timerID) {
 							cScrollBar.timerID = window.SetInterval(function () {
 								if (cScrollBar.timerCounter > 6 && m_y > brw.scrollbar.cursory + brw.scrollbar.cursorh) {
 									scroll = scroll + scroll_step_page;
 									scroll = check_scroll(scroll);
+									brw.repaint();
 								} else {
 									cScrollBar.timerCounter++;
 								}

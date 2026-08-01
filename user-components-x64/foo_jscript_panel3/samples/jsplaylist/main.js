@@ -176,25 +176,35 @@ function on_get_album_art_done(metadb, art_id, image) {
 	if (!image)
 		return;
 
+	var consumed = false;
 	for (var i = 0; i < p.list.groups.length; i++) {
 		var group = p.list.groups[i];
 		if (group.metadb && group.metadb.Compare(metadb)) {
-			g_image_cache.set(group.group_key, image);
+			consumed = g_image_cache.set(group.group_key, image);
 			break;
 		}
 	}
+	if (!consumed) DarkOnePerformance.dispose(image);
 }
 
 function on_item_focus_change(playlist, from, to) {
-	if (playlist == g_active_playlist) {
-		p.list.focusedTrackId = to;
-		var center_focus_item = p.list.isFocusedItemVisible();
-		if ((!center_focus_item && !p.list.drawRectSel) || (center_focus_item && to == 0)) {
-			p.list.setItems(true);
-		}
-		p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset);
+	if (playlist != g_active_playlist) return;
+
+	p.list.focusedTrackId = to;
+	var center_focus_item = p.list.isFocusedItemVisible();
+	var rebuilt = false;
+	if ((!center_focus_item && !p.list.drawRectSel) || (center_focus_item && to == 0)) {
+		p.list.setItems(true);
+		rebuilt = true;
 	}
-	full_repaint();
+	p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset);
+
+	if (rebuilt) {
+		full_repaint();
+	} else {
+		p.list.repaintTrack(from);
+		p.list.repaintTrack(to);
+	}
 }
 
 function on_key_down(vkey) {
@@ -234,7 +244,9 @@ function on_key_down(vkey) {
 						item.cover_img = null;
 					});
 					g_image_cache.reset();
-					g_stub_image = fb.GetAlbumArtStub(cGroup.art_id);
+					DarkOnePerformance.dispose(g_stub_image);
+					var refreshedStub = fb.GetAlbumArtStub(cGroup.art_id);
+					g_stub_image = DarkOnePerformance.toBitmap(refreshedStub, true);
 					full_repaint();
 					break;
 				case VK_TAB:
@@ -689,6 +701,7 @@ function on_mouse_wheel(delta, force_row_snap) {
 }
 
 function on_paint(gr) {
+	if (g_playlist_profiler) g_playlist_profiler.begin();
 	if (cSettings.visible) {
 		p.settings && p.settings.draw(gr);
 	} else {
@@ -771,9 +784,63 @@ function on_paint(gr) {
 
 		p.playlistManager && p.playlistManager.draw(gr);
 	}
+	if (g_playlist_profiler) {
+		var stats = g_playlist_render_cache ? g_playlist_render_cache.stats() : null;
+		g_playlist_profiler.end(stats ? ("cache " + stats.hits + "/" + stats.misses) : "");
+	}
+}
+
+function get_active_playing_track_index() {
+	if (!fb.IsPlaying) return -1;
+	var location = plman.GetPlayingItemLocation();
+	if (!location || location.PlaylistIndex != g_active_playlist) return -1;
+	return location.PlaylistItemIndex;
+}
+
+function refresh_playing_render_cache() {
+	var next = get_active_playing_track_index();
+	if (g_playlist_render_cache) {
+		if (g_cached_playing_index >= 0) g_playlist_render_cache.invalidate(g_cached_playing_index);
+		if (next >= 0) g_playlist_render_cache.invalidate(next);
+	}
+	g_cached_playing_index = next;
+}
+
+function invalidate_current_render_cache() {
+	var index = get_active_playing_track_index();
+	if (g_playlist_render_cache && index >= 0) g_playlist_render_cache.invalidate(index);
+}
+
+function bump_playlist_dynamic_generation() {
+	g_playlist_dynamic_generation = (g_playlist_dynamic_generation + 1) % 2147483647;
+}
+
+function repaint_current_playlist_row() {
+	var index = get_active_playing_track_index();
+	if (index < 0 || !p.list) return;
+	if (p.list.nowplaying_y + cRow.playlist_h > p.list.y && p.list.nowplaying_y < p.list.y + p.list.h) {
+		window.RepaintRect(p.list.x, p.list.nowplaying_y, p.list.w, cRow.playlist_h);
+	}
+}
+
+function on_metadb_changed(handle_list, fromhook) {
+	if (g_playlist_render_cache) {
+		g_playlist_render_cache.invalidateHandles(handle_list, p.list ? p.list.handleList : null);
+	}
+	full_repaint();
+}
+
+function on_playback_dynamic_info() {
+	bump_playlist_dynamic_generation();
+	invalidate_current_render_cache();
+	repaint_current_playlist_row();
 }
 
 function on_playback_dynamic_info_track(type) {
+	bump_playlist_dynamic_generation();
+	// Stream metadata can change title-format output without a normal metadata
+	// callback. Album-art updates also affect the wallpaper/dynamic palette.
+	invalidate_current_render_cache();
 	if (type == 1) {
 		update_wallpaper();
 
@@ -782,10 +849,14 @@ function on_playback_dynamic_info_track(type) {
 		}
 
 		full_repaint();
+	} else {
+		repaint_current_playlist_row();
 	}
 }
 
 function on_playback_new_track() {
+	bump_playlist_dynamic_generation();
+	refresh_playing_render_cache();
 	update_wallpaper();
 
 	if (properties.enableDynamicColours) {
@@ -796,16 +867,18 @@ function on_playback_new_track() {
 }
 
 function on_playback_pause(state) {
-	if (p.list.nowplaying_y + cRow.playlist_h > p.list.y && p.list.nowplaying_y < p.list.y + p.list.h) {
-		window.RepaintRect(p.list.x, p.list.nowplaying_y, p.list.w, cRow.playlist_h);
-	}
+	bump_playlist_dynamic_generation();
+	repaint_current_playlist_row();
 }
 
 function on_playback_queue_changed() {
+	if (g_playlist_render_cache) g_playlist_render_cache.invalidateAll();
 	full_repaint();
 }
 
 function on_playback_stop(reason) {
+	bump_playlist_dynamic_generation();
+	refresh_playing_render_cache();
 	if (reason != 2) {
 		update_wallpaper();
 
@@ -820,10 +893,15 @@ function on_playback_stop(reason) {
 function on_playback_time(time) {
 	g_double_clicked = false;
 	g_seconds = time;
+	bump_playlist_dynamic_generation();
 
-	if (!cSettings.visible && p.list.nowplaying_y + cRow.playlist_h > p.list.y && p.list.nowplaying_y < p.list.y + p.list.h) {
-		window.RepaintRect(p.list.x, p.list.nowplaying_y, p.list.w, cRow.playlist_h);
-	}
+	if (!cSettings.visible) repaint_current_playlist_row();
+}
+
+function on_playback_seek(time) {
+	g_seconds = time;
+	bump_playlist_dynamic_generation();
+	repaint_current_playlist_row();
 }
 
 function on_playlist_item_ensure_visible(playlist, index) {
@@ -893,6 +971,7 @@ function on_playlist_switch() {
 
 function on_playlists_changed() {
 	g_active_playlist = plman.ActivePlaylist;
+	if (g_playlist_render_cache) g_playlist_render_cache.invalidateAll();
 
 	p.topBar.setDatas();
 
@@ -923,7 +1002,18 @@ function on_script_unload() {
 		}
 	}
 
-	g_repaint_timer = clearTimer(g_repaint_timer);
+	if (g_repaint_scheduler) {
+		g_repaint_scheduler.cancel();
+		g_repaint_scheduler = null;
+	}
+	if (g_playlist_scroll_frame) {
+		g_playlist_scroll_frame.stop();
+		g_playlist_scroll_frame = null;
+	}
+	if (g_playlist_scrollbar_drag_frame) {
+		g_playlist_scrollbar_drag_frame.stop();
+		g_playlist_scrollbar_drag_frame = null;
+	}
 	g_mouse_wheel_timeout = clearTimer(g_mouse_wheel_timeout);
 	g_middle_click_timeout = clearTimer(g_middle_click_timeout);
 	clearObjectTimers(typeof p == "object" ? p : null, ["on_key_timeout"]);
@@ -932,12 +1022,21 @@ function on_script_unload() {
 	clearObjectTimers(typeof cPlaylistManager == "object" ? cPlaylistManager : null, ["hscroll_interval", "blink_interval", "init_timeout", "inputbox_timeout"]);
 	clearObjectTimers(typeof cHeaderBar == "object" ? cHeaderBar : null, ["timerAutoHide"]);
 	clearObjectTimers(typeof cSettings == "object" ? cSettings : null, ["wheel_timeout"]);
-	clearObjectTimers(typeof cList == "object" ? cList : null, ["scroll_timer", "free_scroll_timer", "interval"]);
+	clearObjectTimers(typeof cList == "object" ? cList : null, ["interval"]);
 
 	try {
-		if (images.wallpaper) {
-			images.wallpaper.Dispose();
-			images.wallpaper = null;
+		DarkOnePerformance.dispose(images.wallpaper);
+		images.wallpaper = null;
+		g_image_cache.reset();
+		DarkOnePerformance.dispose(g_stub_image);
+		g_stub_image = null;
+		if (p.topBar && p.topBar.logo) {
+			DarkOnePerformance.dispose(p.topBar.logo);
+			p.topBar.logo = null;
+		}
+		if (p.list && p.list.handleList) {
+			p.list.handleList.Dispose();
+			p.list.handleList = null;
 		}
 	} catch (e) {}
 }
@@ -961,7 +1060,7 @@ function DrawCover(gr, img, dst_x, dst_y, dst_w, dst_h) {
 		dst_x += Math.round((dst_w - w) / 2);
 		dst_w = w;
 		dst_h = h;
-		gr.DrawImage(img, dst_x, dst_y, dst_w, dst_h, 0, 0, img.Width, img.Height);
+		gr.DrawBitmap(img, dst_x, dst_y, dst_w, dst_h, 0, 0, img.Width, img.Height);
 	}
 	DrawRectangle(gr, dst_x, dst_y, dst_w - 1, dst_h - 1, g_colour_text);
 }
@@ -1134,9 +1233,9 @@ function togglePlaylistManager() {
 
 function image_cache() {
 	this.get = function (metadb, group_key) {
-		var img = this.cachelist[group_key];
-		if (img)
-			return img;
+		var bitmap = this.cachelist[group_key];
+		if (bitmap)
+			return bitmap;
 
 		if (!this.requested[group_key]) {
 			this.requested[group_key] = true;
@@ -1148,13 +1247,27 @@ function image_cache() {
 	}
 
 	this.set = function (group_key, image) {
-		this.cachelist[group_key] = image;
+		var bitmap = DarkOnePerformance.toBitmap(image, true);
+		if (!bitmap)
+			return false;
+
+		var previous = this.cachelist[group_key];
+		if (previous && previous !== bitmap) {
+			DarkOnePerformance.dispose(previous);
+			if (p.list && p.list.groups) {
+				for (var i = 0; i < p.list.groups.length; i++) {
+					if (p.list.groups[i].group_key == group_key) p.list.groups[i].cover_img = null;
+				}
+			}
+		}
+		this.cachelist[group_key] = bitmap;
 		full_repaint();
+		return true;
 	}
 
 	this.reset = function () {
 		for (var key in this.cachelist) {
-			this.cachelist[key].Dispose();
+			DarkOnePerformance.dispose(this.cachelist[key]);
 		}
 		this.cachelist = {};
 		this.requested = {};
@@ -1166,14 +1279,28 @@ function image_cache() {
 
 function full_repaint() {
 	need_repaint = true;
+	if (g_repaint_scheduler)
+		g_repaint_scheduler.request();
+}
+
+function repaint_scroll_frame() {
+	need_repaint = true;
+	// Animation frames repaint directly from the shared frame loop. Calls made
+	// outside a frame (for example direct scrollbar positioning) remain
+	// coalesced through the normal interval-aware repaint scheduler.
+	if (!g_playlist_scroll_frame_in_tick && g_repaint_scheduler)
+		g_repaint_scheduler.request();
+}
+
+function stop_playlist_scroll_frame_if_idle() {
+	if (g_playlist_scroll_frame && !cList.scroll_timer && !cList.free_scroll_timer)
+		g_playlist_scroll_frame.stop();
 }
 
 function stop_smooth_scroll() {
-	if (cList.scroll_timer) {
-		window.ClearInterval(cList.scroll_timer);
-		cList.scroll_timer = false;
-	}
+	cList.scroll_timer = false;
 	cList.scroll_delta = 0;
+	stop_playlist_scroll_frame_if_idle();
 }
 
 function get_free_scroll_max_px() {
@@ -1185,10 +1312,8 @@ function get_free_scroll_max_px() {
 }
 
 function stop_free_wheel_scroll() {
-	if (cList.free_scroll_timer) {
-		window.ClearInterval(cList.free_scroll_timer);
-		cList.free_scroll_timer = false;
-	}
+	cList.free_scroll_timer = false;
+	stop_playlist_scroll_frame_if_idle();
 }
 
 function reset_free_wheel_scroll() {
@@ -1199,7 +1324,7 @@ function reset_free_wheel_scroll() {
 	cList.free_scroll_active = false;
 }
 
-function apply_free_wheel_position(position, preserve_scrollbar_cursor) {
+function apply_free_wheel_position(position, preserve_scrollbar_cursor, suppress_repaint) {
 	var max_px = get_free_scroll_max_px();
 	position = Math.max(0, Math.min(max_px, position));
 
@@ -1224,7 +1349,131 @@ function apply_free_wheel_position(position, preserve_scrollbar_cursor) {
 	cList.free_scroll_active = pixel_offset > 0 || !!cList.free_scroll_timer;
 	if (!preserve_scrollbar_cursor)
 		p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset, position);
-	full_repaint();
+	if (!suppress_repaint)
+		repaint_scroll_frame();
+}
+
+function repaint_playlist_scrollbar_drag_frame() {
+	need_repaint = true;
+	if (window.IsVisible) {
+		need_repaint = false;
+		window.Repaint();
+	} else if (g_repaint_scheduler) {
+		g_repaint_scheduler.request();
+	}
+}
+
+function ensure_playlist_scrollbar_drag_frame() {
+	if (!g_playlist_scrollbar_drag_frame) {
+		g_playlist_scrollbar_drag_frame = DarkOnePerformance.createFrameLoop(window, {
+			getDelay: function () { return cList.repaint_interval; },
+			hiddenDelay: 250,
+			tick: playlist_scrollbar_drag_frame_tick
+		});
+	}
+	return g_playlist_scrollbar_drag_frame;
+}
+
+function begin_playlist_scrollbar_drag(snap_to_rows) {
+	stop_smooth_scroll();
+	stop_free_wheel_scroll();
+
+	var current = cList.free_scroll_active
+		? cList.free_scroll_position
+		: (p.list ? p.list.offset * Math.max(1, cRow.playlist_h) : 0);
+
+	cList.scrollbar_drag_active = true;
+	cList.scrollbar_drag_snap = !!snap_to_rows;
+	cList.scrollbar_drag_position = current;
+	cList.scrollbar_drag_target = current;
+	cList.scrollbar_drag_last_tick = 0;
+}
+
+function update_playlist_scrollbar_drag(position, snap_to_rows) {
+	position = Math.max(0, Math.min(get_free_scroll_max_px(), Number(position) || 0));
+	cList.scrollbar_drag_active = true;
+	cList.scrollbar_drag_snap = !!snap_to_rows;
+	cList.scrollbar_drag_target = position;
+
+	if (!properties.smoothscrolling) {
+		cList.scrollbar_drag_position = position;
+		apply_free_wheel_position(position, true, true);
+		repaint_playlist_scrollbar_drag_frame();
+		return;
+	}
+
+	ensure_playlist_scrollbar_drag_frame();
+	g_playlist_scrollbar_drag_frame.request();
+}
+
+function playlist_scrollbar_drag_frame_tick() {
+	if (!cList.scrollbar_drag_active)
+		return false;
+
+	var now = Date.now ? Date.now() : new Date().getTime();
+	var elapsed = cList.scrollbar_drag_last_tick
+		? Math.max(1, Math.min(64, now - cList.scrollbar_drag_last_tick))
+		: cList.repaint_interval;
+	cList.scrollbar_drag_last_tick = now;
+
+	var current = cList.scrollbar_drag_position;
+	var target = cList.scrollbar_drag_target;
+	var distance = target - current;
+
+	if (Math.abs(distance) <= 0.5) {
+		current = target;
+	} else {
+		// Time-based half-life keeps the drag response equally quick at every
+		// refresh rate while allowing 8 ms to produce genuine intermediate
+		// frames between mouse-move callbacks.
+		var alpha = 1 - Math.pow(0.5, elapsed / 8);
+		var movement = distance * alpha;
+		if (Math.abs(movement) < 0.5)
+			movement = distance < 0 ? -0.5 : 0.5;
+		current += movement;
+	}
+
+	current = Math.max(0, Math.min(get_free_scroll_max_px(), current));
+	cList.scrollbar_drag_position = current;
+	var render_position = cList.scrollbar_drag_snap
+		? Math.round(current / Math.max(1, cRow.playlist_h)) * Math.max(1, cRow.playlist_h)
+		: current;
+	apply_free_wheel_position(render_position, true, true);
+	repaint_playlist_scrollbar_drag_frame();
+
+	return cList.scrollbar_drag_active && Math.abs(cList.scrollbar_drag_target - current) > 0.5;
+}
+
+function finish_playlist_scrollbar_drag(position, snap_to_rows) {
+	position = Math.max(0, Math.min(get_free_scroll_max_px(), Number(position) || 0));
+	if (g_playlist_scrollbar_drag_frame)
+		g_playlist_scrollbar_drag_frame.stop();
+
+	cList.scrollbar_drag_active = false;
+	cList.scrollbar_drag_snap = !!snap_to_rows;
+	cList.scrollbar_drag_target = position;
+	cList.scrollbar_drag_position = position;
+	cList.scrollbar_drag_last_tick = 0;
+	apply_free_wheel_position(position, true, true);
+
+	if (snap_to_rows) {
+		cList.free_scroll_position = p.list.offset * Math.max(1, cRow.playlist_h);
+		cList.free_scroll_target = cList.free_scroll_position;
+		cList.free_scroll_offset = 0;
+		cList.free_scroll_active = false;
+	} else {
+		cList.free_scroll_target = position;
+		cList.free_scroll_active = cList.free_scroll_offset > 0;
+	}
+
+	repaint_playlist_scrollbar_drag_frame();
+}
+
+function cancel_playlist_scrollbar_drag() {
+	if (g_playlist_scrollbar_drag_frame)
+		g_playlist_scrollbar_drag_frame.stop();
+	cList.scrollbar_drag_active = false;
+	cList.scrollbar_drag_last_tick = 0;
 }
 
 function scroll_wheel_freely(delta) {
@@ -1243,22 +1492,30 @@ function scroll_wheel_freely(delta) {
 		return;
 	}
 
+	start_free_wheel_scroll_timer();
+}
+
+function free_wheel_scroll_tick() {
+	var distance = cList.free_scroll_target - cList.free_scroll_position;
+	if (Math.abs(distance) <= 0.75) {
+		apply_free_wheel_position(cList.free_scroll_target);
+		stop_free_wheel_scroll();
+		cList.free_scroll_active = cList.free_scroll_offset > 0;
+		return;
+	}
+
+	var movement = distance / cList.scroll_div;
+	if (Math.abs(movement) < 1)
+		movement = distance < 0 ? -1 : 1;
+
+	apply_free_wheel_position(cList.free_scroll_position + movement);
+}
+
+function start_free_wheel_scroll_timer() {
 	if (!cList.free_scroll_timer) {
-		cList.free_scroll_timer = window.SetInterval(function () {
-			var distance = cList.free_scroll_target - cList.free_scroll_position;
-			if (Math.abs(distance) <= 0.75) {
-				apply_free_wheel_position(cList.free_scroll_target);
-				stop_free_wheel_scroll();
-				cList.free_scroll_active = cList.free_scroll_offset > 0;
-				return;
-			}
-
-			var movement = distance / cList.scroll_div;
-			if (Math.abs(movement) < 1)
-				movement = distance < 0 ? -1 : 1;
-
-			apply_free_wheel_position(cList.free_scroll_position + movement);
-		}, cList.repaint_interval);
+		cList.free_scroll_timer = true;
+		ensure_playlist_scroll_frame();
+		g_playlist_scroll_frame.request();
 	}
 }
 
@@ -1269,38 +1526,99 @@ function set_scroll_delta() {
 
 	if (!cList.scroll_timer) {
 		cList.scroll_delta = cRow.playlist_h;
-		cList.scroll_timer = window.SetInterval(function () {
-			cList.scroll_step = Math.max(1, Math.round(cList.scroll_delta / cList.scroll_div));
-			cList.scroll_delta -= cList.scroll_step;
-
-			if (cList.scroll_delta <= 1) {
-				stop_smooth_scroll();
-			}
-
-			full_repaint();
-		}, cList.repaint_interval);
+		start_smooth_scroll_timer();
 	} else {
 		cList.scroll_delta = cRow.playlist_h;
 	}
 }
 
-function start_repaint_timer() {
-	if (g_repaint_timer) {
-		window.ClearInterval(g_repaint_timer);
-		g_repaint_timer = false;
+function smooth_scroll_tick() {
+	cList.scroll_step = Math.max(1, Math.round(cList.scroll_delta / cList.scroll_div));
+	cList.scroll_delta -= cList.scroll_step;
+
+	if (cList.scroll_delta <= 1) {
+		stop_smooth_scroll();
 	}
 
-	g_repaint_timer = window.SetInterval(function () {
-		if (!window.IsVisible) {
-			need_repaint = true;
-			return;
-		}
+	repaint_scroll_frame();
+}
 
-		if (need_repaint) {
-			need_repaint = false;
-			window.Repaint();
-		}
-	}, cList.repaint_interval);
+function start_smooth_scroll_timer() {
+	if (!cList.scroll_timer) {
+		cList.scroll_timer = true;
+		ensure_playlist_scroll_frame();
+		g_playlist_scroll_frame.request();
+	}
+}
+
+function playlist_scroll_frame_tick() {
+	g_playlist_scroll_frame_in_tick = true;
+	try {
+		if (cList.free_scroll_timer)
+			free_wheel_scroll_tick();
+		else if (cList.scroll_timer)
+			smooth_scroll_tick();
+	} finally {
+		g_playlist_scroll_frame_in_tick = false;
+	}
+
+	if (need_repaint && window.IsVisible) {
+		need_repaint = false;
+		window.Repaint();
+	}
+
+	return !!cList.scroll_timer || !!cList.free_scroll_timer;
+}
+
+function ensure_playlist_scroll_frame() {
+	if (!g_playlist_scroll_frame) {
+		g_playlist_scroll_frame = DarkOnePerformance.createFrameLoop(window, {
+			getDelay: function () { return cList.repaint_interval; },
+			hiddenDelay: 250,
+			tick: playlist_scroll_frame_tick
+		});
+	}
+	return g_playlist_scroll_frame;
+}
+
+function reschedule_active_playlist_scroll_timers() {
+	if (!cList.scroll_timer && !cList.free_scroll_timer)
+		return;
+
+	ensure_playlist_scroll_frame();
+	g_playlist_scroll_frame.reschedule();
+	if (!g_playlist_scroll_frame.isRunning())
+		g_playlist_scroll_frame.request();
+}
+
+function set_playlist_refresh_interval(value) {
+	value = Math.max(7, Math.min(40, Math.round(Number(value)) || 8));
+	if (cList.repaint_interval == value) return false;
+
+	cList.repaint_interval = value;
+	window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", cList.repaint_interval);
+	start_repaint_timer();
+	reschedule_active_playlist_scroll_timers();
+	if (g_playlist_scrollbar_drag_frame && g_playlist_scrollbar_drag_frame.isRunning())
+		g_playlist_scrollbar_drag_frame.reschedule();
+	return true;
+}
+
+function start_repaint_timer() {
+	if (!g_repaint_scheduler) {
+		g_repaint_scheduler = DarkOnePerformance.createRepaintScheduler(window, {
+			getDelay: function () { return cList.repaint_interval; },
+			hiddenDelay: 250,
+			repaint: function () {
+				if (!need_repaint) return;
+				need_repaint = false;
+				window.Repaint();
+			}
+		});
+	} else {
+		g_repaint_scheduler.reschedule();
+	}
+	if (need_repaint) g_repaint_scheduler.request();
 }
 
 function resize_panels() {
@@ -1348,7 +1666,18 @@ function init() {
 	get_colours();
 	plman.SetActivePlaylistContext();
 	update_wallpaper();
-	g_stub_image = fb.GetAlbumArtStub(cGroup.art_id);
+	var stub = fb.GetAlbumArtStub(cGroup.art_id);
+	g_stub_image = DarkOnePerformance.toBitmap(stub, true);
+	g_playlist_render_cache = new DarkOnePlaylistRenderCache({
+		enabled: properties.enableRenderCache,
+		maxEntries: properties.renderCacheRows
+	});
+	g_playlist_profiler = DarkOnePerformance.createProfiler(
+		utils,
+		properties.performanceProfiling,
+		"DarkOneJSP3 JS Playlist paint",
+		120
+	);
 
 	p.list = new oList("p.list");
 	p.topBar = new oTopBar();
@@ -1363,6 +1692,7 @@ function init() {
 
 function update_playlist() {
 	g_group_id_focused = 0;
+	if (g_playlist_render_cache) g_playlist_render_cache.invalidateAll();
 	p.list.updateHandleList();
 
 	p.list.setItems(false);
@@ -1518,7 +1848,14 @@ var g_textbox_tabbed = false;
 var g_init_on_size = false;
 var g_seconds = 0;
 var g_mouse_wheel_timeout = false;
-var g_repaint_timer = false;
+var g_repaint_scheduler = null;
+var g_playlist_scroll_frame = null;
+var g_playlist_scrollbar_drag_frame = null;
+var g_playlist_scroll_frame_in_tick = false;
+var g_playlist_render_cache = null;
+var g_playlist_profiler = null;
+var g_cached_playing_index = -1;
+var g_playlist_dynamic_generation = 0;
 var g_active_playlist = plman.ActivePlaylist;
 var g_image_cache = new image_cache();
 var g_stub_image = null;
@@ -1577,6 +1914,9 @@ var properties = {
 	wallpapertype : window.GetProperty("JSPLAYLIST.Wallpaper Type", 0),
 	wallpaperpath : window.GetProperty("JSPLAYLIST.Default Wallpaper Path", ""),
 	smoothscrolling : window.GetProperty("JSPLAYLIST.Enable Smooth Scrolling", true),
+	enableRenderCache : window.GetProperty("JSPLAYLIST.Enable Render Cache", true),
+	renderCacheRows : Math.max(64, Math.min(4096, Math.round(window.GetProperty("JSPLAYLIST.Render Cache Rows", 768)))),
+	performanceProfiling : window.GetProperty("JSPLAYLIST.Enable Performance Profiling", false),
 	max_columns : 24,
 	max_patterns : 25,
 	use_foo_lastfm_playcount_sync : window.GetProperty("Love tracks with foo_lastfm_playcount_sync", false),
@@ -1678,6 +2018,11 @@ var cList = {
 	free_scroll_target : 0,
 	free_scroll_offset : 0,
 	free_scroll_active : false,
+	scrollbar_drag_active : false,
+	scrollbar_drag_snap : true,
+	scrollbar_drag_position : 0,
+	scrollbar_drag_target : 0,
+	scrollbar_drag_last_tick : 0,
 	borderWidth : 2,
 	enableExtraLine : window.GetProperty("JSPLAYLIST.Enable Extra Line", true)
 };

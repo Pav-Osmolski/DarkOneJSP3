@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.2.4',
+            'version': '0.3.7',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -221,12 +221,20 @@ def run(ctx: ValidationContext) -> None:
             'required_paths_data_driven': True,
             'module_versions_data_driven': True,
             'command_line_invocation_unchanged': True,
-            'runtime_scripts_unchanged': True,
+            'runtime_scripts_unchanged': False,
             'manifest_inventory_checked': True,
             'runtime_assets_checked': True,
             'repository_assets_checked_when_present': True,
             'manual_fcl_excluded': True,
             'configuration_guide_heading_spacing_checked': True,
+            'performance_scheduler_tests': True,
+            'playlist_render_cache_tests': True,
+            'bitmap_rendering_checks': True,
+            'smooth_scroll_rate_live_update_tests': True,
+            'scrollbar_drag_cadence_tests': True,
+            'scrollbar_drag_interpolation_tests': True,
+            'display_style_runtime_tests': True,
+            'offscreen_sprite_composition_checks': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -640,6 +648,30 @@ def run(ctx: ValidationContext) -> None:
         if role not in body:
             errors.append(rel(entry) + ' does not identify its reset role: ' + role)
 
+    performance_helper = project / 'shared' / 'performance_utils.js'
+    if performance_helper.exists():
+        body = text(performance_helper)
+        for token in [
+            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.1"',
+            'createRepaintScheduler',
+            'createFrameLoop',
+            'createProfiler',
+            'toBitmap',
+        ]:
+            if token not in body:
+                errors.append('Shared performance-helper module is incomplete: ' + token)
+        for forbidden in [
+            'typeof resource.Dispose',
+            'typeof image.CreateBitmap',
+            'typeof utils.LoadBitmap',
+            'typeof utils.LoadImage',
+            'typeof utilsObject.CreateProfiler',
+        ]:
+            if forbidden in body:
+                errors.append(
+                    'Shared performance-helper module incorrectly gates a native JScript Panel COM method with typeof: ' +
+                    forbidden)
+
     registry_path = project / 'shared' / 'reset_defaults.js'
     if registry_path.exists():
         registry_body = text(registry_path)
@@ -719,8 +751,166 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'darkOneJsp3HandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.4.7"' not in body:
-            errors.append('JS Playlist entry version is not 0.4.7')
+        if '// @version "0.5.5"' not in body:
+            errors.append('JS Playlist entry version is not 0.5.5')
+        for token in [
+            'DarkOneJSP3\\shared\\performance_utils.js',
+            'samples\\jsplaylist\\render_cache.js',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist performance import is missing: ' + token)
+
+    js_playlist_main = samples / 'jsplaylist' / 'main.js'
+    js_playlist_rows = samples / 'jsplaylist' / 'playlist.js'
+    js_playlist_header = samples / 'jsplaylist' / 'headerbar.js'
+    js_playlist_topbar = samples / 'jsplaylist' / 'topbar.js'
+    js_playlist_cache = samples / 'jsplaylist' / 'render_cache.js'
+    if js_playlist_main.exists():
+        body = text(js_playlist_main)
+        for token in [
+            'DarkOnePerformance.createRepaintScheduler(window, {',
+            'g_repaint_scheduler.request();',
+            'function repaint_scroll_frame()',
+            'repaint_scroll_frame();',
+            'DarkOnePerformance.toBitmap(image, true)',
+            'g_stub_image = DarkOnePerformance.toBitmap(refreshedStub, true);',
+            'gr.DrawBitmap(img,',
+            'g_playlist_render_cache.invalidateAll();',
+            'g_playlist_render_cache.invalidateHandles(handle_list, p.list ? p.list.handleList : null);',
+            'function on_playback_dynamic_info() {',
+            'function on_playback_seek(time) {',
+            'function bump_playlist_dynamic_generation() {',
+            'function repaint_current_playlist_row() {',
+            'function on_playlists_changed() {',
+            'DarkOnePerformance.createProfiler(',
+            'function set_playlist_refresh_interval(value)',
+            'function reschedule_active_playlist_scroll_timers()',
+            'function playlist_scroll_frame_tick()',
+            'function ensure_playlist_scroll_frame()',
+            'function repaint_playlist_scrollbar_drag_frame()',
+            'function ensure_playlist_scrollbar_drag_frame()',
+            'function begin_playlist_scrollbar_drag(snap_to_rows)',
+            'function update_playlist_scrollbar_drag(position, snap_to_rows)',
+            'function playlist_scrollbar_drag_frame_tick()',
+            'function finish_playlist_scrollbar_drag(position, snap_to_rows)',
+            'function cancel_playlist_scrollbar_drag()',
+            'apply_free_wheel_position(position, preserve_scrollbar_cursor, suppress_repaint)',
+            'DarkOnePerformance.createFrameLoop(window, {',
+            'getDelay: function () { return cList.repaint_interval; }',
+            'tick: playlist_scroll_frame_tick',
+            'window.Repaint();',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist performance optimisation is missing: ' + token)
+        for obsolete in [
+            'g_repaint_timer = window.SetInterval(function () {',
+            'window.SetInterval(smooth_scroll_tick, cList.repaint_interval)',
+            'window.SetInterval(free_wheel_scroll_tick, cList.repaint_interval)',
+            'gr.DrawImage(img, dst_x, dst_y, dst_w, dst_h',
+            'g_stub_image = fb.GetAlbumArtStub(cGroup.art_id);',
+            'function schedule_playlist_scrollbar_drag_frame(',
+            'function flush_playlist_scrollbar_drag_frame(',
+            'function cancel_playlist_scrollbar_drag_frame(',
+            'cList.scrollbar_drag_rebuild_items',
+        ]:
+            if obsolete in body:
+                errors.append('JS Playlist retains an obsolete rendering path: ' + obsolete)
+    js_playlist_scrollbar = samples / 'jsplaylist' / 'scrollbar.js'
+    if js_playlist_scrollbar.exists():
+        body = text(js_playlist_scrollbar)
+        for token in [
+            'cancel_playlist_scrollbar_drag();',
+            'begin_playlist_scrollbar_drag(cList.scrollbar_snap);',
+            'update_playlist_scrollbar_drag(target_row * Math.max(1, cRow.playlist_h), true);',
+            'update_playlist_scrollbar_drag(this.setPixelPositionFromCursorPos(), false);',
+            'finish_playlist_scrollbar_drag(final_row * Math.max(1, cRow.playlist_h), true);',
+            'finish_playlist_scrollbar_drag(final_position, false);',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist scrollbar-drag interpolation handling is missing: ' + token)
+        if 'g_mouse_wheel_timeout = window.SetTimeout(function () {' in body:
+            errors.append('JS Playlist scrollbar dragging still reuses the wheel-throttle timer')
+        for obsolete in [
+            'schedule_playlist_scrollbar_drag_frame(',
+            'flush_playlist_scrollbar_drag_frame(',
+            'cancel_playlist_scrollbar_drag_frame(',
+            'apply_free_wheel_position(this.setPixelPositionFromCursorPos(), true, true);',
+        ]:
+            if obsolete in body:
+                errors.append('JS Playlist scrollbar dragging retains an input-driven one-shot path: ' + obsolete)
+    if js_playlist_rows.exists():
+        body = text(js_playlist_rows)
+        for token in [
+            'g_playlist_render_cache.getConfigured(this.track_index, forceFresh, paintState.dynamicGeneration)',
+            'g_playlist_render_cache.configure(g_tf_pattern, secondaryPattern, lovedSync);',
+            'dynamicGeneration: g_playlist_dynamic_generation',
+            'var paintState = {',
+            'this.repaintTrack = function (trackIndex)',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist row-cache optimisation is missing: ' + token)
+    if js_playlist_topbar.exists():
+        body = text(js_playlist_topbar)
+        for token in [
+            'DarkOnePerformance.loadBitmap(',
+            'gr.DrawBitmap(this.logo,',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist top-bar bitmap optimisation is missing: ' + token)
+        if 'gr.DrawImage(this.logo,' in body:
+            errors.append('JS Playlist top bar retains the obsolete image rendering path')
+
+    if js_playlist_header.exists():
+        body = text(js_playlist_header)
+        for token in [
+            'this.columnsDirty = true;',
+            'if (!this.columnsDirty) return;',
+            'this.invalidateColumns();',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist column-layout caching is missing: ' + token)
+    if js_playlist_cache.exists():
+        body = text(js_playlist_cache)
+        for token in [
+            'DARKONE_JSPLAYLIST_RENDER_CACHE_VERSION = "0.1.0"',
+            'this.globalClockDynamic',
+            'this.dynamicHits',
+            'this.primaryCoupledDynamic',
+            'this.getConfigured = function (trackIndex, refreshCurrentFields, currentGeneration)',
+            'entry.dynamicResult && entry.dynamicKey === dynamicKey',
+            'this.invalidateHandles = function (changedHandles, activeHandles)',
+            'if (key === this.patternKey) return false;',
+            'this.invalidateAll = function ()',
+            'this.maxEntries',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist render-cache module is incomplete: ' + token)
+
+    display_performance = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
+    if display_performance.exists():
+        body = text(display_performance)
+        for token in [
+            'DarkOnePerformance.toBitmap(g_matrix_source, false)',
+            'DarkOnePerformance.toBitmap(g_icons_source, false)',
+            'BaseImage.prototype.commitBitmap = function()',
+            'gr.DrawBitmap(this.bitmap,',
+            'this.drawMatrixSpriteToImage = function(',
+            'gr.DrawImage(this.matrix_source_image,',
+            'this.setDisplayStyle = function(style)',
+            'this.value_label_widths = {};',
+            'this.value_label_widths[valueLabel]',
+        ]:
+            if token not in body:
+                errors.append('Display bitmap/measurement optimisation is missing: ' + token)
+        object_prefix = body.split('// ----- TITLE-FORMAT CACHE -----', 1)[0]
+        if 'display_system.drawMatrixSprite(gr,' in object_prefix:
+            errors.append('Display off-screen digit composition still uses the panel bitmap path')
+
+    display_panel = project / 'jscript' / 'js' / 'Panel_Display.js'
+    if display_panel.exists():
+        body = text(display_panel)
+        if 'display_system.setDisplayStyle(idx - 1);' not in body:
+            errors.append('Display Style menu does not use the validated style setter')
 
     js_playlist_settings = samples / 'jsplaylist' / 'settings.js'
     if js_playlist_settings.exists():
@@ -752,8 +942,10 @@ def run(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'darkOneJsp3HandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.4.10"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.4.10')
+        if '// @version "0.5.1"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.1')
+        if 'DarkOneJSP3\\shared\\performance_utils.js' not in body:
+            errors.append('Smooth Playlist Manager does not import shared performance helpers')
 
     playlist_manager_impl = samples / 'smooth' / 'jsspm.js'
     if playlist_manager_impl.exists():
@@ -767,10 +959,21 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Playlist Manager alternating-row control is missing: ' + token)
         for token in [
-            'timers.repaint = window.SetInterval(function () {',
+            'DarkOnePerformance.createFrameLoop(window, {',
+            'function playlist_manager_frame_tick()',
+            'if (g_playlist_manager_frame) g_playlist_manager_frame.stop();',
+            'this.rows[i].isAutoPlaylist',
+            'this.rows[i].isLocked',
+            '!isAutoPlaylist && plman.IsPlaylistLocked(i)',
+            'window.IsVisible && rowY + ppt.rowHeight',
+            'DarkOnePerformance.createProfiler(',
+            'function set_playlist_manager_refresh_rate(value)',
+            'ppt.refreshRate = value;',
+            'g_playlist_manager_frame.reschedule();',
+            'set_playlist_manager_refresh_rate([8, 10, 12, 16][idx - 32]);',
             'timers.initialPopulate = window.SetTimeout(function () {',
             'function clearPlaylistManagerTimers()',
-            'window.ClearInterval(timers.repaint);',
+            'g_playlist_manager_frame.stop();',
             'window.ClearTimeout(timers.initialPopulate);',
             'window.ClearInterval(timers.movePlaylist);',
             'window.ClearInterval(cScrollBar.timerID);',
@@ -781,6 +984,14 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('Playlist Manager timer cleanup is missing: ' + token)
+        for obsolete in [
+            'timers.repaint = window.SetInterval(function () {',
+            'plman.IsAutoPlaylist(this.rows[i].idx)',
+            'plman.IsPlaylistLocked(this.rows[i].idx)',
+            'window.SetProperty("SMOOTH.UI.REFRESH.INTERVAL.MS", [8, 10, 12, 16][idx - 32]);',
+        ]:
+            if obsolete in body:
+                errors.append('Playlist Manager retains an obsolete performance path: ' + obsolete)
 
     registry_path = project / 'shared' / 'reset_defaults.js'
     if registry_path.exists():
@@ -1064,7 +1275,8 @@ def run(ctx: ValidationContext) -> None:
     troubleshooting = docs / 'TROUBLESHOOTING.txt'
     if troubleshooting.exists():
         body = text(troubleshooting)
-        if '8. Factory reset' not in body or '9. Diagnostics to include in a bug report' not in body:
+        if ('8. Factory reset' not in body or '9. Performance and smoothness' not in body or
+                '10. Diagnostics to include in a bug report' not in body):
             errors.append('Troubleshooting sections are not in the expected order')
         if re.search(r'\bv\d+\.\d+\.\d+\b', body) or 'Install v' in body:
             errors.append('Troubleshooting contains development-version upgrade advice')
@@ -1472,7 +1684,7 @@ def run(ctx: ValidationContext) -> None:
         body = text(path)
         if 'DarkOneJSP3\\jscript\\js\\Buttons_OptionalMenu.js' not in body:
             errors.append(rel(path) + ' does not import the shared optional-button menu')
-        if '@version "3.0.12-jsp3-3.8.5"' not in body:
+        if '@version "3.0.13-jsp3-3.8.5"' not in body:
             errors.append(rel(path) + ' has the wrong consolidated control-panel version')
 
     control_panels = [
@@ -1483,6 +1695,8 @@ def run(ctx: ValidationContext) -> None:
         if not path.exists():
             continue
         body = text(path)
+        if 'safeBitmapImage(imgPath + "buttons.png")' not in body or 'gr.DrawBitmap(g_btns,' not in body:
+            errors.append(rel(path) + ' does not use a cached Direct2D button bitmap')
         if 'darkOneShowControlButtonMenu(x, y, {' not in body:
             errors.append(rel(path) + ' does not use the shared optional-button menu')
         for duplicate in [

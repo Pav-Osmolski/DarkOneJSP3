@@ -2,7 +2,7 @@
 // Panel: Control Right - v2.0build20191004-jscript-panel3-v0616
 // =========================================================================================================
 
-var g_btns = safeGdiImage(imgPath + "buttons.png");
+var g_btns = safeBitmapImage(imgPath + "buttons.png");
 var v_timer = null, b_btns = [], i_size, qx = [], volknob = null;
 btn_panel = 2;
 
@@ -36,7 +36,7 @@ function getButtonMenu(x, y) {
 // ----- DRAW -----
 function on_paint(gr) {
 	gr.FillRectangle(0, 0, ww, wh, p_backcol);
-for (var i = 0; i < 7; i++) g_btns && gr.DrawImage(g_btns, padX + qx[i] + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 42 * i, 0, 36, 36);
+for (var i = 0; i < 7; i++) g_btns && gr.DrawBitmap(g_btns, padX + qx[i] + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 42 * i, 0, 36, 36);
 	darkOneDrawText(gr, "VOLUME", btn_font, btnsCol.text_normal, rbx + padX, by1, bbw, Math.ceil(bbh / 3 * 2), 1);
 	buttonsDraw(gr);
 	volknob && volknob.draw(gr);

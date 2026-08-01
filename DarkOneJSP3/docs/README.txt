@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.4
+DarkOneJSP3 v0.9.7
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -75,7 +75,7 @@ DarkOneJSP3\
   jscript\               DarkOne JScript Panel 3 wrappers and modules
   jsplitter\             Six controllers, loader scripts and InfoStack helpers
   reference\             Original DarkOne2021 PSS reference material
-  shared\                Shared colour utilities and reset defaults
+  shared\                Shared colour, performance and reset utilities
   tools\                 Release-validator entry point, modules and mirror-sync utility
 
 user-components-x64\foo_jscript_panel3\samples\
@@ -97,8 +97,8 @@ Current highlights
   and Staged reveal modes controlled from the InfoStack tab-strip menu.
 - Consolidated Album Notes with configurable providers, caching, diagnostics,
   same-album provider reactivation and MusicBrainz Releases and Links views.
-- Enhanced playlist scrolling, playlist-manager filtering and optional row
-  shading.
+- Demand-driven playlist rendering, cached title formatting, Direct2D bitmap
+  reuse, playlist-manager filtering and optional row shading.
 - Native Queue Viewer support as the recommended full editor, with an optional
   scripted viewer providing multi-selection, keyboard navigation and safe
   source-item commands.

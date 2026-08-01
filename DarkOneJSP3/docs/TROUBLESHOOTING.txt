@@ -11,7 +11,8 @@ Contents
 6. Album Notes, AllMusic and MusicBrainz
 7. Finding panel menus and settings
 8. Factory reset
-9. Diagnostics to include in a bug report
+9. Performance and smoothness
+10. Diagnostics to include in a bug report
 
 1. Before troubleshooting
 -------------------------
@@ -176,10 +177,22 @@ continuous thumb dragging is also wanted.
 Keyboard navigation, scrollbar arrows/page clicks and drag-autoscroll remain
 row-aligned by design.
 
+JS Playlist scrollbar dragging feels capped at one cadence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Confirm Enable smooth scrolling is active.
+- Confirm both the supplied jsplaylist\main.js and jsplaylist\scrollbar.js are
+  installed together; mixing versions bypasses the dedicated drag frame loop.
+- The scrollbar thumb follows the latest mouse position while the playlist uses
+  time-based interpolation at the selected UI refresh interval.
+- With Snap scrollbar dragging to playlist rows enabled, visual updates remain
+  row-aligned; disable it when continuous pixel movement is preferred.
+
 JS Playlist CPU use is high
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Increase the UI refresh interval from 8 ms to 10, 12 or 16 ms. A 16 ms interval
-is normally sufficient for a 60 Hz display.
+Increase the UI refresh interval from 8 ms to 10, 12 or 16 ms. The selected
+value controls both the smooth-scroll animation cadence and the coalesced
+repaints that display it. A 16 ms interval is normally sufficient for a 60 Hz
+display.
 
 Playlist Manager position does not restore as expected
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -399,8 +412,34 @@ JS Playlist and Smooth Playlist Manager must import the project reset bridge.
 Behaviour reset restores their custom refresh and scroll settings; full reset
 also clears the playlist manager's saved scroll anchors.
 
-9. Diagnostics to include in a bug report
------------------------------------------
+9. Performance and smoothness
+-----------------------------
+
+Playlist remains unusually heavy while idle
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The enhanced playlist and Playlist Manager use demand-driven schedulers and
+should not retain their high-refresh animation timers at idle. Confirm that the
+current JS Playlist and Smooth Playlist Manager wrappers are loaded and that
+both import DarkOneJSP3\shared\performance_utils.js. Reload the affected panel
+after replacing scripts.
+
+Playlist text appears stale after metadata or queue changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The row-render cache responds to playlist, metadata, queue, playback-time,
+seek and dynamic stream-information callbacks. Reload the playlist panel if
+third-party tagging software changed files without notifying foobar2000. For diagnosis, temporarily set
+JSPLAYLIST.Enable Render Cache to false in Configure..., reload the panel and
+compare the result.
+
+Collecting paint-time diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enable JSPLAYLIST.Enable Performance Profiling or
+SMOOTH.Enable Performance Profiling in the relevant panel's Configure... window,
+then reproduce the workload. The foobar2000 console reports average and peak
+paint time every 120 frames. Disable profiling after testing.
+
+10. Diagnostics to include in a bug report
+------------------------------------------
 Include:
 - DarkOneJSP3 package version from build-info.json;
 - foobar2000, Columns UI, JScript Panel 3 and JSplitter versions;

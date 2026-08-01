@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.8.4 Validation Report
+DarkOneJSP3 v0.9.7 Validation Report
 ====================================
 
 Scope
@@ -28,6 +28,22 @@ Checks
   titles.
 - Local @import paths resolve inside the distributed package.
 - JavaScript modules and active .txt entry scripts pass Node syntax checks.
+- Demand-driven repaint schedulers coalesce requests, stop when idle and retain
+  pending repaint work while a panel is hidden.
+- JS Playlist render-cache tests cover repeated hits, row/handle/all invalidation,
+  title-format changes, playback-generation reuse, clock-field overlays,
+  cross-column $puts/$get compatibility and bounded cache size.
+- Active playlist panels no longer contain permanent idle repaint intervals;
+  Playlist Manager row type/lock flags and JS Playlist column geometry are
+  cached.
+- Album covers, immutable control sprites and display sprite output use reusable
+  Direct2D bitmaps with explicit disposal checks.
+- Centre Display style tests verify that Plain Font and Dot Matrix selections are
+  persisted, rebuild style-specific render state and repaint immediately. Mutable
+  dot-matrix value images compose from IJSImage sprite sources, while final panel
+  painting retains cached IJSBitmap output.
+- Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose and
+  CreateProfiler are called directly rather than gated by typeof == "function".
 - Python maintenance tools pass py_compile.
 - Intentional compatibility mirror files remain byte-for-byte identical.
 - Every reset callback imports its registry and bridge dependencies.
@@ -65,8 +81,20 @@ Checks
   settings are included in coordinated reset coverage.
 - Managed AllMusic activation completes or fails closed without leaving a
   provider request indefinitely pending.
+- JS Playlist scrollbar dragging uses a dedicated demand-driven latest-target
+  frame loop with time-based interpolation. Runtime tests simulate 16 ms mouse
+  callbacks and verify that 8 ms renders two distinct intermediate frames while
+  16 ms renders one, with equal elapsed-time response and exact final snapping.
+- Row-snapped and free-position dragging do not reuse the wheel-throttle timer,
+  depend solely on mouse callback cadence or pass through a second repaint delay.
+- JS Playlist general repaint requests use the selected smooth-scroll refresh
+  interval, while interval-governed animation ticks use a coalesced immediate
+  post-tick paint without generating extra frames.
 - JS Playlist and Playlist Manager refresh, scrolling and appearance defaults
   are covered by the canonical registry.
+- Smooth-scroll refresh-rate tests verify that both panels update their live
+  rate values, persist the selected property and reschedule active animation
+  timers or frame loops without reverting to the 8 ms default.
 - The native Queue Viewer is identified as the recommended DOJSP3.Queue panel,
   while the optional scripted viewer is verified for multi-selection, keyboard
   navigation, source-item commands and the absence of unsupported mutation API

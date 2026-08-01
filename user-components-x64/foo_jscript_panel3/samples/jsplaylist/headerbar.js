@@ -59,6 +59,12 @@ function oColumn() {
 }
 
 function oHeaderBar() {
+	this.columnsDirty = true;
+
+	this.invalidateColumns = function () {
+		this.columnsDirty = true;
+	}
+
 	this.resetSortIndicators = function () {
 		this.sortedColumnId = -1;
 		this.sortedColumnDirection = 1;
@@ -93,9 +99,11 @@ function oHeaderBar() {
 		this.h = cHeaderBar.height - 1;
 		this.setButtons();
 		this.borderWidth = cHeaderBar.borderWidth;
+		this.invalidateColumns();
 	}
 
 	this.calculateColumns = function () {
+		if (!this.columnsDirty) return;
 		var tmp = this.x;
 
 		for (var i = 0; i < this.totalColumns; i++) {
@@ -120,6 +128,7 @@ function oHeaderBar() {
 				this.columns[i].h = this.h;
 			}
 		}
+		this.columnsDirty = false;
 	}
 
 	this.drawHiddenPanel = function (gr) {
@@ -138,8 +147,7 @@ function oHeaderBar() {
 			this.columnDragged_saved = 0;
 		}
 
-		// calc column metrics for calculating border metrics as well
-		this.calculateColumns();
+		// Column metrics are calculated once before list/header painting.
 
 		// draw borders and left column from each one!
 		var tmp = this.x;
@@ -339,6 +347,7 @@ function oHeaderBar() {
 			}
 		}
 
+		this.invalidateColumns();
 		this.calculateColumns();
 	}
 
@@ -507,6 +516,7 @@ function oHeaderBar() {
 									this.columns[this.borders[i].leftId].percent = Math.abs(this.columns[this.borders[i].leftId].w / this.w * 100000);
 									this.columns[this.borders[i].rightId].percent = addedPercent - this.columns[this.borders[i].leftId].percent;
 									this.borders[i].sourceX = x;
+									this.invalidateColumns();
 									full_repaint();
 								}
 							}
@@ -521,6 +531,7 @@ function oHeaderBar() {
 										var tmpCol = this.columns[this.columnDraggedId];
 										this.columns[this.columnDraggedId] = this.columns[i];
 										this.columns[i] = tmpCol;
+										this.invalidateColumns();
 										// move sortColumnId too !
 										if (i == this.sortedColumnId) {
 											this.sortedColumnId = this.columnDraggedId;

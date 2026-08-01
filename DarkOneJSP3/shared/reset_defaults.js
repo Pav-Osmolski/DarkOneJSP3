@@ -134,7 +134,10 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "JSPLAYLIST.Playlist Scroll Step": 3,
             "JSPLAYLIST.Snap Wheel Scrolling To Rows": true,
             "JSPLAYLIST.Snap Scrollbar Dragging To Rows": true,
-            "JSPLAYLIST.Free Wheel Step (pixels)": 0
+            "JSPLAYLIST.Free Wheel Step (pixels)": 0,
+            "JSPLAYLIST.Enable Render Cache": true,
+            "JSPLAYLIST.Render Cache Rows": 768,
+            "JSPLAYLIST.Enable Performance Profiling": false
         },
         complete: {}
     },
@@ -150,7 +153,8 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "SMOOTH.SCROLL.SMOOTHNESS": 1.75,
             "SMOOTH.ROW.SCROLL.STEP": 3,
             "SMOOTH.PLAYLIST.MANAGER.REMEMBER.SCROLL": true,
-            "SMOOTH.PLAYLIST.MANAGER.AUTO.SHOW.ACTIVE": true
+            "SMOOTH.PLAYLIST.MANAGER.AUTO.SHOW.ACTIVE": true,
+            "SMOOTH.Enable Performance Profiling": false
         },
         complete: {
             "SMOOTH.PLAYLIST.MANAGER.SCROLL": 0,

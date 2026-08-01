@@ -473,6 +473,12 @@ Defaults:
 - Smoothness divisor: 1.75
 - Wheel row step: 3
 
+The refresh interval controls active smooth-scroll animation only. Changes are
+applied immediately to the live frame loop and are retained for future panel
+sessions. The manager uses a demand-driven frame loop and does not keep an 8 ms
+timer running while idle. Playlist type and lock-state icons are cached until
+the playlist state changes.
+
 Playlist row spacing
 - Compact / DarkOne2021 (26)
 - Balanced (29)
@@ -557,6 +563,23 @@ Defaults:
 - Scrollbar dragging row snapping: enabled
 - Snapped wheel row step: 3
 - Free-scroll distance: automatic, 65% of row height
+
+The playlist uses demand-driven repaint scheduling, so the selected refresh
+interval governs both smooth-scroll animation updates and the coalesced paints
+that display them, rather than waking the panel continuously at idle. Scrollbar
+thumb dragging uses a dedicated latest-target frame loop with time-based
+interpolation, allowing lower refresh intervals to render intermediate positions
+between host mouse-move callbacks. Row-snapped dragging remains aligned to
+playlist rows, while free-position dragging retains pixel offsets. The exact
+cursor-derived destination is applied when the mouse button is released. Changes
+are applied immediately, including to row-snap or free-scroll animation already
+in progress. Visible-row title-format output is
+cached across scroll
+frames and invalidated when playlist contents, affected metadata rows, queue
+state, playback state or column formatting changes. Playback-dependent fields
+are reused within the same playback update, and clock-dependent fields are
+refreshed once per second while static fields remain cached. Custom columns
+that share $puts/$get state retain combined-pattern evaluation when required.
 
 When one or more tracks are selected, standard operations include Play, Crop,
 Remove, Invert selection, Cut, Copy, Paste and the normal foobar2000 track
@@ -1063,6 +1086,9 @@ Playlist scrolling
   JSPLAYLIST.Snap Scrollbar Dragging To Rows
   JSPLAYLIST.Free Wheel Step (pixels)
   JSPLAYLIST.Playlist Scroll Step
+  JSPLAYLIST.Enable Render Cache
+  JSPLAYLIST.Render Cache Rows
+  JSPLAYLIST.Enable Performance Profiling
 
 Playlist Manager
   SMOOTH.SHOW.TOP.BAR
@@ -1072,12 +1098,32 @@ Playlist Manager
   SMOOTH.PLAYLIST.MANAGER.REMEMBER.SCROLL
   SMOOTH.PLAYLIST.MANAGER.AUTO.SHOW.ACTIVE
   SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2
+  SMOOTH.Enable Performance Profiling
 
 Waveform host
   DarkOneJSP3.DisplayWaveform.BackgroundMode
   DarkOneJSP3.DisplayWaveform.BackgroundColour
   DarkOneJSP3.DisplayWaveform.HideWhenStopped
   DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay
+
+Performance diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The rendering optimisations are enabled by default. Advanced testing options
+are available through each JScript Panel's Configure... property editor:
+
+- JSPLAYLIST.Enable Render Cache: keeps static visible-row title-format output.
+- JSPLAYLIST.Render Cache Rows: maximum cached playlist rows; default 768,
+  supported range 64 to 4096.
+- JSPLAYLIST.Enable Performance Profiling: logs averaged JS Playlist paint time
+  to the foobar2000 console every 120 rendered frames.
+- SMOOTH.Enable Performance Profiling: logs averaged Playlist Manager paint
+  time using the same sampling interval.
+
+Profiling is disabled by default and should normally be enabled only while
+comparing configurations. Changing the cache properties requires a panel
+reload. Disabling the render cache restores per-paint title-format evaluation
+for diagnostic comparison, but is not recommended for normal use.
 
 13. Resetting DarkOneJSP3
 -------------------------
@@ -1101,8 +1147,8 @@ sample customisation that DarkOneJSP3 does not own is preserved. Album Notes
 cache files and downloaded provider data are also preserved.
 
 The enhanced JS Playlist participates in behaviour and full resets for its
-smooth-scrolling, refresh, throttle, row-step and snapping options. Playlist
-Manager also resets those behaviour settings. Its filter visibility, filter
+smooth-scrolling, refresh, throttle, row-step, snapping, render-cache and
+performance-diagnostic options. Playlist Manager also resets those behaviour settings. Its filter visibility, filter
 width, row height and alternating-row option belong to appearance. Full reset
 additionally clears its saved scroll anchors. InfoStack appearance reset
 restores the automatic font base scale to 100%, DarkOne dark grey page backing

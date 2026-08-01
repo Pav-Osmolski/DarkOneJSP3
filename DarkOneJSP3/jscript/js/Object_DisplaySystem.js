@@ -2,8 +2,10 @@
 // DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0617
 // =========================================================================================================
 
-var g_matrix = safeGdiImage(imgPath + "dot_matrix.png");
-var g_icons = safeGdiImage(imgPath + "sac_pbo.png");
+var g_matrix_source = safeGdiImage(imgPath + "dot_matrix.png");
+var g_icons_source = safeGdiImage(imgPath + "sac_pbo.png");
+var g_matrix = DarkOnePerformance.toBitmap(g_matrix_source, false);
+var g_icons = DarkOnePerformance.toBitmap(g_icons_source, false);
 
 var DARKONE_DISPLAY_ACCENT_DEFAULT = 0;
 var DARKONE_DISPLAY_ACCENT_CUSTOM = 1;
@@ -70,6 +72,7 @@ function darkOneCreateTintedSpriteRow(source, source_y, width, height, colour) {
 // ----- BASE IMAGE OBJECT -----
 function BaseImage() {
 	this.image = null;
+	this.bitmap = null;
 	this.curVal = "";
 }
 
@@ -77,9 +80,24 @@ BaseImage.prototype.reset = function() {
 	this.curVal = "";
 };
 
+BaseImage.prototype.commitBitmap = function() {
+	disposeImage(this.bitmap);
+	this.bitmap = DarkOnePerformance.toBitmap(this.image, false);
+};
+
 BaseImage.prototype.dispose = function() {
+	disposeImage(this.bitmap);
 	disposeImage(this.image);
+	this.bitmap = null;
 	this.image = null;
+};
+
+BaseImage.prototype.paint = function(gr, dx, dy, dw, dh) {
+	if (this.bitmap) {
+		gr.DrawBitmap(this.bitmap, dx, dy, dw, dh, 0, 0, this.bitmap.Width, this.bitmap.Height);
+	} else if (this.image) {
+		gr.DrawImage(this.image, dx, dy, dw, dh, 0, 0, this.image.Width, this.image.Height);
+	}
 };
 
 BaseImage.prototype.isDrawDigit = function(digitValue, index) {
@@ -102,6 +120,7 @@ function NumImage() {
 			for (var i = 0; i < 4; i++) self.drawDigit(gr, curNo, i);
 		});
 		this.curVal = curNo;
+		this.commitBitmap();
 	};
 
 	this.draw = function(curNo) {
@@ -114,7 +133,7 @@ function NumImage() {
 		if (this.isDrawDigit(digitValue, index)) {
 			var xoffset = index * 54;
 			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue * 54, 54, 60);
+			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue * 54, 54, 60);
 		}
 	}
 }
@@ -128,10 +147,11 @@ function TimeImage() {
 		var self = this;
 		darkOneUseImageGraphics(this.image, function (gr) {
 			for (var i = 0; i < 6; i++) self.drawDigit(gr, time, i < 2 ? i : i < 4 ? i + 1 : i + 2, i < 2 ? 0 : i < 4 ? -36 : -72);
-			display_system.drawMatrixSprite(gr, 108, 0, 18, 60, 702, 18, 60);
-			display_system.drawMatrixSprite(gr, 234, 0, 18, 60, 702, 18, 60);
+			display_system.drawMatrixSpriteToImage(gr, 108, 0, 18, 60, 702, 18, 60);
+			display_system.drawMatrixSpriteToImage(gr, 234, 0, 18, 60, 702, 18, 60);
 		});
 		this.curVal = time;
+		this.commitBitmap();
 	};
 
 	this.draw = function(time) {
@@ -144,7 +164,7 @@ function TimeImage() {
 		if (this.isDrawDigit(digitValue, index)) {
 			var xoffset = index * 54 + offset;
 			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, isNaN(digitValue) ? 0 : digitValue * 54, 54, 60);
+			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, isNaN(digitValue) ? 0 : digitValue * 54, 54, 60);
 		}
 	}
 }
@@ -160,6 +180,7 @@ function BitrateImage() {
 			for (var i = 0; i < 5; i++) self.drawDigit(gr, bitrate, i);
 		});
 		this.curVal = bitrate;
+		this.commitBitmap();
 	};
 
 	this.draw = function(bitrate) {
@@ -175,7 +196,7 @@ function BitrateImage() {
 
 			if (digitValue != " ") {
 				var tmp = digitValue * 54;
-				if (!isNaN(tmp)) display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, tmp, 54, 60);
+				if (!isNaN(tmp)) display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, tmp, 54, 60);
 			}
 		}
 	}
@@ -190,11 +211,12 @@ function VolumeImage() {
 		var self = this;
 		darkOneUseImageGraphics(this.image, function (gr) {
 			for (var i = 0; i < 6; i++) self.drawDigit(gr, volume, i < 4 ? i : i + 1, i < 4 ? 0 : -36);
-			display_system.drawMatrixSprite(gr, 216, 0, 18, 60, 720, 18, 60);
-			display_system.drawMatrixSprite(gr, 342, 0, 54, 60, 648, 54, 60);
-			display_system.drawMatrixSprite(gr, 396, 0, 108, 60, 792, 108, 60);
+			display_system.drawMatrixSpriteToImage(gr, 216, 0, 18, 60, 720, 18, 60);
+			display_system.drawMatrixSpriteToImage(gr, 342, 0, 54, 60, 648, 54, 60);
+			display_system.drawMatrixSpriteToImage(gr, 396, 0, 108, 60, 792, 108, 60);
 		});
 		this.curVal = volume;
+		this.commitBitmap();
 	};
 
 	this.draw = function(volume) {
@@ -207,7 +229,7 @@ function VolumeImage() {
 		if (this.isDrawDigit(digitValue, index)) {
 			var xoffset = index * 54 + offset;
 			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSprite(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue == "-" ? 738 : digitValue * 54, 54, 60);
+			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue == "-" ? 738 : digitValue * 54, 54, 60);
 		}
 	}
 }
@@ -248,6 +270,9 @@ var section = {
 	bit : 4,
 };
 
+var DARKONE_DISPLAY_INDICATOR_LABELS = ["LOSSLESS", "LOSSY", "HI-RES", "MULTI-CH", "AUDIO MD5", "REPLAYGAIN"];
+var DARKONE_DISPLAY_VALUE_LABELS = ["TRACK", "TOTAL", "TIME", "VOLUME", "KBPS"];
+
 function DisplaySystem() {
 	this.display_style = window.GetProperty("Display Style", 0);
 	var t_rem = window.GetProperty("Remain Time on", false), v_timer = null, v_change = false;
@@ -283,6 +308,11 @@ function DisplaySystem() {
 
 		this.font_arial = darkOneCreateFont(label_name, Math.max(1, Math.round(this.pxSize * 7 * master_scale * label_scale)), 0, label_weight);
 		this.font_serif = darkOneCreateFont(value_name, Math.max(1, Math.round(this.pxSize * 29 * master_scale * value_scale)), 0, value_weight);
+		this.value_label_widths = {};
+		for (var i = 0; i < DARKONE_DISPLAY_VALUE_LABELS.length; i++) {
+			this.value_label_widths[DARKONE_DISPLAY_VALUE_LABELS[i]] = darkOneCalcTextWidth(DARKONE_DISPLAY_VALUE_LABELS[i], this.font_arial);
+		}
+		this.value_label_widths["TIME REMAINING"] = darkOneCalcTextWidth("TIME REMAINING", this.font_arial);
 	}
 
 	this.traceMouse = function(x, y) {
@@ -290,50 +320,72 @@ function DisplaySystem() {
 	}
 
 	this.disposeAccentSprites = function() {
-		disposeImage(this.custom_matrix);
-		disposeImage(this.custom_icons);
-		this.custom_matrix = null;
-		this.custom_icons = null;
+		disposeImage(this.custom_matrix_bitmap);
+		disposeImage(this.custom_icons_bitmap);
+		disposeImage(this.custom_matrix_source);
+		disposeImage(this.custom_icons_source);
+		this.custom_matrix_bitmap = null;
+		this.custom_icons_bitmap = null;
+		this.custom_matrix_source = null;
+		this.custom_icons_source = null;
 	};
 
 	this.refreshAccentSprites = function() {
 		this.disposeAccentSprites();
-		this.matrix_image = g_matrix;
+		this.matrix_source_image = g_matrix_source;
+		this.matrix_bitmap = g_matrix;
 		this.matrix_source_y = 0;
-		this.icon_image = g_icons;
+		this.icon_source_image = g_icons_source;
+		this.icon_bitmap = g_icons;
 		this.icon_source_y = 0;
 
 		if (this.accent_mode == DARKONE_DISPLAY_ACCENT_DEFAULT) return;
 
-		this.custom_matrix = darkOneCreateTintedSpriteRow(
-			g_matrix,
+		this.custom_matrix_source = darkOneCreateTintedSpriteRow(
+			g_matrix_source,
 			DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_MATRIX_ROW_STRIDE,
-			g_matrix ? g_matrix.Width : 0,
+			g_matrix_source ? g_matrix_source.Width : 0,
 			DARKONE_DISPLAY_MATRIX_ROW_HEIGHT,
 			this.active_colour
 		);
-		this.custom_icons = darkOneCreateTintedSpriteRow(
-			g_icons,
+		this.custom_icons_source = darkOneCreateTintedSpriteRow(
+			g_icons_source,
 			DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_ICON_ROW_STRIDE,
-			g_icons ? g_icons.Width : 0,
+			g_icons_source ? g_icons_source.Width : 0,
 			DARKONE_DISPLAY_ICON_ROW_HEIGHT,
 			this.active_colour
 		);
+		this.custom_matrix_bitmap = DarkOnePerformance.toBitmap(this.custom_matrix_source, false);
+		this.custom_icons_bitmap = DarkOnePerformance.toBitmap(this.custom_icons_source, false);
 
-		if (this.custom_matrix) this.matrix_image = this.custom_matrix;
-		if (this.custom_icons) this.icon_image = this.custom_icons;
+		if (this.custom_matrix_source && this.custom_matrix_bitmap) {
+			this.matrix_source_image = this.custom_matrix_source;
+			this.matrix_bitmap = this.custom_matrix_bitmap;
+		}
+		if (this.custom_icons_source && this.custom_icons_bitmap) {
+			this.icon_source_image = this.custom_icons_source;
+			this.icon_bitmap = this.custom_icons_bitmap;
+		}
 	};
 
+	// Direct panel painting uses cached Direct2D bitmaps. Mutable off-screen
+	// digit images must compose from IJSImage sources via DrawImage; using a
+	// device bitmap on an image graphics target can silently produce no glyphs.
 	this.drawMatrixSprite = function(gr, dx, dy, dw, dh, sx, sw, sh) {
-		if (!this.matrix_image) return;
-		gr.DrawImage(this.matrix_image, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
+		if (!this.matrix_bitmap) return;
+		gr.DrawBitmap(this.matrix_bitmap, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
+	};
+
+	this.drawMatrixSpriteToImage = function(gr, dx, dy, dw, dh, sx, sw, sh) {
+		if (!this.matrix_source_image) return;
+		gr.DrawImage(this.matrix_source_image, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
 	};
 
 	this.drawStatusIcon = function(gr, dx, dy, dw, dh, sx, active) {
-		var image = active ? this.icon_image : g_icons;
-		if (!image) return;
+		var bitmap = active ? this.icon_bitmap : g_icons;
+		if (!bitmap) return;
 		var source_y = active ? this.icon_source_y : DARKONE_DISPLAY_WHITE_ROW_INDEX * DARKONE_DISPLAY_ICON_ROW_STRIDE;
-		gr.DrawImage(image, dx, dy, dw, dh, sx, source_y, 54, 36, active ? 1.0 : 0.02);
+		gr.DrawBitmap(bitmap, dx, dy, dw, dh, sx, source_y, 54, 36, active ? 1.0 : 0.02);
 	};
 
 	this.resetRenderedImages = function() {
@@ -378,6 +430,18 @@ function DisplaySystem() {
 		this.setColours();
 		this.resetRenderedImages();
 	}
+
+	this.setDisplayStyle = function(style) {
+		style = Number(style) == 1 ? 1 : 0;
+		window.SetProperty("Display Style", style);
+		if (this.display_style == style) return false;
+
+		this.display_style = style;
+		this.InitImages();
+		this.init();
+		window.Repaint();
+		return true;
+	};
 
 	this.InitImages = function() {
 		if (this.images) {
@@ -461,36 +525,46 @@ function DisplaySystem() {
 	}
 
 	this.draw = function(gr) {
-var a = "LOSSLESS;LOSSY;HI-RES;MULTI-CH;AUDIO MD5;REPLAYGAIN".split(";");
 		for (var i = 0; i < 6; i++) {
 			gr.DrawRectangle(this.x + this.box_w * i + this.pxSize * 2, this.y, this.box_w - this.pxSize * 4, this.box_h, this.pxSize, this.Colours[i]);
-			darkOneDrawText(gr, a[i], this.font_arial, this.Colours[i], this.x + this.box_w * i + this.pxSize * 2, this.y, this.box_w - this.pxSize * 4, this.box_h, 5);
+			darkOneDrawText(gr, DARKONE_DISPLAY_INDICATOR_LABELS[i], this.font_arial, this.Colours[i], this.x + this.box_w * i + this.pxSize * 2, this.y, this.box_w - this.pxSize * 4, this.box_h, 5);
 		}
 
-		var b = ["TRACK", "TOTAL", t_rem ? "TIME REMAINING" : "TIME", "VOLUME", "KBPS"];
-		var c = [
-			this.Colours[6],
-			this.Colours[7],
-			v_change ? ui_btntxtcol : this.Colours[8],
-			v_change ? ui_btntxtcol : this.inactive_colour,
-			v_change ? this.inactive_colour : this.Colours[8]];
-		var d = [
-			0,
-			this.pxSize * 72,
-			this.pxSize * (this.display_style == 1 ? 162 : 169),
-			this.pxSize * 310,
-			this.pxSize * 349];
 		for (var j = 0; j < 5; j++) {
-			darkOneDrawText(gr, b[j], this.font_arial, c[j], this.x + d[j], this.ind_y, darkOneCalcTextWidth(b[j], this.font_arial), this.box_h, 0);
+			var valueLabel = j == 2 && t_rem ? "TIME REMAINING" : DARKONE_DISPLAY_VALUE_LABELS[j];
+			var valueColour;
+			var valueOffset;
+			switch (j) {
+			case 0:
+				valueColour = this.Colours[6];
+				valueOffset = 0;
+				break;
+			case 1:
+				valueColour = this.Colours[7];
+				valueOffset = this.pxSize * 72;
+				break;
+			case 2:
+				valueColour = v_change ? ui_btntxtcol : this.Colours[8];
+				valueOffset = this.pxSize * (this.display_style == 1 ? 162 : 169);
+				break;
+			case 3:
+				valueColour = v_change ? ui_btntxtcol : this.inactive_colour;
+				valueOffset = this.pxSize * 310;
+				break;
+			default:
+				valueColour = v_change ? this.inactive_colour : this.Colours[8];
+				valueOffset = this.pxSize * 349;
+			}
+			darkOneDrawText(gr, valueLabel, this.font_arial, valueColour, this.x + valueOffset, this.ind_y, this.value_label_widths[valueLabel], this.box_h, 0);
 		}
 
 		if (this.display_style == 1) {
 			if (fb.IsPlaying) {
 				if (this.Trackinfo) {
 					this.images[0].draw(this.TrackNo);
-					gr.DrawImage(this.images[0].image, this.x, this.img_y, this.pxSize * 72, this.img_h, 0, 0, this.images[0].image.Width, this.images[0].image.Height);
+					this.images[0].paint(gr, this.x, this.img_y, this.pxSize * 72, this.img_h);
 					this.images[1].draw(this.TotalNo);
-					gr.DrawImage(this.images[1].image, this.x + this.pxSize * 72, this.img_y, this.pxSize * 72, this.img_h, 0, 0, this.images[1].image.Width, this.images[1].image.Height);
+					this.images[1].paint(gr, this.x + this.pxSize * 72, this.img_y, this.pxSize * 72, this.img_h);
 				} else {
 					this.drawMatrixSprite(gr, this.x, this.img_y, this.pxSize * 104, this.img_h, 1260, 312, 60);
 				}
@@ -500,20 +574,20 @@ var a = "LOSSLESS;LOSSY;HI-RES;MULTI-CH;AUDIO MD5;REPLAYGAIN".split(";");
 			if (v_change) {
 				var f = fb.Volume.toFixed(2) + " db";
 				this.images[4].draw(pad_right(f, 10));
-				gr.DrawImage(this.images[4].image, this.x + this.pxSize * 204, this.img_y, this.pxSize * 168, this.img_h, 0, 0, this.images[4].image.Width, this.images[4].image.Height);
+				this.images[4].paint(gr, this.x + this.pxSize * 204, this.img_y, this.pxSize * 168, this.img_h);
 			} else {
 				if (fb.IsPlaying) {
 					var g = t_rem && fb.PlaybackLength < 0 ? false : true;
 					if (g) {
 						var t = t_rem ? this.Remain : this.Elapse;
 						this.images[2].draw(t);
-						gr.DrawImage(this.images[2].image, this.time_left, this.img_y, this.pxSize * 120, this.img_h, 0, 0, this.images[2].image.Width, this.images[2].image.Height);
+						this.images[2].paint(gr, this.time_left, this.img_y, this.pxSize * 120, this.img_h);
 					} else {
 						this.drawMatrixSprite(gr, this.time_left, this.img_y, this.pxSize * 116, this.img_h, 900, 348, 60);
 					}
 
 					this.images[3].draw(this.Bitrate);
-					gr.DrawImage(this.images[3].image, this.x + this.pxSize * 282, this.img_y, this.pxSize * 90, this.img_h, 0, 0, this.images[3].image.Width, this.images[3].image.Height);
+					this.images[3].paint(gr, this.x + this.pxSize * 282, this.img_y, this.pxSize * 90, this.img_h);
 				}
 			}
 		} else {
@@ -591,11 +665,16 @@ var a = "LOSSLESS;LOSSY;HI-RES;MULTI-CH;AUDIO MD5;REPLAYGAIN".split(";");
 		this.images = [];
 		this.font_arial = null;
 		this.font_serif = null;
+		this.value_label_widths = null;
 		this.disposeAccentSprites();
 		disposeImage(g_matrix);
 		disposeImage(g_icons);
+		disposeImage(g_matrix_source);
+		disposeImage(g_icons_source);
 		g_matrix = null;
 		g_icons = null;
+		g_matrix_source = null;
+		g_icons_source = null;
 	};
 
 	this.InitColours();

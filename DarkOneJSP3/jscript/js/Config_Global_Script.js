@@ -59,6 +59,9 @@ function TimeFmt(t) {
 function safeGdiImage(path) {
     try { return utils.LoadImage(path); } catch (e) { return null; }
 }
+function safeBitmapImage(path) {
+    return DarkOnePerformance.loadBitmap(path);
+}
 function disposeImage(img) {
     if (img) { try { img.Dispose(); } catch (e) {} }
 }

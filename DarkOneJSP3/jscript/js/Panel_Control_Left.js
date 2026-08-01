@@ -2,7 +2,7 @@
 // Panel: Control Left - v2.0build20191004-jscript-panel3-v0616
 // =========================================================================================================
 
-var g_btns = safeGdiImage(imgPath + "buttons.png");
+var g_btns = safeBitmapImage(imgPath + "buttons.png");
 var presetCount = 5, b_btns = [], i_size, t_r = false;
 btn_panel = 1;
 
@@ -85,8 +85,8 @@ TimeOpt();
 function on_paint(gr) {
 	gr.FillRectangle(0, 0, ww, wh, p_backcol);
 if (g_btns) {
-		gr.DrawImage(g_btns, padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 294, 0, 36, 36);
-		gr.DrawImage(g_btns, (ww - area / 8) - padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 420, 0, 36, 36);
+		gr.DrawBitmap(g_btns, padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 294, 0, 36, 36);
+		gr.DrawBitmap(g_btns, (ww - area / 8) - padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 420, 0, 36, 36);
 	}
 	darkOneDrawText(gr, "PANE --- STATUS --- BAR", btn_font, btnsCol.text_normal, padX + bxf * 3, by1, bbw * 2, Math.ceil(bbh / 3 * 2), 1);
 	buttonsDraw(gr);

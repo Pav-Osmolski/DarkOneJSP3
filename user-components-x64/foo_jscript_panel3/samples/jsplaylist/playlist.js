@@ -36,10 +36,9 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 		this.r2 = arr[3];
 	}
 
-	this.drawRowContents = function (gr) {
+	this.drawRowContents = function (gr, is_selected, paintState) {
 		var is_focused = p.list.focusedTrackId == this.track_index;
-		var is_playing = p.list.nowplaying.PlaylistIndex == g_active_playlist && p.list.nowplaying.PlaylistItemIndex == this.track_index;
-		var is_selected = plman.IsPlaylistItemSelected(g_active_playlist, this.track_index);
+		var is_playing = paintState.playingPlaylist == g_active_playlist && paintState.playingItem == this.track_index;
 		var txt_color = is_selected ? g_colour_selected_text : g_colour_text;
 		var fader_txt = setAlpha(txt_color, 180);
 		var rating_colour = g_dynamic ? txt_color : g_colour_rating;
@@ -68,8 +67,18 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 		columns.mood_x = ww;
 		columns.rating_x = ww;
 
-		var tf_arr = get_tfo(g_tf_pattern).EvalActivePlaylistItem(this.track_index).split("^^");
-		var tf2_arr = cList.enableExtraLine ? get_tfo(g_tf2_pattern).EvalActivePlaylistItem(this.track_index).split("^^") : [];
+		var lovedSync = paintState.lovedSync;
+		var secondaryPattern = paintState.secondaryPattern;
+		var forceFresh = is_playing && g_playlist_render_cache && g_playlist_render_cache.requiresCurrentRefresh();
+		var renderData = g_playlist_render_cache
+			? g_playlist_render_cache.getConfigured(this.track_index, forceFresh, paintState.dynamicGeneration)
+			: {
+				primary: get_tfo(g_tf_pattern).EvalActivePlaylistItem(this.track_index).split("^^"),
+				secondary: secondaryPattern ? get_tfo(secondaryPattern).EvalActivePlaylistItem(this.track_index).split("^^") : [],
+				loved: lovedSync ? get_tfo("$if2(%lfm_loved%,0)").EvalActivePlaylistItem(this.track_index) : null
+			};
+		var tf_arr = renderData.primary;
+		var tf2_arr = renderData.secondary;
 
 		for (var j = 0; j < p.headerBar.columns.length; j++) {
 			if (p.headerBar.columns[j].w > 0) {
@@ -90,7 +99,7 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 					};
 
 					if (is_playing) {
-						if (fb.IsPaused) {
+						if (paintState.isPaused) {
 							gr.WriteTextSimple(chars.pause, g_font_fluent_20, txt_color, cx, this.y + 2, g_queue_width, cRow.playlist_h - 4, 2, 2);
 						} else {
 							gr.WriteTextSimple(chars.play, g_font_fluent_20, g_seconds % 2 == 0 ? txt_color : setAlpha(txt_color, 60), cx + 2, this.y + 2, g_queue_width, cRow.playlist_h - 4, 2, 2);
@@ -118,8 +127,8 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 						break;
 					}
 
-					if (properties.use_foo_lastfm_playcount_sync && foo_lastfm_playcount_sync) {
-						this.mood = get_tfo("$if2(%lfm_loved%,0)").EvalActivePlaylistItem(this.track_index);
+					if (lovedSync) {
+						this.mood = renderData.loved;
 					} else {
 						this.mood = StripCode(tf_arr[j], chars.etx) || 0;
 					}
@@ -166,8 +175,8 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 		}
 	}
 
-	this.draw = function (gr, x, y, w, h) {
-		var is_item_selected = plman.IsPlaylistItemSelected(g_active_playlist, this.track_index);
+	this.draw = function (gr, x, y, w, h, paintState) {
+		var is_item_selected = this.type == 0 && plman.IsPlaylistItemSelected(g_active_playlist, this.track_index);
 		var cover_size = 0;
 		this.x = x;
 		this.y = y;
@@ -175,10 +184,10 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 		this.h = h;
 
 		if (this.type == 0) { // track
-			if (fb.IsPlaying && plman.PlayingPlaylist == g_active_playlist && this.track_index == p.list.nowplaying.PlaylistItemIndex) {
+			if (paintState.isPlaying && paintState.playingPlaylist == g_active_playlist && this.track_index == paintState.playingItem) {
 				p.list.nowplaying_y = this.y;
 			}
-			this.drawRowContents(gr);
+			this.drawRowContents(gr, is_item_selected, paintState);
 
 			if (!properties.showgroupheaders && this.track_index_in_group == 0) {
 				gr.FillRectangle(this.x, this.y, this.w, 2, g_colour_text & 0x10ffffff);
@@ -880,6 +889,18 @@ function oList(object_name) {
 			this.offset = 0;
 	}
 
+	this.repaintTrack = function (trackIndex) {
+		if (trackIndex == null || trackIndex < 0) return false;
+		for (var i = 0; i < this.items.length; i++) {
+			var item = this.items[i];
+			if (item.type == 0 && item.track_index == trackIndex && typeof item.y == "number") {
+				window.RepaintRect(this.x, item.y, this.w, item.h || cRow.playlist_h);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	this.isFocusedItemVisible = function () {
 		if (this.totalRows <= this.totalRowVisible) {
 			return true;
@@ -910,20 +931,30 @@ function oList(object_name) {
 		} else {
 			var row_top_y = this.y;
 		}
-		var width = 0;
+		var width = (this.totalRows <= this.totalRowVisible || !properties.showscrollbar)
+			? this.w
+			: this.w - cScrollBar.width;
 
 		this.nowplaying = plman.GetPlayingItemLocation();
+		var secondaryPattern = cList.enableExtraLine ? g_tf2_pattern : "";
+		var lovedSync = properties.use_foo_lastfm_playcount_sync && foo_lastfm_playcount_sync;
+		if (g_playlist_render_cache) {
+			g_playlist_render_cache.configure(g_tf_pattern, secondaryPattern, lovedSync);
+		}
+		var paintState = {
+			isPlaying: fb.IsPlaying,
+			isPaused: fb.IsPaused,
+			playingPlaylist: this.nowplaying ? this.nowplaying.PlaylistIndex : -1,
+			playingItem: this.nowplaying ? this.nowplaying.PlaylistItemIndex : -1,
+			secondaryPattern: secondaryPattern,
+			lovedSync: lovedSync,
+			dynamicGeneration: g_playlist_dynamic_generation
+		};
 
 		var fin = this.items.length;
 		for (var i = 0; i < fin; i++) {
 			item_h = this.items[i].heightInRow * cRow.playlist_h;
-			// test if scrollbar displayed or not for the items width to draw
-			if (this.totalRows <= this.totalRowVisible || !properties.showscrollbar) {
-				width = this.w;
-			} else {
-				width = this.w - cScrollBar.width;
-			}
-			this.items[i].draw(gr, this.x, row_top_y, width, item_h);
+			this.items[i].draw(gr, this.x, row_top_y, width, item_h, paintState);
 			row_top_y += item_h - (this.items[i].groupRowDelta * cRow.playlist_h);
 		}
 
@@ -1208,18 +1239,13 @@ function oList(object_name) {
 		case 102:
 		case 103:
 		case 104:
-			var rates = [8, 10, 12, 16];
-			cList.repaint_interval = rates[idx - 101];
-			window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", cList.repaint_interval);
-			start_repaint_timer();
+			set_playlist_refresh_interval([8, 10, 12, 16][idx - 101]);
 			break;
 		case 105:
 			try {
 				var refresh_ms = Number(utils.InputBox("Enter a refresh interval from 7 to 40 milliseconds. Lower values are smoother but use more CPU.", window.Name, cList.repaint_interval));
 				if (!isNaN(refresh_ms)) {
-					cList.repaint_interval = Math.max(7, Math.min(40, Math.round(refresh_ms)));
-					window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", cList.repaint_interval);
-					start_repaint_timer();
+					set_playlist_refresh_interval(refresh_ms);
 				}
 			} catch (e) {}
 			break;
@@ -1278,7 +1304,6 @@ function oList(object_name) {
 			break;
 		case 109:
 			properties.smoothscrolling = true;
-			cList.repaint_interval = 8;
 			cList.scroll_div = 2;
 			cList.wheel_throttle = 8;
 			cList.wheel_snap = true;
@@ -1286,7 +1311,6 @@ function oList(object_name) {
 			cList.free_wheel_step = 0;
 			cList.scrollstep = 3;
 			window.SetProperty("JSPLAYLIST.Enable Smooth Scrolling", true);
-			window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", 8);
 			window.SetProperty("JSPLAYLIST.Smooth Scroll Divisor", 2);
 			window.SetProperty("JSPLAYLIST.Playlist Wheel Throttle (ms)", 8);
 			window.SetProperty("JSPLAYLIST.Snap Wheel Scrolling To Rows", true);
@@ -1295,7 +1319,7 @@ function oList(object_name) {
 			window.SetProperty("JSPLAYLIST.Playlist Scroll Step", 3);
 			reset_free_wheel_scroll();
 			p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset);
-			start_repaint_timer();
+			set_playlist_refresh_interval(8);
 			break;
 		case 20:
 			plman.ExecutePlaylistDefaultAction(g_active_playlist, p.list.focusedTrackId);

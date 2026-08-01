@@ -11,6 +11,56 @@ import tempfile
 
 from .context import ValidationContext
 
+def _extract_js_function(source: str, name: str) -> str:
+    marker = 'function ' + name + '('
+    start = source.find(marker)
+    if start < 0:
+        raise ValueError('missing JavaScript function: ' + name)
+    brace = source.find('{', start)
+    if brace < 0:
+        raise ValueError('missing JavaScript function body: ' + name)
+
+    depth = 0
+    quote = ''
+    escaped = False
+    line_comment = False
+    block_comment = False
+    index = brace
+    while index < len(source):
+        char = source[index]
+        next_char = source[index + 1] if index + 1 < len(source) else ''
+        if line_comment:
+            if char == '\n':
+                line_comment = False
+        elif block_comment:
+            if char == '*' and next_char == '/':
+                block_comment = False
+                index += 1
+        elif quote:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == quote:
+                quote = ''
+        else:
+            if char == '/' and next_char == '/':
+                line_comment = True
+                index += 1
+            elif char == '/' and next_char == '*':
+                block_comment = True
+                index += 1
+            elif char in {'"', "'"}:
+                quote = char
+            elif char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return source[start:index + 1]
+        index += 1
+    raise ValueError('unterminated JavaScript function: ' + name)
+
 
 def run(ctx: ValidationContext) -> None:
     root = ctx.root
@@ -69,6 +119,449 @@ def run(ctx: ValidationContext) -> None:
                 if result.returncode:
                     errors.append('Entry-script syntax failed for ' + rel(path) + ': ' +
                                   result.stderr.strip())
+
+        # Exercise demand-driven scheduling, hidden-panel recovery and bitmap lifecycle.
+        performance_helper_smoke = f"""
+    const fs = require('fs');
+    const source = fs.readFileSync({json.dumps(str(project / 'shared' / 'performance_utils.js'))}, 'utf8');
+    let visible = true;
+    let sequence = 0;
+    let tasks = [];
+    const host = {{
+        get IsVisible() {{ return visible; }},
+        SetTimeout(fn, delay) {{ const id = ++sequence; tasks.push({{id, fn, delay}}); return id; }},
+        ClearTimeout(id) {{ tasks = tasks.filter(task => task.id !== id); }}
+    }};
+    let fallbackDisposed = 0;
+    const directBitmap = {{Width: 2, Height: 2}};
+    const fallbackBitmap = {{Width: 3, Height: 3}};
+    const utilsMock = {{
+        LoadBitmap(path) {{ return path === 'direct' ? directBitmap : null; }},
+        LoadImage(path) {{
+            return {{CreateBitmap() {{ return fallbackBitmap; }}, Dispose() {{ fallbackDisposed++; }}}};
+        }}
+    }};
+    const api = new Function('utils', source + '\\nreturn DarkOnePerformance;')(utilsMock);
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    function runNext() {{ if (!tasks.length) throw new Error('No scheduled task'); const task = tasks.shift(); task.fn(); return task; }}
+
+    let repaints = 0;
+    const scheduler = api.createRepaintScheduler(host, {{delay: 8, hiddenDelay: 250, repaint() {{ repaints++; }}}});
+    scheduler.request();
+    scheduler.request();
+    assert(tasks.length === 1, 'Repaint requests were not coalesced');
+    runNext();
+    assert(repaints === 1 && tasks.length === 0 && !scheduler.isPending(), 'Visible repaint did not become idle');
+    visible = false;
+    scheduler.request();
+    runNext();
+    assert(repaints === 1 && tasks.length === 1 && tasks[0].delay === 250, 'Hidden repaint retry failed');
+    visible = true;
+    runNext();
+    assert(repaints === 2 && tasks.length === 0, 'Hidden repaint was not flushed when visible');
+
+    let frames = 0;
+    const loop = api.createFrameLoop(host, {{delay: 8, tick() {{ frames++; return frames < 3; }}}});
+    loop.request();
+    runNext(); runNext(); runNext();
+    assert(frames === 3 && tasks.length === 0 && !loop.isRunning(), 'Frame loop did not stop when idle');
+
+    let dynamicDelay = 8;
+    let dynamicFrames = 0;
+    const dynamicLoop = api.createFrameLoop(host, {{
+        getDelay() {{ return dynamicDelay; }},
+        tick() {{ dynamicFrames++; return dynamicFrames < 2; }}
+    }});
+    dynamicLoop.request();
+    assert(tasks.length === 1 && tasks[0].delay === 8, 'Dynamic frame loop did not use the initial delay');
+    dynamicDelay = 16;
+    dynamicLoop.reschedule();
+    assert(tasks.length === 1 && tasks[0].delay === 16, 'Active frame loop did not reschedule to the changed delay');
+    runNext();
+    assert(tasks.length === 1 && tasks[0].delay === 16, 'Changed frame-loop delay was not retained');
+    runNext();
+    assert(dynamicFrames === 2 && tasks.length === 0 && !dynamicLoop.isRunning(), 'Dynamic frame loop did not become idle');
+
+    let disposed = 0;
+    const bitmapObject = {{Width: 1, Height: 1, Dispose: function() {{}}}};
+    const image = {{CreateBitmap: function() {{ return bitmapObject; }}, Dispose: function() {{ disposed++; }}}};
+    const bitmap = api.toBitmap(image, true);
+    assert(bitmap && disposed === 1, 'Image-to-bitmap conversion did not dispose its source');
+    const existingBitmap = {{Width: 4, Height: 4}};
+    assert(api.toBitmap(existingBitmap, false) === existingBitmap,
+        'Existing bitmap fallback was not retained when CreateBitmap was unavailable');
+    let directDisposeCount = 0;
+    api.dispose({{Dispose() {{ directDisposeCount++; }}}});
+    assert(directDisposeCount === 1, 'Native resource disposal was not attempted directly');
+    assert(api.loadBitmap('direct') === directBitmap, 'Direct bitmap loading was not preferred');
+    assert(api.loadBitmap('fallback') === fallbackBitmap && fallbackDisposed === 1,
+        'Image fallback did not create a bitmap and dispose its source');
+    assert(api.createProfiler({{}}, false, 'disabled', 10) === null, 'Disabled profiler created runtime overhead');
+    let profilerCreated = 0;
+    const profilerApi = api.createProfiler({{CreateProfiler() {{ profilerCreated++; return {{Reset() {{}}, Time: 0}}; }}}}, true, 'enabled', 10);
+    assert(profilerApi && profilerCreated === 1, 'Native profiler creation was not attempted directly');
+    """
+        result = subprocess.run([node, '-e', performance_helper_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Performance-helper runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise the exact live refresh-rate setters and active timer restart paths.
+        try:
+            playlist_main_source = text(samples / 'jsplaylist' / 'main.js')
+            manager_source = text(samples / 'smooth' / 'jsspm.js')
+            playlist_rate_functions = '\n\n'.join(
+                _extract_js_function(playlist_main_source, name)
+                for name in [
+                    'full_repaint',
+                    'repaint_scroll_frame',
+                    'stop_playlist_scroll_frame_if_idle',
+                    'stop_smooth_scroll',
+                    'get_free_scroll_max_px',
+                    'stop_free_wheel_scroll',
+                    'reset_free_wheel_scroll',
+                    'apply_free_wheel_position',
+                    'repaint_playlist_scrollbar_drag_frame',
+                    'ensure_playlist_scrollbar_drag_frame',
+                    'begin_playlist_scrollbar_drag',
+                    'update_playlist_scrollbar_drag',
+                    'playlist_scrollbar_drag_frame_tick',
+                    'finish_playlist_scrollbar_drag',
+                    'cancel_playlist_scrollbar_drag',
+                    'start_smooth_scroll_timer',
+                    'start_free_wheel_scroll_timer',
+                    'playlist_scroll_frame_tick',
+                    'ensure_playlist_scroll_frame',
+                    'reschedule_active_playlist_scroll_timers',
+                    'set_playlist_refresh_interval',
+                ]
+            )
+            manager_rate_function = _extract_js_function(
+                manager_source, 'set_playlist_manager_refresh_rate')
+        except ValueError as exc:
+            errors.append('Smooth-scroll refresh-rate runtime setup failed: ' + str(exc))
+        else:
+            smooth_scroll_rate_smoke = f"""
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    let savedProperties = [];
+    let repaintRestarts = 0;
+    let repaintRequestArgs = [];
+    let frameCreates = 0;
+    let frameReschedules = 0;
+    let frameRequests = 0;
+    let frameStops = 0;
+    let repaints = 0;
+    let smoothTicks = 0;
+    let freeTicks = 0;
+    let listRebuilds = 0;
+    let createdFrames = [];
+    var need_repaint = false;
+    var g_repaint_scheduler = {{request(delay) {{ repaintRequestArgs.push(delay); }}}};
+    function newFrame(options) {{
+        let running = false;
+        const frame = {{
+            options: options || null,
+            request() {{ running = true; frameRequests++; }},
+            reschedule() {{ frameReschedules++; }},
+            stop() {{ running = false; frameStops++; }},
+            isRunning() {{ return running; }}
+        }};
+        return frame;
+    }}
+    var DarkOnePerformance = {{createFrameLoop(host, options) {{
+        frameCreates++;
+        const frame = newFrame(options);
+        createdFrames.push(frame);
+        return frame;
+    }}}};
+    var window = {{
+        IsVisible: true,
+        Repaint() {{ repaints++; }},
+        SetProperty(name, value) {{ savedProperties.push([name, value]); }}
+    }};
+    var properties = {{smoothscrolling: true}};
+    var cRow = {{playlist_h: 20}};
+    var cList = {{
+        repaint_interval: 8,
+        scroll_timer: true,
+        free_scroll_timer: false,
+        scroll_delta: 20,
+        free_scroll_position: 0,
+        free_scroll_target: 0,
+        free_scroll_offset: 0,
+        free_scroll_active: false,
+        scrollbar_drag_active: false,
+        scrollbar_drag_snap: true,
+        scrollbar_drag_position: 0,
+        scrollbar_drag_target: 0,
+        scrollbar_drag_last_tick: 0
+    }};
+    var cScrollBar = {{timerID: false}};
+    var p = {{
+        list: {{
+            offset: 0,
+            totalRows: 200,
+            totalRowVisible: 10,
+            setItems() {{ listRebuilds++; }}
+        }},
+        scrollbar: {{setCursor() {{}}}}
+    }};
+    var g_playlist_scroll_frame = newFrame();
+    var g_playlist_scrollbar_drag_frame = null;
+    var g_playlist_scroll_frame_in_tick = false;
+    function smooth_scroll_tick() {{ smoothTicks++; need_repaint = true; cList.scroll_timer = false; }}
+    function free_wheel_scroll_tick() {{ freeTicks++; need_repaint = true; cList.free_scroll_timer = false; }}
+    function start_repaint_timer() {{ repaintRestarts++; }}
+    {playlist_rate_functions}
+    assert(set_playlist_refresh_interval(16) === true, 'JS Playlist rate setter did not report a change');
+    assert(cList.repaint_interval === 16, 'JS Playlist live rate was not updated');
+    assert(savedProperties.length === 1 && savedProperties[0][0] === 'JSPLAYLIST.UI Refresh Interval (ms)' && savedProperties[0][1] === 16,
+        'JS Playlist rate was not persisted');
+    assert(frameReschedules === 1, 'JS Playlist active frame loop was not rescheduled');
+    assert(repaintRestarts === 1, 'JS Playlist repaint scheduler was not rescheduled');
+    assert(set_playlist_refresh_interval(16) === false, 'JS Playlist unchanged rate was not ignored');
+
+    full_repaint();
+    assert(need_repaint === true, 'JS Playlist full_repaint did not mark a pending paint');
+    assert(repaintRequestArgs.length === 1 && repaintRequestArgs[0] === undefined,
+        'JS Playlist full_repaint bypassed the configured repaint interval');
+
+    need_repaint = false;
+    g_playlist_scroll_frame_in_tick = false;
+    repaint_scroll_frame();
+    assert(need_repaint === true && repaintRequestArgs.length === 2,
+        'JS Playlist outside-frame repaint was not coalesced through the interval-aware scheduler');
+
+    need_repaint = false;
+    cList.scroll_timer = true;
+    cList.free_scroll_timer = false;
+    assert(playlist_scroll_frame_tick() === false, 'JS Playlist completed row frame stayed active');
+    assert(smoothTicks === 1 && freeTicks === 0 && repaints === 1,
+        'JS Playlist row animation frame did not update and repaint directly');
+    assert(repaintRequestArgs.length === 2,
+        'JS Playlist animation frame incorrectly scheduled a second repaint timer');
+
+    cList.scroll_timer = false;
+    cList.free_scroll_timer = true;
+    assert(playlist_scroll_frame_tick() === false, 'JS Playlist completed free-scroll frame stayed active');
+    assert(freeTicks === 1 && repaints === 2,
+        'JS Playlist free-scroll frame did not update and repaint directly');
+
+    // Simulate mouse-position updates arriving every 16 ms. At an 8 ms
+    // refresh rate the drag loop must render an intermediate frame; at 16 ms
+    // it renders one frame over the same elapsed time. Both paths should reach
+    // the same time-based position after 16 ms.
+    let fakeNow = 0;
+    Date.now = function () {{ return fakeNow; }};
+    properties.smoothscrolling = true;
+    cList.scroll_timer = false;
+    cList.free_scroll_timer = false;
+    cList.repaint_interval = 8;
+    p.list.offset = 0;
+    cList.free_scroll_position = 0;
+    cList.free_scroll_active = false;
+    begin_playlist_scrollbar_drag(true);
+    update_playlist_scrollbar_drag(200, true);
+    assert(g_playlist_scrollbar_drag_frame && g_playlist_scrollbar_drag_frame.isRunning(),
+        'JS Playlist scrollbar drag did not start its demand-driven frame loop');
+    const repaintBefore8 = repaints;
+    fakeNow = 8;
+    assert(playlist_scrollbar_drag_frame_tick() === true,
+        'JS Playlist 8 ms scrollbar drag stopped before reaching its target');
+    const positionAfter8 = cList.scrollbar_drag_position;
+    fakeNow = 16;
+    assert(playlist_scrollbar_drag_frame_tick() === true,
+        'JS Playlist 8 ms scrollbar drag stopped on its second intermediate frame');
+    const positionAfter16At8 = cList.scrollbar_drag_position;
+    assert(repaints === repaintBefore8 + 2 && positionAfter8 > 0 && positionAfter8 < positionAfter16At8,
+        'JS Playlist 8 ms scrollbar drag did not render two distinct intermediate positions');
+    cancel_playlist_scrollbar_drag();
+
+    cList.repaint_interval = 16;
+    p.list.offset = 0;
+    cList.free_scroll_position = 0;
+    cList.free_scroll_offset = 0;
+    cList.free_scroll_active = false;
+    fakeNow = 0;
+    begin_playlist_scrollbar_drag(true);
+    update_playlist_scrollbar_drag(200, true);
+    const repaintBefore16 = repaints;
+    fakeNow = 16;
+    assert(playlist_scrollbar_drag_frame_tick() === true,
+        'JS Playlist 16 ms scrollbar drag stopped before reaching its target');
+    const positionAfter16At16 = cList.scrollbar_drag_position;
+    assert(repaints === repaintBefore16 + 1,
+        'JS Playlist 16 ms scrollbar drag rendered more than one frame over 16 ms');
+    assert(Math.abs(positionAfter16At8 - positionAfter16At16) < 0.01,
+        'JS Playlist scrollbar drag response speed changed with refresh rate');
+
+    finish_playlist_scrollbar_drag(200, true);
+    assert(cList.scrollbar_drag_active === false && p.list.offset === 10 &&
+        cList.free_scroll_offset === 0 && cList.free_scroll_active === false,
+        'JS Playlist snapped scrollbar drag did not flush the exact final row');
+
+    properties.smoothscrolling = false;
+    p.list.offset = 0;
+    cList.free_scroll_position = 0;
+    cList.free_scroll_offset = 0;
+    cList.free_scroll_active = false;
+    begin_playlist_scrollbar_drag(false);
+    const directRepaintBase = repaints;
+    update_playlist_scrollbar_drag(205, false);
+    assert(cList.scrollbar_drag_position === 205 && p.list.offset === 10 &&
+        cList.free_scroll_offset === 5 && repaints === directRepaintBase + 1,
+        'JS Playlist non-smooth scrollbar drag did not apply directly');
+    finish_playlist_scrollbar_drag(205, false);
+    assert(cList.free_scroll_active === true && cList.free_scroll_offset === 5,
+        'JS Playlist unsnapped scrollbar drag did not preserve its final pixel offset');
+    cancel_playlist_scrollbar_drag();
+
+    g_playlist_scroll_frame = null;
+    cList.scroll_timer = false;
+    cList.free_scroll_timer = false;
+    const frameCreatesBeforeRow = frameCreates;
+    const frameRequestsBeforeRow = frameRequests;
+    start_smooth_scroll_timer();
+    assert(cList.scroll_timer === true && frameCreates === frameCreatesBeforeRow + 1 &&
+        frameRequests === frameRequestsBeforeRow + 1,
+        'JS Playlist row scrolling did not start the shared demand-driven frame loop');
+    stop_smooth_scroll();
+    assert(cList.scroll_timer === false, 'JS Playlist row scrolling did not stop cleanly');
+
+    function clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }}
+    var ppt = {{refreshRate: 8}};
+    var scroll = 100;
+    var scroll_ = 0;
+    var need_repaint = false;
+    cScrollBar = {{timerID: false, repaint_timeout: false}};
+    var timers = {{movePlaylist: false}};
+    let managerReschedules = 0;
+    let managerRequests = 0;
+    var g_playlist_manager_frame = {{
+        reschedule() {{ managerReschedules++; }},
+        request() {{ managerRequests++; }}
+    }};
+    savedProperties = [];
+    {manager_rate_function}
+    assert(set_playlist_manager_refresh_rate(16) === true, 'Playlist Manager rate setter did not report a change');
+    assert(ppt.refreshRate === 16, 'Playlist Manager live rate was not updated');
+    assert(savedProperties.length === 1 && savedProperties[0][0] === 'SMOOTH.UI.REFRESH.INTERVAL.MS' && savedProperties[0][1] === 16,
+        'Playlist Manager rate was not persisted');
+    assert(managerReschedules === 1 && managerRequests === 1,
+        'Playlist Manager active frame loop was not rescheduled and requested');
+    assert(set_playlist_manager_refresh_rate(16) === false, 'Playlist Manager unchanged rate was not ignored');
+    """
+            result = subprocess.run([node, '-e', smooth_scroll_rate_smoke], capture_output=True, text=True)
+            if result.returncode:
+                errors.append('Smooth-scroll refresh-rate runtime smoke test failed: ' +
+                              (result.stdout + result.stderr).strip())
+
+        # Exercise JS Playlist title-format caching, invalidation and volatile-pattern safety.
+        playlist_cache_smoke = f"""
+    const fs = require('fs');
+    const source = fs.readFileSync({json.dumps(str(samples / 'jsplaylist' / 'render_cache.js'))}, 'utf8');
+    let evaluations = 0;
+    let evaluatedPatterns = [];
+    function get_tfo(pattern) {{
+        return {{EvalActivePlaylistItem: function(index) {{
+            evaluations++;
+            evaluatedPatterns.push(pattern);
+            return pattern + ':' + index;
+        }}}};
+    }}
+    const Cache = new Function('get_tfo', source + '\\nreturn DarkOnePlaylistRenderCache;')(get_tfo);
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    let nowMs = 1000000;
+    const cache = new Cache({{enabled: true, maxEntries: 64, now() {{ return nowMs; }}}});
+    assert(cache.configure('A', 'B', true) === true, 'Initial cache configuration was not applied');
+    let first = cache.getConfigured(4, false);
+    let initialEvaluations = evaluations;
+    assert(cache.configure('A', 'B', true) === false, 'Unchanged cache configuration was rebuilt');
+    let second = cache.getConfigured(4, false);
+    assert(first === second && evaluations === initialEvaluations, 'Cached row was reevaluated');
+    cache.invalidate(4);
+    cache.getConfigured(4, false);
+    assert(evaluations > initialEvaluations, 'Row invalidation did not force reevaluation');
+    const sizeBeforeAbsentInvalidate = cache.stats().size;
+    assert(cache.invalidate(9999) === false && cache.stats().size === sizeBeforeAbsentInvalidate,
+        'Absent-row invalidation disturbed the cache');
+    const afterInvalidate = evaluations;
+    cache.get(4, 'C', 'B', true, false);
+    assert(evaluations > afterInvalidate, 'Pattern change did not invalidate the cache');
+    cache.get(5, 'C', 'B', true, false);
+    const changedHandle = {{id: 5}};
+    const activeHandles = {{GetItem(index) {{ return {{id: index}}; }}}};
+    const changedHandles = {{Find(handle) {{ return handle.id === changedHandle.id ? 0 : -1; }}}};
+    assert(cache.invalidateHandles(changedHandles, activeHandles) === 1,
+        'Handle-based metadata invalidation did not target the changed cached row');
+    cache.configure('%isplaying%', '', false);
+    assert(cache.requiresCurrentRefresh(), 'Playing-row volatility was not detected');
+
+    cache.configure('$year(%date%)', '', false);
+    assert(!cache.stats().globalClockDynamic,
+        'Stable date formatting was incorrectly classified as a live clock field');
+
+    evaluations = 0;
+    cache.configure('STATIC^^$now()', '', false);
+    const clockFirst = cache.getConfigured(1, false);
+    const clockAfterFirst = evaluations;
+    const clockSecond = cache.getConfigured(1, false);
+    assert(clockFirst === clockSecond && evaluations === clockAfterFirst,
+        'Clock overlay was reevaluated more than once in the same second');
+    nowMs += 1000;
+    const clockThird = cache.getConfigured(1, false);
+    assert(clockThird.primary[0] === clockFirst.primary[0] && evaluations === clockAfterFirst + 1 &&
+        cache.stats().dynamicHits >= 1,
+        'Clock field was not refreshed once over the cached static row');
+
+    evaluations = 0;
+    cache.configure('STATIC^^%isplaying%', '', false);
+    const playingFirst = cache.getConfigured(7, true, 10);
+    const playingAfterFirst = evaluations;
+    const playingSecond = cache.getConfigured(7, true, 10);
+    assert(playingFirst === playingSecond && evaluations === playingAfterFirst,
+        'Playing-row values were reevaluated within one playback generation');
+    const playingThird = cache.getConfigured(7, true, 11);
+    assert(playingThird.primary[0] === playingFirst.primary[0] && evaluations === playingAfterFirst + 1,
+        'Playing-row dynamic field did not refresh for the next playback generation');
+    const nonPlayingFirst = cache.getConfigured(8, false);
+    const nonPlayingAfterFirst = evaluations;
+    const nonPlayingSecond = cache.getConfigured(8, false);
+    assert(nonPlayingFirst === nonPlayingSecond && evaluations === nonPlayingAfterFirst,
+        'Non-playing row with a playback field did not remain cached');
+
+    evaluations = 0;
+    evaluatedPatterns = [];
+    const coupledPattern = '$puts(shared,STATIC)^^$if(%isplaying%,$get(shared),OFF)';
+    cache.configure(coupledPattern, '', false);
+    cache.getConfigured(7, true, 20);
+    const coupledFirst = evaluations;
+    cache.getConfigured(7, true, 20);
+    assert(evaluations === coupledFirst, 'Coupled dynamic row ignored its playback generation cache');
+    cache.getConfigured(7, true, 21);
+    assert(evaluations === coupledFirst + 1 && evaluatedPatterns[evaluatedPatterns.length - 1] === coupledPattern &&
+        cache.stats().coupledDynamic,
+        'Cross-column $puts/$get state was not preserved during a dynamic refresh');
+
+    for (let i = 0; i < 80; i++) cache.get(i, 'STATIC', '', false, false);
+    assert(cache.stats().size <= 64, 'Render cache did not honour its entry limit');
+
+    evaluations = 0;
+    const frameCache = new Cache({{enabled: true, maxEntries: 128, now() {{ return 2000000; }}}});
+    frameCache.configure('%title%^^%isplaying%', '%artist%', true);
+    for (let frame = 0; frame < 120; frame++) {{
+        const generation = Math.floor(frame / 60);
+        for (let row = 0; row < 40; row++) frameCache.getConfigured(row, row === 7, generation);
+    }}
+    const frameStats = frameCache.stats();
+    assert(evaluations < 300 && frameStats.hits > 4000 && frameStats.dynamicEvaluations === 2 &&
+        frameStats.dynamicHits >= 118,
+        'Visible-row cache did not substantially reduce repeated title-format evaluation');
+    """
+        result = subprocess.run([node, '-e', playlist_cache_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('JS Playlist render-cache runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
 
         # Exercise the shared colour conversions, declarative menu mapping and
         # host-specific picker cancellation/fallback behaviour.
@@ -428,15 +921,18 @@ def run(ctx: ValidationContext) -> None:
         display_accent_smoke = f"""
     const fs = require('fs');
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+    const performanceSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'performance_utils.js'))}, 'utf8');
     let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
     const start = source.indexOf('function DisplaySystem()');
     if (start < 0) throw new Error('DisplaySystem constructor not found');
     source = source.slice(0,  source.indexOf('// ----- BASE IMAGE OBJECT -----')) + '\\n' + source.slice(start);
     const properties = new Map();
+    let repaints = 0;
     const windowMock = {{
         GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
         SetProperty(name, value) {{ properties.set(name, value); }},
-        GetColourCUI(index) {{ return index === 4 ? 0xff556677 : 0xff112233; }}
+        GetColourCUI(index) {{ return index === 4 ? 0xff556677 : 0xff112233; }},
+        Repaint() {{ repaints++; }}
     }};
     const noopImage = {{ Dispose(){{}}, GetGraphics(){{return {{}};}}, ReleaseGraphics(){{}}, Width:1, Height:1 }};
     const factory = new Function('window','fb','safeGdiImage','utils','disposeImage','combColours','p_backcol','ui_btntxtcol',
@@ -444,7 +940,7 @@ def run(ctx: ValidationContext) -> None:
         'tf_display_tracknumber_exists','tf_display_totaltracks_exists','tf_display_tracknumber','tf_display_totaltracks','tf_display_bitrate',
         'imgPath','DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL',
         'darkOneCreateFont','evalTitleFormat','TimeFmt','pad','pad_right','clearPanelTimer','section',
-        colourSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
+        colourSource + '\\n' + performanceSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
     const api = factory(windowMock, {{IsPlaying:false, PlaybackLength:0, PlaybackTime:0}}, function(){{return null;}},
         {{CreateImage(){{return noopImage;}}}}, function(){{}}, function(){{return 0xff000000;}}, 0xff000000, 0xffffffff,
         '', '', '', '', '', '', '', '', '', '', '', '', 900, 400, function(){{return {{}};}}, function(){{return ''; }}, function(){{return ''; }},
@@ -459,6 +955,18 @@ def run(ctx: ValidationContext) -> None:
     display.setAccent(2);
     if (display.accent_mode !== 2 || (display.active_colour >>> 0) !== 0xff556677)
         throw new Error('Display accent does not follow Columns UI selected-item background');
+    let rebuilt = 0;
+    let initialised = 0;
+    display.InitImages = function() {{ rebuilt++; }};
+    display.init = function() {{ initialised++; }};
+    if (display.setDisplayStyle(1) !== true || display.display_style !== 1 || properties.get('Display Style') !== 1)
+        throw new Error('Dot Matrix display style was not activated and persisted');
+    if (rebuilt !== 1 || initialised !== 1 || repaints !== 1)
+        throw new Error('Display style change did not rebuild, initialise and repaint exactly once');
+    if (display.setDisplayStyle(1) !== false || rebuilt !== 1 || initialised !== 1 || repaints !== 1)
+        throw new Error('Redundant display style selection performed unnecessary work');
+    if (display.setDisplayStyle(0) !== true || display.display_style !== 0 || properties.get('Display Style') !== 0)
+        throw new Error('Plain Font display style was not restored');
     """
         result = subprocess.run([node, '-e', display_accent_smoke], capture_output=True, text=True)
         if result.returncode:
