@@ -90,6 +90,7 @@ function on_volume_change(val) {
 }
 
 function on_notify_data(name, info) {
+	if (darkOneDisplayVolumeCadence && darkOneDisplayVolumeCadence.handleNotification(name, info)) return;
 	if (darkOneHandleResetNotification(name, info)) return;
 	if (typeof darkOneHandleNotify == 'function') {
 		var change = darkOneHandleNotify(name, info);

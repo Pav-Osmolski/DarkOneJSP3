@@ -984,6 +984,8 @@ function on_playlists_changed() {
 }
 
 function on_script_unload() {
+	if (g_js_playlist_cadence_reporter) g_js_playlist_cadence_reporter.dispose();
+
 	function clearTimer(id) {
 		if (id) {
 			try { window.ClearTimeout(id); } catch (e) {}
@@ -1591,17 +1593,24 @@ function reschedule_active_playlist_scroll_timers() {
 		g_playlist_scroll_frame.request();
 }
 
-function set_playlist_refresh_interval(value) {
+function apply_playlist_refresh_interval(value) {
 	value = Math.max(7, Math.min(40, Math.round(Number(value)) || 8));
 	if (cList.repaint_interval == value) return false;
 
 	cList.repaint_interval = value;
-	window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", cList.repaint_interval);
+	if (typeof g_js_playlist_cadence_reporter != "undefined" && g_js_playlist_cadence_reporter)
+		g_js_playlist_cadence_reporter.announce();
 	start_repaint_timer();
 	reschedule_active_playlist_scroll_timers();
 	if (g_playlist_scrollbar_drag_frame && g_playlist_scrollbar_drag_frame.isRunning())
 		g_playlist_scrollbar_drag_frame.reschedule();
 	return true;
+}
+
+function set_playlist_refresh_interval(value) {
+	value = Math.max(7, Math.min(40, Math.round(Number(value)) || 8));
+	window.SetProperty("JSPLAYLIST.UI Refresh Interval (ms)", value);
+	return apply_playlist_refresh_interval(value);
 }
 
 function start_repaint_timer() {
@@ -2033,5 +2042,10 @@ var columns = {
 	rating_x : 0,
 	rating_w : 0,
 };
+
+var g_js_playlist_cadence_reporter = DarkOneUiCadence.createSourceReporter(window, {
+	source: DarkOneUiCadence.sources.jsPlaylist,
+	getInterval: function () { return cList.repaint_interval; }
+});
 
 init();

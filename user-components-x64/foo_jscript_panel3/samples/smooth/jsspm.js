@@ -936,14 +936,14 @@ function oBrowser() {
 		sub3.AppendMenuItem(CheckMenuIf(ppt.rememberManagerScrollPosition), 30, "Remember manager scroll position");
 		sub3.AppendMenuItem(CheckMenuIf(ppt.autoShowActivePlaylist), 31, "Keep active playlist visible");
 		sub3.AppendMenuSeparator();
-		sub3.AppendMenuItem(MF_STRING, 32, "8 ms refresh (120/144 Hz)");
-		sub3.AppendMenuItem(MF_STRING, 33, "10 ms refresh (100 Hz)");
-		sub3.AppendMenuItem(MF_STRING, 34, "12 ms refresh (80 Hz)");
-		sub3.AppendMenuItem(MF_STRING, 35, "16 ms refresh (60 Hz)");
-		sub3.CheckMenuRadioItem(32, 35, ppt.refreshRate <= 8 ? 32 : ppt.refreshRate <= 10 ? 33 : ppt.refreshRate <= 12 ? 34 : 35);
+		sub3.AppendMenuItem(CheckMenuIf(ppt.refreshRate == 8), 33, "8 ms refresh (120/144 Hz)");
+		sub3.AppendMenuItem(CheckMenuIf(ppt.refreshRate == 10), 34, "10 ms refresh (100 Hz)");
+		sub3.AppendMenuItem(CheckMenuIf(ppt.refreshRate == 12), 35, "12 ms refresh (80 Hz)");
+		sub3.AppendMenuItem(CheckMenuIf(ppt.refreshRate == 16), 36, "16 ms refresh (60 Hz)");
+		sub3.AppendMenuItem(MF_STRING, 37, "Set custom refresh interval...");
 		sub3.AppendMenuSeparator();
-		sub3.AppendMenuItem(MF_STRING, 36, "Set smoothness...");
-		sub3.AppendMenuItem(MF_STRING, 37, "Set wheel row step...");
+		sub3.AppendMenuItem(MF_STRING, 38, "Set smoothness...");
+		sub3.AppendMenuItem(MF_STRING, 39, "Set wheel row step...");
 		sub3.AppendTo(menu, MF_STRING, "DarkOneJSP3 smooth scrolling");
 
 		sub4.AppendMenuItem(MF_STRING, 40, "Compact / DarkOne2021 (26)");
@@ -1043,16 +1043,22 @@ function oBrowser() {
 			ppt.autoShowActivePlaylist = !ppt.autoShowActivePlaylist;
 			window.SetProperty("SMOOTH.PLAYLIST.MANAGER.AUTO.SHOW.ACTIVE", ppt.autoShowActivePlaylist);
 			break;
-		case 32:
 		case 33:
 		case 34:
 		case 35:
-			set_playlist_manager_refresh_rate([8, 10, 12, 16][idx - 32]);
-			break;
 		case 36:
-			try { var sm = Number(utils.InputBox('Lower is snappier; higher is smoother. Suggested range: 1.25 to 6.', window.Name, ppt.scrollSmoothness)); if (!isNaN(sm)) { window.SetProperty("SMOOTH.SCROLL.SMOOTHNESS", clamp(sm, 1.25, 10)); window.Reload(); } } catch (e) {}
+			set_playlist_manager_refresh_rate([8, 10, 12, 16][idx - 33]);
 			break;
 		case 37:
+			try {
+				var refresh_ms = Number(utils.InputBox('Enter a refresh interval from 8 to 40 milliseconds. Lower values are smoother but use more CPU.', window.Name, ppt.refreshRate));
+				if (!isNaN(refresh_ms)) set_playlist_manager_refresh_rate(refresh_ms);
+			} catch (e) {}
+			break;
+		case 38:
+			try { var sm = Number(utils.InputBox('Lower is snappier; higher is smoother. Suggested range: 1.25 to 6.', window.Name, ppt.scrollSmoothness)); if (!isNaN(sm)) { window.SetProperty("SMOOTH.SCROLL.SMOOTHNESS", clamp(sm, 1.25, 10)); window.Reload(); } } catch (e) {}
+			break;
+		case 39:
 			try { var rs = Number(utils.InputBox('Mouse-wheel row step. Suggested range: 1 to 10.', window.Name, ppt.rowScrollStep)); if (!isNaN(rs)) { window.SetProperty("SMOOTH.ROW.SCROLL.STEP", clamp(Math.round(rs), 1, 10)); window.Reload(); } } catch (e) {}
 			break;
 		case 40:
@@ -1197,12 +1203,13 @@ var cPlaylistManager = {
 }
 
 
-function set_playlist_manager_refresh_rate(value) {
+function apply_playlist_manager_refresh_rate(value) {
 	value = clamp(Math.round(Number(value)) || 8, 8, 40);
 	if (ppt.refreshRate == value) return false;
 
 	ppt.refreshRate = value;
-	window.SetProperty("SMOOTH.UI.REFRESH.INTERVAL.MS", ppt.refreshRate);
+	if (typeof g_playlist_manager_cadence_reporter != "undefined" && g_playlist_manager_cadence_reporter)
+		g_playlist_manager_cadence_reporter.announce();
 
 	if (g_playlist_manager_frame) {
 		g_playlist_manager_frame.reschedule();
@@ -1211,6 +1218,12 @@ function set_playlist_manager_refresh_rate(value) {
 		}
 	}
 	return true;
+}
+
+function set_playlist_manager_refresh_rate(value) {
+	value = clamp(Math.round(Number(value)) || 8, 8, 40);
+	window.SetProperty("SMOOTH.UI.REFRESH.INTERVAL.MS", value);
+	return apply_playlist_manager_refresh_rate(value);
 }
 
 function playlist_manager_frame_tick() {
@@ -1252,6 +1265,10 @@ var g_playlist_manager_profiler = DarkOnePerformance.createProfiler(
 	"DarkOneJSP3 Playlist Manager paint",
 	120
 );
+var g_playlist_manager_cadence_reporter = DarkOneUiCadence.createSourceReporter(window, {
+	source: DarkOneUiCadence.sources.playlistManager,
+	getInterval: function () { return ppt.refreshRate; }
+});
 
 var timers = {
 	movePlaylist: false,
@@ -1303,6 +1320,7 @@ function clearPlaylistManagerTimers() {
 }
 
 function on_script_unload() {
+	if (g_playlist_manager_cadence_reporter) g_playlist_manager_cadence_reporter.dispose();
 	if (brw) brw.saveScrollPosition(true);
 	clearPlaylistManagerTimers();
 	if (g_filterbox) g_filterbox.dispose();

@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "Smooth Playlist Manager - DarkOneJSP3 Enhanced"
-// @version "0.5.1"
+// @version "0.5.4"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\ui_cadence.js"
 // @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
 // @import "%fb2k_component_path%samples\smooth\common.js"
 // @import "%fb2k_component_path%samples\smooth\inputbox.js"
@@ -19,6 +20,9 @@
 // row-spacing, row-aware scroll-state and optional alternating-row shading.
 // Rendering is demand-driven while idle; playlist type/lock flags are cached.
 
+g_playlist_manager_cadence_reporter.start();
+
 function on_notify_data(name, info) {
+    if (g_playlist_manager_cadence_reporter && g_playlist_manager_cadence_reporter.handleNotification(name, info)) return;
     darkOneJsp3HandleSampleReset(name, info, "playlist-manager");
 }

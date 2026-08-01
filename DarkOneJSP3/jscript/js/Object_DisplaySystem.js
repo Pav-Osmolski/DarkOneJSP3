@@ -1,6 +1,14 @@
 // =========================================================================================================
-// DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0617
+// DisplaySystem Object - v2.0build20191007-jscript-panel3-phase2-v0618
 // =========================================================================================================
+
+var darkOneDisplayVolumeCadence = DarkOneUiCadence.createVolumeFollower(window, {
+	fallback: 16,
+	onChange: function() {
+		if (typeof display_system != "undefined" && display_system && typeof display_system.onVolumeCadenceChanged == "function")
+			display_system.onVolumeCadenceChanged();
+	}
+});
 
 var g_matrix_source = safeGdiImage(imgPath + "dot_matrix.png");
 var g_icons_source = safeGdiImage(imgPath + "sac_pbo.png");
@@ -202,43 +210,6 @@ function BitrateImage() {
 	}
 }
 
-// ----- CREATE VOLUME IMAGE -----
-function VolumeImage() {
-	BaseImage.call(this);
-	this.image = utils.CreateImage(504, 60);
-
-	this.init = function(volume) {
-		var self = this;
-		darkOneUseImageGraphics(this.image, function (gr) {
-			for (var i = 0; i < 6; i++) self.drawDigit(gr, volume, i < 4 ? i : i + 1, i < 4 ? 0 : -36);
-			display_system.drawMatrixSpriteToImage(gr, 216, 0, 18, 60, 720, 18, 60);
-			display_system.drawMatrixSpriteToImage(gr, 342, 0, 54, 60, 648, 54, 60);
-			display_system.drawMatrixSpriteToImage(gr, 396, 0, 108, 60, 792, 108, 60);
-		});
-		this.curVal = volume;
-		this.commitBitmap();
-	};
-
-	this.draw = function(volume) {
-		if (this.curVal != volume) this.init(volume);
-	}
-
-	this.drawDigit = function(gr, volume, index, offset) {
-		var digitValue = volume.charAt(index);
-
-		if (this.isDrawDigit(digitValue, index)) {
-			var xoffset = index * 54 + offset;
-			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue == "-" ? 738 : digitValue * 54, 54, 60);
-		}
-	}
-}
-
-darkOneInheritImage(NumImage);
-darkOneInheritImage(TimeImage);
-darkOneInheritImage(BitrateImage);
-darkOneInheritImage(VolumeImage);
-
 // ----- TITLE-FORMAT CACHE -----
 var tf_display_lossless = fb.TitleFormat("$if($stricmp(%__encoding%,lossless),1)");
 var tf_display_lossy = fb.TitleFormat("$if($not($stricmp(%__encoding%,lossless)),1)");
@@ -275,7 +246,19 @@ var DARKONE_DISPLAY_VALUE_LABELS = ["TRACK", "TOTAL", "TIME", "VOLUME", "KBPS"];
 
 function DisplaySystem() {
 	this.display_style = window.GetProperty("Display Style", 0);
-	var t_rem = window.GetProperty("Remain Time on", false), v_timer = null, v_change = false;
+	var t_rem = window.GetProperty("Remain Time on", false), v_change = false;
+	var self = this;
+	var volume_repaint = DarkOnePerformance.createRepaintScheduler(window, {
+		getDelay: function() { return darkOneDisplayVolumeCadence.getInterval(); },
+		repaint: function() { self.repaint(section.vol); }
+	});
+	var volume_change_deadline = DarkOnePerformance.createTrailingDeadline(window, {
+		delay: 3000,
+		onExpire: function() {
+			v_change = false;
+			self.repaint(section.vol);
+		}
+	});
 
 	this.initPos = function() {
 		this.x = 0;
@@ -381,6 +364,23 @@ function DisplaySystem() {
 		gr.DrawImage(this.matrix_source_image, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
 	};
 
+	this.drawVolumeMatrix = function(gr, volume) {
+		var text = pad_right(volume, 10);
+		var base_x = this.x + this.pxSize * 204;
+		var unit = this.pxSize / 3;
+		for (var i = 0; i < 6; i++) {
+			var index = i < 4 ? i : i + 1;
+			var offset = i < 4 ? 0 : -36;
+			var xoffset = index * 54 + offset;
+			var digit = text.charAt(index);
+			var source_x = digit == " " ? 648 : digit == "-" ? 738 : Number(digit) * 54;
+			if (!isFinite(source_x)) source_x = 648;
+			this.drawMatrixSprite(gr, base_x + xoffset * unit, this.img_y, 54 * unit, this.img_h, source_x, 54, 60);
+		}
+		this.drawMatrixSprite(gr, base_x + 216 * unit, this.img_y, 18 * unit, this.img_h, 720, 18, 60);
+		this.drawMatrixSprite(gr, base_x + 396 * unit, this.img_y, 108 * unit, this.img_h, 792, 108, 60);
+	};
+
 	this.drawStatusIcon = function(gr, dx, dy, dw, dh, sx, active) {
 		var bitmap = active ? this.icon_bitmap : g_icons;
 		if (!bitmap) return;
@@ -457,7 +457,6 @@ function DisplaySystem() {
 			this.images[1] = new NumImage();
 			this.images[2] = new TimeImage();
 			this.images[3] = new BitrateImage();
-			this.images[4] = new VolumeImage();
 		}
 	};
 
@@ -572,9 +571,7 @@ function DisplaySystem() {
 			}
 
 			if (v_change) {
-				var f = fb.Volume.toFixed(2) + " db";
-				this.images[4].draw(pad_right(f, 10));
-				this.images[4].paint(gr, this.x + this.pxSize * 204, this.img_y, this.pxSize * 168, this.img_h);
+				this.drawVolumeMatrix(gr, fb.Volume.toFixed(2) + " db");
 			} else {
 				if (fb.IsPlaying) {
 					var g = t_rem && fb.PlaybackLength < 0 ? false : true;
@@ -611,14 +608,13 @@ function DisplaySystem() {
 	}
 
 	this.VolumeChange = function(val) {
-		v_timer = clearPanelTimer(v_timer);
-		v_timer = window.SetTimeout(function () {
-			display_system.repaint(section.vol);
-			v_timer = clearPanelTimer(v_timer);
-			v_change = false;
-		}, 3000);
 		v_change = true;
-		this.repaint(section.vol);
+		volume_change_deadline.touch();
+		volume_repaint.request();
+	}
+
+	this.onVolumeCadenceChanged = function() {
+		volume_repaint.reschedule();
 	}
 
 	this.NotifyData = function(name, info) {
@@ -660,7 +656,9 @@ function DisplaySystem() {
 	}
 
 	this.onUnload = function() {
-		v_timer = clearPanelTimer(v_timer);
+		darkOneDisplayVolumeCadence.dispose();
+		volume_change_deadline.cancel();
+		volume_repaint.cancel();
 		if (this.images) for (var i = 0; i < this.images.length; i++) if (this.images[i]) this.images[i].dispose();
 		this.images = [];
 		this.font_arial = null;

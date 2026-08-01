@@ -1,12 +1,12 @@
 /*
  * DarkOneJSP3 shared performance helpers
- * Version: 0.1.1
+ * Version: 0.1.3
  *
  * Host-neutral utilities for demand-driven repaint scheduling, animation
  * frames, Direct2D bitmap conversion and lightweight optional profiling.
  */
 
-var DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.1";
+var DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.3";
 
 var DarkOnePerformance = (function () {
     "use strict";
@@ -172,6 +172,123 @@ var DarkOnePerformance = (function () {
         };
     }
 
+    function createValueCoalescer(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var pending = false;
+        var pendingValue = null;
+        var lastAppliedAt = -Infinity;
+
+        function now() {
+            var value = typeof options.now === "function" ? options.now() : Date.now();
+            value = Number(value);
+            return isFinite(value) ? value : Date.now();
+        }
+
+        function getDelay() {
+            var value = typeof options.getDelay === "function" ? options.getDelay() : options.delay;
+            return positiveInteger(value, 16);
+        }
+
+        function applyPending() {
+            timer = false;
+            if (!pending) return false;
+
+            var value = pendingValue;
+            pending = false;
+            pendingValue = null;
+            lastAppliedAt = now();
+            if (typeof options.apply === "function") options.apply(value);
+            return true;
+        }
+
+        function schedule() {
+            if (timer || !pending) return;
+            var elapsed = now() - lastAppliedAt;
+            var wait = Math.max(0, getDelay() - elapsed);
+            if (wait <= 0) {
+                applyPending();
+            } else {
+                timer = hostWindow.SetTimeout(applyPending, wait);
+            }
+        }
+
+        return {
+            request: function (value) {
+                pendingValue = value;
+                pending = true;
+                schedule();
+            },
+            flush: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                return applyPending();
+            },
+            reschedule: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                if (pending) schedule();
+            },
+            cancel: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                pending = false;
+                pendingValue = null;
+            },
+            isPending: function () {
+                return pending || !!timer;
+            }
+        };
+    }
+
+    function createTrailingDeadline(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var deadline = 0;
+
+        function now() {
+            var value = typeof options.now === "function" ? options.now() : Date.now();
+            value = Number(value);
+            return isFinite(value) ? value : Date.now();
+        }
+
+        function getDelay(value) {
+            return positiveInteger(value, positiveInteger(options.delay, 3000));
+        }
+
+        function schedule(wait) {
+            if (timer) return;
+            timer = hostWindow.SetTimeout(run, Math.max(1, Math.round(wait)));
+        }
+
+        function run() {
+            timer = false;
+            var remaining = deadline - now();
+            if (remaining > 0) {
+                schedule(remaining);
+                return;
+            }
+            deadline = 0;
+            if (typeof options.onExpire === "function") options.onExpire();
+        }
+
+        return {
+            touch: function (delay) {
+                var duration = getDelay(delay);
+                deadline = now() + duration;
+                if (!timer) schedule(duration);
+            },
+            cancel: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                deadline = 0;
+            },
+            isPending: function () {
+                return !!timer || deadline > 0;
+            }
+        };
+    }
+
     function createProfiler(utilsObject, enabled, name, sampleSize) {
         if (!enabled || !utilsObject) return null;
 
@@ -219,6 +336,8 @@ var DarkOnePerformance = (function () {
         loadBitmap: loadBitmap,
         createRepaintScheduler: createRepaintScheduler,
         createFrameLoop: createFrameLoop,
+        createValueCoalescer: createValueCoalescer,
+        createTrailingDeadline: createTrailingDeadline,
         createProfiler: createProfiler
     };
 })();

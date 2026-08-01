@@ -1,6 +1,106 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.13 - Volume scheduler cleanup hotfix
+-----------------------------------------
+
+- Fixed a Control Right runtime error caused by calling unsupported `stop()`
+  methods on the shared repaint scheduler.
+- Replaced all volume-knob preview scheduler cleanup calls with the scheduler's
+  supported `cancel()` method.
+- Added validation preventing the incorrect scheduler method from returning and
+  confirming both repaint and volume-write schedulers are cancelled on disposal.
+- Advanced Control Right to 3.0.17-jsp3-3.8.5 and validator to 0.4.2.
+
+v0.9.12 - Manual scroll cadence and protected volume writes
+-----------------------------------------------------------
+
+- Removed best-effort screen-refresh detection from JS Playlist and Smooth
+  Playlist Manager because Windows/JScript Panel does not provide a reliable
+  active-panel monitor refresh rate across supported systems.
+- Restored explicit 8, 10, 12 and 16 ms choices as the primary refresh controls.
+- Retained custom intervals of 7-40 ms for JS Playlist and 8-40 ms for Playlist
+  Manager.
+- Existing screen-refresh Automatic properties are ignored; factory reset now
+  restores the explicit 8 ms interval.
+- Kept Automatic volume-knob preview cadence, following the fastest live
+  playlist interval with a 16 ms fallback.
+- Decoupled the visual knob preview from fb.Volume writes: the preview may render
+  at 8/10/12/16 ms, while actual volume writes retain a protected minimum 16 ms
+  cadence to prevent Enhanced Spectrum Analyser stalls.
+- Added local drag-preview rendering so an 8 ms knob remains visually smooth
+  without increasing global volume-change callback frequency.
+- Advanced Control Right to 3.0.16-jsp3-3.8.5, JS Playlist to 0.5.8, Playlist
+  Manager to 0.5.4, UI cadence helper to 0.1.1 and validator to 0.4.1.
+
+v0.9.11 - Automatic display-aware smooth scrolling
+--------------------------------------------------
+
+- Added Automatic refresh modes to JS Playlist and Smooth Playlist Manager.
+- Automatic performs best-effort Windows refresh-rate detection through
+  Win32_VideoController.CurrentRefreshRate and maps the highest valid reported
+  rate to the nearest supported 8, 10, 12 or 16 ms UI cadence.
+- Added Set custom refresh interval... to Playlist Manager with an 8-40 ms
+  range, matching the existing JS Playlist custom control where practical.
+- Preserved fixed 8, 10, 12 and 16 ms overrides for mixed-refresh displays,
+  demanding visualisers and systems where Windows does not report a usable
+  refresh rate.
+- Automatic falls back to the last manual interval when detection is
+  unavailable and re-checks the reported rate whenever the settings menu opens.
+- Existing stored manual intervals remain manual until Automatic is selected;
+  new or factory-reset configurations default to Automatic.
+- The adaptive volume-drag cadence automatically follows the resolved live
+  intervals announced by both panels.
+- Added shared display-refresh helper 0.1.0 and validation for WMI detection,
+  refresh-to-cadence mapping, fallback behaviour, manual overrides and menus.
+- Advanced JS Playlist to 0.5.7, Playlist Manager to 0.5.3 and the release
+  validator to 0.4.0.
+
+v0.9.10 - Adaptive volume-drag refresh cadence
+----------------------------------------------
+
+- Added a shared UI-cadence protocol through which JS Playlist and Smooth
+  Playlist Manager announce their current live refresh intervals.
+- Added a Volume drag refresh rate submenu to the volume-knob context menu with
+  Automatic, 8 ms, 10 ms, 12 ms and 16 ms choices.
+- Automatic is the default and follows the fastest reported playlist cadence,
+  with an 8 ms minimum and safe 16 ms fallback when no source has reported.
+- Manual choices override both playlist settings for users who prefer a lower
+  volume-event frequency with demanding native visualisers or older systems.
+- Synchronised coalesced volume writes, volume-knob repainting and Centre Display
+  volume repainting to the same resolved cadence.
+- Added query/state handshakes so panels loaded or reloaded in any order converge
+  on the current cadence, and unavailable source panels are removed cleanly.
+- Added coordinated factory-reset coverage for the Automatic mode.
+- Added runtime and static validation for source announcements, fastest-source
+  resolution, manual override, fallback behaviour and menu mappings.
+- Advanced Control Right and Display to 3.0.15-jsp3-3.8.5, JS Playlist to 0.5.6,
+  Playlist Manager to 0.5.2, performance helpers to 0.1.3 and the release
+  validator to 0.3.9.
+
+v0.9.9 - Volume-drag visualiser responsiveness
+----------------------------------------------
+
+- Coalesced volume-knob writes to a maximum 16 ms cadence instead of assigning
+  a new floating-point volume value for every raw mouse-move callback.
+- Preserved immediate first response and flushes the exact final value on mouse
+  release, while reducing global on_volume_change event pressure during drags.
+- Replaced repeated clear-and-recreate three-second timers in Control Right and
+  the Centre Display with trailing-deadline timers that extend without timer
+  churn.
+- Coalesced knob and Display repaint requests while volume is changing.
+- Removed the Dot Matrix Display's per-change off-screen VolumeImage bitmap
+  creation and now renders the current volume directly from the cached matrix
+  sprite bitmap.
+- Reduces main UI message-loop and Direct2D resource pressure so the native
+  Enhanced Spectrum Analyser can continue updating smoothly during rapid volume
+  dragging.
+- Added runtime tests for value coalescing, exact final-value flushing and
+  trailing-deadline extension, plus static regression checks for the volume
+  rendering path.
+- Advanced Control Right and Display to 3.0.14-jsp3-3.8.5, the performance
+  helper to 0.1.2 and the release validator to 0.3.8.
+
 v0.9.8 - Standard-installation path documentation
 -------------------------------------------------
 

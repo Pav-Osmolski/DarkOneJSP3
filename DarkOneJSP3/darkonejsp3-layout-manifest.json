@@ -1,5 +1,5 @@
 {
-  "version": "0.9.8",
+  "version": "0.9.13",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -659,7 +659,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.3.7",
+      "version": "0.4.2",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -684,10 +684,16 @@
       "scrollbar_drag_cadence_tests": true,
       "scrollbar_drag_interpolation_tests": true,
       "display_style_runtime_tests": true,
-      "offscreen_sprite_composition_checks": true
+      "offscreen_sprite_composition_checks": true,
+      "volume_drag_coalescing_tests": true,
+      "trailing_deadline_timer_tests": true,
+      "display_volume_direct_rendering_checks": true,
+      "volume_cadence_protocol_tests": true,
+      "manual_refresh_interval_tests": true,
+      "protected_volume_write_cadence_tests": true
     },
     "rendering_optimisation": {
-      "version": "0.1.1",
+      "version": "0.1.3",
       "shared_helper": "DarkOneJSP3/shared/performance_utils.js",
       "demand_driven_schedulers": true,
       "direct2d_bitmap_reuse": true,
@@ -702,7 +708,35 @@
       "playlist_scrollbar_drag_interpolation": true,
       "scrollbar_drag_input_cadence_independent": true,
       "display_offscreen_composition_uses_ijsimage": true,
-      "display_panel_paint_uses_ijsbitmap": true
+      "display_panel_paint_uses_ijsbitmap": true,
+      "volume_drag_writes_coalesced": true,
+      "volume_change_timer_churn_removed": true,
+      "display_volume_direct_sprite_rendering": true,
+      "native_visualiser_message_loop_friendly": true,
+      "volume_drag_visual_preview_decoupled": true,
+      "volume_write_minimum_interval_ms": 16
+    },
+    "adaptive_volume_cadence": {
+      "version": "0.1.1",
+      "default_mode": "automatic",
+      "source_panels": [
+        "js-playlist",
+        "playlist-manager"
+      ],
+      "resolution": "fastest reported live refresh interval for visual preview",
+      "fallback_ms": 16,
+      "manual_intervals_ms": [
+        8,
+        10,
+        12,
+        16
+      ],
+      "synchronised_consumers": [
+        "volume knob preview",
+        "centre display repaint"
+      ],
+      "volume_write_minimum_ms": 16,
+      "protected_consumer": "fb.Volume writes"
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",
@@ -753,6 +787,26 @@
       ],
       "factory_reset_covered": true,
       "shared_colour_helper": true
+    }
+  },
+  "performance": {
+    "manual_refresh_intervals": {
+      "presets_ms": [
+        8,
+        10,
+        12,
+        16
+      ],
+      "playlist_custom_range_ms": [
+        7,
+        40
+      ],
+      "playlist_manager_custom_range_ms": [
+        8,
+        40
+      ],
+      "default_ms": 8,
+      "display_detection": false
     }
   }
 }

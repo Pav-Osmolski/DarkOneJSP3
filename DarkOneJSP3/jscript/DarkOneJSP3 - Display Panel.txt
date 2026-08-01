@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Display Panel"
-// @version "3.0.13-jsp3-3.8.5"
+// @version "3.0.15-jsp3-3.8.5"
 // @author "tedGo / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\ui_cadence.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Config_Global_Script.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Object_DisplaySystem.js"
@@ -12,3 +13,4 @@
 // ==/PREPROCESSOR==
 
 var DARKONEJSP3_RESET_ROLE = "display";
+darkOneDisplayVolumeCadence.start();

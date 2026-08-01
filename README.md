@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.8
+  <strong>Current stable release:</strong> v0.9.13
 </p>
 
 > [!IMPORTANT]
@@ -60,6 +60,8 @@ workflow of the original theme.
 * Consolidated Album Notes panel with configurable providers, source priority,
   caching, diagnostics and dedicated MusicBrainz Releases and Links views.
 * Improved playlist scrolling, playlist-manager filtering and queue handling.
+* Configurable 8/10/12/16 ms refresh cadence for JS Playlist and Playlist Manager,
+  with custom interval overrides.
 * Enhanced optional scripted Queue Viewer with multi-selection, keyboard
   navigation and source-item commands.
 * Optional startup transitions with native-window reveal hardening.
@@ -69,7 +71,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.8** is the current stable release.
+**DarkOneJSP3 v0.9.13** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a

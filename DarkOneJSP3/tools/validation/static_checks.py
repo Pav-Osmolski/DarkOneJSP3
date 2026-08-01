@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.3.7',
+            'version': '0.4.2',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -235,6 +235,9 @@ def run(ctx: ValidationContext) -> None:
             'scrollbar_drag_interpolation_tests': True,
             'display_style_runtime_tests': True,
             'offscreen_sprite_composition_checks': True,
+            'volume_cadence_protocol_tests': True,
+            'manual_refresh_interval_tests': True,
+            'protected_volume_write_cadence_tests': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -652,9 +655,12 @@ def run(ctx: ValidationContext) -> None:
     if performance_helper.exists():
         body = text(performance_helper)
         for token in [
-            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.1"',
+            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.3"',
             'createRepaintScheduler',
             'createFrameLoop',
+            'createValueCoalescer',
+            'reschedule: function ()',
+            'createTrailingDeadline',
             'createProfiler',
             'toBitmap',
         ]:
@@ -671,6 +677,25 @@ def run(ctx: ValidationContext) -> None:
                 errors.append(
                     'Shared performance-helper module incorrectly gates a native JScript Panel COM method with typeof: ' +
                     forbidden)
+
+
+    ui_cadence_helper = project / 'shared' / 'ui_cadence.js'
+    if ui_cadence_helper.exists():
+        body = text(ui_cadence_helper)
+        for token in [
+            'DARKONE_UI_CADENCE_VERSION = "0.1.1"',
+            'DarkOneJSP3.UIRefresh.Source.State',
+            'DarkOneJSP3.UIRefresh.Source.Query',
+            'DarkOneJSP3.VolumeRefresh.State',
+            'DarkOneJSP3.VolumeRefresh.Query',
+            'createSourceReporter',
+            'createVolumeOwner',
+            'createVolumeFollower',
+            'Automatic (currently ',
+            'VOLUME_MANUAL_INTERVALS = [8, 10, 12, 16]',
+        ]:
+            if token not in body:
+                errors.append('Shared UI-cadence protocol is incomplete: ' + token)
 
     registry_path = project / 'shared' / 'reset_defaults.js'
     if registry_path.exists():
@@ -751,10 +776,11 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'darkOneJsp3HandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.5.5"' not in body:
-            errors.append('JS Playlist entry version is not 0.5.5')
+        if '// @version "0.5.8"' not in body:
+            errors.append('JS Playlist entry version is not 0.5.8')
         for token in [
             'DarkOneJSP3\\shared\\performance_utils.js',
+            'DarkOneJSP3\\shared\\ui_cadence.js',
             'samples\\jsplaylist\\render_cache.js',
         ]:
             if token not in body:
@@ -784,6 +810,8 @@ def run(ctx: ValidationContext) -> None:
             'function on_playlists_changed() {',
             'DarkOnePerformance.createProfiler(',
             'function set_playlist_refresh_interval(value)',
+            'g_js_playlist_cadence_reporter.announce();',
+            'DarkOneUiCadence.createSourceReporter(window, {',
             'function reschedule_active_playlist_scroll_timers()',
             'function playlist_scroll_frame_tick()',
             'function ensure_playlist_scroll_frame()',
@@ -803,6 +831,8 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('JS Playlist performance optimisation is missing: ' + token)
         for obsolete in [
+            'DarkOneDisplayRefresh.createController(window, {',
+            'function set_playlist_refresh_automatic()',
             'g_repaint_timer = window.SetInterval(function () {',
             'window.SetInterval(smooth_scroll_tick, cList.repaint_interval)',
             'window.SetInterval(free_wheel_scroll_tick, cList.repaint_interval)',
@@ -942,10 +972,12 @@ def run(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'darkOneJsp3HandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.1"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.1')
+        if '// @version "0.5.4"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.4')
         if 'DarkOneJSP3\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
+        if 'DarkOneJSP3\\shared\\ui_cadence.js' not in body:
+            errors.append('Smooth Playlist Manager does not import shared UI-cadence helpers')
 
     playlist_manager_impl = samples / 'smooth' / 'jsspm.js'
     if playlist_manager_impl.exists():
@@ -968,9 +1000,12 @@ def run(ctx: ValidationContext) -> None:
             'window.IsVisible && rowY + ppt.rowHeight',
             'DarkOnePerformance.createProfiler(',
             'function set_playlist_manager_refresh_rate(value)',
+            'g_playlist_manager_cadence_reporter.announce();',
+            'DarkOneUiCadence.createSourceReporter(window, {',
             'ppt.refreshRate = value;',
             'g_playlist_manager_frame.reschedule();',
-            'set_playlist_manager_refresh_rate([8, 10, 12, 16][idx - 32]);',
+            'set_playlist_manager_refresh_rate([8, 10, 12, 16][idx - 33]);',
+            'Set custom refresh interval...',
             'timers.initialPopulate = window.SetTimeout(function () {',
             'function clearPlaylistManagerTimers()',
             'g_playlist_manager_frame.stop();',
@@ -985,6 +1020,8 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Playlist Manager timer cleanup is missing: ' + token)
         for obsolete in [
+            'DarkOneDisplayRefresh.createController(window, {',
+            'function set_playlist_manager_refresh_automatic()',
             'timers.repaint = window.SetInterval(function () {',
             'plman.IsAutoPlaylist(this.rows[i].idx)',
             'plman.IsPlaylistLocked(this.rows[i].idx)',
@@ -1001,6 +1038,8 @@ def run(ctx: ValidationContext) -> None:
                      'js-playlist', 'playlist-manager']:
             if f'"{role}"' not in registry:
                 errors.append('Reset role missing: ' + role)
+        if '"DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE": 0' not in registry:
+            errors.append('Control Right reset registry is missing the automatic volume-cadence default')
         for token in [
             'darkOneJsp3AddOptionalButtonDefaults("control-left", 8);',
             'darkOneJsp3AddOptionalButtonDefaults("control-right", 10);',
@@ -1674,17 +1713,59 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Shared optional-button menu helper is missing: ' + token)
 
-    control_entries = [
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt',
-    ]
-    for path in control_entries:
+    volume_knob = project / 'jscript' / 'js' / 'Object_Volumeknob.js'
+    if volume_knob.exists():
+        body = text(volume_knob)
+        for token in [
+            'getDelay: function() { return darkOneGetVolumeWriteInterval(); }',
+            'DarkOnePerformance.createRepaintScheduler(window, {',
+            'this.preview_volume = v;',
+            'preview_repaint.request();',
+            'Volume drag refresh rate',
+            'DarkOneUiCadence.volumeModeForMenuId(q)',
+            'volume_writer.reschedule();',
+            'preview_repaint.reschedule();',
+        ]:
+            if token not in body:
+                errors.append('Adaptive volume-knob cadence is missing: ' + token)
+
+    control_right_panel = project / 'jscript' / 'js' / 'Panel_Control_Right.js'
+    if control_right_panel.exists():
+        body = text(control_right_panel)
+        for token in [
+            'DarkOneUiCadence.createVolumeOwner(window, {',
+            'DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE',
+            'getDelay: darkOneGetVolumeDragInterval',
+            'function darkOneGetVolumeWriteInterval()',
+            'return Math.max(16, darkOneGetVolumeDragInterval());',
+            'if (!v_drag) volume_knob_repaint.request();',
+            'darkOneVolumeCadenceOwner.handleNotification(name, info)',
+        ]:
+            if token not in body:
+                errors.append('Control Right volume-cadence ownership is missing: ' + token)
+
+    display_system_path = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
+    if display_system_path.exists():
+        body = text(display_system_path)
+        for token in [
+            'DarkOneUiCadence.createVolumeFollower(window, {',
+            'getDelay: function() { return darkOneDisplayVolumeCadence.getInterval(); }',
+            'this.onVolumeCadenceChanged = function()',
+        ]:
+            if token not in body:
+                errors.append('Display volume-cadence follower is missing: ' + token)
+
+    control_entries = {
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.13-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.17-jsp3-3.8.5',
+    }
+    for path, expected_version in control_entries.items():
         if not path.exists():
             continue
         body = text(path)
         if 'DarkOneJSP3\\jscript\\js\\Buttons_OptionalMenu.js' not in body:
             errors.append(rel(path) + ' does not import the shared optional-button menu')
-        if '@version "3.0.13-jsp3-3.8.5"' not in body:
+        if '@version "' + expected_version + '"' not in body:
             errors.append(rel(path) + ' has the wrong consolidated control-panel version')
 
     control_panels = [
@@ -1719,6 +1800,59 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('Control Left lost its panel-specific menu behaviour: ' + token)
+
+    volume_knob = project / 'jscript' / 'js' / 'Object_Volumeknob.js'
+    if volume_knob.exists():
+        body = text(volume_knob)
+        for token in [
+            'getDelay: function() { return darkOneGetVolumeWriteInterval(); }',
+            'DarkOnePerformance.createRepaintScheduler(window, {',
+            'preview_repaint.request()',
+            'this.preview_volume = v',
+            'Volume drag refresh rate',
+            'DarkOnePerformance.createValueCoalescer',
+            'volume_writer.request(v)',
+            'volume_writer.flush()',
+            'volume_writer.cancel()',
+        ]:
+            if token not in body:
+                errors.append('Volume knob drag coalescing is missing: ' + token)
+        if 'if (fb.Volume != v) fb.Volume = v' in body:
+            errors.append('Volume knob still writes every raw mouse-move value directly')
+        if 'preview_repaint.stop()' in body:
+            errors.append('Volume knob calls unsupported repaint-scheduler stop(); use cancel()')
+        for token in ['preview_repaint.cancel()', 'volume_writer.cancel()']:
+            if token not in body:
+                errors.append('Volume knob cleanup is missing: ' + token)
+
+    right_control = project / 'jscript' / 'js' / 'Panel_Control_Right.js'
+    if right_control.exists():
+        body = text(right_control)
+        for token in [
+            'DarkOnePerformance.createRepaintScheduler',
+            'DarkOnePerformance.createTrailingDeadline',
+            'volume_change_deadline.touch()',
+            'volume_knob_repaint.request()',
+        ]:
+            if token not in body:
+                errors.append('Control Right volume update coalescing is missing: ' + token)
+        if 'v_timer = clearPanelTimer(v_timer)' in body:
+            errors.append('Control Right still recreates its three-second volume timer for every callback')
+
+    display_system_source = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
+    if display_system_source.exists():
+        body = text(display_system_source)
+        for token in [
+            'DarkOnePerformance.createRepaintScheduler',
+            'DarkOnePerformance.createTrailingDeadline',
+            'this.drawVolumeMatrix = function(gr, volume)',
+            'this.drawVolumeMatrix(gr, fb.Volume.toFixed(2) + " db")',
+        ]:
+            if token not in body:
+                errors.append('Display volume rendering optimisation is missing: ' + token)
+        for forbidden in ['new VolumeImage()', 'this.images[4]', 'function VolumeImage()']:
+            if forbidden in body:
+                errors.append('Display still rebuilds an off-screen volume bitmap while dragging: ' + forbidden)
 
     ctx.version = version
     ctx.build = build

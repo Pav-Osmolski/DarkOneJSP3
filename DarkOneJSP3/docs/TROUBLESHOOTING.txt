@@ -187,6 +187,18 @@ JS Playlist scrollbar dragging feels capped at one cadence
 - With Snap scrollbar dragging to playlist rows enabled, visual updates remain
   row-aligned; disable it when continuous pixel movement is preferred.
 
+Enhanced Spectrum Analyser pauses while dragging volume
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Volume writes are protected by a minimum 16 ms cadence, regardless of the
+  visual knob-refresh setting.
+- Automatic follows the fastest live refresh interval reported by JS Playlist
+  and Smooth Playlist Manager for the knob preview only.
+- The first drag value remains immediate and the exact final value is applied
+  when the mouse button is released.
+- If pausing persists, include the selected visualiser settings and component
+  version in the bug report; lowering the knob preview cadence should not change
+  the protected volume-write frequency.
+
 JS Playlist CPU use is high
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Increase the UI refresh interval from 8 ms to 10, 12 or 16 ms. The selected
@@ -448,3 +460,4 @@ Include:
 - Album Notes Current source > Copy diagnostics output, when applicable;
 - whether the issue also occurs after a restart; and
 - any non-default property or component setting related to the affected area.
+

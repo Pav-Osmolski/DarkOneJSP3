@@ -1,5 +1,5 @@
-DarkOneJSP3 v0.9.8 Validation Report
-====================================
+DarkOneJSP3 v0.9.13 Validation Report
+=====================================
 
 Scope
 -----
@@ -13,6 +13,8 @@ Checks
 ------
 - Required project, documentation, controller, loader, wrapper, sample and
   runtime bitmap files are present.
+- Volume-knob cleanup uses the supported repaint-scheduler `cancel()` API and
+  rejects invalid `stop()` calls on repaint schedulers.
 - Every scripted JSplitter and panel source declared by the layout manifest
   resolves to a distributed file; native-component entries are identified
   explicitly.
@@ -30,6 +32,20 @@ Checks
 - JavaScript modules and active .txt entry scripts pass Node syntax checks.
 - Demand-driven repaint schedulers coalesce requests, stop when idle and retain
   pending repaint work while a panel is hidden.
+- Volume-knob dragging coalesces rapid mouse input, applies the first value
+  immediately and flushes the exact final value on release.
+- JS Playlist and Playlist Manager expose fixed and custom refresh intervals and
+  announce their live values to the adaptive volume-preview protocol.
+- Automatic volume-preview cadence follows the fastest reported panel interval
+  with a 16 ms fallback, while manual 8/10/12/16 ms overrides remain available.
+- Knob-preview and Centre Display repaint scheduling follow the resolved visual
+  cadence, while actual fb.Volume writes retain a protected minimum 16 ms
+  interval to avoid starving native visualisers.
+- Trailing volume-state deadlines extend without clearing and recreating a timer
+  for every on_volume_change callback.
+- Dot Matrix volume output renders directly from the cached matrix sprite bitmap
+  instead of rebuilding and disposing an off-screen volume bitmap during every
+  drag update.
 - JS Playlist render-cache tests cover repeated hits, row/handle/all invalidation,
   title-format changes, playback-generation reuse, clock-field overlays,
   cross-column $puts/$get compatibility and bounded cache size.

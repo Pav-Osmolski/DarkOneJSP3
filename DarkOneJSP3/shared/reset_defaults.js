@@ -28,7 +28,9 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "Buttons appearance preset": 1,
             "Buttons depth preset": 0
         },
-        behaviour: {},
+        behaviour: {
+            "DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE": 0
+        },
         complete: {}
     },
     "display": {

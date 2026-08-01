@@ -147,6 +147,7 @@ def run(ctx: ValidationContext) -> None:
 
     let repaints = 0;
     const scheduler = api.createRepaintScheduler(host, {{delay: 8, hiddenDelay: 250, repaint() {{ repaints++; }}}});
+    assert(typeof scheduler.cancel === 'function' && typeof scheduler.stop === 'undefined', 'Repaint scheduler cleanup API must use cancel(), not stop()');
     scheduler.request();
     scheduler.request();
     assert(tasks.length === 1, 'Repaint requests were not coalesced');
@@ -182,6 +183,55 @@ def run(ctx: ValidationContext) -> None:
     runNext();
     assert(dynamicFrames === 2 && tasks.length === 0 && !dynamicLoop.isRunning(), 'Dynamic frame loop did not become idle');
 
+    let valueClock = 1000;
+    let appliedValues = [];
+    const valueCoalescer = api.createValueCoalescer(host, {{
+        delay: 16,
+        now() {{ return valueClock; }},
+        apply(value) {{ appliedValues.push(value); }}
+    }});
+    valueCoalescer.request(-10);
+    assert(appliedValues.join(',') === '-10' && tasks.length === 0,
+        'First coalesced value was not applied immediately');
+    valueClock = 1004;
+    valueCoalescer.request(-20);
+    valueClock = 1006;
+    valueCoalescer.request(-30);
+    assert(tasks.length === 1 && tasks[0].delay === 12,
+        'Rapid values were not coalesced behind one interval timer');
+    valueClock = 1016;
+    runNext();
+    assert(appliedValues.join(',') === '-10,-30' && !valueCoalescer.isPending(),
+        'Coalescer did not apply only the latest pending value');
+    valueClock = 1018;
+    valueCoalescer.request(-40);
+    assert(tasks.length === 1, 'Later coalesced value was not delayed');
+    valueCoalescer.flush();
+    assert(appliedValues.join(',') === '-10,-30,-40' && tasks.length === 0,
+        'Coalescer flush did not apply the exact final value');
+
+    let deadlineClock = 2000;
+    let deadlineExpirations = 0;
+    const trailingDeadline = api.createTrailingDeadline(host, {{
+        delay: 3000,
+        now() {{ return deadlineClock; }},
+        onExpire() {{ deadlineExpirations++; }}
+    }});
+    trailingDeadline.touch();
+    assert(tasks.length === 1 && tasks[0].delay === 3000,
+        'Trailing deadline did not create its initial timer');
+    deadlineClock = 4000;
+    trailingDeadline.touch();
+    assert(tasks.length === 1, 'Trailing deadline recreated its timer on every touch');
+    deadlineClock = 5000;
+    runNext();
+    assert(tasks.length === 1 && tasks[0].delay === 2000 && deadlineExpirations === 0,
+        'Extended trailing deadline did not reschedule only at expiry');
+    deadlineClock = 7000;
+    runNext();
+    assert(deadlineExpirations === 1 && !trailingDeadline.isPending(),
+        'Trailing deadline did not expire after the final touch');
+
     let disposed = 0;
     const bitmapObject = {{Width: 1, Height: 1, Dispose: function() {{}}}};
     const image = {{CreateBitmap: function() {{ return bitmapObject; }}, Dispose: function() {{ disposed++; }}}};
@@ -204,6 +254,90 @@ def run(ctx: ValidationContext) -> None:
         result = subprocess.run([node, '-e', performance_helper_smoke], capture_output=True, text=True)
         if result.returncode:
             errors.append('Performance-helper runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise adaptive UI-cadence announcements and the shared volume owner/follower protocol.
+        ui_cadence_smoke = f"""
+    const fs = require('fs');
+    const source = fs.readFileSync({json.dumps(str(project / 'shared' / 'ui_cadence.js'))}, 'utf8');
+    const api = new Function(source + '\\nreturn DarkOneUiCadence;')();
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    const listeners = [];
+    function createHost(name) {{
+        const properties = new Map();
+        const host = {{
+            name,
+            GetProperty(key, fallback) {{ return properties.has(key) ? properties.get(key) : fallback; }},
+            SetProperty(key, value) {{ properties.set(key, value); }},
+            NotifyOthers(notification, payload) {{
+                listeners.forEach(entry => {{ if (entry.host !== host) entry.handle(notification, payload); }});
+            }}
+        }};
+        return host;
+    }}
+    const controlHost = createHost('control');
+    const displayHost = createHost('display');
+    const playlistHost = createHost('playlist');
+    const managerHost = createHost('manager');
+    let playlistInterval = 8;
+    let managerInterval = 16;
+    let ownerChanges = [];
+    let followerChanges = [];
+    const owner = api.createVolumeOwner(controlHost, {{
+        propertyName: 'DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE',
+        fallback: 16,
+        onChange(value) {{ ownerChanges.push(value); }}
+    }});
+    const follower = api.createVolumeFollower(displayHost, {{
+        fallback: 16,
+        onChange(value) {{ followerChanges.push(value); }}
+    }});
+    const playlist = api.createSourceReporter(playlistHost, {{
+        source: api.sources.jsPlaylist,
+        getInterval() {{ return playlistInterval; }}
+    }});
+    const manager = api.createSourceReporter(managerHost, {{
+        source: api.sources.playlistManager,
+        getInterval() {{ return managerInterval; }}
+    }});
+    listeners.push(
+        {{host: controlHost, handle: owner.handleNotification}},
+        {{host: displayHost, handle: follower.handleNotification}},
+        {{host: playlistHost, handle: playlist.handleNotification}},
+        {{host: managerHost, handle: manager.handleNotification}}
+    );
+    owner.start();
+    follower.start();
+    playlist.start();
+    manager.start();
+    assert(owner.getInterval() === 8 && follower.getInterval() === 8,
+        'Automatic volume cadence did not follow the fastest reported panel interval');
+    playlistInterval = 12;
+    playlist.announce();
+    assert(owner.getInterval() === 12 && follower.getInterval() === 12,
+        'Automatic volume cadence did not update after a source interval change');
+    assert(owner.setMode(16) && owner.getMode() === 16 && owner.getInterval() === 16 && follower.getInterval() === 16,
+        'Manual volume cadence did not override automatic source resolution');
+    playlistInterval = 8;
+    playlist.announce();
+    assert(owner.getInterval() === 16 && follower.getInterval() === 16,
+        'Manual volume cadence was incorrectly changed by a source announcement');
+    assert(owner.setMode(api.volumeModeAuto) && owner.getInterval() === 8 && follower.getInterval() === 8,
+        'Returning to Automatic did not restore fastest-source resolution');
+    playlist.dispose();
+    assert(owner.getInterval() === 16 && follower.getInterval() === 16,
+        'Unavailable fastest source was not removed from automatic resolution');
+    manager.dispose();
+    assert(owner.getInterval() === 16 && follower.getInterval() === 16,
+        'Automatic cadence did not retain the safe fallback with no sources');
+    assert(api.volumeModeForMenuId(20) === 0 && api.volumeModeForMenuId(24) === 16,
+        'Volume cadence menu IDs no longer preserve their mappings');
+    assert(ownerChanges.length > 0 && followerChanges.length > 0,
+        'Volume cadence changes were not propagated to consumers');
+    """
+        result = subprocess.run([node, '-e', ui_cadence_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('UI-cadence protocol runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise the exact live refresh-rate setters and active timer restart paths.
@@ -233,11 +367,14 @@ def run(ctx: ValidationContext) -> None:
                     'playlist_scroll_frame_tick',
                     'ensure_playlist_scroll_frame',
                     'reschedule_active_playlist_scroll_timers',
+                    'apply_playlist_refresh_interval',
                     'set_playlist_refresh_interval',
                 ]
             )
-            manager_rate_function = _extract_js_function(
-                manager_source, 'set_playlist_manager_refresh_rate')
+            manager_rate_function = '\n\n'.join([
+                _extract_js_function(manager_source, 'apply_playlist_manager_refresh_rate'),
+                _extract_js_function(manager_source, 'set_playlist_manager_refresh_rate'),
+            ])
         except ValueError as exc:
             errors.append('Smooth-scroll refresh-rate runtime setup failed: ' + str(exc))
         else:
@@ -922,6 +1059,7 @@ def run(ctx: ValidationContext) -> None:
     const fs = require('fs');
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
     const performanceSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'performance_utils.js'))}, 'utf8');
+    const uiCadenceSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'ui_cadence.js'))}, 'utf8');
     let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
     const start = source.indexOf('function DisplaySystem()');
     if (start < 0) throw new Error('DisplaySystem constructor not found');
@@ -932,7 +1070,8 @@ def run(ctx: ValidationContext) -> None:
         GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
         SetProperty(name, value) {{ properties.set(name, value); }},
         GetColourCUI(index) {{ return index === 4 ? 0xff556677 : 0xff112233; }},
-        Repaint() {{ repaints++; }}
+        Repaint() {{ repaints++; }},
+        NotifyOthers() {{}}
     }};
     const noopImage = {{ Dispose(){{}}, GetGraphics(){{return {{}};}}, ReleaseGraphics(){{}}, Width:1, Height:1 }};
     const factory = new Function('window','fb','safeGdiImage','utils','disposeImage','combColours','p_backcol','ui_btntxtcol',
@@ -940,7 +1079,7 @@ def run(ctx: ValidationContext) -> None:
         'tf_display_tracknumber_exists','tf_display_totaltracks_exists','tf_display_tracknumber','tf_display_totaltracks','tf_display_bitrate',
         'imgPath','DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL',
         'darkOneCreateFont','evalTitleFormat','TimeFmt','pad','pad_right','clearPanelTimer','section',
-        colourSource + '\\n' + performanceSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
+        colourSource + '\\n' + performanceSource + '\\n' + uiCadenceSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
     const api = factory(windowMock, {{IsPlaying:false, PlaybackLength:0, PlaybackTime:0}}, function(){{return null;}},
         {{CreateImage(){{return noopImage;}}}}, function(){{}}, function(){{return 0xff000000;}}, 0xff000000, 0xffffffff,
         '', '', '', '', '', '', '', '', '', '', '', '', 900, 400, function(){{return {{}};}}, function(){{return ''; }}, function(){{return ''; }},

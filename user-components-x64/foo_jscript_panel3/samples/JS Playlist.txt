@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - DarkOneJSP3 Enhanced"
-// @version "0.5.5"
+// @version "0.5.8"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\ui_cadence.js"
 // @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
 // @import "%fb2k_component_path%samples\jsplaylist\topbar.js"
@@ -21,7 +22,7 @@
 DarkOneJSP3 enhancements
 -----------------------
 - Restored the smooth row-transition system present in the final DarkOne2021 build.
-- Configurable high-refresh repaint timing (8/10/12/16 ms or custom).
+- Manual 8/10/12/16 ms repaint timing with a custom 7-40 ms override.
 - The selected interval governs the shared demand-driven animation and paint frame loop.
 - Configurable wheel throttle, smoothness divisor and wheel row step.
 - Optional free pixel scrolling with row snapping disabled.
@@ -42,6 +43,9 @@ Defaults: enabled, 8 ms refresh, divisor 2, wheel and scrollbar snapping enabled
 
 // https://jscript-panel.github.io/gallery/jsplaylist/
 
+g_js_playlist_cadence_reporter.start();
+
 function on_notify_data(name, info) {
+    if (g_js_playlist_cadence_reporter && g_js_playlist_cadence_reporter.handleNotification(name, info)) return;
     darkOneJsp3HandleSampleReset(name, info, "js-playlist");
 }

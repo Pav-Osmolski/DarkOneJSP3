@@ -1,10 +1,50 @@
 // =========================================================================================================
-// Panel: Control Right - v2.0build20191004-jscript-panel3-v0616
+// Panel: Control Right - v2.0build20191004-jscript-panel3-v0618
 // =========================================================================================================
 
 var g_btns = safeBitmapImage(imgPath + "buttons.png");
-var v_timer = null, b_btns = [], i_size, qx = [], volknob = null;
+var b_btns = [], i_size, qx = [], volknob = null;
 btn_panel = 2;
+
+var volume_knob_repaint = null;
+var darkOneVolumeCadenceOwner = DarkOneUiCadence.createVolumeOwner(window, {
+	propertyName: "DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE",
+	fallback: 16,
+	onChange: function() {
+		if (volume_knob_repaint) volume_knob_repaint.reschedule();
+		if (volknob && typeof volknob.onCadenceChanged == "function") volknob.onCadenceChanged();
+	}
+});
+
+function darkOneGetVolumeDragInterval() {
+	return darkOneVolumeCadenceOwner ? darkOneVolumeCadenceOwner.getInterval() : 16;
+}
+
+function darkOneGetVolumeWriteInterval() {
+	// Keep expensive global fb.Volume notifications at the proven-safe cadence.
+	// The knob preview can still repaint at the faster adaptive UI interval.
+	return Math.max(16, darkOneGetVolumeDragInterval());
+}
+
+function darkOneGetVolumeDragMode() {
+	return darkOneVolumeCadenceOwner ? darkOneVolumeCadenceOwner.getMode() : DarkOneUiCadence.volumeModeAuto;
+}
+
+function darkOneSetVolumeDragMode(mode) {
+	return darkOneVolumeCadenceOwner ? darkOneVolumeCadenceOwner.setMode(mode) : false;
+}
+
+volume_knob_repaint = DarkOnePerformance.createRepaintScheduler(window, {
+	getDelay: darkOneGetVolumeDragInterval,
+	repaint: function() { if (volknob) volknob.Repaint(); }
+});
+var volume_change_deadline = DarkOnePerformance.createTrailingDeadline(window, {
+	delay: 3000,
+	onExpire: function() {
+		v_change = false;
+		if (volknob) volknob.Repaint();
+	}
+});
 
 var a_name = ";;;;;;;STOP A. C.;PB. ORDER".split(";");
 var a_func = [getOpenMenu, function(){fb.Prev()}, function(){fb.Pause()}, function(){fb.Play()}, function(){fb.Stop();}, function(){fb.Next()}, function(){fb.Random()}, function(){fb.RunMainMenuCommand("Playback/Stop After Current")}, getPBOMenu];
@@ -82,17 +122,13 @@ function on_size() {
 }
 
 function on_volume_change(val) {
-	v_timer = clearPanelTimer(v_timer);
-	v_timer = window.SetTimeout(function () {
-		volknob && volknob.Repaint();
-		v_timer = clearPanelTimer(v_timer);
-		v_change = false;
-	}, 3000);
 	v_change = true;
-	volknob && volknob.Repaint();
+	volume_change_deadline.touch();
+	if (!v_drag) volume_knob_repaint.request();
 }
 
 function on_notify_data(name, info) {
+	if (darkOneVolumeCadenceOwner && darkOneVolumeCadenceOwner.handleNotification(name, info)) return;
 	if (darkOneHandleResetNotification(name, info)) return;
 	if (typeof darkOneHandleNotify == 'function') {
 		var change = darkOneHandleNotify(name, info);
@@ -138,7 +174,10 @@ function on_colours_changed() {
 }
 
 function on_script_unload() {
-	v_timer = clearPanelTimer(v_timer);
+	if (darkOneVolumeCadenceOwner) darkOneVolumeCadenceOwner.dispose();
+	volume_change_deadline.cancel();
+	volume_knob_repaint.cancel();
+	volknob && volknob.dispose();
 	volknob && volknob.on_mouse_leave();
 	buttonsUnload();
 	disposeImage(g_btns);

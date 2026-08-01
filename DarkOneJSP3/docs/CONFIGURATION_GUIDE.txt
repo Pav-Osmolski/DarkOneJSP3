@@ -172,6 +172,31 @@ Right-click the volume knob for:
 
 The mouse wheel adjusts volume when the pointer is over the knob.
 
+Volume drag refresh rate
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Controls the visual refresh cadence used while dragging the knob.
+
+Choices:
+- Automatic (default)
+- 8 ms
+- 10 ms
+- 12 ms
+- 16 ms
+
+Automatic follows the fastest live UI refresh interval reported by JS Playlist
+and Smooth Playlist Manager. For example, if JS Playlist uses 8 ms and Playlist
+Manager uses 16 ms, the knob preview uses 8 ms. When neither panel has reported
+a value, Automatic uses a 16 ms fallback.
+
+The knob preview is independent from the underlying fb.Volume write cadence.
+Actual volume writes retain a safe minimum interval of 16 ms to avoid flooding
+global volume-change callbacks and starving native visualisers. The first drag
+value is immediate and the exact final value is flushed on release.
+
+A manual choice overrides the preview cadence only; it does not raise the
+volume-write frequency above the protected 16 ms maximum cadence.
+
 DarkOne Tools
 ~~~~~~~~~~~~~
 
@@ -463,6 +488,7 @@ DarkOneJSP3 smooth scrolling
 - 10 ms refresh (100 Hz)
 - 12 ms refresh (80 Hz)
 - 16 ms refresh (60 Hz)
+- Set custom refresh interval...
 - Set smoothness...
 - Set wheel row step...
 
@@ -473,11 +499,13 @@ Defaults:
 - Smoothness divisor: 1.75
 - Wheel row step: 3
 
-The refresh interval controls active smooth-scroll animation only. Changes are
+Select a fixed preset or enter a custom interval from 8-40 ms. Lower values can
+look smoother on high-refresh displays but generate more UI work. The selected
+interval controls active smooth-scroll animation only. Changes are
 applied immediately to the live frame loop and are retained for future panel
-sessions. The manager uses a demand-driven frame loop and does not keep an 8 ms
-timer running while idle. Playlist type and lock-state icons are cached until
-the playlist state changes.
+sessions. The manager uses a demand-driven frame loop and does not keep a
+high-frequency timer running while idle. Playlist type and lock-state icons are
+cached until the playlist state changes.
 
 Playlist row spacing
 - Compact / DarkOne2021 (26)
@@ -563,6 +591,9 @@ Defaults:
 - Scrollbar dragging row snapping: enabled
 - Snapped wheel row step: 3
 - Free-scroll distance: automatic, 65% of row height
+
+Select a fixed preset or enter a custom interval from 7-40 ms. Lower values can
+look smoother on high-refresh displays but generate more UI work.
 
 The playlist uses demand-driven repaint scheduling, so the selected refresh
 interval governs both smooth-scroll animation updates and the coalesced paints
@@ -1049,6 +1080,7 @@ Display
   DARKONEJSP3.DISPLAY.ACCENT.CUSTOM.COLOUR
 
 Control appearance
+  DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE
   DARKONEJSP3.BUTTON.ROUNDNESS
   Buttons appearance preset
   Buttons depth preset
