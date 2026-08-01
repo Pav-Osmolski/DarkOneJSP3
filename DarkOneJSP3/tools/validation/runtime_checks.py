@@ -1112,6 +1112,53 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Display accent runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
+        # Exercise the mutable Dot Matrix image classes themselves. The constructors
+        # initialise BaseImage state with BaseImage.call(), but they also require the
+        # shared prototype methods to be attached explicitly. Missing inheritance
+        # causes a JScript runtime error at the first isDrawDigit() call.
+        display_image_inheritance_smoke = f"""
+    const fs = require('fs');
+    let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
+    const end = source.indexOf('// ----- TITLE-FORMAT CACHE -----');
+    if (end < 0) throw new Error('Display image-class boundary not found');
+    source = source.slice(0, end);
+    function makeImage(width, height) {{
+        return {{
+            Width: width, Height: height,
+            GetGraphics() {{ return {{ DrawImage() {{}}, FillRectangle() {{}} }}; }},
+            ReleaseGraphics() {{}},
+            CreateBitmap() {{ return {{ Width: width, Height: height, Dispose() {{}} }}; }},
+            Dispose() {{}}
+        }};
+    }}
+    const factory = new Function('window','DarkOneUiCadence','safeGdiImage','DarkOnePerformance','utils','imgPath','disposeImage','console',
+        source + '\\nreturn {{ NumImage, TimeImage, BitrateImage }};');
+    const api = factory({{}}, {{ createVolumeFollower() {{ return {{}}; }} }}, function() {{ return null; }},
+        {{ toBitmap(image) {{ return image ? image.CreateBitmap() : null; }} }},
+        {{ CreateImage(width, height) {{ return makeImage(width, height); }} }}, '', function() {{}}, console);
+    for (const name of ['NumImage', 'TimeImage', 'BitrateImage']) {{
+        const image = new api[name]();
+        for (const method of ['reset', 'commitBitmap', 'dispose', 'paint', 'isDrawDigit']) {{
+            if (typeof image[method] !== 'function')
+                throw new Error(name + ' is missing inherited method ' + method);
+        }}
+        if (image.isDrawDigit('1', 0) !== true)
+            throw new Error(name + ' initial digit comparison failed');
+        image.curVal = '1';
+        if (image.isDrawDigit('1', 0) !== false)
+            throw new Error(name + ' cached digit comparison failed');
+        image.reset();
+        if (image.curVal !== '')
+            throw new Error(name + ' reset did not restore the empty value');
+        image.commitBitmap();
+        image.dispose();
+    }}
+    """
+        result = subprocess.run([node, '-e', display_image_inheritance_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Display image inheritance runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
         # Exercise the opt-in information-page background modes, including the
         # explicit restoration of the historical Columns UI global background.
         page_background_smoke = f"""

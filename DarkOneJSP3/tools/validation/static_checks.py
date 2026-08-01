@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.2',
+            'version': '0.4.3',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -1414,6 +1414,9 @@ def run(ctx: ValidationContext) -> None:
             'DarkOneColour.normaliseMode(',
             'DarkOneColour.columnsUi(4, DARKONE_DISPLAY_DEFAULT_BLUE)',
             'if (this.accent_mode == DARKONE_DISPLAY_ACCENT_DEFAULT) return;',
+            'darkOneInheritImage(NumImage);',
+            'darkOneInheritImage(TimeImage);',
+            'darkOneInheritImage(BitrateImage);',
         ]:
             if token not in body:
                 errors.append('Display selected-item accent is missing: ' + token)

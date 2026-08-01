@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.13 Validation Report
+DarkOneJSP3 v0.9.14 Validation Report
 =====================================
 
 Scope
@@ -58,6 +58,9 @@ Checks
   persisted, rebuild style-specific render state and repaint immediately. Mutable
   dot-matrix value images compose from IJSImage sprite sources, while final panel
   painting retains cached IJSBitmap output.
+- NumImage, TimeImage and BitrateImage explicitly inherit the shared BaseImage
+  lifecycle and digit-comparison methods; runtime tests instantiate each class and
+  exercise reset, bitmap commit, disposal and isDrawDigit behaviour.
 - Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose and
   CreateProfiler are called directly rather than gated by typeof == "function".
 - Python maintenance tools pass py_compile.

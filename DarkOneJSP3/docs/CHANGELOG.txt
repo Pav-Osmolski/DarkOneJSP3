@@ -1,6 +1,17 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.14 - Dot Matrix image inheritance hotfix
+---------------------------------------------
+
+- Fixed a Display runtime error where NumImage, TimeImage and BitrateImage
+  initialised BaseImage state but did not inherit its prototype methods.
+- Restored reset(), commitBitmap(), dispose(), paint() and isDrawDigit() for all
+  mutable Dot Matrix value-image classes.
+- Added static and runtime validation that instantiates every Dot Matrix image
+  class and exercises its inherited lifecycle and digit-comparison behaviour.
+- Advanced Display to 3.0.16-jsp3-3.8.5 and validator to 0.4.3.
+
 v0.9.13 - Volume scheduler cleanup hotfix
 -----------------------------------------
 

@@ -210,6 +210,13 @@ function BitrateImage() {
 	}
 }
 
+// Attach the shared bitmap lifecycle and digit-comparison methods. BaseImage.call()
+// initialises instance state, while these prototype links provide reset(),
+// commitBitmap(), paint(), dispose() and isDrawDigit().
+darkOneInheritImage(NumImage);
+darkOneInheritImage(TimeImage);
+darkOneInheritImage(BitrateImage);
+
 // ----- TITLE-FORMAT CACHE -----
 var tf_display_lossless = fb.TitleFormat("$if($stricmp(%__encoding%,lossless),1)");
 var tf_display_lossy = fb.TitleFormat("$if($not($stricmp(%__encoding%,lossless)),1)");

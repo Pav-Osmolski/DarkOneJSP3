@@ -1,5 +1,5 @@
 {
-  "version": "0.9.13",
+  "version": "0.9.14",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -659,7 +659,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
