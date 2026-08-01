@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -31,5 +31,5 @@
     "playlist_render_cache": "0.1.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v0.9.7"
+  "release": "DarkOneJSP3 v0.9.8"
 }

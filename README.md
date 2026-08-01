@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.7
+  <strong>Current stable release:</strong> v0.9.8
 </p>
 
 > [!IMPORTANT]
@@ -69,7 +69,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.7** is the current stable release.
+**DarkOneJSP3 v0.9.8** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -107,28 +107,54 @@ before configuring the theme.
 
 Back up your active foobar2000 profile before installing or upgrading.
 
-Merge the supplied `DarkOneJSP3` and `user-components-x64` directories into
-the location used by your active foobar2000 profile.
+The package contains two top-level directories: `DarkOneJSP3` and
+`user-components-x64`. Merge both into the directory used by your active
+foobar2000 profile.
 
-Depending on the installation, the resulting paths will normally use one of
-the following structures.
+### Standard installation (non-portable)
 
-### Installation-root profile
+A standard foobar2000 v2 installation normally stores its active profile at:
+
+```text
+%APPDATA%\foobar2000-v2\profile\
+```
+
+`%APPDATA%` usually expands to:
+
+```text
+C:\Users\<username>\AppData\Roaming
+```
+
+Merge the package directories into the `profile` directory so the resulting
+paths are:
+
+```text
+%APPDATA%\foobar2000-v2\profile\DarkOneJSP3\
+%APPDATA%\foobar2000-v2\profile\user-components-x64\foo_jscript_panel3\samples\
+```
+
+You can paste `%APPDATA%\foobar2000-v2\profile` into the File Explorer address
+bar to open the correct location directly. Do not copy these files into the
+foobar2000 program directory for a normal non-portable installation.
+
+### Portable installation
+
+A portable installation commonly uses either the installation root itself:
 
 ```text
 <foobar2000>\DarkOneJSP3\
 <foobar2000>\user-components-x64\foo_jscript_panel3\samples\
 ```
 
-### `profile` subfolder
+or its `profile` subfolder:
 
 ```text
 <foobar2000>\profile\DarkOneJSP3\
 <foobar2000>\profile\user-components-x64\foo_jscript_panel3\samples\
 ```
 
-Use the structure already used by your foobar2000 installation. Do not install
-the files into both locations.
+Use only the structure already used by your active foobar2000 profile. Do not
+install the files into more than one location.
 
 ### Recommended setup
 

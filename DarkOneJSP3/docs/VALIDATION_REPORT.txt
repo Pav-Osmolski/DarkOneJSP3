@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.7 Validation Report
+DarkOneJSP3 v0.9.8 Validation Report
 ====================================
 
 Scope
@@ -110,6 +110,10 @@ Checks
 - Documentation headings, numbered sections and README links are internally
   consistent; Configuration Guide headings require blank-line separation, and
   repository artwork is checked whenever an assets folder is present.
+- Installation guidance distinguishes the default standard-install profile at
+  %APPDATA%\foobar2000-v2\profile from both supported portable-profile
+  structures and keeps the DarkOneJSP3 and user-components-x64 destinations
+  explicit.
 - Troubleshooting guidance describes current behaviour without development
   upgrade instructions.
 - CHANGELOG.txt contains one document title and a correctly formatted entry for

@@ -1,6 +1,21 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.8 - Standard-installation path documentation
+-------------------------------------------------
+
+- Added explicit installation guidance for standard, non-portable foobar2000
+  v2 installations using %APPDATA%\foobar2000-v2\profile.
+- Documented the resolved AppData\Roaming location and the complete
+  DarkOneJSP3 and foo_jscript_panel3 sample destinations.
+- Clarified that both top-level package folders must be merged into the active
+  profile and should not be copied beside foobar2000.exe for a normal installed
+  setup.
+- Retained the two supported portable layouts: installation-root profiles and
+  installations using a profile subfolder.
+- Updated README.md and INSTALLATION.txt without changing runtime scripts or
+  the maintainer-managed DarkOneJSP3.fcl.
+
 v0.9.7 - Dot Matrix display-style rendering hotfix
 --------------------------------------------------
 

@@ -37,33 +37,61 @@ Close foobar2000, then back up:
 
 3. Fresh installation
 ---------------------
+The package contains two top-level folders:
+
+  DarkOneJSP3\
+  user-components-x64\
+
+Merge both into the directory used by the active foobar2000 profile. Do not
+copy only one of them, and do not install the same files into multiple profile
+locations.
+
+Standard installation (non-portable)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By default, a standard foobar2000 v2 installation stores its active profile at:
+
+  %APPDATA%\foobar2000-v2\profile\
+
+%APPDATA% normally expands to:
+
+  C:\Users\<username>\AppData\Roaming
+
+Merge the supplied folders into the profile directory. The resulting paths
+should be:
+
+  %APPDATA%\foobar2000-v2\profile\DarkOneJSP3\
+  %APPDATA%\foobar2000-v2\profile\user-components-x64\foo_jscript_panel3\samples\
+
+Paste this path into the File Explorer address bar to open it directly:
+
+  %APPDATA%\foobar2000-v2\profile
+
+Do not place the package folders beside foobar2000.exe for a normal
+non-portable installation. If the profile location was customised, use the
+actual path represented by %fb2k_profile_path% instead.
+
 Portable installation
 ~~~~~~~~~~~~~~~~~~~~~
-The active profile location determines where the package folders belong. A
-portable installation commonly uses either of these structures:
+A portable installation commonly uses the installation root itself:
 
   <foobar2000>\DarkOneJSP3\
   <foobar2000>\user-components-x64\foo_jscript_panel3\samples\
 
-or:
+or its profile subfolder:
 
   <foobar2000>\profile\DarkOneJSP3\
   <foobar2000>\profile\user-components-x64\foo_jscript_panel3\samples\
 
-Use the structure that matches %fb2k_profile_path% for the installation.
+Use the structure that matches %fb2k_profile_path% for the active installation.
 
-Standard or profile installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Place the DarkOneJSP3 folder at the location resolved by:
+JScript Panel files
+~~~~~~~~~~~~~~~~~~~
+The supplied user-components-x64 tree contains customised JScript Panel sample
+and helper files. Merge it into the active profile so the files reach the
+installed foo_jscript_panel3 sample directory.
 
-  %fb2k_profile_path%
-
-Merge the supplied JScript Panel samples into the folder resolved by:
-
-  %fb2k_component_path%samples\
-
-Do not delete or overwrite the foo_jscript_panel3 component DLL. Only its
-customised sample and helper files are supplied by this package.
+Do not delete or overwrite the foo_jscript_panel3 component DLL. Component
+binaries are not supplied by this package.
 
 4. Building or restoring the Columns UI layout
 ----------------------------------------------
