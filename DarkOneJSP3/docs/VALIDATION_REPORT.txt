@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.15 Validation Report
+DarkOneJSP3 v0.9.16 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,9 @@ validation and the audited-file count.
 
 Checks
 ------
+- JS Playlist metadata-only refreshes, including inline star-rating edits,
+  preserve and safely clamp the current viewport offset rather than
+  recentering on the previously focused item.
 - Required project, documentation, controller, loader, wrapper, sample and
   runtime bitmap files are present.
 - Volume-knob cleanup uses the supported repaint-scheduler `cancel()` API and

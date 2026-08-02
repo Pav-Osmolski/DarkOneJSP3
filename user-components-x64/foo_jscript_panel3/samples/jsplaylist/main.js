@@ -922,7 +922,10 @@ function on_playlist_items_added(playlistIndex) {
 
 function on_playlist_items_changed(playlistIndex) {
 	if (playlistIndex == g_active_playlist) {
-		update_playlist();
+		// Metadata-only changes such as an inline rating update must refresh the
+		// row data without recentering the viewport on the previously focused
+		// playlist item.
+		update_playlist(true);
 		p.topBar.setDatas();
 		p.headerBar.resetSortIndicators();
 		full_repaint();
@@ -1699,10 +1702,16 @@ function init() {
 	start_repaint_timer();
 }
 
-function update_playlist() {
+function update_playlist(preserveOffset) {
+	var previous_offset = preserveOffset ? p.list.offset : null;
 	g_group_id_focused = 0;
 	if (g_playlist_render_cache) g_playlist_render_cache.invalidateAll();
 	p.list.updateHandleList();
+
+	if (typeof previous_offset == "number") {
+		var maximum_offset = Math.max(0, p.list.totalRows - p.list.totalRowVisible);
+		p.list.offset = Math.max(0, Math.min(Math.round(previous_offset), maximum_offset));
+	}
 
 	p.list.setItems(false);
 	p.scrollbar.setCursor(p.list.totalRowVisible, p.list.totalRows, p.list.offset);

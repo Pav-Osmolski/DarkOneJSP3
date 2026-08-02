@@ -77,7 +77,7 @@ EXPECTED_MODULE_VERSIONS = {
     'queue_viewer': ('0.6.0', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.3', 'MusicBrainz'),
-    'js_playlist': ('0.5.8', 'JS Playlist'),
+    'js_playlist': ('0.5.9', 'JS Playlist'),
     'playlist_manager': ('0.5.4', 'Playlist Manager'),
     'network_headers': ('0.6.2', 'network-header identity'),
     'album_notes': ('0.6.7', 'Album Notes'),
@@ -93,7 +93,7 @@ EXPECTED_MODULE_VERSIONS = {
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.4.4', 'release-validator module'),
+    'release_validator': ('0.4.5', 'release-validator module'),
 }
 
 SEMVER_MODULES = ()

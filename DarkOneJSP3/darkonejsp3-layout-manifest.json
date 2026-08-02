@@ -1,5 +1,5 @@
 {
-  "version": "0.9.15",
+  "version": "0.9.16",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -154,7 +154,8 @@
       "optional_performance_profiling": true,
       "render_cache_playback_generation_reuse": true,
       "render_cache_clock_second_reuse": true,
-      "render_cache_cross_column_state_compatibility": true
+      "render_cache_cross_column_state_compatibility": true,
+      "inline_metadata_viewport_preserved": true
     },
     "documentation": "complete supported-layout context-menu map, current-state configuration, topic-based troubleshooting and source-backed menu coverage validation",
     "playlist_manager": {
@@ -659,7 +660,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.4.4",
+      "version": "0.4.5",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",

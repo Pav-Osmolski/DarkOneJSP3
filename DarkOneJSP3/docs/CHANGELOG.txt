@@ -1,6 +1,20 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.16 - JS Playlist inline-rating viewport preservation
+---------------------------------------------------------
+
+- Fixed JS Playlist jumping back to the previously focused or selected track
+  immediately after clicking a rating star on another visible row.
+- Metadata-only playlist refreshes now retain the current row offset instead of
+  allowing the handle-list rebuild to recentre the viewport on the focused item.
+- The preserved offset is clamped safely when a metadata edit also changes group
+  structure or reduces the total number of visible rows.
+- Selection and keyboard focus remain unchanged when a rating is edited.
+- Added validation requiring the metadata-refresh callback to use the
+  viewport-preserving path and rejecting the previous recentering call.
+- Advanced JS Playlist to 0.5.9 and validator to 0.4.5.
+
 v0.9.15 - Immediate volume-knob release state
 ---------------------------------------------
 

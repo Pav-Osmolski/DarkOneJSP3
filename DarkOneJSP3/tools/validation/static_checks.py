@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.4',
+            'version': '0.4.5',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -385,6 +385,8 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if js_playlist_manifest.get(flag) is not True:
                 errors.append('Manifest JS Playlist arrow flag is missing: ' + flag)
+        if js_playlist_manifest.get('inline_metadata_viewport_preserved') is not True:
+            errors.append('Manifest omits JS Playlist inline-metadata viewport preservation')
         factory_scope = manifest.get('enhancements', {}).get('factory_reset', {})
         if factory_scope.get('scope') != 'DarkOneJSP3-managed properties only':
             errors.append('Manifest does not define factory-reset ownership')
@@ -776,8 +778,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'darkOneJsp3HandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.5.8"' not in body:
-            errors.append('JS Playlist entry version is not 0.5.8')
+        if '// @version "0.5.9"' not in body:
+            errors.append('JS Playlist entry version is not 0.5.9')
         for token in [
             'DarkOneJSP3\\shared\\performance_utils.js',
             'DarkOneJSP3\\shared\\ui_cadence.js',
@@ -808,6 +810,11 @@ def run(ctx: ValidationContext) -> None:
             'function bump_playlist_dynamic_generation() {',
             'function repaint_current_playlist_row() {',
             'function on_playlists_changed() {',
+            'function update_playlist(preserveOffset)',
+            'var previous_offset = preserveOffset ? p.list.offset : null;',
+            'p.list.offset = Math.max(0, Math.min(Math.round(previous_offset), maximum_offset));',
+            'update_playlist(true);',
+            'Metadata-only changes such as an inline rating update',
             'DarkOnePerformance.createProfiler(',
             'function set_playlist_refresh_interval(value)',
             'g_js_playlist_cadence_reporter.announce();',
@@ -831,6 +838,7 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('JS Playlist performance optimisation is missing: ' + token)
         for obsolete in [
+            'function on_playlist_items_changed(playlistIndex) {\n\tif (playlistIndex == g_active_playlist) {\n\t\tupdate_playlist();',
             'DarkOneDisplayRefresh.createController(window, {',
             'function set_playlist_refresh_automatic()',
             'g_repaint_timer = window.SetInterval(function () {',

@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - DarkOneJSP3 Enhanced"
-// @version "0.5.8"
+// @version "0.5.9"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
@@ -36,6 +36,7 @@ DarkOneJSP3 enhancements
 - Cached row title-format rendering with selective invalidation.
 - Direct2D bitmap caching for album covers and immutable artwork.
 - Optional performance diagnostics through panel properties.
+- Inline rating and metadata refreshes preserve the current playlist viewport.
 
 Right-click the playlist and open "Smooth scrolling" to configure these options.
 Defaults: enabled, 8 ms refresh, divisor 2, wheel and scrollbar snapping enabled, 3 rows per notch.
