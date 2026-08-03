@@ -1,6 +1,18 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.19 - Enhanced Sample Library documentation
+-----------------------------------------------
+
+- Added a dedicated Enhanced Sample Library section to the repository README.
+- Explained the standalone sample architecture, preserved compatibility contract
+  and benefits for other foobar2000 themes.
+- Added direct README links to `DarkOneJSP3/docs/ENHANCED_SAMPLES.txt` from the
+  new section, installation guidance and documentation index.
+- Added release validation requiring the README section and documentation link
+  to remain present and point to the distributed guide.
+- Advanced the release validator to 0.4.8.
+
 v0.9.18 - Standalone compatibility hardening
 --------------------------------------------
 

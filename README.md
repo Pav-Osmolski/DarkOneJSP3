@@ -5,7 +5,6 @@
 ![JSplitter 4.x](https://img.shields.io/badge/JSplitter-Required-7b68ee?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/Pav-Osmolski/DarkOneJSP3?style=flat-square)
-![Downloads](https://img.shields.io/github/downloads/Pav-Osmolski/DarkOneJSP3/total?style=flat-square)
 
 <p align="center">
   <img src="assets/darkonejsp3-logo.png" alt="DarkOneJSP3" width="760">
@@ -19,7 +18,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.18
+  <strong>Current stable release:</strong> v0.9.19
 </p>
 
 > [!IMPORTANT]
@@ -31,6 +30,7 @@
 
 - [✨ Overview](#overview)
 - [📸 Screenshots](#screenshots)
+- [🧩 Enhanced Sample Library](#enhanced-sample-library)
 - [🛠️ Requirements and Installation](#requirements)
 - [📖 Documentation](#documentation)
 - [⚖️ Credits and attribution](#credits-and-attribution)
@@ -73,7 +73,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.18** is the current stable release.
+**DarkOneJSP3 v0.9.19** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -84,6 +84,40 @@ starting layout.
 ![Main view](assets/darkonejsp3-screenshot-main.jpg)
 
 ![InfoStack Album Notes functionality](assets/darkonejsp3-screenshot-albumnotes.jpg)
+
+## Enhanced Sample Library
+
+DarkOneJSP3 includes a standalone, upgraded library of JScript Panel 3 samples
+inside `user-components-x64\foo_jscript_panel3`. These are the same enhanced
+samples used by the theme, but they no longer require the separate
+`DarkOneJSP3` project directory and can also be installed for other foobar2000
+themes.
+
+The library preserves the established sample filenames, module paths,
+constructors and saved property keys, allowing existing themes and older saved
+panel entries to continue using the upgraded implementations. Component-local
+shared helpers provide the enhanced performance scheduling, UI cadence, colour
+handling and reset support without coupling the samples to the DarkOneJSP3
+layout.
+
+Benefits for other themes include:
+
+* Drop-in access to the enhanced Album Notes, MusicBrainz, playlist, playlist
+  manager, queue, properties and Last.fm sample improvements.
+* Backwards compatibility for older entry scripts through guarded helper and
+  reset adapters.
+* Neutral standalone reset and page-background integration, while retaining
+  the established DarkOneJSP3 aliases and saved settings.
+* A single maintained sample library shared by DarkOneJSP3 and other themes,
+  avoiding divergent or theme-specific forks.
+
+Back up an existing `foo_jscript_panel3\samples` directory and `helpers.txt`
+before replacing them, particularly when another theme includes its own local
+modifications. Individual top-level sample files can then be loaded normally
+inside JScript Panel 3.
+
+See the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt)
+for standalone installation, compatibility guarantees and integration details.
 
 ## Requirements
 
@@ -116,8 +150,8 @@ The package contains two top-level directories: `DarkOneJSP3` and
 foobar2000 profile.
 
 The supplied JScript Panel sample tree can also be installed independently for
-other themes; see `DarkOneJSP3/docs/ENHANCED_SAMPLES.txt`. DarkOneJSP3 itself
-still requires both top-level directories.
+other themes; see the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt).
+DarkOneJSP3 itself still requires both top-level directories.
 
 ### Standard installation (non-portable)
 
@@ -192,6 +226,7 @@ regenerate the FCL.
 * [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
 * [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
 * [Configuration Guide](DarkOneJSP3/docs/CONFIGURATION_GUIDE.txt)
+* [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt)
 * [Troubleshooting](DarkOneJSP3/docs/TROUBLESHOOTING.txt)
 * [Migration Reference](DarkOneJSP3/docs/MIGRATION_REFERENCE.txt)
 * [Changelog](DarkOneJSP3/docs/CHANGELOG.txt)
@@ -202,10 +237,12 @@ regenerate the FCL.
 
 ```text
 assets/
-└── darkonejsp3-logo.png   Repository artwork used by this README
+├── darkonejsp3-logo.png                    Repository artwork used by this README
+├── darkonejsp3-screenshot-albumnotes.jpg   Album Notes and InfoStack screenshot
+└── darkonejsp3-screenshot-main.jpg         Main DarkOneJSP3 interface screenshot
 
 DarkOneJSP3/
-├── docs/                  Documentation, changelog and credits
+├── docs/                  Documentation, changelog, credits and user guides
 ├── fcl/                   Optional maintainer-exported Columns UI layout
 ├── images/                DarkOne artwork and display/icon sheets
 ├── jscript/               DarkOne JScript Panel 3 wrappers and modules
@@ -220,7 +257,8 @@ DarkOneJSP3/
 user-components-x64/
 └── foo_jscript_panel3/
     ├── licenses/          Retained third-party licence notices
-    └── samples/           DarkOneJSP3-enhanced sample scripts
+    └── samples/           Standalone enhanced sample library used by
+                           DarkOneJSP3 and compatible foobar2000 themes
 ```
 
 ## Validation

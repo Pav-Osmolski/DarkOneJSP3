@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.7',
+            'version': '0.4.8',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -227,6 +227,8 @@ def run(ctx: ValidationContext) -> None:
             'repository_assets_checked_when_present': True,
             'manual_fcl_excluded': True,
             'configuration_guide_heading_spacing_checked': True,
+            'enhanced_sample_readme_section_checked': True,
+            'enhanced_sample_document_link_checked': True,
             'performance_scheduler_tests': True,
             'playlist_render_cache_tests': True,
             'bitmap_rendering_checks': True,
@@ -1332,6 +1334,11 @@ def run(ctx: ValidationContext) -> None:
     readme_path = root / 'README.md'
     if readme_path.exists():
         readme_body = text(readme_path)
+        enhanced_samples_target = 'DarkOneJSP3/docs/ENHANCED_SAMPLES.txt'
+        if '## Enhanced Sample Library' not in readme_body:
+            errors.append('README.md is missing the Enhanced Sample Library section')
+        if f']({enhanced_samples_target})' not in readme_body:
+            errors.append('README.md is missing a link to the enhanced sample guide')
         # Promotional artwork is maintained in the GitHub repository and may be
         # omitted from runtime release archives. When an assets folder is present,
         # however, every referenced repository image must also be present.

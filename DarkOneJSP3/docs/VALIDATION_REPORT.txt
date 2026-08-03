@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.18 Validation Report
+DarkOneJSP3 v0.9.19 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,8 @@ validation and the audited-file count.
 
 Checks
 ------
+- The repository README contains a dedicated Enhanced Sample Library section
+  and a direct link to the distributed ENHANCED_SAMPLES.txt guide.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3
   directory and every distributed top-level sample import resolves.
 - Enhanced sample entries contain no hard DarkOneJSP3 profile-path imports.

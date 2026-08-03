@@ -100,7 +100,7 @@ EXPECTED_MODULE_VERSIONS = {
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.4.7', 'release-validator module'),
+    'release_validator': ('0.4.8', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
