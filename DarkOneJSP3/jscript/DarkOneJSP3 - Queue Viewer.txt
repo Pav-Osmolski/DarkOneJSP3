@@ -1,18 +1,18 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Queue Viewer"
-// @version "0.6.0"
+// @version "0.6.1"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
-// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Queue_Viewer.js"
 // ==/PREPROCESSOR==
 
-var panel = new _panel({ darkonejsp3_page_background : true });
+var panel = new _panel({ enhanced_page_background : true });
 var queue = new _queue_viewer(LM, TM, 0, 0);
 
 function on_colours_changed() { panel.colours_changed(); window.Repaint(); }
@@ -40,5 +40,5 @@ function on_size() {
 }
 
 function on_notify_data(name, info) {
-    if (darkOneJsp3HandleSampleReset(name, info, "queue-viewer")) return;
+    if (jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")) return;
 }

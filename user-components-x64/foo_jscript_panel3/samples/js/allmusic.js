@@ -235,7 +235,7 @@ function _allmusic(x, y, w, h, options) {
 		var profile = value == 'chrome' ? 'chrome' : 'application';
 		if (typeof DarkOneNetwork != 'undefined' && typeof DarkOneNetwork.setHeaderProfile == 'function')
 			profile = DarkOneNetwork.setHeaderProfile(profile);
-		console.log(N, 'Request identity changed to ' + (profile == 'chrome' ? 'Google Chrome 150-style (experimental).' : 'DarkOneJSP3 application (recommended).'));
+		console.log(N, 'Request identity changed to ' + (profile == 'chrome' ? 'Google Chrome 150-style (experimental).' : 'JSP3 Enhanced Samples application (recommended).'));
 		if (profile == 'chrome')
 			console.log(N, 'Chrome-style headers do not execute JavaScript challenges or create a real browser session.');
 	}
@@ -1128,7 +1128,7 @@ function _allmusic(x, y, w, h, options) {
 		panel.s11.AppendTo(panel.m, MF_STRING, 'AllMusic cache/tools');
 
 		if (!this.managed) {
-			panel.s12.AppendMenuItem(MF_STRING, 1150, 'DarkOneJSP3 application (recommended)');
+			panel.s12.AppendMenuItem(MF_STRING, 1150, 'JSP3 Enhanced Samples application (recommended)');
 			panel.s12.AppendMenuItem(MF_STRING, 1151, 'Google Chrome 150-style (experimental)');
 			panel.s12.CheckMenuRadioItem(1150, 1151, this.get_header_profile() == 'chrome' ? 1151 : 1150);
 			panel.s12.AppendTo(panel.m, MF_STRING, 'Request identity');
@@ -1346,14 +1346,14 @@ function _allmusic(x, y, w, h, options) {
 	this.last_request_url = '';
 
 	this.headers = JSON.stringify({
-		'User-Agent' : 'DarkOneJSP3/0.6.2 (foobar2000 JScript Panel 3)',
+		'User-Agent' : 'JSP3EnhancedSamples/0.6.2 (foobar2000 JScript Panel 3)',
 		'Referer' : 'https://www.allmusic.com/',
 		'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 		'Accept-Language' : 'en-GB,en;q=0.9'
 	});
 
 	this.mb_headers = JSON.stringify({
-		'User-Agent' : 'DarkOneJSP3/0.6.2 (foobar2000 JScript Panel 3)',
+		'User-Agent' : 'JSP3EnhancedSamples/0.6.2 (foobar2000 JScript Panel 3)',
 		'Accept' : 'application/json'
 	});
 

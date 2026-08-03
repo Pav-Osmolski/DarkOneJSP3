@@ -1141,7 +1141,7 @@ function oList(object_name) {
 		smooth.AppendMenuItem(cList.wheel_snap ? MF_STRING : MF_GRAYED, 108, "Set snapped wheel row step...");
 		smooth.AppendMenuItem(CheckMenuIf(cList.scrollbar_snap), 112, "Snap scrollbar dragging to playlist rows");
 		smooth.AppendMenuSeparator();
-		smooth.AppendMenuItem(MF_STRING, 109, "Restore DarkOneJSP3 defaults");
+		smooth.AppendMenuItem(MF_STRING, 109, "Restore enhanced defaults");
 		smooth.AppendTo(menu, MF_STRING, "Smooth scrolling");
 
 		menu.AppendMenuSeparator();

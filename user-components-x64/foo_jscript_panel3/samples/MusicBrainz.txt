@@ -1,18 +1,17 @@
 // ==PREPROCESSOR==
-// @name "MusicBrainz - DarkOneJSP3 Enhanced"
-// @version "0.6.3"
+// @name "MusicBrainz - Enhanced"
+// @version "0.6.4"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
-// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
-// @import "%fb2k_component_path%samples\js\darkone_network.js"
 // @import "%fb2k_component_path%samples\js\musicbrainz.js"
 // ==/PREPROCESSOR==
 
-// DarkOneJSP3 enhancements:
+// Enhanced sample features:
 // - artist/album-artist selection
 // - optional artist-ID resolution when MusicBrainz tags are missing
 // - MusicBrainz-compliant request scheduling and HTTP status handling
@@ -65,7 +64,7 @@ function on_mouse_move(x, y) {
 }
 
 function on_notify_data(name, info) {
-	if (darkOneJsp3HandleSampleReset(name, info, "musicbrainz")) return;
+	if (jsp3EnhancedHandleSampleReset(name, info, "musicbrainz")) return;
 	musicbrainz.notify_data(name, info);
 }
 

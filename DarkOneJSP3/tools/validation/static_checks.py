@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.5',
+            'version': '0.4.7',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -525,17 +525,20 @@ def run(ctx: ValidationContext) -> None:
             if title not in panel_titles:
                 errors.append('Manifest panel inventory is missing ' + title)
 
-    # Reset bridge scope and ownership.
-    reset_import = '%fb2k_profile_path%DarkOneJSP3\\shared\\reset_defaults.js'
-    bridge_import = '%fb2k_component_path%samples\\js\\darkonejsp3_reset.js'
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
+    sample_bridge_import = '%fb2k_component_path%samples\\js\\jsp3_enhanced_reset.js'
+    legacy_project_import = '%fb2k_profile_path%DarkOneJSP3\\'
     reset_entries: set[str] = set()
     if samples.exists():
         for entry in samples.glob('*.txt'):
             body = text(entry)
-            if reset_import in body or bridge_import in body:
+            if legacy_project_import in body:
+                errors.append(rel(entry) + ' retains a hard DarkOneJSP3 profile dependency')
+            if sample_defaults_import in body or sample_bridge_import in body:
                 reset_entries.add(entry.name)
-            if (reset_import in body) != (bridge_import in body):
-                errors.append(rel(entry) + ' imports only half of the reset bridge')
+            if (sample_defaults_import in body) != (sample_bridge_import in body):
+                errors.append(rel(entry) + ' imports only half of the standalone reset bridge')
     expected_reset_entries = {
         'Album Notes.txt',
         'Last.fm Artist Info + User Info.txt',
@@ -547,7 +550,7 @@ def run(ctx: ValidationContext) -> None:
     }
     if reset_entries != expected_reset_entries:
         errors.append(
-            'Reset bridge import ownership mismatch: ' +
+            'Standalone reset bridge import ownership mismatch: ' +
             ', '.join(sorted(reset_entries))
         )
 
@@ -559,32 +562,32 @@ def run(ctx: ValidationContext) -> None:
     )
     for entry in reset_callback_entries:
         body = text(entry)
-        if 'darkOneJsp3HandleSampleReset(' not in body:
+        if 'jsp3EnhancedHandleSampleReset(' not in body:
             continue
         missing = []
-        if reset_import not in body:
-            missing.append('reset_defaults.js')
-        if bridge_import not in body:
-            missing.append('darkonejsp3_reset.js')
+        if sample_defaults_import not in body:
+            missing.append('sample_defaults.js')
+        if sample_bridge_import not in body:
+            missing.append('jsp3_enhanced_reset.js')
         if missing:
             errors.append(
-                rel(entry) + ' calls the reset helper without importing ' +
+                rel(entry) + ' calls the standalone reset helper without importing ' +
                 ' and '.join(missing)
             )
 
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.6.0"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.0')
-        if 'darkOneJsp3HandleSampleReset(name, info, "queue-viewer")' not in body:
+        if '// @version "0.6.1"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.1')
+        if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
-        if reset_import not in body or bridge_import not in body:
-            errors.append('DarkOneJSP3 Queue Viewer reset bridge imports are incomplete')
+        if sample_defaults_import not in body or sample_bridge_import not in body:
+            errors.append('DarkOneJSP3 Queue Viewer standalone reset imports are incomplete')
 
     generic_queue_entry = samples / 'Queue Viewer.txt'
-    if generic_queue_entry.exists() and '// @version "0.6.0"' not in text(generic_queue_entry):
-        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.0')
+    if generic_queue_entry.exists() and '// @version "0.6.1"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.1')
 
     queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
     if queue_source.exists():
@@ -612,6 +615,25 @@ def run(ctx: ValidationContext) -> None:
             if forbidden in body:
                 errors.append('Queue Viewer uses unsupported queue API: ' + forbidden)
 
+    for path in [
+        samples / 'js' / 'darkone_network.js',
+        samples / 'js' / 'musicbrainz.js',
+        samples / 'js' / 'allmusic.js',
+        samples / 'js' / 'album_notes.js',
+        project / 'jscript' / 'js' / 'Queue_Viewer.js',
+    ]:
+        if not path.exists():
+            continue
+        body = text(path)
+        for obsolete in [
+            'DarkOneJSP3 application (recommended)',
+            'DarkOneJSP3 Album Notes diagnostics',
+            '[DarkOneJSP3 Queue Viewer]',
+            "'DarkOneJSP3/0.6.2 (foobar2000 JScript Panel 3",
+        ]:
+            if obsolete in body:
+                errors.append(rel(path) + ' retains visible project branding in a standalone sample: ' + obsolete)
+
     common = samples / 'js' / 'common.js'
     if common.exists():
         body = text(common)
@@ -624,6 +646,7 @@ def run(ctx: ValidationContext) -> None:
     if panel_helper.exists():
         body = text(panel_helper)
         for token in [
+            'options.enhanced_page_background === true',
             'options.darkonejsp3_page_background === true',
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3)",
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR', RGB(24, 24, 24))",
@@ -633,6 +656,8 @@ def run(ctx: ValidationContext) -> None:
             "'Columns UI global background'",
             "'Page background colour'",
             'gr.Clear(this.page_background_colour())',
+            "typeof DarkOneColour !== 'undefined'",
+            'case Boolean(background_option):',
         ]:
             if token not in body:
                 errors.append('Page-background helper is missing: ' + token)
@@ -648,16 +673,78 @@ def run(ctx: ValidationContext) -> None:
         if not entry.exists():
             continue
         body = text(entry)
-        if 'new _panel({ darkonejsp3_page_background : true })' not in body:
+        if 'new _panel({ enhanced_page_background : true })' not in body:
             errors.append(rel(entry) + ' does not opt in to page backgrounds')
         if role not in body:
             errors.append(rel(entry) + ' does not identify its reset role: ' + role)
+
+    standalone_performance_helper = samples / 'shared' / 'performance_utils.js'
+    standalone_cadence_helper = samples / 'shared' / 'ui_cadence.js'
+    component_helpers = root / 'user-components-x64' / 'foo_jscript_panel3' / 'helpers.txt'
+    if standalone_performance_helper.exists() and 'typeof DarkOnePerformance != "undefined"' not in text(standalone_performance_helper):
+        errors.append('Standalone performance helper lacks duplicate-import protection')
+    if standalone_cadence_helper.exists() and 'typeof DarkOneUiCadence != "undefined"' not in text(standalone_cadence_helper):
+        errors.append('Standalone UI-cadence helper lacks duplicate-import protection')
+    canonical_import_order = {
+        samples / 'JS Playlist.txt': [
+            'samples\\shared\\performance_utils.js',
+            'samples\\shared\\ui_cadence.js',
+            '%fb2k_component_path%helpers.txt',
+        ],
+        samples / 'Smooth Playlist Manager.txt': [
+            'samples\\shared\\performance_utils.js',
+            'samples\\shared\\ui_cadence.js',
+            '%fb2k_component_path%helpers.txt',
+        ],
+        project / 'jscript' / 'DarkOneJSP3 - Display Panel.txt': [
+            'DarkOneJSP3\\shared\\performance_utils.js',
+            'DarkOneJSP3\\shared\\ui_cadence.js',
+            '%fb2k_component_path%helpers.txt',
+        ],
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': [
+            'DarkOneJSP3\\shared\\performance_utils.js',
+            '%fb2k_component_path%helpers.txt',
+        ],
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': [
+            'DarkOneJSP3\\shared\\performance_utils.js',
+            'DarkOneJSP3\\shared\\ui_cadence.js',
+            '%fb2k_component_path%helpers.txt',
+        ],
+    }
+    for entry, tokens in canonical_import_order.items():
+        if not entry.exists():
+            continue
+        body = text(entry)
+        positions = [body.find(token) for token in tokens]
+        if any(position < 0 for position in positions) or positions != sorted(positions):
+            errors.append(rel(entry) + ' does not load canonical helpers before helpers.txt')
+
+    redundant_network_import = '%fb2k_component_path%samples\\js\\darkone_network.js'
+    for entry in [
+        samples / 'Album Notes.txt',
+        samples / 'MusicBrainz.txt',
+        samples / 'Allmusic Review.txt',
+        samples / 'Allmusic Review + Album Art.txt',
+    ]:
+        if entry.exists() and redundant_network_import in text(entry):
+            errors.append(rel(entry) + ' redundantly imports the network coordinator after common.js')
+
+    if component_helpers.exists():
+        helper_body = text(component_helpers)
+        for token in [
+            '// == JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS ==',
+            'var DarkOnePerformance = typeof DarkOnePerformance != "undefined"',
+            'var DarkOneUiCadence = typeof DarkOneUiCadence != "undefined"',
+            '// == END JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS ==',
+        ]:
+            if token not in helper_body:
+                errors.append('helpers.txt legacy-sample compatibility is missing: ' + token)
 
     performance_helper = project / 'shared' / 'performance_utils.js'
     if performance_helper.exists():
         body = text(performance_helper)
         for token in [
-            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.3"',
+            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.4"',
             'createRepaintScheduler',
             'createFrameLoop',
             'createValueCoalescer',
@@ -674,6 +761,7 @@ def run(ctx: ValidationContext) -> None:
             'typeof utils.LoadBitmap',
             'typeof utils.LoadImage',
             'typeof utilsObject.CreateProfiler',
+            'typeof profiler.Reset',
         ]:
             if forbidden in body:
                 errors.append(
@@ -699,31 +787,81 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Shared UI-cadence protocol is incomplete: ' + token)
 
-    registry_path = project / 'shared' / 'reset_defaults.js'
-    if registry_path.exists():
-        registry_body = text(registry_path)
+    project_reset_receivers = {
+        project / 'jscript' / 'js' / 'Config_Global_Script.js': [
+            'function darkOneNormaliseResetScope(value)',
+            "if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;",
+        ],
+        project / 'jsplitter' / 'shared.js': [
+            'function darkOneJsp3NormaliseResetScope(value)',
+            "if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;",
+        ],
+    }
+    for receiver, tokens in project_reset_receivers.items():
+        if not receiver.exists():
+            continue
+        receiver_body = text(receiver)
+        for token in tokens:
+            if token not in receiver_body:
+                errors.append(rel(receiver) + ' project reset hardening is missing: ' + token)
+
+    reset_bridge_path = samples / 'js' / 'jsp3_enhanced_reset.js'
+    if reset_bridge_path.exists():
+        bridge_body = text(reset_bridge_path)
+        for token in [
+            'function jsp3EnhancedNormaliseResetScope(value)',
+            'function jsp3EnhancedHasResetRole(role)',
+            'if (!scope) return false;',
+            'if (!handled) return false;',
+        ]:
+            if token not in bridge_body:
+                errors.append('Standalone reset bridge hardening is missing: ' + token)
+
+    legacy_reset_path = samples / 'js' / 'darkonejsp3_reset.js'
+    if legacy_reset_path.exists():
+        legacy_body = text(legacy_reset_path)
+        for token in [
+            '// == JSP3 ENHANCED LEGACY SAMPLE DEFAULTS ==',
+            '// == END JSP3 ENHANCED LEGACY SAMPLE DEFAULTS ==',
+            '// == JSP3 ENHANCED LEGACY RESET BRIDGE ==',
+            '// == END JSP3 ENHANCED LEGACY RESET BRIDGE ==',
+        ]:
+            if token not in legacy_body:
+                errors.append('Legacy saved-entry reset adapter is missing: ' + token)
+
+    sample_registry_path = samples / 'shared' / 'sample_defaults.js'
+    if sample_registry_path.exists():
+        registry_body = text(sample_registry_path)
+        for token in [
+            'var JSP3_ENHANCED_RESET_REGISTRY = {',
+            'function jsp3EnhancedRoleDefaults(role, scope)',
+            'function jsp3EnhancedApplyRoleReset(role, scope)',
+            'var DARKONEJSP3_SAMPLE_RESET_REGISTRY = JSP3_ENHANCED_RESET_REGISTRY',
+        ]:
+            if token not in registry_body:
+                errors.append('Standalone sample-default registry is missing: ' + token)
         for role in ['lastfm-bio', 'lastfm-info', 'album-notes', 'queue-viewer', 'properties']:
             role_match = re.search(
                 r'"' + re.escape(role) + r'"\s*:\s*\{(.*?)(?=\n    "[^"]+"\s*:\s*\{|\n\};)',
                 registry_body, re.S)
             if not role_match:
-                errors.append('Reset registry is missing page-background role: ' + role)
+                errors.append('Standalone sample reset registry is missing page-background role: ' + role)
                 continue
             block = role_match.group(1)
             for token in [
                     '"DARKONEJSP3.PAGE.BACKGROUND.MODE": 3',
                     '"DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818']:
                 if token not in block:
-                    errors.append('Reset registry page-background default is missing for ' + role + ': ' + token)
+                    errors.append('Standalone sample reset registry page-background default is missing for ' + role + ': ' + token)
 
     album_notes = samples / 'Album Notes.txt'
     if album_notes.exists():
         album_notes_entry_body = text(album_notes)
-        token = 'darkOneJsp3HandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
+        token = 'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
         if token not in album_notes_entry_body:
             errors.append('Album Notes does not reset embedded MusicBrainz settings')
-        if '// @version "0.6.7"' not in album_notes_entry_body:
-            errors.append('Album Notes entry version is not 0.6.7')
+        if '// @version "0.6.8"' not in album_notes_entry_body:
+            errors.append('Album Notes entry version is not 0.6.8')
 
     album_art_entry = samples / 'Album Art.txt'
     if album_art_entry.exists():
@@ -771,18 +909,22 @@ def run(ctx: ValidationContext) -> None:
             if token not in album_notes_body:
                 errors.append('Album Notes AllMusic activation guard is missing: ' + token)
     musicbrainz = samples / 'MusicBrainz.txt'
-    if musicbrainz.exists() and 'darkOneJsp3HandleSampleReset(name, info, "musicbrainz")' not in text(musicbrainz):
-        errors.append('Standalone MusicBrainz reset bridge is missing')
+    if musicbrainz.exists():
+        musicbrainz_body = text(musicbrainz)
+        if 'jsp3EnhancedHandleSampleReset(name, info, "musicbrainz")' not in musicbrainz_body:
+            errors.append('Standalone MusicBrainz reset bridge is missing')
+        if '// @version "0.6.4"' not in musicbrainz_body:
+            errors.append('MusicBrainz entry version is not 0.6.4')
     js_playlist_entry = samples / 'JS Playlist.txt'
     if js_playlist_entry.exists():
         body = text(js_playlist_entry)
-        if 'darkOneJsp3HandleSampleReset(name, info, "js-playlist")' not in body:
+        if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.5.9"' not in body:
-            errors.append('JS Playlist entry version is not 0.5.9')
+        if '// @version "0.6.0"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.0')
         for token in [
-            'DarkOneJSP3\\shared\\performance_utils.js',
-            'DarkOneJSP3\\shared\\ui_cadence.js',
+            'samples\\shared\\performance_utils.js',
+            'samples\\shared\\ui_cadence.js',
             'samples\\jsplaylist\\render_cache.js',
         ]:
             if token not in body:
@@ -978,13 +1120,13 @@ def run(ctx: ValidationContext) -> None:
     playlist_manager_entry = samples / 'Smooth Playlist Manager.txt'
     if playlist_manager_entry.exists():
         body = text(playlist_manager_entry)
-        if 'darkOneJsp3HandleSampleReset(name, info, "playlist-manager")' not in body:
+        if 'jsp3EnhancedHandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.4"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.4')
-        if 'DarkOneJSP3\\shared\\performance_utils.js' not in body:
+        if '// @version "0.5.5"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.5')
+        if 'samples\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
-        if 'DarkOneJSP3\\shared\\ui_cadence.js' not in body:
+        if 'samples\\shared\\ui_cadence.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared UI-cadence helpers')
 
     playlist_manager_impl = samples / 'smooth' / 'jsspm.js'
@@ -1039,13 +1181,16 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Playlist Manager retains an obsolete performance path: ' + obsolete)
 
     registry_path = project / 'shared' / 'reset_defaults.js'
+    sample_registry_path = samples / 'shared' / 'sample_defaults.js'
     if registry_path.exists():
         registry = text(registry_path)
         for role in ['control-left', 'control-right', 'display', 'root', 'main-columns', 'info-stack',
-                     'display-waveform', 'album-notes', 'musicbrainz', 'queue-viewer',
-                     'js-playlist', 'playlist-manager']:
+                     'display-waveform']:
             if f'"{role}"' not in registry:
-                errors.append('Reset role missing: ' + role)
+                errors.append('DarkOneJSP3 reset role missing: ' + role)
+        for role in ['album-notes', 'musicbrainz', 'queue-viewer', 'js-playlist', 'playlist-manager']:
+            if f'"{role}"' in registry:
+                errors.append('Sample-owned reset role remains in the DarkOneJSP3 registry: ' + role)
         if '"DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE": 0' not in registry:
             errors.append('Control Right reset registry is missing the automatic volume-cadence default')
         for token in [
@@ -1055,6 +1200,15 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in registry:
                 errors.append('Optional-button reset coverage is missing: ' + token)
+        for token in [
+            '"DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE": 1',
+            '"DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR": 0xff000000',
+        ]:
+            if token not in registry:
+                errors.append('Upper divider reset default is missing: ' + token)
+
+    if sample_registry_path.exists():
+        sample_registry = text(sample_registry_path)
         playlist_defaults = [
             '"JSPLAYLIST.Enable Smooth Scrolling": true',
             '"JSPLAYLIST.UI Refresh Interval (ms)": 8',
@@ -1079,17 +1233,11 @@ def run(ctx: ValidationContext) -> None:
             '"SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2": ""',
         ]
         for token in playlist_defaults:
-            if token not in registry:
+            if token not in sample_registry:
                 errors.append('JS Playlist reset default is missing: ' + token)
         for token in manager_defaults:
-            if token not in registry:
+            if token not in sample_registry:
                 errors.append('Playlist Manager reset default is missing: ' + token)
-        for token in [
-            '"DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE": 1',
-            '"DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR": 0xff000000',
-        ]:
-            if token not in registry:
-                errors.append('Upper divider reset default is missing: ' + token)
 
     for path in [project / 'jsplitter' / '04_art_spectrum.js',
                  project / 'jsplitter' / '05_bottom_controls.js']:
@@ -1097,8 +1245,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append(rel(path) + ' declares a no-op reset role')
 
     shared = project / 'jsplitter' / 'shared.js'
-    if shared.exists() and 'if (!role || !DARKONEJSP3_RESET_REGISTRY[role]) return true;' not in text(shared):
-        errors.append('JSplitter reset handler does not skip hosts without settings')
+    if shared.exists() and 'if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;' not in text(shared):
+        errors.append('JSplitter reset handler does not reject invalid scopes or hosts without settings')
 
     # Obsolete property migrations and helper parameters.
     display_system = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
@@ -1122,16 +1270,19 @@ def run(ctx: ValidationContext) -> None:
         if "NotifyOthers('DarkOneJSP3.Reset.Properties', { scope : scope })" in body:
             errors.append('Control-panel reset still sends an object payload')
 
-    sample_reset = samples / 'js' / 'darkonejsp3_reset.js'
+    sample_reset = samples / 'js' / 'jsp3_enhanced_reset.js'
     if sample_reset.exists():
         body = text(sample_reset)
         for token in [
-            'function darkOneJsp3SampleResetScope(info)',
-            'var scope = darkOneJsp3SampleResetScope(info);',
+            'function jsp3EnhancedSampleResetScope(info)',
+            'var scope = jsp3EnhancedSampleResetScope(info);',
+            'JSP3Enhanced.Reset.Properties',
+            'DarkOneJSP3.Reset.Properties',
+            'function darkOneJsp3HandleSampleReset(name, info, roles)',
             'JSON.parse(info)',
         ]:
             if token not in body:
-                errors.append('Sample reset bridge is missing serialised parsing: ' + token)
+                errors.append('Standalone sample reset bridge is missing: ' + token)
     if shared.exists():
         body = text(shared)
         for token in [
@@ -1328,7 +1479,7 @@ def run(ctx: ValidationContext) -> None:
         if re.search(r'\bv\d+\.\d+\.\d+\b', body) or 'Install v' in body:
             errors.append('Troubleshooting contains development-version upgrade advice')
         for phrase in [
-            'The DarkOneJSP3 Queue Viewer wrapper must import both reset_defaults.js',
+            'The DarkOneJSP3 Queue Viewer wrapper must import the component-local',
             'DarkOneJSP3-managed properties',
             'DarkOneJSP3 wrapper rather than the generic sample entry',
             'Right-click the InfoStack tab strip',
@@ -1690,17 +1841,19 @@ def run(ctx: ValidationContext) -> None:
             if duplicate in body:
                 errors.append(rel(path) + ' retains duplicate JSplitter protocol code: ' + duplicate)
 
-    adapted_colour_entries = [
+    standalone_colour_entries = [
         samples / 'Last.fm Bio.txt',
         samples / 'Last.fm Artist Info + User Info.txt',
         samples / 'Album Notes.txt',
         samples / 'Properties.txt',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt',
-        project / 'jscript' / 'DarkOneJSP3 - Display Panel.txt',
     ]
-    for path in adapted_colour_entries:
-        if path.exists() and 'DarkOneJSP3\\shared\\colour_utils.js' not in text(path):
-            errors.append(rel(path) + ' does not import the shared colour helper')
+    for path in standalone_colour_entries:
+        if path.exists() and 'samples\\shared\\colour_utils.js' not in text(path):
+            errors.append(rel(path) + ' does not import the standalone colour helper')
+    display_entry = project / 'jscript' / 'DarkOneJSP3 - Display Panel.txt'
+    if display_entry.exists() and 'DarkOneJSP3\\shared\\colour_utils.js' not in text(display_entry):
+        errors.append(rel(display_entry) + ' does not import the project colour-helper mirror')
 
     optional_button_helper = project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js'
     if optional_button_helper.exists():

@@ -22,10 +22,9 @@ var DARKONE_PAGE_BACKGROUND_MENU_OPTIONS = [
 ];
 
 function _panel(options) {
-	// Optional DarkOneJSP3 information-page background support is enabled only
-	// by the adapted Biography, Last.fm, Album Notes, Queue and Properties
-	// entry scripts. Generic JScript Panel samples retain their normal behaviour.
-	// Shared menu mapping and picker handling keep saved page modes unchanged.
+	// Optional enhanced information-page background support is enabled only
+	// by participating entry scripts. Generic JScript Panel samples retain their
+	// normal behaviour. The legacy DarkOneJSP3 option remains an alias.
 	this.create_font = function (size, weight) {
 		return JSON.stringify({
 			Name : this.fonts.name,
@@ -128,7 +127,7 @@ function _panel(options) {
 	}
 
 	this.paint = function (gr) {
-		if (this.darkonejsp3_page_background) {
+		if (this.enhanced_page_background) {
 			gr.Clear(this.page_background_colour());
 			return;
 		}
@@ -177,7 +176,7 @@ function _panel(options) {
 			this.m.AppendMenuSeparator();
 		}
 
-		if (this.darkonejsp3_page_background) {
+		if (this.enhanced_page_background) {
 			DarkOneColour.appendRadioOptions(
 				this.s15,
 				DARKONE_PAGE_BACKGROUND_MENU_OPTIONS,
@@ -211,6 +210,17 @@ function _panel(options) {
 		var idx = this.m.TrackPopupMenu(x, y);
 		this.m.Dispose();
 
+		// Do not touch the optional colour helper for ordinary samples. Switch
+		// case expressions are evaluated in order, so resolving this beforehand
+		// avoids a ReferenceError when an object-specific command is selected.
+		var background_option = null;
+		if (this.enhanced_page_background && typeof DarkOneColour !== 'undefined') {
+			background_option = DarkOneColour.optionForId(
+				DARKONE_PAGE_BACKGROUND_MENU_OPTIONS,
+				idx
+			);
+		}
+
 		switch (true) {
 		case idx == 0:
 			break;
@@ -237,11 +247,7 @@ function _panel(options) {
 		case idx == 120:
 			window.ShowConfigure();
 			break;
-		case Boolean(DarkOneColour.optionForId(DARKONE_PAGE_BACKGROUND_MENU_OPTIONS, idx)):
-			var background_option = DarkOneColour.optionForId(
-				DARKONE_PAGE_BACKGROUND_MENU_OPTIONS,
-				idx
-			);
+		case Boolean(background_option):
 			if (background_option.custom) {
 				var chosen = DarkOneColour.pickJscript(
 					this.page_background.custom.value,
@@ -277,6 +283,7 @@ function _panel(options) {
 	this.text_objects = [];
 	this.display_objects = [];
 	this.custom_background = false;
+	this.enhanced_page_background = false;
 	this.darkonejsp3_page_background = false;
 	this.page_background = null;
 	this.w = 0;
@@ -291,7 +298,9 @@ function _panel(options) {
 	}
 
 	if (typeof options == 'object') {
-		if (options.darkonejsp3_page_background === true) {
+		if (options.enhanced_page_background === true ||
+				options.darkonejsp3_page_background === true) {
+			this.enhanced_page_background = true;
 			this.darkonejsp3_page_background = true;
 			this.page_background = {
 				mode : new _p('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3),

@@ -481,7 +481,7 @@ Background Wallpaper
 - Custom image path...
 - Blur
 
-DarkOneJSP3 smooth scrolling
+Enhanced smooth scrolling
 - Remember manager scroll position
 - Keep active playlist visible
 - 8 ms refresh (120/144 Hz)
@@ -580,7 +580,7 @@ Smooth scrolling
 - Set free-scroll wheel distance...
 - Set snapped wheel row step...
 - Snap scrollbar dragging to playlist rows
-- Restore DarkOneJSP3 defaults
+- Restore enhanced defaults
 
 Defaults:
 - Smooth scrolling: enabled

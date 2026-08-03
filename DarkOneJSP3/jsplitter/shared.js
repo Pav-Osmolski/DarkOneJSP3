@@ -93,23 +93,39 @@ var DOJSP3 = Object.freeze({
 
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\reset_defaults.js');
 
+function darkOneJsp3NormaliseResetScope(value) {
+    value = String(value == null ? '' : value).toLowerCase();
+    return value == 'appearance' || value == 'behaviour' || value == 'all'
+        ? value
+        : null;
+}
+
 function darkOneJsp3ResetScope(data) {
+    if (data == null || data === '') return 'all';
     if (typeof data == 'string') {
         try {
             var payload = JSON.parse(data);
-            if (payload && payload.scope) return String(payload.scope);
-        } catch (e) {
-            if (data == 'appearance' || data == 'behaviour' || data == 'all') return data;
-        }
+            if (payload && typeof payload == 'object') {
+                return Object.prototype.hasOwnProperty.call(payload, 'scope')
+                    ? darkOneJsp3NormaliseResetScope(payload.scope)
+                    : 'all';
+            }
+        } catch (e) {}
+        return darkOneJsp3NormaliseResetScope(data);
     }
-    return data && data.scope ? String(data.scope) : 'all';
+    if (typeof data == 'object') {
+        return Object.prototype.hasOwnProperty.call(data, 'scope')
+            ? darkOneJsp3NormaliseResetScope(data.scope)
+            : 'all';
+    }
+    return null;
 }
 
 function darkOneJsp3HandleReset(name, data) {
     if (name !== 'DarkOneJSP3.Reset.Properties') return false;
     var scope = darkOneJsp3ResetScope(data);
     var role = typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '';
-    if (!role || !DARKONEJSP3_RESET_REGISTRY[role]) return true;
+    if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;
     darkOneJsp3ApplyRoleReset(role, scope);
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;

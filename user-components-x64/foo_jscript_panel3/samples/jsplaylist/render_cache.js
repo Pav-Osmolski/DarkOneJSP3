@@ -1,5 +1,5 @@
 /*
- * DarkOneJSP3 JS Playlist row-render cache
+ * Enhanced JS Playlist row-render cache
  * Version: 0.1.0
  *
  * Caches title-format output independently of transient oItem instances so

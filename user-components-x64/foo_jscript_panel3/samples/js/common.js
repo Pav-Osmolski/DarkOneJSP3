@@ -488,7 +488,7 @@ var ha_links = [
 ];
 
 // == DARKONEJSP3 SHARED NETWORK COORDINATOR ==
-// DarkOneJSP3 shared network coordination for JSP3 panels.
+// Enhanced sample-suite network coordination for JSP3 panels.
 // Coordinates provider pacing, AllMusic backoff and separate API/HTML
 // request-identity profiles used by Album Notes providers.
 
@@ -591,7 +591,7 @@ var DarkOneNetwork = typeof DarkOneNetwork != 'undefined' ? DarkOneNetwork : (fu
 
     function application_user_agent(contact) {
         contact = String(contact || '').replace(/^\s+|\s+$/g, '');
-        return 'DarkOneJSP3/' + APPLICATION_VERSION + ' (foobar2000 JScript Panel 3' + (contact ? '; ' + contact : '') + ')';
+        return 'JSP3EnhancedSamples/' + APPLICATION_VERSION + ' (foobar2000 JScript Panel 3' + (contact ? '; ' + contact : '') + ')';
     }
 
     function chrome_user_agent() {
@@ -673,7 +673,7 @@ var DarkOneNetwork = typeof DarkOneNetwork != 'undefined' ? DarkOneNetwork : (fu
 
     function header_profile_label(scope) {
         var profile = scope == 'api' ? get_api_header_profile() : get_html_header_profile();
-        return profile == HEADER_PROFILE_CHROME ? 'Google Chrome ' + CHROME_MAJOR_VERSION + '-style' : 'DarkOneJSP3 application';
+        return profile == HEADER_PROFILE_CHROME ? 'Google Chrome ' + CHROME_MAJOR_VERSION + '-style' : 'JSP3 Enhanced Samples application';
     }
 
     function normalise_future_timestamp(value, now, maximum_ahead) {

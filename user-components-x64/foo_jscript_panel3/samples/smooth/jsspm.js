@@ -310,7 +310,7 @@ function oBrowser() {
 		if (g_playlist_manager_frame) g_playlist_manager_frame.request();
 	}
 
-	// DarkOneJSP3 v0.4.7: persist a semantic scroll anchor instead of only
+	// Enhanced sample: persist a semantic scroll anchor instead of only
 	// an absolute pixel value. This keeps the same top playlist visible when
 	// row height, DPI/font scaling or the panel dimensions change.
 	this.getMaxScroll = function (rowHeight, viewportHeight, rowCount) {
@@ -944,7 +944,7 @@ function oBrowser() {
 		sub3.AppendMenuSeparator();
 		sub3.AppendMenuItem(MF_STRING, 38, "Set smoothness...");
 		sub3.AppendMenuItem(MF_STRING, 39, "Set wheel row step...");
-		sub3.AppendTo(menu, MF_STRING, "DarkOneJSP3 smooth scrolling");
+		sub3.AppendTo(menu, MF_STRING, "Enhanced smooth scrolling");
 
 		sub4.AppendMenuItem(MF_STRING, 40, "Compact / DarkOne2021 (26)");
 		sub4.AppendMenuItem(MF_STRING, 41, "Balanced (29)");
@@ -1178,7 +1178,7 @@ var g_manager_scroll_restore_done = false;
 var g_manager_scroll_save_timer = false;
 var g_manager_scroll_last_saved = '';
 
-// DarkOneJSP3: keep playlist-manager density independent from the stock JSP3 default.
+// Enhanced sample: keep playlist-manager density independent from the stock JSP3 default.
 // The value is a logical row height and is still scaled with the active CUI item font/DPI.
 ppt.defaultRowHeight = clamp(Math.round(Number(window.GetProperty("SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT", 26))) || 26, 20, 64);
 ppt.rowHeight = ppt.defaultRowHeight;
@@ -1262,7 +1262,7 @@ var g_playlist_manager_frame = DarkOnePerformance.createFrameLoop(window, {
 var g_playlist_manager_profiler = DarkOnePerformance.createProfiler(
 	utils,
 	window.GetProperty("SMOOTH.Enable Performance Profiling", false),
-	"DarkOneJSP3 Playlist Manager paint",
+	"Enhanced Playlist Manager paint",
 	120
 );
 var g_playlist_manager_cadence_reporter = DarkOneUiCadence.createSourceReporter(window, {

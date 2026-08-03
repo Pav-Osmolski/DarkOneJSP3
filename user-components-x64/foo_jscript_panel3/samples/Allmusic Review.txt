@@ -1,12 +1,11 @@
 // ==PREPROCESSOR==
-// @name "Album Notes - DarkOneJSP3 (legacy AllMusic slot)"
+// @name "Album Notes - Enhanced (legacy AllMusic slot)"
 // @version "0.6.6"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
-// @import "%fb2k_component_path%samples\js\darkone_network.js"
 // @import "%fb2k_component_path%samples\js\allmusic.js"
 // @import "%fb2k_component_path%samples\js\musicbrainz.js"
 // @import "%fb2k_component_path%samples\js\album_notes.js"

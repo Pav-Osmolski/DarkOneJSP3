@@ -113,7 +113,7 @@ function _musicbrainz(x, y, w, h, options) {
 		var contact = String(this.properties.contact.value || '').replace(/^\s+|\s+$/g, '');
 		if (typeof DarkOneNetwork != 'undefined' && typeof DarkOneNetwork.applicationUserAgent == 'function')
 			return DarkOneNetwork.applicationUserAgent(contact);
-		return 'DarkOneJSP3/0.6.2 (foobar2000 JScript Panel 3' + (contact ? '; ' + contact : '') + ')';
+		return 'JSP3EnhancedSamples/0.6.2 (foobar2000 JScript Panel 3' + (contact ? '; ' + contact : '') + ')';
 	}
 
 	this.get_header_profile = function () {
@@ -124,7 +124,7 @@ function _musicbrainz(x, y, w, h, options) {
 		var profile = value == 'chrome' ? 'chrome' : 'application';
 		if (typeof DarkOneNetwork != 'undefined' && typeof DarkOneNetwork.setHeaderProfile == 'function')
 			profile = DarkOneNetwork.setHeaderProfile(profile);
-		console.log(N, 'Request identity changed to ' + (profile == 'chrome' ? 'Google Chrome 150-style (experimental).' : 'DarkOneJSP3 application (recommended).'));
+		console.log(N, 'Request identity changed to ' + (profile == 'chrome' ? 'Google Chrome 150-style (experimental).' : 'JSP3 Enhanced Samples application (recommended).'));
 		if (profile == 'chrome')
 			console.log(N, 'MusicBrainz recommends an application-identifying User-Agent; Chrome mode is intended for diagnostics only.');
 	}
@@ -1088,7 +1088,7 @@ function _musicbrainz(x, y, w, h, options) {
 		panel.m.AppendMenuSeparator();
 
 		if (!this.managed) {
-			panel.s14.AppendMenuItem(MF_STRING, 1410, 'DarkOneJSP3 application (recommended)');
+			panel.s14.AppendMenuItem(MF_STRING, 1410, 'JSP3 Enhanced Samples application (recommended)');
 			panel.s14.AppendMenuItem(MF_STRING, 1411, 'Google Chrome 150-style (experimental)');
 			panel.s14.CheckMenuRadioItem(1410, 1411, this.get_header_profile() == 'chrome' ? 1411 : 1410);
 			panel.s14.AppendTo(panel.m, MF_STRING, 'Request identity');
@@ -1197,7 +1197,7 @@ function _musicbrainz(x, y, w, h, options) {
 			_explorer(this.filename);
 			break;
 		case 1403:
-			var contact = utils.InputBox('MusicBrainz requests should identify the application and provide a maintainer contact URL or email.\n\nEnter the contact portion to append to the DarkOneJSP3 User-Agent. This contact is used only with the recommended DarkOneJSP3 application identity:', window.Name, this.properties.contact.value);
+			var contact = utils.InputBox('MusicBrainz requests should identify the application and provide a maintainer contact URL or email.\n\nEnter the contact portion to append to the JSP3 Enhanced Samples User-Agent. This contact is used only with the recommended JSP3 Enhanced Samples application identity:', window.Name, this.properties.contact.value);
 			this.properties.contact.value = String(contact || '').replace(/^\s+|\s+$/g, '');
 			break;
 		case 1410:

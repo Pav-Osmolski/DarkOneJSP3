@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.16
+DarkOneJSP3 v0.9.18
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -47,6 +47,10 @@ CREDITS.txt
 VALIDATION_REPORT.txt
   Scope and reproducible checks for the current release.
 
+ENHANCED_SAMPLES.txt
+  Standalone use, compatibility guarantees and integration details for the
+  upgraded JScript Panel sample tree.
+
 Quick start
 -----------
 1. Back up the foobar2000 profile and Columns UI layout.
@@ -79,7 +83,7 @@ DarkOneJSP3\
   tools\                 Release-validator entry point, modules and mirror-sync utility
 
 user-components-x64\foo_jscript_panel3\samples\
-  DarkOneJSP3-enhanced JScript Panel 3 sample tree.
+  Standalone enhanced JScript Panel 3 sample tree used by DarkOneJSP3.
 
 Current highlights
 ------------------
@@ -102,6 +106,8 @@ Current highlights
 - Native Queue Viewer support as the recommended full editor, with an optional
   scripted viewer providing multi-selection, keyboard navigation and safe
   source-item commands.
+- Standalone enhanced JScript Panel samples with component-local helpers,
+  preserved legacy imports and no project-folder runtime dependency.
 - Coordinated per-panel factory defaults for DarkOneJSP3-managed settings,
   including enhanced playlist refresh and scrolling options, without deleting
   provider cache files or unrelated upstream sample customisation.

@@ -1,12 +1,11 @@
 // ==PREPROCESSOR==
-// @name "Allmusic Review + Album Art - DarkOneJSP3 Enhanced"
+// @name "Allmusic Review + Album Art - Enhanced"
 // @version "0.6.4"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
-// @import "%fb2k_component_path%samples\js\darkone_network.js"
 // @import "%fb2k_component_path%samples\js\albumart.js"
 // @import "%fb2k_component_path%samples\js\allmusic.js"
 // ==/PREPROCESSOR==

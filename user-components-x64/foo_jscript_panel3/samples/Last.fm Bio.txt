@@ -1,12 +1,12 @@
 // ==PREPROCESSOR==
 // @name "Last.fm Bio"
-// @version "0.1.0"
+// @version "0.1.1"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
-// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
 // @import "%fb2k_component_path%samples\js\lastfm.js"
@@ -15,7 +15,7 @@
 
 // https://jscript-panel.github.io/gallery/lastfm-bio/
 
-var panel = new _panel({ darkonejsp3_page_background : true });
+var panel = new _panel({ enhanced_page_background : true });
 var lastfm = new _lastfm();
 var lastfm_bio = new _lastfm_bio(LM, TM, 0, 0);
 
@@ -74,7 +74,7 @@ function on_mouse_wheel(s) {
 }
 
 function on_notify_data(name, data) {
-	if (darkOneJsp3HandleSampleReset(name, data, "lastfm-bio")) return;
+	if (jsp3EnhancedHandleSampleReset(name, data, "lastfm-bio")) return;
 	lastfm.notify_data(name, data);
 }
 

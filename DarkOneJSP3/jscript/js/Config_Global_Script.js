@@ -401,23 +401,43 @@ function darkOneResetAllFonts() {
 }
 
 // Coordinated DarkOneJSP3 factory-reset support. Cache files are intentionally preserved.
+function darkOneNormaliseResetScope(value) {
+    value = String(value == null ? '' : value).toLowerCase();
+    return value == 'appearance' || value == 'behaviour' || value == 'all'
+        ? value
+        : null;
+}
 function darkOneResetScope(info) {
+    if (info == null || info === '') return 'all';
     if (typeof info == 'string') {
         try {
             var payload = JSON.parse(info);
-            if (payload && payload.scope) return String(payload.scope);
-        } catch (e) {
-            if (info == 'appearance' || info == 'behaviour' || info == 'all') return info;
-        }
+            if (payload && typeof payload == 'object') {
+                return Object.prototype.hasOwnProperty.call(payload, 'scope')
+                    ? darkOneNormaliseResetScope(payload.scope)
+                    : 'all';
+            }
+        } catch (e) {}
+        return darkOneNormaliseResetScope(info);
     }
-    return info && info.scope ? String(info.scope) : 'all';
+    if (typeof info == 'object') {
+        return Object.prototype.hasOwnProperty.call(info, 'scope')
+            ? darkOneNormaliseResetScope(info.scope)
+            : 'all';
+    }
+    return null;
 }
 function darkOneApplyResetDefaults(scope) {
-    return darkOneJsp3ApplyRoleReset(typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '', scope || 'all');
+    var role = typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '';
+    if (!role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;
+    return darkOneJsp3ApplyRoleReset(role, scope || 'all');
 }
 function darkOneHandleResetNotification(name, info) {
     if (name !== 'DarkOneJSP3.Reset.Properties') return false;
-    darkOneApplyResetDefaults(darkOneResetScope(info));
+    var scope = darkOneResetScope(info);
+    var role = typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '';
+    if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;
+    darkOneJsp3ApplyRoleReset(role, scope);
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;
 }

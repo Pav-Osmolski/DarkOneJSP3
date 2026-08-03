@@ -90,6 +90,11 @@ The supplied user-components-x64 tree contains customised JScript Panel sample
 and helper files. Merge it into the active profile so the files reach the
 installed foo_jscript_panel3 sample directory.
 
+These enhanced samples are standalone and can also be used by other themes.
+Existing filenames and legacy entry-script imports are preserved, but retaining
+a backup is still recommended because the files replace the installed sample
+tree. See ENHANCED_SAMPLES.txt for the compatibility contract.
+
 Do not delete or overwrite the foo_jscript_panel3 component DLL. Component
 binaries are not supplied by this package.
 

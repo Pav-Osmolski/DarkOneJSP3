@@ -578,3 +578,669 @@ String.prototype.repeat = function (num) {
 	}
 	return "";
 }
+
+// == JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS ==
+/*
+ * Enhanced JScript Panel sample performance helpers
+ * Version: 0.1.4
+ *
+ * Host-neutral utilities for demand-driven repaint scheduling, animation
+ * frames, Direct2D bitmap conversion and lightweight optional profiling.
+ */
+
+var DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.4";
+
+var DarkOnePerformance = typeof DarkOnePerformance != "undefined"
+    ? DarkOnePerformance
+    : (function () {
+    "use strict";
+
+    function positiveInteger(value, fallback) {
+        value = Math.round(Number(value));
+        return isFinite(value) && value > 0 ? value : fallback;
+    }
+
+    function dispose(resource) {
+        if (!resource) return;
+        // Native JScript Panel COM methods can report typeof == "unknown".
+        // Call the method directly and let try/catch handle unsupported objects.
+        try { resource.Dispose(); } catch (e) {}
+    }
+
+    function toBitmap(image, disposeSource) {
+        if (!image) return null;
+
+        var bitmap = null;
+        try {
+            // Do not gate native COM methods with typeof == "function".
+            bitmap = image.CreateBitmap();
+        } catch (e) {
+            // An existing IJSBitmap has no CreateBitmap method and is already
+            // suitable for DrawBitmap, so retain it unchanged.
+            bitmap = image;
+        }
+
+        if (disposeSource && bitmap !== image) dispose(image);
+        return bitmap;
+    }
+
+    function loadBitmap(path) {
+        var bitmap = null;
+        try {
+            if (typeof utils !== "undefined") bitmap = utils.LoadBitmap(path);
+        } catch (e) {
+            bitmap = null;
+        }
+
+        if (bitmap) return bitmap;
+
+        var image = null;
+        try {
+            if (typeof utils !== "undefined") {
+                image = utils.LoadImage(path);
+                bitmap = toBitmap(image, true);
+            }
+        } catch (e2) {
+            dispose(image);
+            bitmap = null;
+        }
+        return bitmap;
+    }
+
+    function createRepaintScheduler(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var pending = false;
+        var hiddenDelay = positiveInteger(options.hiddenDelay, 250);
+
+        function getDelay() {
+            var value = typeof options.getDelay === "function" ? options.getDelay() : options.delay;
+            return positiveInteger(value, 16);
+        }
+
+        function schedule(delay) {
+            if (timer) return;
+            timer = hostWindow.SetTimeout(run, positiveInteger(delay, getDelay()));
+        }
+
+        function run() {
+            timer = false;
+            if (!pending) return;
+
+            if (!hostWindow.IsVisible) {
+                schedule(hiddenDelay);
+                return;
+            }
+
+            pending = false;
+            if (typeof options.repaint === "function") options.repaint();
+        }
+
+        return {
+            request: function (delay) {
+                pending = true;
+                schedule(delay);
+            },
+            reschedule: function () {
+                if (timer) {
+                    hostWindow.ClearTimeout(timer);
+                    timer = false;
+                }
+                if (pending) schedule(getDelay());
+            },
+            cancel: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                pending = false;
+            },
+            isPending: function () {
+                return pending || !!timer;
+            }
+        };
+    }
+
+    function createFrameLoop(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var requested = false;
+        var hiddenDelay = positiveInteger(options.hiddenDelay, 250);
+
+        function getDelay() {
+            var value = typeof options.getDelay === "function" ? options.getDelay() : options.delay;
+            return positiveInteger(value, 16);
+        }
+
+        function schedule(delay) {
+            if (timer) return;
+            timer = hostWindow.SetTimeout(run, positiveInteger(delay, getDelay()));
+        }
+
+        function run() {
+            timer = false;
+            if (!requested) return;
+
+            if (!hostWindow.IsVisible) {
+                schedule(hiddenDelay);
+                return;
+            }
+
+            requested = false;
+            var keepRunning = false;
+            if (typeof options.tick === "function") keepRunning = options.tick() === true;
+            if (keepRunning || requested) {
+                requested = true;
+                schedule(getDelay());
+            }
+        }
+
+        return {
+            request: function (delay) {
+                requested = true;
+                schedule(delay);
+            },
+            reschedule: function () {
+                if (timer) {
+                    hostWindow.ClearTimeout(timer);
+                    timer = false;
+                }
+                if (requested) schedule(getDelay());
+            },
+            stop: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                requested = false;
+            },
+            isRunning: function () {
+                return requested || !!timer;
+            }
+        };
+    }
+
+    function createValueCoalescer(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var pending = false;
+        var pendingValue = null;
+        var lastAppliedAt = -Infinity;
+
+        function now() {
+            var value = typeof options.now === "function" ? options.now() : Date.now();
+            value = Number(value);
+            return isFinite(value) ? value : Date.now();
+        }
+
+        function getDelay() {
+            var value = typeof options.getDelay === "function" ? options.getDelay() : options.delay;
+            return positiveInteger(value, 16);
+        }
+
+        function applyPending() {
+            timer = false;
+            if (!pending) return false;
+
+            var value = pendingValue;
+            pending = false;
+            pendingValue = null;
+            lastAppliedAt = now();
+            if (typeof options.apply === "function") options.apply(value);
+            return true;
+        }
+
+        function schedule() {
+            if (timer || !pending) return;
+            var elapsed = now() - lastAppliedAt;
+            var wait = Math.max(0, getDelay() - elapsed);
+            if (wait <= 0) {
+                applyPending();
+            } else {
+                timer = hostWindow.SetTimeout(applyPending, wait);
+            }
+        }
+
+        return {
+            request: function (value) {
+                pendingValue = value;
+                pending = true;
+                schedule();
+            },
+            flush: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                return applyPending();
+            },
+            reschedule: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                if (pending) schedule();
+            },
+            cancel: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                pending = false;
+                pendingValue = null;
+            },
+            isPending: function () {
+                return pending || !!timer;
+            }
+        };
+    }
+
+    function createTrailingDeadline(hostWindow, options) {
+        options = options || {};
+        var timer = false;
+        var deadline = 0;
+
+        function now() {
+            var value = typeof options.now === "function" ? options.now() : Date.now();
+            value = Number(value);
+            return isFinite(value) ? value : Date.now();
+        }
+
+        function getDelay(value) {
+            return positiveInteger(value, positiveInteger(options.delay, 3000));
+        }
+
+        function schedule(wait) {
+            if (timer) return;
+            timer = hostWindow.SetTimeout(run, Math.max(1, Math.round(wait)));
+        }
+
+        function run() {
+            timer = false;
+            var remaining = deadline - now();
+            if (remaining > 0) {
+                schedule(remaining);
+                return;
+            }
+            deadline = 0;
+            if (typeof options.onExpire === "function") options.onExpire();
+        }
+
+        return {
+            touch: function (delay) {
+                var duration = getDelay(delay);
+                deadline = now() + duration;
+                if (!timer) schedule(duration);
+            },
+            cancel: function () {
+                if (timer) hostWindow.ClearTimeout(timer);
+                timer = false;
+                deadline = 0;
+            },
+            isPending: function () {
+                return !!timer || deadline > 0;
+            }
+        };
+    }
+
+    function createProfiler(utilsObject, enabled, name, sampleSize) {
+        if (!enabled || !utilsObject) return null;
+
+        var profiler = null;
+        // CreateProfiler is another native COM method and may report
+        // typeof == "unknown" in the JScript engine.
+        try { profiler = utilsObject.CreateProfiler(name || "JSP3 Enhanced Samples"); } catch (e) {}
+        if (!profiler) return null;
+
+        var count = 0;
+        var total = 0;
+        var maximum = 0;
+        var samples = positiveInteger(sampleSize, 120);
+
+        return {
+            begin: function () {
+                if (!profiler) return;
+                // Native profiler methods may report typeof == "unknown".
+                try { profiler.Reset(); } catch (e) {}
+            },
+            end: function (suffix) {
+                if (!profiler) return;
+                var elapsed = Number(profiler.Time) || 0;
+                total += elapsed;
+                maximum = Math.max(maximum, elapsed);
+                count++;
+                if (count >= samples) {
+                    try {
+                        console.log((name || "JSP3 Enhanced Samples") + ": average " +
+                            (total / count).toFixed(3) + " ms, peak " + maximum.toFixed(3) +
+                            " ms over " + count + " frames" + (suffix ? " (" + suffix + ")" : ""));
+                    } catch (e) {}
+                    count = 0;
+                    total = 0;
+                    maximum = 0;
+                }
+            },
+            enabled: function () {
+                return !!profiler;
+            }
+        };
+    }
+
+    return {
+        dispose: dispose,
+        toBitmap: toBitmap,
+        loadBitmap: loadBitmap,
+        createRepaintScheduler: createRepaintScheduler,
+        createFrameLoop: createFrameLoop,
+        createValueCoalescer: createValueCoalescer,
+        createTrailingDeadline: createTrailingDeadline,
+        createProfiler: createProfiler
+    };
+})();
+
+/*
+ * Enhanced JScript Panel sample UI cadence protocol
+ * Version: 0.1.1
+ *
+ * Coordinates refresh-rate announcements from JS Playlist and Smooth Playlist
+ * Manager with the volume-knob preview and Centre Display repaint cadence.
+ * Actual fb.Volume writes retain a separate safe minimum cadence.
+ */
+
+var DARKONE_UI_CADENCE_VERSION = "0.1.1";
+
+var DarkOneUiCadence = typeof DarkOneUiCadence != "undefined"
+    ? DarkOneUiCadence
+    : (function () {
+    "use strict";
+
+    var PROTOCOL_VERSION = 1;
+    var SOURCE_STATE_NOTIFICATION = "DarkOneJSP3.UIRefresh.Source.State";
+    var SOURCE_QUERY_NOTIFICATION = "DarkOneJSP3.UIRefresh.Source.Query";
+    var VOLUME_STATE_NOTIFICATION = "DarkOneJSP3.VolumeRefresh.State";
+    var VOLUME_QUERY_NOTIFICATION = "DarkOneJSP3.VolumeRefresh.Query";
+
+    var SOURCE_JS_PLAYLIST = "js-playlist";
+    var SOURCE_PLAYLIST_MANAGER = "playlist-manager";
+
+    var VOLUME_MODE_AUTO = 0;
+    var VOLUME_MANUAL_INTERVALS = [8, 10, 12, 16];
+    var VOLUME_MENU_IDS = [20, 21, 22, 23, 24];
+
+    function own(object, name) {
+        return Object.prototype.hasOwnProperty.call(object, name);
+    }
+
+    function notify(hostWindow, name, payload) {
+        try {
+            hostWindow.NotifyOthers(name, payload);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function normaliseInterval(value, fallback, minimum, maximum) {
+        value = Math.round(Number(value));
+        fallback = Math.round(Number(fallback));
+        minimum = Math.round(Number(minimum));
+        maximum = Math.round(Number(maximum));
+
+        if (!isFinite(fallback)) fallback = 16;
+        if (!isFinite(minimum)) minimum = 8;
+        if (!isFinite(maximum)) maximum = 40;
+        if (minimum > maximum) {
+            var swap = minimum;
+            minimum = maximum;
+            maximum = swap;
+        }
+        if (!isFinite(value)) value = fallback;
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    function normaliseVolumeMode(value) {
+        value = Math.round(Number(value));
+        if (value === VOLUME_MODE_AUTO) return VOLUME_MODE_AUTO;
+        for (var i = 0; i < VOLUME_MANUAL_INTERVALS.length; i++) {
+            if (value === VOLUME_MANUAL_INTERVALS[i]) return value;
+        }
+        return VOLUME_MODE_AUTO;
+    }
+
+    function volumeMenuIdForMode(mode) {
+        mode = normaliseVolumeMode(mode);
+        if (mode === VOLUME_MODE_AUTO) return VOLUME_MENU_IDS[0];
+        for (var i = 0; i < VOLUME_MANUAL_INTERVALS.length; i++) {
+            if (mode === VOLUME_MANUAL_INTERVALS[i]) return VOLUME_MENU_IDS[i + 1];
+        }
+        return VOLUME_MENU_IDS[0];
+    }
+
+    function volumeModeForMenuId(id) {
+        id = Math.round(Number(id));
+        if (id === VOLUME_MENU_IDS[0]) return VOLUME_MODE_AUTO;
+        for (var i = 0; i < VOLUME_MANUAL_INTERVALS.length; i++) {
+            if (id === VOLUME_MENU_IDS[i + 1]) return VOLUME_MANUAL_INTERVALS[i];
+        }
+        return null;
+    }
+
+    function appendVolumeMenu(menu, mode, resolvedInterval, flags) {
+        flags = flags == null ? 0 : flags;
+        mode = normaliseVolumeMode(mode);
+        resolvedInterval = normaliseInterval(resolvedInterval, 16, 8, 40);
+
+        menu.AppendMenuItem(flags, VOLUME_MENU_IDS[0], "Automatic (currently " + resolvedInterval + " ms)");
+        for (var i = 0; i < VOLUME_MANUAL_INTERVALS.length; i++) {
+            var interval = VOLUME_MANUAL_INTERVALS[i];
+            menu.AppendMenuItem(flags, VOLUME_MENU_IDS[i + 1], interval + " ms");
+        }
+        menu.CheckMenuRadioItem(
+            VOLUME_MENU_IDS[0],
+            VOLUME_MENU_IDS[VOLUME_MENU_IDS.length - 1],
+            volumeMenuIdForMode(mode)
+        );
+    }
+
+    function validPayload(info) {
+        return info && typeof info === "object" && Number(info.version) === PROTOCOL_VERSION;
+    }
+
+    function createSourceReporter(hostWindow, options) {
+        options = options || {};
+        var source = String(options.source || "");
+        var active = false;
+
+        function getInterval() {
+            var value = typeof options.getInterval === "function" ? options.getInterval() : options.interval;
+            return normaliseInterval(value, 16, 7, 40);
+        }
+
+        function announce(available) {
+            if (!source) return false;
+            return notify(hostWindow, SOURCE_STATE_NOTIFICATION, {
+                version: PROTOCOL_VERSION,
+                source: source,
+                available: available !== false,
+                interval: available === false ? 0 : getInterval()
+            });
+        }
+
+        return {
+            start: function () {
+                if (active) return;
+                active = true;
+                announce(true);
+            },
+            announce: function () {
+                if (active) announce(true);
+            },
+            handleNotification: function (name, info) {
+                if (name !== SOURCE_QUERY_NOTIFICATION) return false;
+                if (active) announce(true);
+                return true;
+            },
+            dispose: function () {
+                if (!active) return;
+                announce(false);
+                active = false;
+            },
+            getInterval: getInterval
+        };
+    }
+
+    function createVolumeOwner(hostWindow, options) {
+        options = options || {};
+        var propertyName = String(options.propertyName || "DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE");
+        var fallback = normaliseInterval(options.fallback, 16, 8, 40);
+        var mode = normaliseVolumeMode(hostWindow.GetProperty(propertyName, VOLUME_MODE_AUTO));
+        var sourceIntervals = {};
+        var resolved = fallback;
+        var active = false;
+
+        function resolve() {
+            if (mode !== VOLUME_MODE_AUTO) return mode;
+
+            var fastest = null;
+            for (var source in sourceIntervals) {
+                if (!own(sourceIntervals, source)) continue;
+                var interval = normaliseInterval(sourceIntervals[source], fallback, 8, 40);
+                if (fastest === null || interval < fastest) fastest = interval;
+            }
+            return fastest === null ? fallback : fastest;
+        }
+
+        function announce() {
+            if (!active) return;
+            notify(hostWindow, VOLUME_STATE_NOTIFICATION, {
+                version: PROTOCOL_VERSION,
+                available: true,
+                mode: mode,
+                interval: resolved
+            });
+        }
+
+        function update(forceAnnouncement) {
+            var next = resolve();
+            var changed = next !== resolved;
+            var previous = resolved;
+            resolved = next;
+            if (changed && typeof options.onChange === "function") {
+                options.onChange(resolved, previous, mode);
+            }
+            if (changed || forceAnnouncement) announce();
+            return changed;
+        }
+
+        return {
+            start: function () {
+                if (active) return;
+                active = true;
+                update(true);
+                notify(hostWindow, SOURCE_QUERY_NOTIFICATION, { version: PROTOCOL_VERSION });
+            },
+            handleNotification: function (name, info) {
+                if (name === SOURCE_STATE_NOTIFICATION) {
+                    if (!validPayload(info) || !info.source) return true;
+                    var source = String(info.source);
+                    if (info.available === false) {
+                        if (own(sourceIntervals, source)) delete sourceIntervals[source];
+                    } else {
+                        sourceIntervals[source] = normaliseInterval(info.interval, fallback, 8, 40);
+                    }
+                    update(false);
+                    return true;
+                }
+
+                if (name === VOLUME_QUERY_NOTIFICATION) {
+                    announce();
+                    return true;
+                }
+                return false;
+            },
+            setMode: function (value) {
+                var next = normaliseVolumeMode(value);
+                if (next === mode) return false;
+                mode = next;
+                hostWindow.SetProperty(propertyName, mode);
+                update(true);
+                return true;
+            },
+            getMode: function () {
+                return mode;
+            },
+            getInterval: function () {
+                return resolved;
+            },
+            dispose: function () {
+                if (!active) return;
+                notify(hostWindow, VOLUME_STATE_NOTIFICATION, {
+                    version: PROTOCOL_VERSION,
+                    available: false,
+                    mode: mode,
+                    interval: fallback
+                });
+                active = false;
+            }
+        };
+    }
+
+    function createVolumeFollower(hostWindow, options) {
+        options = options || {};
+        var fallback = normaliseInterval(options.fallback, 16, 8, 40);
+        var interval = fallback;
+        var mode = VOLUME_MODE_AUTO;
+        var active = false;
+
+        function update(nextInterval, nextMode) {
+            nextInterval = normaliseInterval(nextInterval, fallback, 8, 40);
+            nextMode = normaliseVolumeMode(nextMode);
+            var changed = nextInterval !== interval || nextMode !== mode;
+            var previous = interval;
+            interval = nextInterval;
+            mode = nextMode;
+            if (changed && typeof options.onChange === "function") {
+                options.onChange(interval, previous, mode);
+            }
+            return changed;
+        }
+
+        return {
+            start: function () {
+                if (active) return;
+                active = true;
+                notify(hostWindow, VOLUME_QUERY_NOTIFICATION, { version: PROTOCOL_VERSION });
+            },
+            handleNotification: function (name, info) {
+                if (name !== VOLUME_STATE_NOTIFICATION) return false;
+                if (!validPayload(info)) return true;
+                if (info.available === false) update(fallback, VOLUME_MODE_AUTO);
+                else update(info.interval, info.mode);
+                return true;
+            },
+            getInterval: function () {
+                return interval;
+            },
+            getMode: function () {
+                return mode;
+            },
+            dispose: function () {
+                active = false;
+            }
+        };
+    }
+
+    return {
+        protocolVersion: PROTOCOL_VERSION,
+        notifications: {
+            sourceState: SOURCE_STATE_NOTIFICATION,
+            sourceQuery: SOURCE_QUERY_NOTIFICATION,
+            volumeState: VOLUME_STATE_NOTIFICATION,
+            volumeQuery: VOLUME_QUERY_NOTIFICATION
+        },
+        sources: {
+            jsPlaylist: SOURCE_JS_PLAYLIST,
+            playlistManager: SOURCE_PLAYLIST_MANAGER
+        },
+        volumeModeAuto: VOLUME_MODE_AUTO,
+        volumeManualIntervals: VOLUME_MANUAL_INTERVALS.slice(0),
+        normaliseInterval: normaliseInterval,
+        normaliseVolumeMode: normaliseVolumeMode,
+        appendVolumeMenu: appendVolumeMenu,
+        volumeModeForMenuId: volumeModeForMenuId,
+        createSourceReporter: createSourceReporter,
+        createVolumeOwner: createVolumeOwner,
+        createVolumeFollower: createVolumeFollower
+    };
+})();
+// == END JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS ==

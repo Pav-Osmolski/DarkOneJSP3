@@ -223,12 +223,12 @@ scan to complete. Use the native Queue Viewer component for full editing,
 including adding, removing and reordering entries. When using the script, load
 the DarkOneJSP3 wrapper rather than the generic sample entry.
 
-Queue Viewer reports darkOneJsp3HandleSampleReset is undefined
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The DarkOneJSP3 Queue Viewer wrapper must import both reset_defaults.js and
-darkonejsp3_reset.js before Queue Viewer initialises. Reload the supplied
-wrapper rather than the generic sample entry and restart foobar2000 if cached
-code remains.
+Queue Viewer reports jsp3EnhancedHandleSampleReset is undefined
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The DarkOneJSP3 Queue Viewer wrapper must import the component-local
+samples\shared\sample_defaults.js registry and
+samples\js\jsp3_enhanced_reset.js bridge before Queue Viewer initialises.
+Reload the supplied wrapper and restart foobar2000 if cached code remains.
 
 5. Quick Search and waveform
 ----------------------------
@@ -410,19 +410,20 @@ Factory reset appears to only reload panels
 The reset writes explicit per-panel defaults before reloading each
 participating panel. It covers DarkOneJSP3-managed properties; unrelated
 upstream sample customisation is intentionally preserved. Confirm that
-participating wrappers import the packaged reset registry and bridge.
+participating wrappers import the appropriate project or standalone sample reset registry and bridge.
 
 Album Notes settings do not fully reset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The consolidated Album Notes panel resets both its provider role and embedded
 MusicBrainz role in one reload while preserving downloaded provider cache files.
-Confirm that samples\Album Notes.txt imports the packaged reset helpers.
+Confirm that samples\Album Notes.txt imports the component-local sample reset helpers.
 
 Playlist refresh or scroll settings do not reset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-JS Playlist and Smooth Playlist Manager must import the project reset bridge.
-Behaviour reset restores their custom refresh and scroll settings; full reset
-also clears the playlist manager's saved scroll anchors.
+JS Playlist and Smooth Playlist Manager must import the component-local
+sample-default registry and neutral reset bridge. Behaviour reset restores their
+custom refresh and scroll settings; full reset also clears the playlist
+manager's saved scroll anchors.
 
 9. Performance and smoothness
 -----------------------------
@@ -432,8 +433,9 @@ Playlist remains unusually heavy while idle
 The enhanced playlist and Playlist Manager use demand-driven schedulers and
 should not retain their high-refresh animation timers at idle. Confirm that the
 current JS Playlist and Smooth Playlist Manager wrappers are loaded and that
-both import DarkOneJSP3\shared\performance_utils.js. Reload the affected panel
-after replacing scripts.
+both use samples\shared\performance_utils.js. Older saved entry scripts are
+also supported through the guarded compatibility block in helpers.txt. Reload
+the affected panel after replacing scripts.
 
 Playlist text appears stale after metadata or queue changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

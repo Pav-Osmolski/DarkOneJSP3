@@ -1,0 +1,54 @@
+Enhanced JScript Panel 3 Samples
+================================
+
+Purpose
+-------
+The user-components-x64 tree supplied with DarkOneJSP3 is now a standalone,
+upgraded JScript Panel 3 sample suite. The enhanced samples no longer require
+the DarkOneJSP3 project directory and can be used by other foobar2000 themes.
+
+Installation outside DarkOneJSP3
+--------------------------------
+1. Close foobar2000.
+2. Back up the installed foo_jscript_panel3\samples directory and helpers.txt.
+3. Merge the supplied user-components-x64\foo_jscript_panel3 tree into the
+   active profile's user-components-x64 location.
+4. Load the desired top-level sample .txt file in a JScript Panel 3 instance.
+
+The DarkOneJSP3 folder and its Columns UI layout are not required for standalone
+sample use.
+
+Compatibility design
+--------------------
+- Existing sample filenames, module filenames, constructors and import paths are
+  retained.
+- helpers.txt carries guarded performance and UI-cadence fallbacks so themes
+  whose panel configuration still contains an older JS Playlist or Smooth
+  Playlist Manager entry script continue to receive the globals now used by the
+  upgraded internal modules.
+- Current enhanced entries import reusable files from samples\shared rather
+  than %fb2k_profile_path%DarkOneJSP3\shared.
+- Existing DARKONEJSP3.*, JSPLAYLIST.* and SMOOTH.* property keys remain intact,
+  preserving saved settings.
+- The neutral JSP3Enhanced.Reset.Properties notification and the legacy
+  DarkOneJSP3.Reset.Properties notification are both supported.
+- darkonejsp3_reset.js is retained as a generated, self-contained legacy
+  adapter containing the sample defaults and neutral reset bridge required by
+  saved entries created before the standalone-sample refactor.
+- enhanced_page_background is the neutral _panel option;
+  darkonejsp3_page_background remains a supported alias.
+
+DarkOneJSP3 integration
+-----------------------
+DarkOneJSP3 uses these same standalone samples. Its project-specific code adds
+layout coordination, InfoStack integration and coordinated factory-reset
+commands, but the sample implementations and their shared runtime utilities
+are owned by the JScript Panel component tree.
+
+Validation
+----------
+The release validator stages user-components-x64 by itself, with no DarkOneJSP3
+directory, and resolves every distributed sample entry import. It also checks
+legacy helpers.txt fallbacks, neutral and legacy reset notifications, property
+compatibility, the optional page-background alias and generic context-menu
+routing without the colour helper loaded.

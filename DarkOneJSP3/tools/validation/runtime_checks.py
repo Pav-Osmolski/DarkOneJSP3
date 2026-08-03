@@ -70,6 +70,7 @@ def run(ctx: ValidationContext) -> None:
     rel = ctx.rel
     text = ctx.text
     registry_path = project / 'shared' / 'reset_defaults.js'
+    sample_registry_path = samples / 'shared' / 'sample_defaults.js'
     info_stack = project / 'jsplitter' / '03_info_stack_tabs.js'
 
     # Resolve local JScript Panel preprocessor imports.
@@ -89,6 +90,31 @@ def run(ctx: ValidationContext) -> None:
                 continue
             if target is not None and not target.exists():
                 errors.append(rel(entry) + ' imports missing file ' + rel(target))
+
+    # Stage only the component tree and prove that every distributed sample
+    # entry resolves without the DarkOneJSP3 project directory being present.
+    with tempfile.TemporaryDirectory() as temp:
+        staged_root = Path(temp)
+        shutil.copytree(
+            root / 'user-components-x64',
+            staged_root / 'user-components-x64',
+        )
+        staged_component = staged_root / 'user-components-x64' / 'foo_jscript_panel3'
+        staged_samples = staged_component / 'samples'
+        for entry in sorted(staged_samples.glob('*.txt')):
+            for value in import_re.findall(text(entry)):
+                if value.startswith('%fb2k_profile_path%DarkOneJSP3\\'):
+                    errors.append(rel(entry) + ' cannot run in component-only staging')
+                    continue
+                target = None
+                if value.startswith('%fb2k_component_path%helpers.txt'):
+                    target = staged_component / 'helpers.txt'
+                elif value.startswith('%fb2k_component_path%samples\\'):
+                    target = staged_samples / value.split('%fb2k_component_path%samples\\', 1)[1].replace('\\', '/')
+                elif value == 'lodash':
+                    continue
+                if target is not None and not target.exists():
+                    errors.append('Component-only staging import is missing for ' + rel(entry) + ': ' + value)
 
     # Compatibility mirrors.
     sync_tool = project / 'tools' / 'sync_mirrors.py'
@@ -118,6 +144,47 @@ def run(ctx: ValidationContext) -> None:
                                         capture_output=True, text=True)
                 if result.returncode:
                     errors.append('Entry-script syntax failed for ' + rel(path) + ': ' +
+                                  result.stderr.strip())
+
+            # Syntax-check the actual local preprocessor expansion as well as
+            # each source file in isolation. This catches duplicate globals or
+            # ordering regressions that only appear after imports are combined.
+            preprocessor_re = re.compile(
+                r'// ==PREPROCESSOR==.*?// ==/PREPROCESSOR==\s*', re.S)
+            combined_entries = sorted(samples.glob('*.txt')) + sorted((project / 'jscript').glob('*.txt'))
+            for index, path in enumerate(combined_entries):
+                source = text(path)
+                chunks: list[str] = []
+                unresolved = False
+                for value in import_re.findall(source):
+                    target_path: Path | None = None
+                    if value.startswith('%fb2k_component_path%helpers.txt'):
+                        target_path = root / 'user-components-x64' / 'foo_jscript_panel3' / 'helpers.txt'
+                    elif value.startswith('%fb2k_component_path%samples\\'):
+                        target_path = samples / value.split(
+                            '%fb2k_component_path%samples\\', 1)[1].replace('\\', '/')
+                    elif value.startswith('%fb2k_profile_path%DarkOneJSP3\\'):
+                        target_path = project / value.split(
+                            '%fb2k_profile_path%DarkOneJSP3\\', 1)[1].replace('\\', '/')
+                    elif value == 'lodash':
+                        continue
+                    else:
+                        unresolved = True
+                        errors.append(rel(path) + ' has an unsupported preprocessor import: ' + value)
+                        break
+                    if target_path is None or not target_path.exists():
+                        unresolved = True
+                        break
+                    chunks.append(text(target_path))
+                if unresolved:
+                    continue
+                chunks.append(preprocessor_re.sub('', source))
+                target = temp_dir / f'preprocessed_{index}.js'
+                target.write_text('\n'.join(chunks), encoding='utf-8')
+                result = subprocess.run([node, '--check', str(target)],
+                                        capture_output=True, text=True)
+                if result.returncode:
+                    errors.append('Preprocessed entry syntax failed for ' + rel(path) + ': ' +
                                   result.stderr.strip())
 
         # Exercise demand-driven scheduling, hidden-panel recovery and bitmap lifecycle.
@@ -248,8 +315,11 @@ def run(ctx: ValidationContext) -> None:
         'Image fallback did not create a bitmap and dispose its source');
     assert(api.createProfiler({{}}, false, 'disabled', 10) === null, 'Disabled profiler created runtime overhead');
     let profilerCreated = 0;
-    const profilerApi = api.createProfiler({{CreateProfiler() {{ profilerCreated++; return {{Reset() {{}}, Time: 0}}; }}}}, true, 'enabled', 10);
+    let profilerResets = 0;
+    const profilerApi = api.createProfiler({{CreateProfiler() {{ profilerCreated++; return {{Reset() {{ profilerResets++; }}, Time: 0}}; }}}}, true, 'enabled', 10);
     assert(profilerApi && profilerCreated === 1, 'Native profiler creation was not attempted directly');
+    profilerApi.begin();
+    assert(profilerResets === 1, 'Native profiler Reset was not attempted directly');
     """
         result = subprocess.run([node, '-e', performance_helper_smoke], capture_output=True, text=True)
         if result.returncode:
@@ -1163,7 +1233,7 @@ def run(ctx: ValidationContext) -> None:
         # explicit restoration of the historical Columns UI global background.
         page_background_smoke = f"""
     const fs = require('fs');
-    const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+    const colourSource = fs.readFileSync({json.dumps(str(samples / 'shared' / 'colour_utils.js'))}, 'utf8');
     const source = fs.readFileSync({json.dumps(str(samples / 'js' / 'panel.js'))}, 'utf8');
     function property(name, fallback) {{ this.name = name; this.value = fallback; }}
     const windowMock = {{
@@ -1191,7 +1261,7 @@ def run(ctx: ValidationContext) -> None:
         (r, g, b) => 0xff000000 + (r << 16) + (g << 8) + b,
         () => 0xff888888
     );
-    const panel = new Panel({{ darkonejsp3_page_background: true }});
+    const panel = new Panel({{ enhanced_page_background: true }});
     if ((panel.page_background_colour() >>> 0) !== 0xff181818)
         throw new Error('Default information-page background is not DarkOne dark grey');
     panel.page_background.custom.value = 0xff123456;
@@ -1206,6 +1276,46 @@ def run(ctx: ValidationContext) -> None:
                                 capture_output=True, text=True)
         if result.returncode:
             errors.append('Page-background runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Generic samples must dispatch object-specific menu commands without
+        # importing the optional colour helper.
+        generic_panel_menu_smoke = f"""
+    const fs = require('fs');
+    const source = fs.readFileSync({json.dumps(str(samples / 'js' / 'panel.js'))}, 'utf8');
+    function property(name, fallback) {{ this.name = name; this.value = fallback; }}
+    function menuFactory() {{
+        return {{
+            AppendMenuItem() {{}}, AppendMenuSeparator() {{}}, CheckMenuRadioItem() {{}},
+            AppendTo() {{}}, Dispose() {{}}, TrackPopupMenu() {{ return 1001; }}
+        }};
+    }}
+    const windowMock = {{
+        IsDefaultUI: false, Width: 640, Height: 480, IsDark: true,
+        GetColourCUI() {{ return 0xff202020; }}, GetColourDUI() {{ return 0xff202020; }},
+        GetFontCUI() {{ return JSON.stringify({{Name: 'Segoe UI'}}); }},
+        GetFontDUI() {{ return JSON.stringify({{Name: 'Segoe UI'}}); }},
+        CreatePopupMenu: menuFactory, Repaint() {{}}, ShowConfigure() {{}},
+    }};
+    const underscore = {{ invoke() {{}}, forEach() {{}}, first(a) {{ return a[0]; }}, last(a) {{ return a[a.length - 1]; }} }};
+    const factory = new Function(
+        'window', 'fb', '_p', '_scale', '_', 'RGB', 'blendColours', 'MF_STRING',
+        source + '\\nreturn _panel;'
+    );
+    const Panel = factory(
+        windowMock, {{ GetFocusItem() {{ return null; }} }}, property, value => value,
+        underscore, (r, g, b) => 0xff000000 + (r << 16) + (g << 8) + b,
+        () => 0xff888888, 0
+    );
+    const panel = new Panel();
+    let dispatched = 0;
+    const object = {{ rbtn_up() {{}}, rbtn_up_done(id) {{ if (id === 1001) dispatched++; }} }};
+    panel.rbtn_up(0, 0, object);
+    if (dispatched !== 1) throw new Error('Generic object menu command was not dispatched');
+    """
+        result = subprocess.run([node, '-e', generic_panel_menu_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Generic panel menu runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise the InfoStack backing-colour mode range. Mode 4 was added after
@@ -1797,8 +1907,6 @@ def run(ctx: ValidationContext) -> None:
         Repaint() {{}}
     }};
     vm.runInThisContext(fs.readFileSync({json.dumps(str(registry_path))}, 'utf8'));
-    vm.runInThisContext(fs.readFileSync(
-        {json.dumps(str(samples / 'js' / 'darkonejsp3_reset.js'))}, 'utf8'));
     function assert(condition, message) {{
         if (!condition) throw new Error(message);
     }}
@@ -1817,6 +1925,10 @@ def run(ctx: ValidationContext) -> None:
     assert(properties['DarkOneJSP3.InfoStack.ActivePanel'] === 4,
         'InfoStack appearance reset changed active-panel behaviour');
 
+    vm.runInThisContext(fs.readFileSync({json.dumps(str(sample_registry_path))}, 'utf8'));
+    vm.runInThisContext(fs.readFileSync(
+        {json.dumps(str(samples / 'js' / 'jsp3_enhanced_reset.js'))}, 'utf8'));
+
     reset({{
         'JSPLAYLIST.Enable Smooth Scrolling': false,
         'JSPLAYLIST.UI Refresh Interval (ms)': 31,
@@ -1827,8 +1939,8 @@ def run(ctx: ValidationContext) -> None:
         'JSPLAYLIST.Snap Scrollbar Dragging To Rows': false,
         'JSPLAYLIST.Free Wheel Step (pixels)': 240
     }});
-    assert(darkOneJsp3HandleSampleReset(
-        'DarkOneJSP3.Reset.Properties', JSON.stringify({{version: 1, scope: 'behaviour'}}), 'js-playlist'),
+    assert(jsp3EnhancedHandleSampleReset(
+        'JSP3Enhanced.Reset.Properties', JSON.stringify({{version: 1, scope: 'behaviour'}}), 'js-playlist'),
         'JS Playlist reset notification was not handled');
     assert(properties['JSPLAYLIST.Enable Smooth Scrolling'] === true,
         'JS Playlist smooth-scrolling default failed');
@@ -1861,7 +1973,7 @@ def run(ctx: ValidationContext) -> None:
         'SMOOTH.PLAYLIST.MANAGER.SCROLL': 1234,
         'SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2': '{{"version":2}}'
     }});
-    darkOneJsp3HandleSampleReset(
+    jsp3EnhancedHandleSampleReset(
         'DarkOneJSP3.Reset.Properties', JSON.stringify({{version: 1, scope: 'behaviour'}}), 'playlist-manager');
     assert(properties['SMOOTH.UI.REFRESH.INTERVAL.MS'] === 8,
         'Playlist Manager refresh default failed');
@@ -1890,7 +2002,7 @@ def run(ctx: ValidationContext) -> None:
         'SMOOTH.PLAYLIST.MANAGER.SCROLL': 1234,
         'SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2': '{{"version":2}}'
     }});
-    darkOneJsp3HandleSampleReset(
+    jsp3EnhancedHandleSampleReset(
         'DarkOneJSP3.Reset.Properties', {{scope: 'appearance'}}, 'playlist-manager');
     assert(properties['SMOOTH.PLAYLIST.MANAGER.SHOW.FILTER'] === true,
         'Playlist Manager filter visibility default failed');
@@ -1913,7 +2025,7 @@ def run(ctx: ValidationContext) -> None:
         'SMOOTH.PLAYLIST.MANAGER.SCROLL': 1234,
         'SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2': '{{"version":2}}'
     }});
-    darkOneJsp3HandleSampleReset(
+    jsp3EnhancedHandleSampleReset(
         'DarkOneJSP3.Reset.Properties', JSON.stringify({{version: 1, scope: 'all'}}), 'playlist-manager');
     assert(properties['SMOOTH.PLAYLIST.MANAGER.SHOW.FILTER'] === true,
         'Full reset missed Playlist Manager appearance');
@@ -1926,10 +2038,118 @@ def run(ctx: ValidationContext) -> None:
     assert(properties['SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2'] === '',
         'Full reset did not clear row-aware Playlist Manager scroll state');
     assert(reloads === 1, 'Playlist Manager full reset did not reload once');
+
+    reset({{'JSPLAYLIST.UI Refresh Interval (ms)': 31}});
+    assert(jsp3EnhancedSampleResetScope({{scope: 'preview'}}) === null,
+        'Unknown reset scope was not rejected');
+    assert(!jsp3EnhancedHandleSampleReset(
+        'DarkOneJSP3.Reset.Properties', {{scope: 'preview'}}, 'js-playlist'),
+        'Malformed reset scope was incorrectly handled');
+    assert(properties['JSPLAYLIST.UI Refresh Interval (ms)'] === 31 && reloads === 0,
+        'Malformed reset scope changed properties or reloaded the panel');
+    assert(!jsp3EnhancedHandleSampleReset(
+        'DarkOneJSP3.Reset.Properties', {{scope: 'all'}}, 'unknown-role'),
+        'Unknown reset role was incorrectly handled');
+    assert(reloads === 0, 'Unknown reset role reloaded the panel');
     """
         result = subprocess.run([node, '-e', reset_smoke], capture_output=True, text=True)
         if result.returncode:
             errors.append('Playlist reset smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Reproduce saved pre-v0.9.17 sample entries: they import the project
+        # reset registry followed by darkonejsp3_reset.js, but not sample_defaults.js.
+        legacy_sample_reset_smoke = f"""
+    const fs = require('fs');
+    const vm = require('vm');
+    const roles = {json.dumps({
+        'lastfm-bio': ('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3),
+        'lastfm-info': ('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3),
+        'properties': ('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3),
+        'queue-viewer': ('DARKONEJSP3.QUEUE.TF', '%artist% - %title%'),
+        'js-playlist': ('JSPLAYLIST.UI Refresh Interval (ms)', 8),
+        'playlist-manager': ('SMOOTH.UI.REFRESH.INTERVAL.MS', 8),
+        'musicbrainz': ('DARKONEJSP3.MUSICBRAINZ.MODE', 0),
+        'album-notes': ('DARKONEJSP3.ALBUM.NOTES.MODE', 0),
+    })};
+    let properties = {{}};
+    let reloads = 0;
+    global.window = {{
+        GetProperty(name, fallback) {{
+            return Object.prototype.hasOwnProperty.call(properties, name)
+                ? properties[name]
+                : fallback;
+        }},
+        SetProperty(name, value) {{ properties[name] = value; }},
+        Reload() {{ reloads++; }},
+        Repaint() {{}}
+    }};
+    vm.runInThisContext(fs.readFileSync({json.dumps(str(registry_path))}, 'utf8'));
+    vm.runInThisContext(fs.readFileSync(
+        {json.dumps(str(samples / 'js' / 'darkonejsp3_reset.js'))}, 'utf8'));
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    for (const role of Object.keys(roles)) {{
+        const property = roles[role][0];
+        const expected = roles[role][1];
+        properties = {{}};
+        properties[property] = expected === true ? false : expected === false ? true : '__non_default__';
+        reloads = 0;
+        assert(darkOneJsp3HandleSampleReset(
+            'DarkOneJSP3.Reset.Properties', JSON.stringify({{version: 1, scope: 'all'}}), role),
+            'Legacy adapter did not handle role ' + role);
+        assert(properties[property] === expected, 'Legacy adapter did not reset role ' + role);
+        assert(reloads === 1, 'Legacy adapter did not reload exactly once for role ' + role);
+    }}
+    """
+        result = subprocess.run([node, '-e', legacy_sample_reset_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Legacy saved-entry reset smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise the project JScript Panel reset receiver independently of
+        # the much larger control/display runtime modules.
+        config_reset_source = text(project / 'jscript' / 'js' / 'Config_Global_Script.js')
+        config_reset_functions = '\n'.join(
+            _extract_js_function(config_reset_source, name)
+            for name in [
+                'darkOneNormaliseResetScope',
+                'darkOneResetScope',
+                'darkOneApplyResetDefaults',
+                'darkOneHandleResetNotification',
+            ]
+        )
+        config_reset_smoke = f"""
+    let applied = [];
+    let reloads = 0;
+    global.DARKONEJSP3_RESET_ROLE = 'display';
+    global.DARKONEJSP3_RESET_REGISTRY = {{display: {{appearance: {{}}, behaviour: {{}}}}}};
+    global.darkOneJsp3ApplyRoleReset = function(role, scope) {{ applied.push([role, scope]); return true; }};
+    global.window = {{Reload() {{ reloads++; }}, Repaint() {{}}}};
+    {config_reset_functions}
+    function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    assert(darkOneResetScope(JSON.stringify({{version: 1, scope: 'appearance'}})) === 'appearance',
+        'Project JScript receiver did not parse a serialised scope');
+    assert(darkOneResetScope({{scope: 'behaviour'}}) === 'behaviour',
+        'Project JScript receiver did not retain object-payload compatibility');
+    assert(darkOneResetScope({{scope: 'preview'}}) === null,
+        'Project JScript receiver did not reject an unknown scope');
+    assert(!darkOneHandleResetNotification(
+        'DarkOneJSP3.Reset.Properties', {{scope: 'preview'}}),
+        'Project JScript receiver handled an invalid scope');
+    assert(applied.length === 0 && reloads === 0,
+        'Project JScript invalid scope applied defaults or reloaded');
+    assert(darkOneHandleResetNotification(
+        'DarkOneJSP3.Reset.Properties', {{scope: 'appearance'}}),
+        'Project JScript receiver did not handle a valid reset');
+    assert(applied.length === 1 && applied[0][0] === 'display' && applied[0][1] === 'appearance',
+        'Project JScript receiver applied the wrong role or scope');
+    assert(reloads === 1, 'Project JScript receiver did not reload exactly once');
+    """
+        result = subprocess.run([node, '-e', config_reset_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Project JScript reset smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise the JSplitter-side reset parser with serialised and legacy payloads.
@@ -1967,6 +2187,12 @@ def run(ctx: ValidationContext) -> None:
         'JSplitter did not parse a serialised reset scope');
     assert(darkOneJsp3ResetScope({{scope: 'behaviour'}}) === 'behaviour',
         'JSplitter did not retain legacy object-payload compatibility');
+    assert(darkOneJsp3ResetScope({{scope: 'preview'}}) === null,
+        'JSplitter did not reject an unknown reset scope');
+    assert(!darkOneJsp3HandleReset('DarkOneJSP3.Reset.Properties', {{scope: 'preview'}}),
+        'JSplitter handled an invalid reset scope');
+    assert(properties['DarkOneJSP3.InfoStack.FontSize'] === 31 && reloads === 0,
+        'JSplitter invalid scope changed properties or reloaded');
     assert(darkOneJsp3HandleReset('DarkOneJSP3.Reset.Properties',
         JSON.stringify({{version: 1, scope: 'appearance'}})),
         'JSplitter did not handle a serialised reset notification');

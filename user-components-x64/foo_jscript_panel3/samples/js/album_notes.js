@@ -333,7 +333,7 @@ function _album_notes(x, y, w, h) {
 
     this.format_diagnostics = function () {
         var lines = [
-            'DarkOneJSP3 Album Notes diagnostics',
+            'Enhanced Album Notes diagnostics',
             '',
             'Artist: ' + (this.artist || '(none)'),
             'Album: ' + (this.album_clean || this.album || '(none)'),
@@ -1029,11 +1029,11 @@ function _album_notes(x, y, w, h) {
         this.menu_provider.AppendMenuItem(EnableMenuIf(this.identity.release_group_mbid.length), 2036, 'Copy release-group MBID');
         this.menu_provider.AppendTo(panel.m, MF_STRING, 'Provider and matching settings');
 
-        this.menu_identity_api.AppendMenuItem(MF_STRING, 2040, 'DarkOneJSP3 application (recommended)');
+        this.menu_identity_api.AppendMenuItem(MF_STRING, 2040, 'JSP3 Enhanced Samples application (recommended)');
         this.menu_identity_api.AppendMenuItem(MF_STRING, 2041, 'Google Chrome 150-style (experimental)');
         this.menu_identity_api.CheckMenuRadioItem(2040, 2041, DarkOneNetwork.getApiHeaderProfile() == 'chrome' ? 2041 : 2040);
         this.menu_identity_api.AppendTo(this.menu_identity, MF_STRING, 'API services');
-        this.menu_identity_html.AppendMenuItem(MF_STRING, 2042, 'DarkOneJSP3 application');
+        this.menu_identity_html.AppendMenuItem(MF_STRING, 2042, 'JSP3 Enhanced Samples application');
         this.menu_identity_html.AppendMenuItem(MF_STRING, 2043, 'Google Chrome 150-style (experimental)');
         this.menu_identity_html.CheckMenuRadioItem(2042, 2043, DarkOneNetwork.getHtmlHeaderProfile() == 'chrome' ? 2043 : 2042);
         this.menu_identity_html.AppendTo(this.menu_identity, MF_STRING, 'HTML services');

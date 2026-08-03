@@ -1,5 +1,5 @@
 {
-  "version": "0.9.16",
+  "version": "0.9.18",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -660,7 +660,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.4.5",
+      "version": "0.4.7",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -695,7 +695,7 @@
       "volume_knob_pressed_state_tests": true
     },
     "rendering_optimisation": {
-      "version": "0.1.3",
+      "version": "0.1.4",
       "shared_helper": "DarkOneJSP3/shared/performance_utils.js",
       "demand_driven_schedulers": true,
       "direct2d_bitmap_reuse": true,
@@ -739,6 +739,13 @@
       ],
       "volume_write_minimum_ms": 16,
       "protected_consumer": "fb.Volume writes"
+    },
+    "standalone_jsp3_samples": {
+      "component_local_shared_helpers": true,
+      "no_darkonejsp3_profile_dependency": true,
+      "legacy_import_paths_preserved": true,
+      "legacy_reset_notification_supported": true,
+      "legacy_property_keys_preserved": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

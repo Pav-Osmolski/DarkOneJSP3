@@ -1,12 +1,12 @@
 // ==PREPROCESSOR==
-// @name "Smooth Playlist Manager - DarkOneJSP3 Enhanced"
-// @version "0.5.4"
+// @name "Smooth Playlist Manager - Enhanced"
+// @version "0.5.5"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
+// @import "%fb2k_component_path%samples\shared\performance_utils.js"
+// @import "%fb2k_component_path%samples\shared\ui_cadence.js"
 // @import "%fb2k_component_path%helpers.txt"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\reset_defaults.js"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
-// @import "%fb2k_profile_path%DarkOneJSP3\shared\ui_cadence.js"
-// @import "%fb2k_component_path%samples\js\darkonejsp3_reset.js"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\smooth\common.js"
 // @import "%fb2k_component_path%samples\smooth\inputbox.js"
 // @import "%fb2k_component_path%samples\smooth\filterbox.js"
@@ -16,7 +16,7 @@
 
 // https://jscript-panel.github.io/gallery/smooth-playlist-manager/
 
-// DarkOneJSP3 restores the JSP2 playlist-name filter and retains smooth-scroll,
+// This enhanced sample restores the JSP2 playlist-name filter and retains smooth-scroll,
 // row-spacing, row-aware scroll-state and optional alternating-row shading.
 // Rendering is demand-driven while idle; playlist type/lock flags are cached.
 
@@ -24,5 +24,5 @@ g_playlist_manager_cadence_reporter.start();
 
 function on_notify_data(name, info) {
     if (g_playlist_manager_cadence_reporter && g_playlist_manager_cadence_reporter.handleNotification(name, info)) return;
-    darkOneJsp3HandleSampleReset(name, info, "playlist-manager");
+    jsp3EnhancedHandleSampleReset(name, info, "playlist-manager");
 }

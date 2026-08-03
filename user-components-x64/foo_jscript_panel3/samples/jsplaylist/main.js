@@ -1687,7 +1687,7 @@ function init() {
 	g_playlist_profiler = DarkOnePerformance.createProfiler(
 		utils,
 		properties.performanceProfiling,
-		"DarkOneJSP3 JS Playlist paint",
+		"Enhanced JS Playlist paint",
 		120
 	);
 

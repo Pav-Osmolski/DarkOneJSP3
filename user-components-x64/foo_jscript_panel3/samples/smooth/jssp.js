@@ -1055,7 +1055,7 @@ function oBrowser() {
 		sub6.AppendMenuSeparator();
 		sub6.AppendMenuItem(MF_STRING, 47, "Set smoothness...");
 		sub6.AppendMenuItem(MF_STRING, 48, "Set wheel row step...");
-		sub6.AppendTo(menu, MF_STRING, "DarkOneJSP3 smooth scrolling");
+		sub6.AppendTo(menu, MF_STRING, "Enhanced smooth scrolling");
 
 		// settings end
 

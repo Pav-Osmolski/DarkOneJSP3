@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.16
+  <strong>Current stable release:</strong> v0.9.18
 </p>
 
 > [!IMPORTANT]
@@ -68,10 +68,12 @@ workflow of the original theme.
 * Demand-driven playlist rendering with cached title formatting and Direct2D
   bitmap reuse.
 * Release validation, compatibility-mirror checking and maintenance utilities.
+* Standalone enhanced JScript Panel samples with component-local dependencies
+  and compatibility for older theme entry scripts.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.16** is the current stable release.
+**DarkOneJSP3 v0.9.18** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -112,6 +114,10 @@ Back up your active foobar2000 profile before installing or upgrading.
 The package contains two top-level directories: `DarkOneJSP3` and
 `user-components-x64`. Merge both into the directory used by your active
 foobar2000 profile.
+
+The supplied JScript Panel sample tree can also be installed independently for
+other themes; see `DarkOneJSP3/docs/ENHANCED_SAMPLES.txt`. DarkOneJSP3 itself
+still requires both top-level directories.
 
 ### Standard installation (non-portable)
 
@@ -228,7 +234,7 @@ python DarkOneJSP3/tools/validate_release.py .
 
 The validator checks package structure, namespaces, imports, reset coverage,
 metadata, documentation consistency, JavaScript syntax, Python compilation and
-intentional compatibility mirrors.
+intentional compatibility mirrors and generated adapters.
 
 ## Credits and attribution
 

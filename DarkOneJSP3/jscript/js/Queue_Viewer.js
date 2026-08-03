@@ -188,7 +188,7 @@ function _queue_viewer(x, y, w, h) {
                 handles.AddItem(lists[row.playlist_index].GetItem(row.playlist_item_index));
             }
         } catch (e) {
-            console.log('[DarkOneJSP3 Queue Viewer] Could not read selected source items: ' + e.message);
+            console.log('[Enhanced Queue Viewer] Could not read selected source items: ' + e.message);
         } finally {
             for (var key in lists) {
                 if (!Object.prototype.hasOwnProperty.call(lists, key)) continue;
@@ -226,7 +226,7 @@ function _queue_viewer(x, y, w, h) {
             }
             return true;
         } catch (e) {
-            console.log('[DarkOneJSP3 Queue Viewer] Could not focus source playlist item: ' + e.message);
+            console.log('[Enhanced Queue Viewer] Could not focus source playlist item: ' + e.message);
             this.request_scan(false, 0);
             return false;
         }
@@ -241,7 +241,7 @@ function _queue_viewer(x, y, w, h) {
             if (!this.is_selected(index)) this.select_only(index, true);
             return true;
         } catch (e) {
-            console.log('[DarkOneJSP3 Queue Viewer] Could not play source playlist item: ' + e.message);
+            console.log('[Enhanced Queue Viewer] Could not play source playlist item: ' + e.message);
             this.request_scan(false, 0);
             return false;
         }
@@ -253,7 +253,7 @@ function _queue_viewer(x, y, w, h) {
         try {
             if (handles.Count) result = handles.RunContextCommand('Properties');
         } catch (e) {
-            console.log('[DarkOneJSP3 Queue Viewer] Could not open item properties: ' + e.message);
+            console.log('[Enhanced Queue Viewer] Could not open item properties: ' + e.message);
         }
         try { handles.Dispose(); } catch (disposeError) {}
         return result;
@@ -277,7 +277,7 @@ function _queue_viewer(x, y, w, h) {
                 if (path) values.push(path);
             }
         } catch (e) {
-            console.log('[DarkOneJSP3 Queue Viewer] Could not copy source paths: ' + e.message);
+            console.log('[Enhanced Queue Viewer] Could not copy source paths: ' + e.message);
         }
         try { handles.Dispose(); } catch (disposeError) {}
         if (!values.length) return false;
@@ -655,7 +655,7 @@ function _queue_viewer(x, y, w, h) {
                     state.item_count = state.items.Count;
                     state.item_index = 0;
                 } catch (e) {
-                    console.log('[DarkOneJSP3 Queue Viewer] Failed to read playlist ' + state.playlist_index + ': ' + e.message);
+                    console.log('[Enhanced Queue Viewer] Failed to read playlist ' + state.playlist_index + ': ' + e.message);
                     state.playlist_index++;
                     continue;
                 }
@@ -677,7 +677,7 @@ function _queue_viewer(x, y, w, h) {
                         });
                     }
                 } catch (e2) {
-                    console.log('[DarkOneJSP3 Queue Viewer] Failed at playlist ' + state.playlist_index +
+                    console.log('[Enhanced Queue Viewer] Failed at playlist ' + state.playlist_index +
                         ', item ' + itemIndex + ': ' + e2.message);
                 }
             }
@@ -725,7 +725,7 @@ function _queue_viewer(x, y, w, h) {
         this.scan_state = null;
         var elapsed = Date.now() - state.started;
         if (this.force_log || elapsed >= 100) {
-            console.log('[DarkOneJSP3 Queue Viewer] Scanned ' + state.processed_items + ' items across ' +
+            console.log('[Enhanced Queue Viewer] Scanned ' + state.processed_items + ' items across ' +
                 state.playlist_count + ' playlists in ' + elapsed + ' ms; found ' + this.count + ' queue entr' +
                 (this.count === 1 ? 'y' : 'ies') + '; source field: %queue_indexes%; incremental scan.');
         }

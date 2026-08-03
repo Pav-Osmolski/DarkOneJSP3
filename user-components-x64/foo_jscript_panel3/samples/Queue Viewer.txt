@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
-// @name "Queue Viewer - DarkOneJSP3 Enhanced"
-// @version "0.6.0"
+// @name "Queue Viewer - Enhanced"
+// @version "0.6.1"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"

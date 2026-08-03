@@ -1,4 +1,4 @@
-// DarkOneJSP3: DirectWrite playlist-name filter restored from the JSP2 manager.
+// Enhanced sample: DirectWrite playlist-name filter restored from the JSP2 manager.
 function oFilterBox() {
 	this.x = 0;
 	this.y = 0;

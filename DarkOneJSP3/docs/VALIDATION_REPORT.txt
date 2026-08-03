@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.16 Validation Report
+DarkOneJSP3 v0.9.18 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,17 @@ validation and the audited-file count.
 
 Checks
 ------
+- The complete user-components-x64 tree is staged without a DarkOneJSP3
+  directory and every distributed top-level sample import resolves.
+- Enhanced sample entries contain no hard DarkOneJSP3 profile-path imports.
+- helpers.txt supplies guarded performance and UI-cadence compatibility for
+  older saved JS Playlist and Smooth Playlist Manager entry scripts.
+- Standalone sample defaults are separated from project-owned theme defaults;
+  neutral and legacy reset notifications restore the same preserved properties.
+- The generated legacy reset adapter is executed after the current project reset
+  registry to reproduce saved entries created before the standalone-sample refactor across every sample role.
+- Generic panel object-menu commands remain safe when optional colour support
+  is not loaded, while both page-background option names remain supported.
 - JS Playlist metadata-only refreshes, including inline star-rating edits,
   preserve and safely clamp the current viewport offset rather than
   recentering on the previously focused item.
@@ -35,7 +46,9 @@ Checks
 - Active scripts use the current DarkOneJSP3 namespace and supported panel
   titles.
 - Local @import paths resolve inside the distributed package.
-- JavaScript modules and active .txt entry scripts pass Node syntax checks.
+- JavaScript modules and active .txt entry scripts pass Node syntax checks;
+  locally imported preprocessor sources are also combined and checked in their
+  actual execution order.
 - Demand-driven repaint schedulers coalesce requests, stop when idle and retain
   pending repaint work while a panel is hidden.
 - Volume-knob dragging coalesces rapid mouse input, applies the first value
@@ -67,13 +80,16 @@ Checks
 - NumImage, TimeImage and BitrateImage explicitly inherit the shared BaseImage
   lifecycle and digit-comparison methods; runtime tests instantiate each class and
   exercise reset, bitmap commit, disposal and isDrawDigit behaviour.
-- Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose and
-  CreateProfiler are called directly rather than gated by typeof == "function".
+- Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose,
+  CreateProfiler and profiler Reset are called directly rather than gated by
+  typeof == "function".
 - Python maintenance tools pass py_compile.
-- Intentional compatibility mirror files remain byte-for-byte identical.
+- Intentional compatibility mirrors remain synchronised; generated adapters
+  match their canonical source inputs exactly.
 - Every reset callback imports its registry and bridge dependencies.
 - Coordinated resets use serialised payloads while retaining legacy payload
-  compatibility.
+  compatibility; malformed scopes are rejected by standalone, JScript Panel
+  and JSplitter receivers without applying defaults or reloading.
 - Startup settings remain owned by the root controller and preserve the tested
   reveal timing and first-layout safeguards.
 - Biography, Last.fm, Album Notes, Properties and the optional scripted Queue

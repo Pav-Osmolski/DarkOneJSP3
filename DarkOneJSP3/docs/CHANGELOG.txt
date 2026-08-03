@@ -1,6 +1,61 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.18 - Standalone compatibility hardening
+--------------------------------------------
+
+- Fixed factory reset for saved pre-v0.9.17 sample entries. The legacy
+  `darkonejsp3_reset.js` filename is now a generated, self-contained adapter
+  containing the canonical sample defaults and neutral reset bridge.
+- Added runtime coverage for all eight migrated sample reset roles using the
+  exact old import arrangement: project defaults followed by the legacy bridge.
+- Rejects malformed reset scopes and unknown roles across standalone, project
+  JScript Panel and JSplitter receivers without changing properties or reloading.
+- Loads canonical performance and UI-cadence helpers before `helpers.txt` in
+  current playlist and DarkOneJSP3 panel entries, leaving the embedded block as
+  a true fallback for older saved entries.
+- Removed redundant `darkone_network.js` imports from four current metadata
+  entries because `common.js` already supplies the guarded coordinator.
+- Calls the native profiler `Reset` method directly through `try/catch`, matching
+  the existing COM-safe treatment of `CreateProfiler`, `CreateBitmap` and
+  `Dispose`.
+- Expanded static and runtime validation for import ordering, redundant network
+  imports, generated legacy-adapter synchronisation, invalid reset inputs and
+  direct profiler reset calls.
+- Advanced performance helpers to 0.1.4, the sample reset bridge and legacy
+  compatibility layer to 0.1.1, and the release validator to 0.4.7.
+
+v0.9.17 - Standalone enhanced-sample compatibility
+--------------------------------------------------
+
+- Removed every hard `%fb2k_profile_path%DarkOneJSP3` dependency from the
+  enhanced top-level JScript Panel sample entries.
+- Added component-local shared colour, performance, UI-cadence and sample-reset
+  utilities under `samples\shared`.
+- Split sample-owned factory defaults from the DarkOneJSP3 theme reset registry,
+  while preserving all existing property names and saved settings.
+- Added the neutral `JSP3Enhanced.Reset.Properties` protocol and retained the
+  legacy `DarkOneJSP3.Reset.Properties` notification and reset-helper aliases.
+- Retained `darkonejsp3_reset.js` as the legacy bridge filename. v0.9.18
+  subsequently made it a self-contained generated adapter for saved entries.
+- Added guarded performance and UI-cadence fallbacks to the established
+  `helpers.txt` import so older saved JS Playlist and Smooth Playlist Manager
+  entry scripts remain compatible with the upgraded internal modules.
+- Generalised the optional page-background opt-in to
+  `enhanced_page_background`, retaining `darkonejsp3_page_background` as an
+  alias and preserving the existing property keys.
+- Fixed generic `_panel` object-menu dispatch so it no longer evaluates the
+  optional colour helper when that helper was not imported.
+- Neutralised principal sample names and enhanced scrolling/default menu labels
+  without changing filenames, constructors or internal module paths.
+- Expanded compatibility-mirror tooling to keep the standalone shared helpers,
+  project mirrors, reset bridges and helpers.txt fallback block synchronised.
+- Added component-only staging validation, legacy-entry compatibility checks
+  and standalone sample documentation.
+- Advanced Queue Viewer to 0.6.1, Album Notes to 0.6.8, MusicBrainz to 0.6.4,
+  JS Playlist to 0.6.0, Playlist Manager to 0.5.5, page-background support to
+  0.1.3 and the release validator to 0.4.6.
+
 v0.9.16 - JS Playlist inline-rating viewport preservation
 ---------------------------------------------------------
 

@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Synchronise the deliberate DarkOneJSP3 compatibility source mirrors."""
+"""Synchronise deliberate DarkOneJSP3 and standalone-sample source mirrors."""
 from __future__ import annotations
 
 from pathlib import Path
 import argparse
-import sys
+import re
 
 NETWORK_START = '// == DARKONEJSP3 SHARED NETWORK COORDINATOR =='
 NETWORK_END = '// == END DARKONEJSP3 SHARED NETWORK COORDINATOR =='
+HELPERS_START = '// == JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS =='
+HELPERS_END = '// == END JSP3 ENHANCED SAMPLE COMPATIBILITY HELPERS =='
+LEGACY_DEFAULTS_START = '// == JSP3 ENHANCED LEGACY SAMPLE DEFAULTS =='
+LEGACY_DEFAULTS_END = '// == END JSP3 ENHANCED LEGACY SAMPLE DEFAULTS =='
+LEGACY_BRIDGE_START = '// == JSP3 ENHANCED LEGACY RESET BRIDGE =='
+LEGACY_BRIDGE_END = '// == END JSP3 ENHANCED LEGACY RESET BRIDGE =='
 
 
 def read_text(path: Path) -> str:
@@ -25,14 +31,64 @@ def replace_network_block(common: str, canonical: str) -> str:
     )
 
 
+
+def replace_helpers_block(helpers: str, performance: str, cadence: str) -> str:
+    canonical = performance.strip() + '\n\n' + cadence.strip()
+    if HELPERS_START not in helpers or HELPERS_END not in helpers:
+        return helpers.rstrip() + '\n\n' + HELPERS_START + '\n' + canonical + '\n' + HELPERS_END + '\n'
+    prefix, remainder = helpers.split(HELPERS_START, 1)
+    _, suffix = remainder.split(HELPERS_END, 1)
+    return (
+        prefix.rstrip() + '\n\n' + HELPERS_START + '\n' + canonical +
+        '\n' + HELPERS_END + '\n' + suffix.lstrip('\r\n')
+    )
+
+
+def strip_use_strict(source: str) -> str:
+    return re.sub(r'^\s*"use strict";\s*', '', source, count=1)
+
+
+def build_legacy_reset_adapter(defaults: str, bridge: str) -> str:
+    return (
+        '"use strict";\n\n'
+        '// Generated compatibility adapter for saved pre-v0.9.17 sample entries.\n'
+        '// Do not edit directly; run sync_mirrors.py after changing the canonical\n'
+        '// sample-default registry or neutral reset bridge.\n\n'
+        + LEGACY_DEFAULTS_START + '\n' + strip_use_strict(defaults).strip() + '\n'
+        + LEGACY_DEFAULTS_END + '\n\n'
+        + LEGACY_BRIDGE_START + '\n' + strip_use_strict(bridge).strip() + '\n'
+        + LEGACY_BRIDGE_END + '\n'
+    )
+
 def paths(root: Path) -> dict[str, Path]:
-    samples = root / 'user-components-x64' / 'foo_jscript_panel3' / 'samples' / 'js'
+    samples = root / 'user-components-x64' / 'foo_jscript_panel3' / 'samples'
+    sample_js = samples / 'js'
+    sample_shared = samples / 'shared'
+    project_shared = root / 'DarkOneJSP3' / 'shared'
     return {
         'queue_canonical': root / 'DarkOneJSP3' / 'jscript' / 'js' / 'Queue_Viewer.js',
-        'queue_mirror': samples / 'queue_viewer.js',
-        'network_canonical': samples / 'darkone_network.js',
-        'network_host': samples / 'common.js',
+        'queue_mirror': sample_js / 'queue_viewer.js',
+        'network_canonical': sample_js / 'darkone_network.js',
+        'network_host': sample_js / 'common.js',
+        'performance_canonical': sample_shared / 'performance_utils.js',
+        'performance_mirror': project_shared / 'performance_utils.js',
+        'cadence_canonical': sample_shared / 'ui_cadence.js',
+        'cadence_mirror': project_shared / 'ui_cadence.js',
+        'colour_canonical': sample_shared / 'colour_utils.js',
+        'colour_mirror': project_shared / 'colour_utils.js',
+        'sample_defaults_canonical': sample_shared / 'sample_defaults.js',
+        'reset_bridge_canonical': sample_js / 'jsp3_enhanced_reset.js',
+        'reset_bridge_legacy': sample_js / 'darkonejsp3_reset.js',
+        'helpers_host': root / 'user-components-x64' / 'foo_jscript_panel3' / 'helpers.txt',
     }
+
+
+FILE_MIRROR_PAIRS = (
+    ('queue_canonical', 'queue_mirror', 'queue_viewer.js differs from canonical Queue_Viewer.js'),
+    ('performance_canonical', 'performance_mirror', 'project performance helper differs from standalone canonical helper'),
+    ('cadence_canonical', 'cadence_mirror', 'project UI-cadence helper differs from standalone canonical helper'),
+    ('colour_canonical', 'colour_mirror', 'project colour helper differs from standalone canonical helper'),
+)
 
 
 def check(root: Path) -> list[str]:
@@ -44,8 +100,27 @@ def check(root: Path) -> list[str]:
     if errors:
         return errors
 
-    if p['queue_canonical'].read_bytes() != p['queue_mirror'].read_bytes():
-        errors.append('queue_viewer.js differs from canonical Queue_Viewer.js')
+    for canonical, mirror, message in FILE_MIRROR_PAIRS:
+        if p[canonical].read_bytes() != p[mirror].read_bytes():
+            errors.append(message)
+
+    helpers = read_text(p['helpers_host'])
+    performance = read_text(p['performance_canonical']).strip()
+    cadence = read_text(p['cadence_canonical']).strip()
+    try:
+        embedded = helpers.split(HELPERS_START, 1)[1].split(HELPERS_END, 1)[0].strip()
+    except IndexError:
+        errors.append('helpers.txt does not contain the enhanced compatibility helper block')
+    else:
+        if embedded != performance + '\n\n' + cadence:
+            errors.append('helpers.txt enhanced compatibility block differs from canonical helpers')
+
+    legacy_expected = build_legacy_reset_adapter(
+        read_text(p['sample_defaults_canonical']),
+        read_text(p['reset_bridge_canonical']),
+    )
+    if read_text(p['reset_bridge_legacy']) != legacy_expected:
+        errors.append('legacy reset adapter differs from canonical defaults and bridge')
 
     common = read_text(p['network_host'])
     canonical = read_text(p['network_canonical']).strip()
@@ -61,7 +136,29 @@ def check(root: Path) -> list[str]:
 
 def sync(root: Path) -> None:
     p = paths(root)
-    p['queue_mirror'].write_bytes(p['queue_canonical'].read_bytes())
+    for canonical, mirror, _ in FILE_MIRROR_PAIRS:
+        p[mirror].write_bytes(p[canonical].read_bytes())
+
+    p['reset_bridge_legacy'].write_text(
+        build_legacy_reset_adapter(
+            read_text(p['sample_defaults_canonical']),
+            read_text(p['reset_bridge_canonical']),
+        ),
+        encoding='utf-8',
+        newline='\n',
+    )
+
+    helpers = read_text(p['helpers_host'])
+    p['helpers_host'].write_text(
+        replace_helpers_block(
+            helpers,
+            read_text(p['performance_canonical']),
+            read_text(p['cadence_canonical']),
+        ),
+        encoding='utf-8',
+        newline='\n',
+    )
+
     common = read_text(p['network_host'])
     canonical = read_text(p['network_canonical'])
     p['network_host'].write_text(
