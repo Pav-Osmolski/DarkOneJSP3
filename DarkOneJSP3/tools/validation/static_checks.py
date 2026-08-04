@@ -213,7 +213,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.4.8',
+            'version': '0.4.9',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -240,11 +240,29 @@ def run(ctx: ValidationContext) -> None:
             'volume_cadence_protocol_tests': True,
             'manual_refresh_interval_tests': True,
             'protected_volume_write_cadence_tests': True,
+            'album_art_wheel_debounce_tests': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
                 errors.append(
                     'Manifest validation-tooling field is incorrect: ' + key
+                )
+        album_art_navigation = manifest.get('enhancements', {}).get(
+            'album_art_navigation', {})
+        expected_album_art_navigation = {
+            'version': '0.1.0',
+            'wheel_debounce_ms': 80,
+            'trailing_wheel_coalescing': True,
+            'keyboard_selection_immediate': True,
+            'metadata_change_cancels_pending': True,
+            'script_unload_cancels_pending': True,
+            'intermediate_property_writes_avoided': True,
+            'intermediate_image_decodes_avoided': True,
+        }
+        for key, expected in expected_album_art_navigation.items():
+            if album_art_navigation.get(key) != expected:
+                errors.append(
+                    'Manifest Album Art navigation field is incorrect: ' + key
                 )
         accent = manifest.get('enhancements', {}).get('display_accent', {})
         if accent.get('legacy_six_colour_property_migration') is not False:
@@ -869,12 +887,33 @@ def run(ctx: ValidationContext) -> None:
     if album_art_entry.exists():
         album_art_body = text(album_art_entry)
         for token in [
+            '// @name "Album Art - Enhanced"',
+            '// @version "0.1.0"',
+            '// @author "marc2003 / DeViLhoOD"',
+            'albumart.dispose();',
+        ]:
+            if token not in album_art_body:
+                errors.append('Enhanced Album Art entry is missing: ' + token)
+        for token in [
             'Side divider colour',
             'DarkOneJSP3.ArtSpectrum.Divider.',
             'darkOneJsp3Divider',
         ]:
             if token in album_art_body:
                 errors.append('Album Art retains unsupported divider bridge: ' + token)
+
+    album_art_impl = samples / 'js' / 'albumart.js'
+    if album_art_impl.exists():
+        album_art_impl_body = text(album_art_impl)
+        for token in [
+            'this.wheel_debounce_ms = 80;',
+            'this.pending_id = id;',
+            'this.wheel_timer = window.SetTimeout(function () {',
+            'return this.cycle_artwork(s, true);',
+            'this.cancel_wheel_selection();',
+        ]:
+            if token not in album_art_impl_body:
+                errors.append('Album Art wheel hardening is missing: ' + token)
 
     legacy_allmusic_entry = samples / 'Allmusic Review.txt'
     if legacy_allmusic_entry.exists() and '// @version "0.6.6"' not in text(legacy_allmusic_entry):

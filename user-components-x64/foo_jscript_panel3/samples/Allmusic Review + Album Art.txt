@@ -136,6 +136,7 @@ function on_playlist_switch() {
 }
 
 function on_script_unload() {
+	albumart.dispose();
 	allmusic.dispose();
 }
 

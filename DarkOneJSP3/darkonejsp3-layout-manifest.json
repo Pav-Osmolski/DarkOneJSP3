@@ -1,5 +1,5 @@
 {
-  "version": "0.9.19",
+  "version": "0.9.20",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.11",
@@ -660,7 +660,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.4.8",
+      "version": "0.4.9",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -694,7 +694,8 @@
       "protected_volume_write_cadence_tests": true,
       "volume_knob_pressed_state_tests": true,
       "enhanced_sample_readme_section_checked": true,
-      "enhanced_sample_document_link_checked": true
+      "enhanced_sample_document_link_checked": true,
+      "album_art_wheel_debounce_tests": true
     },
     "rendering_optimisation": {
       "version": "0.1.4",
@@ -748,6 +749,16 @@
       "legacy_import_paths_preserved": true,
       "legacy_reset_notification_supported": true,
       "legacy_property_keys_preserved": true
+    },
+    "album_art_navigation": {
+      "version": "0.1.0",
+      "wheel_debounce_ms": 80,
+      "trailing_wheel_coalescing": true,
+      "keyboard_selection_immediate": true,
+      "metadata_change_cancels_pending": true,
+      "script_unload_cancels_pending": true,
+      "intermediate_property_writes_avoided": true,
+      "intermediate_image_decodes_avoided": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

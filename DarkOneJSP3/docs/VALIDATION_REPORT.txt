@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.19 Validation Report
+DarkOneJSP3 v0.9.20 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,10 @@ validation and the audited-file count.
 
 Checks
 ------
+- Album Art mouse-wheel bursts are coalesced through an 80 ms trailing timer,
+  decode only the final selected artwork ID, persist that ID once, retain
+  immediate keyboard selection and cancel pending work on metadata changes or
+  script unload.
 - The repository README contains a dedicated Enhanced Sample Library section
   and a direct link to the distributed ENHANCED_SAMPLES.txt guide.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3

@@ -1,6 +1,7 @@
 // ==PREPROCESSOR==
-// @name "Album Art"
-// @author "marc2003"
+// @name "Album Art - Enhanced"
+// @version "0.1.0"
+// @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\js\common.js"
@@ -77,6 +78,10 @@ function on_playback_stop(reason) {
 
 function on_playlist_switch() {
 	on_item_focus_change();
+}
+
+function on_script_unload() {
+	albumart.dispose();
 }
 
 function on_size() {

@@ -29,15 +29,75 @@ function _albumart(x, y, w, h) {
 		switch (k) {
 		case VK_LEFT:
 		case VK_UP:
-			this.wheel(1);
+			this.cycle_artwork(1, false);
 			return true;
 		case VK_RIGHT:
 		case VK_DOWN:
-			this.wheel(-1);
+			this.cycle_artwork(-1, false);
 			return true;
 		default:
 			return false;
 		}
+	}
+
+	this.cancel_wheel_selection = function () {
+		if (this.wheel_timer) {
+			window.ClearTimeout(this.wheel_timer);
+			this.wheel_timer = 0;
+		}
+
+		this.pending_id = -1;
+	}
+
+	this.commit_artwork_id = function (id) {
+		this.cancel_wheel_selection();
+
+		if (id == this.properties.id.value)
+			return;
+
+		this.properties.id.value = id;
+		this.metadb_changed();
+	}
+
+	this.cycle_artwork = function (s, deferred) {
+		if (this.properties.mode.value == 1 || !this.containsXY(this.mx, this.my))
+			return false;
+
+		var current_id = this.pending_id > -1 ? this.pending_id : this.properties.id.value;
+		var id = current_id - s;
+
+		if (id < 0) {
+			id = 4;
+		} else if (id > 4) {
+			id = 0;
+		}
+
+		_tt('');
+
+		if (!deferred) {
+			this.commit_artwork_id(id);
+			return true;
+		}
+
+		this.pending_id = id;
+
+		if (this.wheel_timer) {
+			window.ClearTimeout(this.wheel_timer);
+		}
+
+		var self = this;
+		this.wheel_timer = window.SetTimeout(function () {
+			var pending_id = self.pending_id;
+			self.wheel_timer = 0;
+			self.pending_id = -1;
+
+			if (pending_id > -1 && pending_id != self.properties.id.value) {
+				self.properties.id.value = pending_id;
+				self.metadb_changed();
+			}
+		}, this.wheel_debounce_ms);
+
+		return true;
 	}
 
 	this.lbtn_dblclk = function (x, y) {
@@ -74,6 +134,8 @@ function _albumart(x, y, w, h) {
 	}
 
 	this.metadb_changed = function () {
+		this.cancel_wheel_selection();
+
 		var img = null;
 		this.custom_id = -1;
 		this.custom_type = -1;
@@ -170,6 +232,10 @@ function _albumart(x, y, w, h) {
 		}
 
 		this.tooltip = this.path = '';
+	}
+
+	this.dispose = function () {
+		this.cancel_wheel_selection();
 	}
 
 	this.rbtn_up = function (x, y) {
@@ -277,21 +343,7 @@ function _albumart(x, y, w, h) {
 	}
 
 	this.wheel = function (s) {
-		if (this.properties.mode.value == 1 || !this.containsXY(this.mx, this.my))
-			return false;
-
-		var id = this.properties.id.value - s;
-
-		if (id < 0) {
-			id = 4;
-		} else if (id > 4) {
-			id = 0;
-		}
-
-		this.properties.id.value = id;
-		_tt('');
-		this.metadb_changed();
-		return true;
+		return this.cycle_artwork(s, true);
 	}
 
 	this.is_review_panel = panel.text_objects.length == 1 && panel.text_objects[0].name == 'allmusic';
@@ -310,6 +362,9 @@ function _albumart(x, y, w, h) {
 	this.types = ['embedded', 'default', 'stub'];
 	this.custom_id = -1;
 	this.custom_type = -1;
+	this.pending_id = -1;
+	this.wheel_timer = 0;
+	this.wheel_debounce_ms = 80;
 	this.help_text = utils.ReadUTF8(fb.ComponentPath + 'samples\\text\\albumart_help');
 
 	this.bitmap = {

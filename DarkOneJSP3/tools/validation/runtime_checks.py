@@ -2208,6 +2208,150 @@ def run(ctx: ValidationContext) -> None:
             errors.append('JSplitter reset smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
+        # Exercise Album Art wheel coalescing with deterministic fake timers.
+        # Rapid wheel input must select through pending IDs without decoding
+        # every intermediate image, while keyboard selection remains immediate
+        # and metadata changes or script unload cancel pending work.
+        albumart_source = json.dumps(text(samples / 'js' / 'albumart.js'))
+        albumart_smoke = """
+const source = %s;
+let nextTimer = 1;
+const timers = new Map();
+let lastDelay = 0;
+let loads = [];
+let idWrites = 0;
+const windowMock = {
+    SetTimeout(fn, delay) {
+        const id = nextTimer++;
+        lastDelay = delay;
+        timers.set(id, fn);
+        return id;
+    },
+    ClearTimeout(id) { timers.delete(id); },
+    Repaint() {}
+};
+function runTimers() {
+    const pending = Array.from(timers.entries());
+    timers.clear();
+    pending.forEach(entry => entry[1]());
+}
+function Property(name, value) {
+    this._value = value;
+    Object.defineProperty(this, 'value', {
+        get: () => this._value,
+        set: value => {
+            if (name === '2K3.ARTREADER.ID') idWrites++;
+            this._value = value;
+        }
+    });
+    Object.defineProperty(this, 'enabled', {get: () => !!this._value});
+    this.toggle = () => { this.value = !this.value; };
+}
+function makeImage(id) {
+    return {
+        Width: 100,
+        Height: 100,
+        Path: 'art-' + id + '.jpg',
+        CreateBitmap() { return {Dispose() {}}; },
+        StackBlur() {},
+        Dispose() {}
+    };
+}
+const panel = {
+    display_objects: [],
+    text_objects: [],
+    metadb: {
+        Path: 'track.flac',
+        GetAlbumArt(id) { loads.push(id); return makeImage(id); },
+        GetAlbumArtEmbedded(id) { return makeImage(id); },
+        ShowAlbumArtViewer() {},
+        ShowAlbumArtViewer2() {}
+    }
+};
+const utils = {
+    ReadUTF8() { return ''; },
+    IsFile() { return false; },
+    Run() {}
+};
+const fb = {ComponentPath: '', GetAlbumArtStub(id) { return makeImage(id); }};
+const lodash = {
+    startsWith(value, prefix) { return String(value).indexOf(prefix) === 0; },
+    forEach(values, callback, context) {
+        for (let i = 0; i < values.length; i++) {
+            if (callback.call(context, values[i], i) === false) break;
+        }
+    },
+    capitalize(value) { return value; }
+};
+function assert(condition, message) { if (!condition) throw new Error(message); }
+const factory = new Function(
+    'panel', 'window', 'utils', 'fb', '_p', 'image', '_tt',
+    'VK_LEFT', 'VK_UP', 'VK_RIGHT', 'VK_DOWN', 'AlbumArtType',
+    'CRLF', '_stringToArray', '_', 'RGB', '_drawImage', '_explorer',
+    'MF_STRING', 'MF_GRAYED', 'CheckMenuIf', 'EnableMenuIf',
+    source + '\\nreturn _albumart;'
+);
+const AlbumArt = factory(
+    panel, windowMock, utils, fb, Property,
+    {full: 3, full_top_align: 4}, () => {},
+    0x25, 0x26, 0x27, 0x28,
+    {embedded: 0, default: 1, stub: 2}, '\\r\\n',
+    value => String(value).split('_'), lodash,
+    () => 0, () => {}, () => {}, 0, 1, () => 0, () => 0
+);
+const albumart = new AlbumArt(0, 0, 100, 100);
+albumart.mx = 50;
+albumart.my = 50;
+albumart.metadb_changed();
+assert(loads.join(',') === '0', 'Initial Album Art load failed');
+
+albumart.wheel(-1);
+albumart.wheel(-1);
+albumart.wheel(-1);
+assert(albumart.properties.id.value === 0, 'Wheel burst wrote the property before settling');
+assert(idWrites === 0, 'Wheel burst persisted intermediate artwork IDs');
+assert(loads.join(',') === '0', 'Wheel burst decoded intermediate artwork');
+assert(timers.size === 1, 'Wheel burst did not coalesce to one timer');
+assert(lastDelay === 80, 'Album Art wheel debounce is not 80 ms');
+runTimers();
+assert(albumart.properties.id.value === 3, 'Wheel burst committed the wrong final artwork ID');
+assert(idWrites === 1, 'Wheel burst did not persist exactly one final ID');
+assert(loads.join(',') === '0,3', 'Wheel burst did not decode only the final artwork');
+
+albumart.wheel(-1);
+assert(timers.size === 1 && albumart.pending_id === 4, 'Pending wheel selection was not staged');
+albumart.key_down(0x27);
+assert(timers.size === 0, 'Keyboard selection did not cancel pending wheel work');
+assert(albumart.properties.id.value === 0, 'Keyboard selection did not apply immediately');
+assert(loads[loads.length - 1] === 0, 'Keyboard selection did not load immediately');
+
+albumart.wheel(-1);
+assert(timers.size === 1, 'Track-change cancellation test did not stage a timer');
+albumart.metadb_changed();
+assert(timers.size === 0 && albumart.pending_id === -1,
+       'Metadata change did not cancel pending wheel work');
+const loadsAfterMetadataChange = loads.length;
+runTimers();
+assert(loads.length === loadsAfterMetadataChange,
+       'Cancelled wheel work ran after metadata change');
+
+for (let i = 0; i < 5; i++) albumart.wheel(-1);
+const loadsBeforeNoopCommit = loads.length;
+runTimers();
+assert(loads.length === loadsBeforeNoopCommit,
+       'A full wheel cycle unnecessarily reloaded the current artwork');
+
+albumart.wheel(-1);
+albumart.dispose();
+assert(timers.size === 0 && albumart.pending_id === -1,
+       'Album Art dispose did not clear pending wheel work');
+""" % albumart_source
+        result = subprocess.run([node, '-e', albumart_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Album Art wheel debounce runtime test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
         # Exercise scripted Queue Viewer selection, keyboard navigation and
         # source-item commands without relying on unsupported queue mutation APIs.
         queue_viewer_smoke = f"""

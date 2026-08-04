@@ -1,6 +1,27 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.20 - Album Art wheel responsiveness
+----------------------------------------
+
+- Added an 80 ms trailing debounce when cycling default Album Art types with
+  the mouse wheel, so rapid wheel bursts decode and convert only the final
+  selected image instead of every intermediate front/back/disc/icon/artist ID.
+- Defers the saved `2K3.ARTREADER.ID` property write until the wheel selection
+  settles, avoiding repeated synchronous property updates during a burst.
+- Preserves immediate artwork switching for keyboard arrow navigation and
+  context-menu selection.
+- Cancels pending wheel work when metadata changes or an Album Art-hosting
+  sample unloads, preventing stale selections from being applied to a new track
+  or reloaded panel.
+- Avoids an unnecessary reload when a wheel burst completes a full cycle and
+  returns to the artwork type already being displayed.
+- Added deterministic runtime validation for wheel coalescing, final-ID
+  persistence, immediate keyboard selection, metadata cancellation, no-op full
+  cycles and unload cleanup.
+- Identified the upgraded entry as Album Art - Enhanced v0.1.0 and advanced the
+  release validator to 0.4.9.
+
 v0.9.19 - Enhanced Sample Library documentation
 -----------------------------------------------
 

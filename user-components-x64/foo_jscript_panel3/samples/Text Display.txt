@@ -116,6 +116,10 @@ function on_playlists_changed() {
 	text.refresh();
 }
 
+function on_script_unload() {
+	albumart.dispose();
+}
+
 function on_size() {
 	panel.size();
 	text.size();
