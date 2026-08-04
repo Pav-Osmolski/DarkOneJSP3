@@ -6,10 +6,6 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/Pav-Osmolski/DarkOneJSP3?style=flat-square)
 
-<p align="center">
-  <img src="assets/darkonejsp3-logo.png" alt="DarkOneJSP3" width="760">
-</p>
-
 <h1 align="center">DarkOneJSP3</h1>
 
 <p align="center">
