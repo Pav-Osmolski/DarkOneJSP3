@@ -51,23 +51,19 @@ workflow of the original theme.
 
 * Modern six-controller JSplitter layout with persistent panel settings.
 * JScript Panel 3 control, display, queue and information panels.
+* Direct2D-accelerated rendering for a smoother, more responsive interface.
 * Configurable InfoStack tabs, titles, dimensions, backgrounds and tab colours.
-* Independent page backgrounds for Biography, Last.fm, Album Notes, Properties
-  and the optional scripted Queue Viewer.
-* Coordinated background palettes for the InfoStack backing, upper side
-  dividers and waveform host.
 * Default or custom display accent colour.
 * Consolidated Album Notes panel with configurable providers, source priority,
   caching, diagnostics and dedicated MusicBrainz Releases and Links views.
-* Improved playlist scrolling, playlist-manager filtering and queue handling.
-* Configurable 8/10/12/16 ms refresh cadence for JS Playlist and Playlist Manager,
-  with custom interval overrides.
+* Improved JS Playlist, Playlist Manager filtering and queue handling.
+* Smooth scrolling for JS Playlist and Playlist Manager,
+  with custom refresh interval overrides.
 * Enhanced optional scripted Queue Viewer with multi-selection, keyboard
   navigation and source-item commands.
 * Optional startup transitions with native-window reveal hardening.
 * Demand-driven playlist rendering with cached title formatting and Direct2D
   bitmap reuse.
-* Release validation, compatibility-mirror checking and maintenance utilities.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
 
@@ -142,6 +138,9 @@ from their official project pages or trusted foobar2000 component sources
 before configuring the theme.
 
 ## Installation
+
+> [!TIP]
+> **New to DarkOneJSP3?** Visit the [DarkOneJSP3 Wiki](https://github.com/Pav-Osmolski/DarkOneJSP3/wiki) for detailed installation guidance, configuration help, panel setup instructions, troubleshooting and additional project documentation.
 
 Back up your active foobar2000 profile before installing or upgrading.
 
@@ -223,6 +222,7 @@ regenerate the FCL.
 
 ## Documentation
 
+* [DarkOneJSP3 Wiki](https://github.com/Pav-Osmolski/DarkOneJSP3/wiki)
 * [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
 * [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
 * [Configuration Guide](DarkOneJSP3/docs/CONFIGURATION_GUIDE.txt)
@@ -238,6 +238,7 @@ regenerate the FCL.
 ```text
 assets/
 ├── darkonejsp3-logo.png                    Repository artwork used by this README
+├── darkonejsp3-social.jpg                  Promotional artwork used by the Wiki
 ├── darkonejsp3-screenshot-albumnotes.jpg   Album Notes and InfoStack screenshot
 └── darkonejsp3-screenshot-main.jpg         Main DarkOneJSP3 interface screenshot
 

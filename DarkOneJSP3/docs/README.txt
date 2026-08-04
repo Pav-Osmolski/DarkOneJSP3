@@ -37,7 +37,6 @@ TROUBLESHOOTING.txt
 MIGRATION_REFERENCE.txt
   Architectural reference for moving from DarkOne2021/PSS to DarkOneJSP3.
 
-
 CHANGELOG.txt
   Complete release history. Release notes are maintained here only.
 
