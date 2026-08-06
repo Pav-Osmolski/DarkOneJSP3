@@ -202,6 +202,67 @@ DarkOne Tools
 
 DarkOne Tools is available from either control panel and the centre display.
 
+Appearance
+~~~~~~~~~~
+
+Bottom area background
+- Transparent / inherit parent
+- Black
+- DarkOne grey (default)
+- DarkOne dark grey
+- Columns UI global background
+- Custom colour... (#RRGGBB)
+
+This single setting controls the bottom-left control panel, bottom-right control
+panel, centre Display panel and the Bottom Controls JSplitter backing behind
+them. Transparent / inherit parent resolves uniformly to DarkOne dark grey
+(`#181818`, `DOJSP3.colours.separator`) across all three panels and both nested
+JSplitter hosts. Literal no-paint transparency is not used because native JSP3
+and JSplitter child windows expose different component backings. Columns UI mode
+follows the current Columns UI global background and updates when the UI colour
+changes.
+
+Bottom area side divider colour
+- Transparent / inherit background
+- Black
+- DarkOne grey
+- DarkOne dark grey (default)
+- Columns UI global background
+- Custom colour... (#RRGGBB)
+
+This setting controls both lower vertical divider strips together. Transparent
+leaves the selected bottom-area background visible in their place. The Quick
+Search frame and interior remain fixed and are not affected.
+
+The shared properties are:
+- DARKONEJSP3.BOTTOM.BACKGROUND.MODE
+- DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR
+- DARKONEJSP3.BOTTOM.DIVIDER.MODE
+- DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR
+
+The JScript Panel and JSplitter component hosts keep separate panel properties.
+DarkOneJSP3 therefore mirrors this state through a small runtime-generated file
+at js_data\darkonejsp3.bottom-area-state.txt. The file is created and updated
+automatically; it is not part of the release package and should not be edited.
+Existing state from DarkOneJSP3\shared\bottom-area-state.txt is migrated
+automatically.
+
+Each JScript panel reads and applies the shared state once during
+initialisation, before its first paint, and then uses same-component
+notifications for live panel-to-panel updates. Later resize callbacks do not
+reread the file. Divider-only changes update the shared properties without
+rebuilding JScript button or Display rendering resources.
+
+Only the Bottom Controls JSplitter polls the state file, at 100 ms, to bridge
+the separate component hosts. Failed writes are logged with the target path and
+retried once.
+
+Factory reset uses a second short-lived runtime command file at
+js_data\darkonejsp3.reset-command.txt. The same Bottom Controls timer checks
+that command every 500 ms, consumes it, removes or clears the processed file and
+rebroadcasts the established reset notification to all JSplitter controllers,
+so JScript Panel and JSplitter-owned settings reset together.
+
 Fonts
 - Control-panel labels
 - Display captions
@@ -835,17 +896,32 @@ Right-click the narrow JSplitter host/spacer around the waveform, not the
 Waveform Minibar child itself.
 
 Host background
+- Automatic - Bottom area background (default)
 - Transparent / inherit parent
 - Black
-- DarkOne grey: RGB 32, 32, 32 (default)
+- DarkOne grey: RGB 32, 32, 32
 - DarkOne dark grey: RGB 24, 24, 24
 - Columns UI global background
 - Custom colour...
+
+Automatic follows the effective shared Bottom area background, including Black,
+both DarkOne greys, Columns UI and Custom. When the shared setting is
+Transparent / inherit parent, Automatic resolves it to the uniform DarkOne dark
+grey parent tone (`#181818`) rather than exposing the host's native backing. The
+Bottom Controls host remains the sole runtime-state poller and relays changed
+state within the JSplitter notification domain, so Display/Waveform does not add
+another poller. Existing explicitly selected fixed Host background modes are
+preserved; the fixed Transparent / inherit parent choice uses the same resolved
+tone.
 
 Other controls:
 - Force blank waveform when playback stops
 - New-track reveal delay
 - Reset waveform-area settings
+
+Waveform blanking and the new-track reveal delay are behaviour settings. The
+Host background and custom colour are appearance settings, so the coordinated
+appearance and behaviour reset scopes do not alter one another.
 
 The host background paints the 20-pixel spacer and the area exposed while
 Waveform Minibar is hidden. The default reveal delay is 200 ms and suppresses a

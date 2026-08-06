@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.20
+DarkOneJSP3 v0.9.29
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -10,7 +10,7 @@ Supported environment
 - foobar2000 v2 x64
 - Columns UI
 - JScript Panel 3.8.5
-- JSplitter 4.x, developed and tested with 4.1.11
+- JSplitter 4.x, developed and tested with 4.1.12
 - Queue Viewer
 - Quick Search Toolbar
 - Enhanced Spectrum Analyser
@@ -91,9 +91,13 @@ Current highlights
 - Shared customisable colour for the two upper Album Art/Spectrum divider
   strips, including both DarkOne greys and the Columns UI global background,
   with Black preserved as the default and lower dividers unchanged.
-- Configurable waveform-host background for the spacer and hidden-waveform
-  area, with transparent, black, both DarkOne greys, Columns UI global and
-  custom choices.
+- Automatic waveform-host background follows the shared Bottom area background
+  by default, with transparent, black, both DarkOne greys, Columns UI global
+  and custom fixed choices still available.
+- One shared bottom-area background setting controls the left controls, right
+  controls, centre display and Bottom Controls backing; Transparent / inherit
+  parent resolves uniformly to DarkOne dark grey (#181818), while a second
+  shared setting controls both lower side-divider strips.
 - Default, Columns UI selected-item or custom display accent shared by Plain
   Font and Dot Matrix modes.
 - Root-owned startup transition defaults to Off, with optional Black reveal

@@ -1,6 +1,209 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.29 - Release hardening and runtime efficiency
+--------------------------------------------------
+
+- Fixed saved non-default bottom backgrounds being dependent on a later
+  `on_colours_changed()` callback. Each JScript panel now resolves and applies
+  the persisted background unconditionally before its first paint.
+- Added a one-time bottom-area initialisation guard, preventing repeated resize
+  callbacks from rereading the runtime state file or querying peer panels.
+- Split shared bottom-area state changes into background and divider changes.
+  Divider-only selections still update and persist shared menu properties but no
+  longer rebuild control buttons, volume colours, Display colour caches or
+  rendered Display images in the three JScript panels.
+- Moved `DarkOneJSP3.DisplayWaveform.HideWhenStopped` from appearance reset
+  defaults to behaviour defaults, alongside the new-track reveal delay.
+- Kept visible bottom-area colour synchronisation at 100 ms while reducing the
+  factory-reset command check to 500 ms through the same single host timer.
+- Acknowledged processed factory-reset commands by removing the short-lived
+  command file, with an empty-file fallback for hosts where removal is
+  unavailable.
+- Removed the obsolete JScript state-file sync function and snapshot state left
+  over from the retired continuous-polling implementation.
+- Fixed Album Art script unload explicitly disposing active normal and blurred
+  Direct2D bitmaps in addition to cancelling pending wheel work.
+- Expanded validation for first-paint persistence, one-time initialisation,
+  divider-only efficiency, split waveform reset scopes, 100/500 ms bridge
+  cadence, reset-command acknowledgement and Album Art bitmap disposal.
+- Advanced Control Left to 3.0.20, Control Right to 3.0.25, Display to 3.0.23,
+  shared bottom-area appearance to 0.2.5 and the release validator to 0.6.5.
+
+v0.9.28 - Bottom-area fixed-mode regression correction
+------------------------------------------------------
+
+- Fixed DarkOne grey in the three bottom JScript panels resolving to the
+  inherited `#181818` fallback instead of its intended `#202020` colour.
+- Added an explicit `DARKONE_BOTTOM_MODE_DARKONE` branch to the shared JScript
+  background resolver, so only Transparent / inherit parent reaches the
+  resolved DarkOne dark grey fallback.
+- Restored consistent Black, DarkOne grey, DarkOne dark grey, Columns UI and
+  Custom backgrounds across the bottom JScript panels, Bottom Controls host and
+  Automatic Display/Waveform host while preserving v0.9.27 transparent
+  inheritance.
+- Expanded runtime validation to compare all six shared background modes across
+  both component hosts and the Automatic Display/Waveform consumer.
+- Advanced Control Left to 3.0.19, Control Right to 3.0.24, Display to 3.0.22,
+  shared bottom-area appearance to 0.2.4 and the release validator to 0.6.4.
+
+v0.9.27 - Uniform bottom-area inherited background
+--------------------------------------------------
+
+- Changed Bottom area background > Transparent / inherit parent from literal
+  no-paint behaviour to a resolved DarkOne dark grey parent tone (`#181818`,
+  `DOJSP3.colours.separator`) across all three JScript panels and both nested
+  JSplitter hosts.
+- Fixed the lower-left Quick Search region, centre Display/Waveform gaps and
+  right control panel exposing different native component backings when the
+  shared background was transparent.
+- Updated Display cached rendering to use the same resolved background, removing
+  `#202020` rectangles around track information and inactive display elements.
+- Preserved Transparent side-divider behaviour: the divider strips stop painting
+  and reveal the now-uniform resolved bottom background.
+- Preserved every saved mode value and all fixed Black, DarkOne grey, DarkOne
+  dark grey, Columns UI and Custom colour choices.
+- Added runtime validation requiring the JScript panels, Bottom Controls host and
+  Automatic/Transparent Display/Waveform host to resolve inherited background to
+  `#181818` and paint their complete surfaces.
+- Advanced Control Left to 3.0.18, Control Right to 3.0.23, Display to 3.0.21,
+  shared bottom-area appearance to 0.2.3 and the release validator to 0.6.3.
+
+v0.9.26 - Automatic Display/Waveform host background
+----------------------------------------------------
+
+- Added `Automatic - Bottom area background` to the Display/Waveform Host
+  background menu and made it the default for new properties and appearance
+  resets.
+- Automatic mode follows the effective shared Bottom area background across
+  Black, both DarkOne greys, Columns UI global background, Custom and
+  Transparent modes.
+- Preserved every existing fixed Host background mode and its numeric property
+  value, so explicitly stored selections continue to behave unchanged.
+- Kept Bottom Controls as the sole 100 ms runtime-file poller. It now relays
+  changed bottom-area state within the JSplitter notification domain, while
+  Display/Waveform reads the runtime state once during initialisation and
+  repaints only when Automatic is active.
+- Added runtime coverage for initial state loading, state-only JSplitter relay,
+  custom and Columns UI resolution, transparent inheritance, single repaint
+  behaviour and reset default 6.
+- Advanced shared bottom-area appearance to 0.2.2 and the release validator to
+  0.6.2.
+
+v0.9.25 - Faster bottom-area appearance synchronisation
+-------------------------------------------------------
+
+- Reduced the sole Bottom Controls runtime-state poll interval from 500 ms to
+  100 ms, making background and side-divider colour changes appear effectively
+  instantaneous across the JSplitter-owned backing and divider strips.
+- Retained the single-poller architecture introduced in v0.9.24; the three
+  JScript panels continue to use same-component notifications and perform no
+  continuous file polling.
+- Updated runtime validation to require the 100 ms host interval and prevent
+  the slower value from being reintroduced.
+- Advanced bottom-area appearance to 0.2.1 and the release validator to 0.6.1.
+
+v0.9.24 - Cross-host reset and runtime-state hardening
+------------------------------------------------------
+
+- Added a short-lived factory-reset command bridge at
+  `js_data\darkonejsp3.reset-command.txt`. The Bottom Controls JSplitter
+  consumes the command and rebroadcasts the established reset notification
+  inside the JSplitter host domain, so JScript Panel and JSplitter-owned
+  settings reset together.
+- Added command IDs, a 30-second validity window and last-command tracking so a
+  reset command is processed once and stale commands are ignored.
+- Fixed bottom-area factory reset explicitly restoring the shared DarkOne grey
+  background and DarkOne dark grey divider defaults in the JScript panels.
+- Moved persistent bottom-area runtime state out of the maintained source tree
+  to `js_data\darkonejsp3.bottom-area-state.txt`; v0.9.22/v0.9.23 state under
+  `DarkOneJSP3\shared` is migrated automatically.
+- Reduced continuous state polling from four readers at 250 ms to one Bottom
+  Controls reader at 500 ms. The three JScript panels now read once during
+  initialisation and use their same-component notification fast path.
+- Fixed duplicate bottom-area appearance application so one peer state change
+  causes one property application and one visual refresh.
+- Added diagnostics for both thrown write failures and `WriteTextFile` returning
+  false, including the target path, plus one delayed retry for bottom-area state.
+- Removed obsolete BottomArea query/set/state handling and broadcasts from the
+  Bottom Controls JSplitter left over from the failed cross-component transport.
+- Aligned shared colour-menu command IDs so Columns UI uses base + 4 and Custom
+  colour uses base + 5 in both JScript Panel and JSplitter helpers.
+- Added package validation rejecting generated state and reset-command files,
+  plus `.gitignore` rules for repository-backed portable profiles.
+- Added isolated-host runtime tests for reset propagation, expired-command
+  rejection, one-time command handling, write failure/retry, single repaint
+  behaviour, legacy-state migration and sole-host polling.
+- Updated the tested JSplitter version to 4.1.12.
+- Advanced Control Left to 3.0.17, Control Right to 3.0.22, Display to 3.0.20,
+  shared JSplitter protocols to 0.2.1, bottom-area appearance to 0.2.0 and the
+  release validator to 0.6.0.
+
+v0.9.23 - Bottom-area state persistence correction
+--------------------------------------------------
+
+- Fixed the JScript Panel bottom-area menu writer using a three-argument
+  `utils.WriteTextFile` call that did not update the state file in the tested
+  JScript Panel 3.8.5 environment. It now uses the canonical two-argument form
+  used throughout the supplied sample library.
+- Bottom-area background and divider selections now update the shared state
+  file immediately, allowing the Bottom Controls JSplitter host to repaint its
+  full backing, layout gaps and both divider strips.
+- Fixed selected colours reverting to their previous values after restarting
+  foobar2000 because the stale shared state file was being reloaded.
+- Added a console diagnostic if the shared state file cannot be written.
+- Strengthened isolated-host runtime validation so bottom-area persistence must
+  use the canonical two-argument writer call.
+- Added static validation preventing the failed three-argument form from being
+  reintroduced.
+- Advanced Control Left to 3.0.16, Control Right to 3.0.21, Display to 3.0.19,
+  bottom-area appearance to 0.1.2 and the release validator to 0.5.2.
+
+v0.9.22 - Bottom-area synchronisation hotfix
+--------------------------------------------
+
+- Fixed the v0.9.21 bottom-area settings only changing the JScript panel where
+  the menu was opened.
+- Replaced the invalid assumption that JScript Panel 3 and JSplitter share one
+  NotifyOthers transport with a runtime-generated UTF-8 state file used by both
+  component hosts.
+- Added 250 ms change-only polling in all three JScript panels and the Bottom
+  Controls JSplitter, while retaining same-component notifications as a fast
+  path.
+- Fixed the Bottom area side divider colour menu having no visible effect by
+  synchronising the host-owned divider state with the panel menus.
+- Fixed the lower section beneath the left control panel and the narrow exposed
+  strips beside the dividers remaining DarkOne grey by repainting the complete
+  Bottom Controls host backing.
+- Preserved DarkOne grey (#202020) and DarkOne dark grey (#181818) as the
+  background and divider defaults, with the Quick Search frame unchanged.
+- Added isolated-host runtime tests proving that background and divider changes
+  reach both JScript peers and the JSplitter host without cross-component
+  notifications.
+- Advanced Control Left to 3.0.15, Control Right to 3.0.20, Display to 3.0.18,
+  bottom-area appearance to 0.1.1 and the release validator to 0.5.1.
+
+v0.9.21 - Shared bottom-area appearance
+---------------------------------------
+
+- Added one shared Bottom area background menu under DarkOne Tools >
+  Appearance for the left controls, right controls, centre display and Bottom
+  Controls JSplitter backing.
+- Added Transparent, Black, DarkOne grey, DarkOne dark grey, Columns UI global
+  background and Custom colour modes, with DarkOne grey retained as the
+  default.
+- Added one shared Bottom area side divider colour menu controlling both lower
+  vertical divider strips, with the same palette and DarkOne dark grey retained
+  as the default.
+- Added a versioned BottomArea query/set/state protocol so the Bottom Controls
+  host owns and synchronises the shared state across all three JScript panels,
+  including older saved entries that continue importing Config_Global_Script.js.
+- Columns UI background changes repaint the host and all child panels live;
+  transparent modes stop painting the relevant backing or divider layer.
+- Added coordinated appearance-reset defaults for the Bottom Controls owner.
+- Advanced Control Left to 3.0.14, Control Right to 3.0.19, Display to 3.0.17,
+  shared JSplitter protocols to 0.2.0 and the release validator to 0.5.0.
+
 v0.9.20 - Album Art wheel responsiveness
 ----------------------------------------
 

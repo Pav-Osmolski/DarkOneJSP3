@@ -14,6 +14,10 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 //
 // v0.3.8 consolidates background-mode validation, menu mapping and custom
 // colour picking through the shared DarkOneJSP3 colour helper.
+//
+// v0.3.9 adds Automatic as the default host-background mode. Automatic follows
+// the shared Bottom area background without adding another runtime-file poller;
+// Bottom Controls relays changed state inside the JSplitter notification domain.
 
 var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
     window,
@@ -30,28 +34,36 @@ var BACKGROUND_COLOUR_PROPERTY = 'DarkOneJSP3.DisplayWaveform.BackgroundColour';
 var HIDE_ON_STOP_PROPERTY = 'DarkOneJSP3.DisplayWaveform.HideWhenStopped';
 var REVEAL_DELAY_PROPERTY = 'DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay';
 
+var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
+var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt';
+var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
+
 var revealTimer = 0;
 var waveformVisible = null;
 var hiddenAfterStop = hideWhenStopped() && !fb.IsPlaying;
 
 // 0 = transparent / inherit parent, 1 = black, 2 = DarkOne grey,
 // 3 = custom (legacy), 4 = DarkOne dark grey, 5 = Columns UI global
-// background. Keeping custom at 3 preserves existing properties.
+// background, 6 = Automatic / shared Bottom area background. Keeping custom
+// at 3 preserves existing properties. Existing explicit modes remain unchanged.
 var BACKGROUND_TRANSPARENT = 0;
 var BACKGROUND_BLACK = 1;
 var BACKGROUND_DARKONE = 2;
 var BACKGROUND_CUSTOM = 3;
 var BACKGROUND_DARKONE_DARK = 4;
 var BACKGROUND_COLUMNS_UI = 5;
+var BACKGROUND_AUTOMATIC = 6;
 var BACKGROUND_MODES = [
     BACKGROUND_TRANSPARENT,
     BACKGROUND_BLACK,
     BACKGROUND_DARKONE,
     BACKGROUND_CUSTOM,
     BACKGROUND_DARKONE_DARK,
-    BACKGROUND_COLUMNS_UI
+    BACKGROUND_COLUMNS_UI,
+    BACKGROUND_AUTOMATIC
 ];
 var BACKGROUND_MENU_OPTIONS = [
+    { id: 106, mode: BACKGROUND_AUTOMATIC, label: 'Automatic - Bottom area background' },
     { id: 100, mode: BACKGROUND_TRANSPARENT, label: 'Transparent / inherit parent' },
     { id: 101, mode: BACKGROUND_BLACK, label: 'Black' },
     { id: 102, mode: BACKGROUND_DARKONE, label: 'DarkOne grey' },
@@ -63,16 +75,79 @@ var BACKGROUND_MENU_OPTIONS = [
 var MENU_STRING = 0x00000000;
 var MENU_POPUP = 0x00000010;
 
+function defaultBottomAreaState() {
+    return BOTTOM_AREA_PROTOCOL.state(
+        BOTTOM_AREA_PROTOCOL.defaults.backgroundMode,
+        BOTTOM_AREA_PROTOCOL.defaults.backgroundCustomColour,
+        BOTTOM_AREA_PROTOCOL.defaults.dividerMode,
+        BOTTOM_AREA_PROTOCOL.defaults.dividerCustomColour
+    );
+}
+
+function readBottomAreaStatePath(path) {
+    try {
+        return BOTTOM_AREA_PROTOCOL.parseState(utils.ReadTextFile(path, 65001));
+    } catch (e) {}
+    return null;
+}
+
+function readBottomAreaStateFile() {
+    return readBottomAreaStatePath(BOTTOM_AREA_STATE_FILE) ||
+        readBottomAreaStatePath(BOTTOM_AREA_LEGACY_STATE_FILE) ||
+        defaultBottomAreaState();
+}
+
+var sharedBottomAreaState = readBottomAreaStateFile();
+
+function applySharedBottomAreaState(data, repaint) {
+    var state = BOTTOM_AREA_PROTOCOL.parseState(data);
+    if (!state) return false;
+
+    var changed = !sharedBottomAreaState ||
+        state.backgroundMode !== sharedBottomAreaState.backgroundMode ||
+        (state.backgroundCustomColour >>> 0) !==
+            (sharedBottomAreaState.backgroundCustomColour >>> 0);
+    sharedBottomAreaState = state;
+
+    if (changed && repaint !== false && backgroundMode() === BACKGROUND_AUTOMATIC) {
+        window.Repaint();
+    }
+    return changed;
+}
+
 function backgroundMode() {
     return DarkOneColour.normaliseMode(
-        window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE),
+        window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_AUTOMATIC),
         BACKGROUND_MODES,
-        BACKGROUND_DARKONE
+        BACKGROUND_AUTOMATIC
     );
+}
+
+function resolvedSharedBackgroundMode() {
+    return DarkOneColour.normaliseMode(
+        sharedBottomAreaState.backgroundMode,
+        BOTTOM_AREA_PROTOCOL.modeValues,
+        BOTTOM_AREA_PROTOCOL.defaults.backgroundMode
+    );
+}
+
+function sharedBottomAreaBackgroundColour() {
+    var mode = resolvedSharedBackgroundMode();
+    if (mode === BOTTOM_AREA_PROTOCOL.modes.black) return 0xff000000;
+    if (mode === BOTTOM_AREA_PROTOCOL.modes.darkOne) return DOJSP3.colours.bar;
+    if (mode === BOTTOM_AREA_PROTOCOL.modes.darkOneDark) return DOJSP3.colours.separator;
+    if (mode === BOTTOM_AREA_PROTOCOL.modes.columnsUi) {
+        return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
+    }
+    if (mode === BOTTOM_AREA_PROTOCOL.modes.custom) {
+        return DarkOneColour.opaque(sharedBottomAreaState.backgroundCustomColour);
+    }
+    return DOJSP3.colours.separator;
 }
 
 function backgroundColour() {
     var mode = backgroundMode();
+    if (mode === BACKGROUND_AUTOMATIC) return sharedBottomAreaBackgroundColour();
     if (mode === BACKGROUND_BLACK) return 0xff000000;
     if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
     if (mode === BACKGROUND_DARKONE_DARK) return DOJSP3.colours.separator;
@@ -83,7 +158,7 @@ function backgroundColour() {
             DOJSP3.colours.bar
         ));
     }
-    return 0x00000000;
+    return DOJSP3.colours.separator;
 }
 
 function hideWhenStopped() {
@@ -108,7 +183,7 @@ function cancelWaveformReveal() {
 function setBackgroundMode(mode) {
     window.SetProperty(
         BACKGROUND_MODE_PROPERTY,
-        DarkOneColour.normaliseMode(mode, BACKGROUND_MODES, BACKGROUND_DARKONE)
+        DarkOneColour.normaliseMode(mode, BACKGROUND_MODES, BACKGROUND_AUTOMATIC)
     );
     window.Repaint();
 }
@@ -211,12 +286,9 @@ function on_size(width, height) {
 }
 
 function on_paint(gr) {
-    var mode = backgroundMode();
-    if (mode !== BACKGROUND_TRANSPARENT) {
-        // Paint the whole host. Child windows cover their own rectangles,
-        // while the spacer and stopped/hidden waveform area retain this fill.
-        gr.FillSolidRect(0, 0, ww, wh, backgroundColour());
-    }
+    // Paint the whole host. Transparent / inherit parent is resolved by
+    // backgroundColour() to the common #181818 parent tone.
+    gr.FillSolidRect(0, 0, ww, wh, backgroundColour());
 }
 
 function on_playback_starting(command, is_paused) {
@@ -258,6 +330,10 @@ function on_playback_stop(reason) {
 }
 
 function on_notify_data(name, data) {
+    if (name === BOTTOM_AREA_PROTOCOL.notifications.state) {
+        applySharedBottomAreaState(data, true);
+        return;
+    }
     if (darkOneJsp3HandleReset(name, data)) return;
     startupReadiness.handle(name);
 }
@@ -324,7 +400,7 @@ function on_mouse_rbtn_up(x, y) {
             }
         } catch (e) {}
     } else if (id === 300) {
-        window.SetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_DARKONE);
+        window.SetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_AUTOMATIC);
         window.SetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar);
         window.SetProperty(HIDE_ON_STOP_PROPERTY, true);
         window.SetProperty(REVEAL_DELAY_PROPERTY, 200);

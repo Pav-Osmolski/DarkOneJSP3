@@ -882,7 +882,7 @@ def run(ctx: ValidationContext) -> None:
         'Divider accepted a non-finite colour value');
     const options = divider.menuOptions(900);
     assert(options.map(item => item.id + ':' + item.mode).join(',') ===
-        '900:0,901:1,902:2,903:4,905:5,904:3',
+        '900:0,901:1,902:2,903:4,904:5,905:3',
         'Divider menu mapping changed');
     const events = [];
     const readiness = startup.createReadinessBridge(
@@ -1390,20 +1390,24 @@ def run(ctx: ValidationContext) -> None:
             errors.append('InfoStack backing-colour runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
-        # Exercise the waveform-host background range and colour resolution.
+        # Exercise the waveform-host background range, Automatic mode and
+        # state-only JSplitter notification path without adding a file poller.
         waveform_background_smoke = f"""
     const fs = require('fs');
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
     const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
     const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '06_display_waveform.js'))}, 'utf8');
     const properties = new Map();
+    const initialBottomState = 'v1|1|4278190080|4|4278190080';
     let repaintCount = 0;
+    const fills = [];
     const windowMock = {{
         GetProperty(name, fallback) {{
             return properties.has(name) ? properties.get(name) : fallback;
         }},
         SetProperty(name, value) {{ properties.set(name, value); }},
         GetColourCUI(index) {{ return index === 3 ? 0xff445566 : 0xffffffff; }},
+        NotifyOthers() {{}},
         Repaint() {{ repaintCount++; }}
     }};
     const DOJSP3Mock = {{
@@ -1412,9 +1416,13 @@ def run(ctx: ValidationContext) -> None:
             return Math.max(minimum, Math.min(maximum, value));
         }}
     }};
+    const utilsMock = {{
+        ReadTextFile() {{ return initialBottomState; }}
+    }};
     const factory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils',
-        colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ backgroundMode, backgroundColour, on_colours_changed }};'
+        colourSource + '\\n' + protocolSource + '\\n' + source +
+        '\\nreturn {{ backgroundMode, backgroundColour, applySharedBottomAreaState, on_notify_data, on_colours_changed, on_paint, setSize:function(w,h){{ww=w;wh=h;}} }};'
     );
     const controller = factory(
         windowMock,
@@ -1422,16 +1430,39 @@ def run(ctx: ValidationContext) -> None:
         function() {{}},
         DOJSP3Mock,
         function() {{ return false; }},
-        {{}}
+        utilsMock
     );
-    if (controller.backgroundMode() !== 2 ||
-            (controller.backgroundColour() >>> 0) !== 0xff202020)
-        throw new Error('Default waveform host is not DarkOne grey');
+    controller.setSize(640, 300);
+    if (controller.backgroundMode() !== 6 ||
+            (controller.backgroundColour() >>> 0) !== 0xff000000)
+        throw new Error('Default waveform host does not automatically follow the bottom background');
+
+    const automaticModeMatrix = [
+        [0, 0xff181818],
+        [1, 0xff000000],
+        [2, 0xff202020],
+        [3, 0xff123456],
+        [4, 0xff181818],
+        [5, 0xff445566]
+    ];
+    automaticModeMatrix.forEach(function(entry) {{
+        const mode = entry[0];
+        const expected = entry[1] >>> 0;
+        controller.on_notify_data(
+            'DarkOneJSP3.BottomArea.State',
+            'v1|' + mode + '|' + (0xff123456 >>> 0) + '|4|' + (0xff000000 >>> 0)
+        );
+        if ((controller.backgroundColour() >>> 0) !== expected)
+            throw new Error('Automatic waveform host mode ' + mode +
+                ' resolved to ' + (controller.backgroundColour() >>> 0).toString(16) +
+                ' instead of ' + expected.toString(16));
+    }});
+
     properties.set('DarkOneJSP3.DisplayWaveform.BackgroundColour', 0xff123456);
     properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 4);
     if (controller.backgroundMode() !== 4 ||
             (controller.backgroundColour() >>> 0) !== 0xff181818)
-        throw new Error('Waveform DarkOne dark grey resolves to the custom colour');
+        throw new Error('Waveform DarkOne dark grey mode no longer works');
     properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 3);
     if (controller.backgroundMode() !== 3 ||
             (controller.backgroundColour() >>> 0) !== 0xff123456)
@@ -1439,15 +1470,442 @@ def run(ctx: ValidationContext) -> None:
     properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 5);
     if (controller.backgroundMode() !== 5 ||
             (controller.backgroundColour() >>> 0) !== 0xff445566)
-        throw new Error('Waveform host does not follow the Columns UI background');
+        throw new Error('Waveform fixed Columns UI background mode no longer works');
+
+    properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 6);
+    const beforeNotification = repaintCount;
+    controller.on_notify_data('DarkOneJSP3.BottomArea.State', 'v1|3|4279383126|4|4278190080');
+    if ((controller.backgroundColour() >>> 0) !== 0xff123456)
+        throw new Error('Automatic waveform host did not adopt the shared custom background');
+    if (repaintCount !== beforeNotification + 1)
+        throw new Error('Automatic waveform host did not repaint exactly once after shared state changed');
+
+    controller.on_notify_data('DarkOneJSP3.BottomArea.State', 'v1|0|4278190080|4|4278190080');
+    if ((controller.backgroundColour() >>> 0) !== 0xff181818)
+        throw new Error('Automatic inherited waveform host does not resolve to #181818');
+    fills.length = 0;
+    controller.on_paint({{ FillSolidRect(x,y,w,h,colour) {{ fills.push([x,y,w,h,colour>>>0]); }} }});
+    if (fills.length !== 1 || fills[0][4] !== 0xff181818)
+        throw new Error('Automatic inherited waveform host does not paint the uniform parent tone');
+
+    properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 0);
+    fills.length = 0;
+    if ((controller.backgroundColour() >>> 0) !== 0xff181818)
+        throw new Error('Fixed inherited waveform host does not resolve to #181818');
+    controller.on_paint({{ FillSolidRect(x,y,w,h,colour) {{ fills.push([x,y,w,h,colour>>>0]); }} }});
+    if (fills.length !== 1 || fills[0][4] !== 0xff181818)
+        throw new Error('Fixed inherited waveform host does not paint its full resolved backing');
+
+    properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 6);
+    controller.on_notify_data('DarkOneJSP3.BottomArea.State', 'v1|5|4278190080|4|4278190080');
+    if ((controller.backgroundColour() >>> 0) !== 0xff445566)
+        throw new Error('Automatic waveform host does not follow the shared Columns UI mode');
+    const beforeColoursChanged = repaintCount;
     controller.on_colours_changed();
-    if (repaintCount !== 1)
+    if (repaintCount !== beforeColoursChanged + 1)
         throw new Error('Waveform host does not repaint after a Columns UI colour change');
     """
         result = subprocess.run([node, '-e', waveform_background_smoke],
                                 capture_output=True, text=True)
         if result.returncode:
             errors.append('Waveform background runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise the file-backed bridge between isolated JScript Panel and
+        # JSplitter hosts. JScript panels read once at startup and use their
+        # same-component notification path; only the Bottom Controls host polls.
+        bottom_area_smoke = f"""
+    const fs = require('fs');
+    const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+    const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+    const resetSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'reset_defaults.js'))}, 'utf8');
+    const hostSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '05_bottom_controls.js'))}, 'utf8');
+    const configSource = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Config_Global_Script.js'))}, 'utf8');
+    const bottomStart = configSource.indexOf('// Shared bottom-area appearance.');
+    const bottomEnd = configSource.indexOf('function repeat(', bottomStart);
+    if (bottomStart < 0 || bottomEnd < 0) throw new Error('JScript bottom-area compatibility block is missing');
+    const bottomSource = configSource.slice(bottomStart, bottomEnd);
+
+    const files = Object.create(null);
+    const NEW_STATE = 'P:\\\\js_data\\\\darkonejsp3.bottom-area-state.txt';
+    const LEGACY_STATE = 'P:\\\\DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';
+    const RESET_COMMAND = 'P:\\\\js_data\\\\darkonejsp3.reset-command.txt';
+    let failWrites = 0;
+    const logs = [];
+    const readCounts = Object.create(null);
+    function fileUtils() {{
+        return {{
+            CreateFolder() {{ return true; }},
+            ReadTextFile(path) {{
+                readCounts[path] = (readCounts[path] || 0) + 1;
+                if (!Object.prototype.hasOwnProperty.call(files, path)) throw new Error('missing');
+                return files[path];
+            }},
+            WriteTextFile(path, content) {{
+                if (arguments.length !== 2)
+                    throw new Error('Runtime persistence must use the canonical two-argument WriteTextFile call');
+                if (failWrites > 0) {{ failWrites--; return false; }}
+                files[path] = String(content);
+                return true;
+            }},
+            RemovePath(path) {{ delete files[path]; return true; }},
+            ColourPicker() {{ return 0xff556677; }},
+            MessageBox() {{ return 1; }}
+        }};
+    }}
+
+    function makePanel(initialProperties) {{
+        const properties = new Map(Object.entries(initialProperties || {{}}));
+        const notifications = [];
+        const timers = [];
+        let repaints = 0;
+        let intervalCalls = 0;
+        let appearanceApplications = 0;
+        let displayResourceResets = 0;
+        const windowMock = {{
+            GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
+            SetProperty(name, value) {{ properties.set(name, value); }},
+            NotifyOthers(name, data) {{ notifications.push([name, data]); }},
+            Repaint() {{ repaints++; }},
+            SetInterval() {{ intervalCalls++; throw new Error('JScript panels must not poll the runtime file'); }},
+            ClearInterval() {{}},
+            SetTimeout(fn, delay) {{ timers.push([fn, delay]); return timers.length; }},
+            ClearTimeout(id) {{ if (id > 0 && id <= timers.length) timers[id - 1] = null; }}
+        }};
+        function applyValues(values) {{
+            const names = [];
+            Object.keys(values).forEach(name => {{ windowMock.SetProperty(name, values[name]); names.push(name); }});
+            return {{ handled: true, all: false, names, categories: {{ bottom: true }} }};
+        }}
+        const factory = new Function(
+            'window', 'fb', 'utils', 'MF_STRING', 'MB_OK', 'MB_ICONEXCLAMATION',
+            'ui_backcol', 'p_backcol', 'ww', 'wh', 'console', 'darkOneApplySharedValues',
+            'buttonsColours', 'display_system',
+            resetSource + '\\n' + bottomSource +
+            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,apply:darkOneApplyBottomAreaState,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand}};'
+        );
+        const api = factory(
+            windowMock,
+            {{ ProfilePath: 'P:\\\\' }},
+            fileUtils(),
+            0, 0, 0,
+            0xff445566,
+            0xff202020,
+            320,
+            120,
+            {{ log(message) {{ logs.push(String(message)); }} }},
+            applyValues,
+            function() {{ appearanceApplications++; }},
+            {{
+                InitColours() {{ appearanceApplications++; }},
+                setColours() {{ appearanceApplications++; }},
+                resetRenderedImages() {{ displayResourceResets++; }}
+            }}
+        );
+        return {{
+            api,
+            properties,
+            notifications,
+            runTimers() {{
+                const pending = timers.splice(0, timers.length);
+                pending.forEach(item => {{ if (item) item[0](); }});
+            }},
+            get repaints() {{ return repaints; }},
+            get intervalCalls() {{ return intervalCalls; }},
+            get appearanceApplications() {{ return appearanceApplications; }},
+            get displayResourceResets() {{ return displayResourceResets; }}
+        }};
+    }}
+
+    // Legacy state is migrated out of DarkOneJSP3/shared into js_data.
+    files[LEGACY_STATE] = 'v1|1|4278190080|4|4278190080';
+    const migratingPanel = makePanel();
+    migratingPanel.api.request();
+    if (migratingPanel.intervalCalls !== 0)
+        throw new Error('JScript panel started a continuous state-file poller');
+    if (files[NEW_STATE] !== files[LEGACY_STATE])
+        throw new Error('Legacy bottom-area state was not migrated into js_data');
+    delete files[LEGACY_STATE];
+
+    // A saved mode must be resolved before the first paint even when the panel's
+    // persisted properties already match the state file. Repeated on_size-style
+    // initialisation requests must not reread the file or query peers again.
+    files[NEW_STATE] = 'v1|1|4278190080|4|4278190080';
+    const firstPaintPanel = makePanel({{
+        'DARKONEJSP3.BOTTOM.BACKGROUND.MODE': 1,
+        'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR': 0xff000000,
+        'DARKONEJSP3.BOTTOM.DIVIDER.MODE': 4,
+        'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR': 0xff000000
+    }});
+    const readsBeforeFirstInit = readCounts[NEW_STATE] || 0;
+    if (!firstPaintPanel.api.request())
+        throw new Error('First bottom-area initialisation request was rejected');
+    const firstPaintFills = [];
+    firstPaintPanel.api.paint({{ FillRectangle(x,y,w,h,colour) {{ firstPaintFills.push(colour >>> 0); }} }});
+    if (firstPaintFills.length !== 1 || firstPaintFills[0] !== 0xff000000)
+        throw new Error('Saved Black background was not applied before the first JScript paint');
+    if (firstPaintPanel.appearanceApplications !== 3 || firstPaintPanel.displayResourceResets !== 1 ||
+            firstPaintPanel.repaints !== 1)
+        throw new Error('First bottom-area initialisation did not resolve appearance exactly once');
+    const firstQueryCount = firstPaintPanel.notifications.filter(
+        item => item[0] === 'DarkOneJSP3.BottomArea.Query').length;
+    firstPaintPanel.api.request();
+    firstPaintPanel.api.request();
+    if ((readCounts[NEW_STATE] || 0) !== readsBeforeFirstInit + 1)
+        throw new Error('Repeated panel resize requests reread the bottom-area state file');
+    if (firstPaintPanel.notifications.filter(
+            item => item[0] === 'DarkOneJSP3.BottomArea.Query').length !== firstQueryCount)
+        throw new Error('Repeated panel resize requests queried peers again');
+
+    const panelA = makePanel();
+    const panelB = makePanel();
+    panelA.api.request();
+    panelB.api.request();
+    if (panelA.intervalCalls || panelB.intervalCalls)
+        throw new Error('JScript panels retain redundant continuous file pollers');
+
+    const hostProperties = new Map();
+    const hostNotifications = [];
+    let hostRepaints = 0;
+    let hostReloads = 0;
+    let hostIntervalDelay = 0;
+    let hostIntervalCallback = null;
+    const hostWindow = {{
+        GetProperty(name, fallback) {{ return hostProperties.has(name) ? hostProperties.get(name) : fallback; }},
+        SetProperty(name, value) {{ hostProperties.set(name, value); }},
+        GetColourCUI(index) {{ return index === 3 ? 0xff445566 : 0xffffffff; }},
+        NotifyOthers(name, data) {{ hostNotifications.push([name, data]); }},
+        Repaint() {{ hostRepaints++; }},
+        Reload() {{ hostReloads++; }},
+        GetPanel() {{ return null; }}
+    }};
+    const DOJSP3Mock = {{
+        colours: {{ bar: 0xff202020, separator: 0xff181818, quickSearchBorder: 0xff696969, quickSearchFill: 0xff1e1e1e }},
+        titles: {{ controlsLeft:'l',quickSearch:'q',displayStack:'d',controlsRight:'r' }},
+        idiv(value, divisor) {{ return Math.floor(value / divisor); }},
+        mulDiv(value, multiplier, divisor) {{ return Math.round(value * multiplier / divisor); }},
+        clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }},
+        panel() {{ return null; }}, move() {{}}, show() {{}}
+    }};
+    const hostFactory = new Function(
+        'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'console',
+        'darkOneJsp3ResetScope',
+        colourSource + '\\n' + protocolSource + '\\n' + resetSource + '\\n' + hostSource +
+        '\\nreturn {{paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncReset:syncResetCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){{ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}}}};'
+    );
+    const host = hostFactory(
+        hostWindow,
+        {{ ProfilePath: 'P:\\\\' }},
+        function() {{}},
+        DOJSP3Mock,
+        fileUtils(),
+        function(fn, delay) {{ hostIntervalCallback = fn; hostIntervalDelay = delay; return 1; }},
+        function() {{ hostIntervalCallback = null; }},
+        {{ log(message) {{ logs.push(String(message)); }} }},
+        function(data) {{
+            try {{ data = typeof data === 'string' ? JSON.parse(data) : data; }} catch (e) {{ return null; }}
+            return data && (data.scope === 'appearance' || data.scope === 'behaviour' || data.scope === 'all') ? data.scope : null;
+        }}
+    );
+    host.setSize(1920, 300);
+    host.ensure();
+    if (hostIntervalDelay !== 100 || typeof hostIntervalCallback !== 'function')
+        throw new Error('Bottom Controls is not the sole 100 ms runtime-file poller');
+    const resetReadsAfterEnsure = readCounts[RESET_COMMAND] || 0;
+    const stateReadsAfterEnsure = readCounts[NEW_STATE] || 0;
+    for (let i = 0; i < 4; i++) hostIntervalCallback();
+    if ((readCounts[RESET_COMMAND] || 0) !== resetReadsAfterEnsure)
+        throw new Error('Factory-reset command file was polled at the 100 ms colour cadence');
+    if ((readCounts[NEW_STATE] || 0) !== stateReadsAfterEnsure + 4)
+        throw new Error('Bottom-area state was not checked on every 100 ms host tick');
+    hostIntervalCallback();
+    if ((readCounts[RESET_COMMAND] || 0) !== resetReadsAfterEnsure + 1)
+        throw new Error('Factory-reset command file was not checked at 500 ms');
+
+    const fills = [];
+    const gr = {{ FillSolidRect(x,y,w,h,colour) {{ fills.push([x,y,w,h,colour>>>0]); }} }};
+    host.paint(gr);
+    if (fills.length !== 5 || fills[0][4] !== 0xff000000 ||
+            fills[1][4] !== 0xff181818 || fills[2][4] !== 0xff181818)
+        throw new Error('Migrated bottom background/dividers are incorrect');
+
+    // Every shared background mode must resolve identically in the JScript
+    // panels and the Bottom Controls JSplitter host. This specifically guards
+    // DarkOne grey (#202020) from falling through the inherited #181818 path.
+    const sharedModeMatrix = [
+        [0, 0xff181818],
+        [1, 0xff000000],
+        [2, 0xff202020],
+        [3, 0xff123456],
+        [4, 0xff181818],
+        [5, 0xff445566]
+    ];
+    sharedModeMatrix.forEach(function(entry) {{
+        const mode = entry[0];
+        const expected = entry[1] >>> 0;
+        panelA.api.send({{
+            backgroundMode: mode,
+            backgroundCustomColour: 0xff123456,
+            dividerMode: 4,
+            dividerCustomColour: 0xff765432
+        }});
+        if ((panelA.api.backgroundColour() >>> 0) !== expected)
+            throw new Error('JScript bottom mode ' + mode + ' resolved incorrectly');
+        host.syncFile(false);
+        if ((host.backgroundColour() >>> 0) !== expected)
+            throw new Error('Bottom Controls mode ' + mode + ' resolved differently from JScript');
+        fills.length = 0;
+        host.paint(gr);
+        if (!fills.length || (fills[0][4] >>> 0) !== expected)
+            throw new Error('Bottom Controls mode ' + mode + ' did not paint its expected backing');
+    }});
+
+    // Divider-only changes update shared menu properties and persistence but
+    // must not rebuild buttons, Display colour caches or repaint JScript panels.
+    panelA.api.send({{
+        backgroundMode: 3,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432
+    }});
+    const dividerOnlyRepaints = panelA.repaints;
+    const dividerOnlyAppearance = panelA.appearanceApplications;
+    const dividerOnlyDisplayResets = panelA.displayResourceResets;
+    panelA.api.send({{
+        backgroundMode: 3,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 1,
+        dividerCustomColour: 0xff765432
+    }});
+    if (panelA.api.state().dividerMode !== 1)
+        throw new Error('Divider-only state did not update the JScript menu properties');
+    if (panelA.repaints !== dividerOnlyRepaints ||
+            panelA.appearanceApplications !== dividerOnlyAppearance ||
+            panelA.displayResourceResets !== dividerOnlyDisplayResets)
+        throw new Error('Divider-only state rebuilt JScript visual resources');
+
+    panelA.api.send({{
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 1,
+        dividerCustomColour: 0xff765432
+    }});
+
+    const customState = {{
+        backgroundMode: 3,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 5,
+        dividerCustomColour: 0xff765432
+    }};
+    const panelARepaints = panelA.repaints;
+    panelA.api.send(customState);
+    if (!files[NEW_STATE] || panelA.api.parse(files[NEW_STATE]).backgroundMode !== 3)
+        throw new Error('JScript panel did not persist the shared bottom-area state');
+    if (panelA.repaints !== panelARepaints + 1)
+        throw new Error('The initiating panel repainted more than once for one state change');
+
+    const stateEvent = panelA.notifications.filter(item => item[0] === 'DarkOneJSP3.BottomArea.State').pop();
+    if (!stateEvent) throw new Error('JScript panel did not retain its peer notification fast path');
+    const panelBRepaints = panelB.repaints;
+    panelB.api.apply(stateEvent[1]);
+    if ((panelB.api.backgroundColour() >>> 0) !== 0xff123456)
+        throw new Error('The second JScript panel did not adopt the peer notification');
+    if (panelB.repaints !== panelBRepaints + 1)
+        throw new Error('A peer panel repainted more than once for one state notification');
+
+    const stateRelayCountBefore = hostNotifications.filter(
+        item => item[0] === 'DarkOneJSP3.BottomArea.State').length;
+    host.syncFile(false);
+    const relayedState = hostNotifications.filter(
+        item => item[0] === 'DarkOneJSP3.BottomArea.State').pop();
+    if (!relayedState || hostNotifications.filter(
+            item => item[0] === 'DarkOneJSP3.BottomArea.State').length !==
+            stateRelayCountBefore + 1 ||
+            panelA.api.parse(relayedState[1]).backgroundMode !== 3)
+        throw new Error('Bottom Controls did not relay the changed state inside JSplitter');
+    fills.length = 0;
+    host.paint(gr);
+    if (fills.length !== 5 || fills[0][4] !== 0xff123456 ||
+            fills[1][4] !== 0xff445566 || fills[2][4] !== 0xff445566)
+        throw new Error('File-backed custom background / divider state did not paint correctly');
+    if (fills[0][0] !== 0 || fills[0][1] !== 0 || fills[0][2] !== 1920 || fills[0][3] !== 300)
+        throw new Error('The JSplitter backing does not cover the full bottom area');
+
+    // A false WriteTextFile return must be logged and retried once.
+    failWrites = 1;
+    panelA.api.send({{
+        backgroundMode: 1,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432
+    }});
+    if (!logs.some(line => line.indexOf(NEW_STATE) >= 0 && line.indexOf('returned false') >= 0))
+        throw new Error('A false bottom-area write was not diagnosed with its path');
+    panelA.runTimers();
+    if (files[NEW_STATE] !== 'v1|1|4279383126|4|4285944882')
+        throw new Error('The failed bottom-area write was not retried successfully');
+    host.syncFile(false);
+
+    // Cross-host factory reset: JScript writes a short-lived command, Bottom
+    // Controls consumes it, resets its own role and rebroadcasts within JSplitter.
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.MODE', 1);
+    hostProperties.set('DARKONEJSP3.BOTTOM.DIVIDER.MODE', 1);
+    if (!panelA.api.writeReset('appearance') || !files[RESET_COMMAND])
+        throw new Error('JScript factory reset did not write the reset command');
+    const resetEventsBefore = hostNotifications.length;
+    if (!host.syncReset()) throw new Error('Bottom Controls did not consume the reset command');
+    if (hostProperties.get('DARKONEJSP3.BOTTOM.BACKGROUND.MODE') !== 2 ||
+            hostProperties.get('DARKONEJSP3.BOTTOM.DIVIDER.MODE') !== 4)
+        throw new Error('Bottom Controls did not restore its reset defaults');
+    const resetEvent = hostNotifications.slice(resetEventsBefore).find(item => item[0] === 'DarkOneJSP3.Reset.Properties');
+    if (!resetEvent || JSON.parse(resetEvent[1]).scope !== 'appearance')
+        throw new Error('Bottom Controls did not rebroadcast reset inside JSplitter');
+    if (hostReloads !== 1) throw new Error('Bottom Controls reset did not reload exactly once');
+    if (Object.prototype.hasOwnProperty.call(files, RESET_COMMAND))
+        throw new Error('Processed factory-reset command file was not acknowledged and removed');
+    if (host.syncReset()) throw new Error('The same reset command was processed twice');
+
+    const now = Date.now();
+    files[RESET_COMMAND] = 'v1|stale|' + String(now - 60000) + '|all';
+    if (host.syncReset()) throw new Error('An expired reset command was processed');
+
+    const restartedPanel = makePanel();
+    restartedPanel.api.request();
+    const restartedState = restartedPanel.api.state();
+    if (restartedState.backgroundMode !== 2 || restartedState.dividerMode !== 4)
+        throw new Error('Reset bottom-area defaults did not survive a simulated restart');
+
+    panelA.api.send({{
+        backgroundMode: 0,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 0,
+        dividerCustomColour: 0xff765432
+    }});
+    if ((panelA.api.backgroundColour() >>> 0) !== 0xff181818)
+        throw new Error('JScript inherited bottom background does not resolve to #181818');
+    const panelFills = [];
+    panelA.api.paint({{ FillRectangle(x,y,w,h,colour) {{ panelFills.push([x,y,w,h,colour>>>0]); }} }});
+    if (panelFills.length !== 1 || panelFills[0][0] !== 0 || panelFills[0][1] !== 0 ||
+            panelFills[0][2] !== 320 || panelFills[0][3] !== 120 ||
+            panelFills[0][4] !== 0xff181818)
+        throw new Error('JScript inherited bottom background does not paint its complete panel surface');
+    host.syncFile(false);
+    fills.length = 0;
+    host.paint(gr);
+    if (fills.length !== 3 || fills[0][4] !== 0xff181818 ||
+            fills[1][4] !== 0xff696969 || fills[2][4] !== 0xff1e1e1e)
+        throw new Error('Inherited bottom background does not paint #181818 while transparent dividers reveal it');
+    if (hostRepaints < 3) throw new Error('File state changes did not repaint the JSplitter host');
+    host.dispose();
+    firstPaintPanel.api.dispose();
+    panelA.api.dispose();
+    panelB.api.dispose();
+    restartedPanel.api.dispose();
+    """
+        result = subprocess.run([node, '-e', bottom_area_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Bottom-area appearance runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise upper-divider mode persistence, painting and notifications.
@@ -2201,6 +2659,33 @@ def run(ctx: ValidationContext) -> None:
     assert(properties['DarkOneJSP3.InfoStack.ActivePanel'] === 4,
         'JSplitter appearance reset changed behaviour state');
     assert(reloads === 1, 'JSplitter serialised reset did not reload exactly once');
+
+    DARKONEJSP3_RESET_ROLE = 'display-waveform';
+    properties = {{
+        'DarkOneJSP3.DisplayWaveform.BackgroundMode': 1,
+        'DarkOneJSP3.DisplayWaveform.BackgroundColour': 0xff123456,
+        'DarkOneJSP3.DisplayWaveform.HideWhenStopped': false,
+        'DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay': 999
+    }};
+    reloads = 0;
+    assert(darkOneJsp3HandleReset('DarkOneJSP3.Reset.Properties', {{scope: 'appearance'}}),
+        'Waveform appearance reset was not handled');
+    assert(properties['DarkOneJSP3.DisplayWaveform.BackgroundMode'] === 6,
+        'Waveform appearance reset did not restore Automatic background');
+    assert(properties['DarkOneJSP3.DisplayWaveform.HideWhenStopped'] === false &&
+        properties['DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay'] === 999,
+        'Waveform appearance reset changed behavioural settings');
+
+    properties['DarkOneJSP3.DisplayWaveform.BackgroundMode'] = 1;
+    properties['DarkOneJSP3.DisplayWaveform.HideWhenStopped'] = false;
+    properties['DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay'] = 999;
+    assert(darkOneJsp3HandleReset('DarkOneJSP3.Reset.Properties', {{scope: 'behaviour'}}),
+        'Waveform behaviour reset was not handled');
+    assert(properties['DarkOneJSP3.DisplayWaveform.BackgroundMode'] === 1,
+        'Waveform behaviour reset changed the fixed host background');
+    assert(properties['DarkOneJSP3.DisplayWaveform.HideWhenStopped'] === true &&
+        properties['DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay'] === 200,
+        'Waveform behaviour reset did not restore blanking and reveal delay');
     """
         result = subprocess.run([node, '-e', jsplitter_reset_smoke],
                                 capture_output=True, text=True)
@@ -2220,6 +2705,7 @@ const timers = new Map();
 let lastDelay = 0;
 let loads = [];
 let idWrites = 0;
+let bitmapDisposals = 0;
 const windowMock = {
     SetTimeout(fn, delay) {
         const id = nextTimer++;
@@ -2252,7 +2738,7 @@ function makeImage(id) {
         Width: 100,
         Height: 100,
         Path: 'art-' + id + '.jpg',
-        CreateBitmap() { return {Dispose() {}}; },
+        CreateBitmap() { return {Dispose() { bitmapDisposals++; }}; },
         StackBlur() {},
         Dispose() {}
     };
@@ -2342,9 +2828,13 @@ assert(loads.length === loadsBeforeNoopCommit,
        'A full wheel cycle unnecessarily reloaded the current artwork');
 
 albumart.wheel(-1);
+const disposalsBeforeUnload = bitmapDisposals;
 albumart.dispose();
 assert(timers.size === 0 && albumart.pending_id === -1,
        'Album Art dispose did not clear pending wheel work');
+assert(bitmapDisposals === disposalsBeforeUnload + 1 &&
+       albumart.bitmap.normal === null && albumart.bitmap.blur === null,
+       'Album Art unload did not dispose its active Direct2D bitmaps');
 """ % albumart_source
         result = subprocess.run([node, '-e', albumart_smoke],
                                 capture_output=True, text=True)

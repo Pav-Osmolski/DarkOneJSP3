@@ -1,15 +1,15 @@
 {
   "package": "DarkOneJSP3",
-  "version": "0.9.20",
+  "version": "0.9.29",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
-    "jsplitter": "4.1.11"
+    "jsplitter": "4.1.12"
   },
   "modules": {
-    "control_left": "3.0.13-jsp3-3.8.5",
-    "control_right": "3.0.18-jsp3-3.8.5",
-    "display": "3.0.16-jsp3-3.8.5",
+    "control_left": "3.0.20-jsp3-3.8.5",
+    "control_right": "3.0.25-jsp3-3.8.5",
+    "display": "3.0.23-jsp3-3.8.5",
     "queue_viewer": "0.6.1",
     "allmusic": "0.6.4",
     "musicbrainz": "0.6.4",
@@ -22,19 +22,20 @@
     "main_columns_controller": "0.7.36",
     "page_background": "0.1.3",
     "colour_helpers": "0.1.0",
-    "jsplitter_protocols": "0.1.0",
+    "jsplitter_protocols": "0.2.1",
     "optional_button_menu": "0.1.0",
     "info_stack_colours": "0.1.0",
     "info_stack_bridges": "0.1.0",
-    "release_validator": "0.4.9",
+    "release_validator": "0.6.5",
     "performance_helpers": "0.1.4",
     "playlist_render_cache": "0.1.0",
     "ui_cadence": "0.1.1",
     "sample_defaults": "0.1.0",
     "sample_reset_bridge": "0.1.1",
     "standalone_sample_compatibility": "0.1.1",
-    "album_art": "0.1.0"
+    "album_art": "0.1.0",
+    "bottom_area_appearance": "0.2.5"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v0.9.20"
+  "release": "DarkOneJSP3 v0.9.29"
 }

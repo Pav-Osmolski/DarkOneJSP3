@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.20 Validation Report
+DarkOneJSP3 v0.9.29 Validation Report
 =====================================
 
 Scope
@@ -11,10 +11,44 @@ validation and the audited-file count.
 
 Checks
 ------
+- Bottom-area state is shared through js_data\darkonejsp3.bottom-area-state.txt
+  so the three JScript Panel instances and the Bottom Controls JSplitter host do
+  not depend on cross-component NotifyOthers delivery. Legacy state stored under
+  DarkOneJSP3\shared is migrated automatically.
+- JScript Panel state persistence uses the canonical two-argument
+  `utils.WriteTextFile(path, content)` form. False returns and exceptions are
+  logged with the target path, and failed bottom-area writes are retried once.
+- Each JScript panel reads and applies the state once during initialisation,
+  before its first paint, and uses same-component notifications for live peer
+  updates. Repeated resize callbacks do not reread the file or query peers.
+- Divider-only changes persist and update shared menus without rebuilding
+  JScript control or Display visual resources.
+- Only the Bottom Controls JSplitter polls continuously. Visible bottom-area
+  state is checked at 100 ms, while the factory-reset command is checked at
+  500 ms through the same timer and acknowledged after successful processing.
+- Display/Waveform reads the shared bottom-area state once, defaults to
+  Automatic Host background and receives state-only notifications relayed by
+  Bottom Controls inside the JSplitter domain. Automatic custom and Columns UI
+  modes are exercised without adding another poller; Transparent / inherit
+  parent must resolve to the shared #181818 parent
+  tone and paint the full host surface.
+- A fresh JScript Panel instance is created after persisted colour changes and
+  factory reset to verify restart persistence.
+- Cross-host factory reset is exercised through
+  js_data\darkonejsp3.reset-command.txt; Bottom Controls must consume the
+  short-lived command and rebroadcast it to the other JSplitter controllers.
+- Bottom-area painting covers the complete Bottom Controls host, including the
+  lower Quick Search region and the narrow layout gaps beside both divider
+  strips; Transparent / inherit parent resolves every bottom surface to #181818,
+  while transparent dividers reveal that uniform backing.
+- A complete six-mode matrix verifies that Transparent, Black, DarkOne grey,
+  DarkOne dark grey, Columns UI and Custom resolve identically in the three
+  JScript panels, the Bottom Controls host and Automatic Display/Waveform host.
 - Album Art mouse-wheel bursts are coalesced through an 80 ms trailing timer,
   decode only the final selected artwork ID, persist that ID once, retain
   immediate keyboard selection and cancel pending work on metadata changes or
-  script unload.
+  script unload. Script unload also explicitly disposes active normal and blurred
+  Direct2D bitmaps.
 - The repository README contains a dedicated Enhanced Sample Library section
   and a direct link to the distributed ENHANCED_SAMPLES.txt guide.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3
@@ -95,7 +129,9 @@ Checks
 - Every reset callback imports its registry and bridge dependencies.
 - Coordinated resets use serialised payloads while retaining legacy payload
   compatibility; malformed scopes are rejected by standalone, JScript Panel
-  and JSplitter receivers without applying defaults or reloading.
+  and JSplitter receivers without applying defaults or reloading. Waveform
+  blanking and reveal delay are validated as behaviour settings, while the Host
+  background remains appearance-only.
 - Startup settings remain owned by the root controller and preserve the tested
   reveal timing and first-layout safeguards.
 - Biography, Last.fm, Album Notes, Properties and the optional scripted Queue
@@ -122,8 +158,12 @@ Checks
 - InfoStack tab labels and the centre-display accent preserve their existing
   Default and Custom modes and can follow the Columns UI selected-item
   background colour.
-- Upper-divider colour controls retain established geometry and do not alter
-  the lower control dividers.
+- Upper-divider colour controls retain established geometry and remain
+  independent from the lower control-divider settings.
+- Bottom-area runtime tests isolate the JScript Panel and JSplitter notification
+  domains, verify file-backed synchronisation for all three child panels and the
+  host, cover every palette mode, transparent painting, full-host geometry,
+  divider painting, Columns UI live updates and protocol serialisation.
 - Album Notes provider settings, caching controls and embedded MusicBrainz
   settings are included in coordinated reset coverage.
 - Managed AllMusic activation completes or fails closed without leaving a

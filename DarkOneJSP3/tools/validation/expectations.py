@@ -1,6 +1,7 @@
 """Stable, data-driven expectations used by the release validator."""
 
 REQUIRED_PATHS = (
+    '.gitignore',
     'README.md',
     'DarkOneJSP3/build-info.json',
     'DarkOneJSP3/darkonejsp3-layout-manifest.json',
@@ -79,9 +80,9 @@ REQUIRED_PATHS = (
 )
 
 EXPECTED_MODULE_VERSIONS = {
-    'control_left': ('3.0.13-jsp3-3.8.5', 'Control Left'),
-    'control_right': ('3.0.18-jsp3-3.8.5', 'Control Right'),
-    'display': ('3.0.16-jsp3-3.8.5', 'Display'),
+    'control_left': ('3.0.20-jsp3-3.8.5', 'Control Left'),
+    'control_right': ('3.0.25-jsp3-3.8.5', 'Control Right'),
+    'display': ('3.0.23-jsp3-3.8.5', 'Display'),
     'queue_viewer': ('0.6.1', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.4', 'MusicBrainz'),
@@ -98,14 +99,15 @@ EXPECTED_MODULE_VERSIONS = {
     'performance_helpers': ('0.1.4', 'performance-helper module'),
     'ui_cadence': ('0.1.1', 'UI-cadence protocol module'),
     'playlist_render_cache': ('0.1.0', 'playlist render-cache module'),
-    'jsplitter_protocols': ('0.1.0', 'JSplitter-protocol module'),
+    'jsplitter_protocols': ('0.2.1', 'JSplitter-protocol module'),
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.4.9', 'release-validator module'),
+    'release_validator': ('0.6.5', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
+    'bottom_area_appearance': ('0.2.5', 'shared bottom-area appearance'),
 }
 
 SEMVER_MODULES = ()

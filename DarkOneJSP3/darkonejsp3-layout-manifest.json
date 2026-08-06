@@ -1,8 +1,8 @@
 {
-  "version": "0.9.20",
+  "version": "0.9.29",
   "target": {
     "jscript_panel": "3.8.5",
-    "jsplitter": "4.1.11",
+    "jsplitter": "4.1.12",
     "foobar2000": "v2 x64"
   },
   "jsplitters": [
@@ -517,7 +517,12 @@
       "art_spectrum_divider_colour_covered": true,
       "serialised_notification_payload": true,
       "legacy_object_payload_accepted": true,
-      "infostack_page_backgrounds_covered": true
+      "infostack_page_backgrounds_covered": true,
+      "bottom_area_appearance_covered": true,
+      "cross_component_command_file": "js_data/darkonejsp3.reset-command.txt",
+      "jsplitter_rebroadcast_bridge": true,
+      "isolated_component_hosts_tested": true,
+      "expired_commands_rejected": true
     },
     "info_stack": {
       "automatic_tab_font_sizing": true,
@@ -611,10 +616,11 @@
     },
     "jsplitter_protocol_consolidation": {
       "shared_helper": "DarkOneJSP3/shared/jsplitter_protocols.js",
-      "version": "0.1.0",
+      "version": "0.2.1",
       "protocol_versions": {
         "startup_controls": "v1",
-        "divider_state": "v1"
+        "divider_state": "v1",
+        "bottom_area_state": "v1"
       },
       "startup_notifications_centralised": true,
       "startup_state_serialisation_centralised": true,
@@ -625,7 +631,15 @@
       "divider_menu_mapping_centralised": true,
       "property_ownership_unchanged": true,
       "saved_values_unchanged": true,
-      "runtime_bridge_tests": true
+      "runtime_bridge_tests": true,
+      "bottom_area_notifications_centralised": true,
+      "bottom_area_state_serialisation_centralised": true,
+      "bottom_area_host_owned_state": false,
+      "bottom_area_file_backed_state": true,
+      "bottom_area_component_hosts_isolated": true,
+      "bottom_area_poll_interval_ms": 100,
+      "bottom_area_jsplitter_state_relay": true,
+      "reset_command_poll_interval_ms": 500
     },
     "optional_button_menu_consolidation": {
       "shared_helper": "DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js",
@@ -660,7 +674,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.4.9",
+      "version": "0.6.5",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -695,7 +709,17 @@
       "volume_knob_pressed_state_tests": true,
       "enhanced_sample_readme_section_checked": true,
       "enhanced_sample_document_link_checked": true,
-      "album_art_wheel_debounce_tests": true
+      "album_art_wheel_debounce_tests": true,
+      "bottom_area_appearance_tests": true,
+      "bottom_area_cross_component_file_bridge_tests": true,
+      "waveform_automatic_background_tests": true,
+      "transparent_bottom_area_resolution_tests": true,
+      "bottom_area_full_mode_matrix_tests": true,
+      "bottom_area_first_paint_persistence_tests": true,
+      "bottom_area_one_time_initialisation_tests": true,
+      "bottom_area_divider_only_efficiency_tests": true,
+      "waveform_reset_scope_tests": true,
+      "album_art_unload_bitmap_disposal_tests": true
     },
     "rendering_optimisation": {
       "version": "0.1.4",
@@ -758,7 +782,73 @@
       "metadata_change_cancels_pending": true,
       "script_unload_cancels_pending": true,
       "intermediate_property_writes_avoided": true,
-      "intermediate_image_decodes_avoided": true
+      "intermediate_image_decodes_avoided": true,
+      "script_unload_disposes_bitmaps": true
+    },
+    "bottom_area_appearance": {
+      "menu_location": "DarkOne Tools > Appearance",
+      "background_default": "DarkOne grey",
+      "divider_default": "DarkOne dark grey",
+      "modes": [
+        "Transparent",
+        "Black",
+        "DarkOne grey",
+        "DarkOne dark grey",
+        "Columns UI global background",
+        "Custom colour"
+      ],
+      "background_targets": [
+        "DOJSP3.ControlsLeft",
+        "DOJSP3.ControlsRight",
+        "DOJSP3.Display",
+        "DOJSP3.Controls backing"
+      ],
+      "divider_targets": [
+        "left lower side divider",
+        "right lower side divider"
+      ],
+      "quick_search_frame_unchanged": true,
+      "shared_state_owner": "runtime-generated shared state file",
+      "protocol": "DarkOneJSP3.BottomArea v1 same-host notifications plus file-backed state",
+      "columns_ui_live_update": true,
+      "transparent_layers_supported": true,
+      "properties": [
+        "DARKONEJSP3.BOTTOM.BACKGROUND.MODE",
+        "DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR",
+        "DARKONEJSP3.BOTTOM.DIVIDER.MODE",
+        "DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR"
+      ],
+      "runtime_tests": true,
+      "version": "0.2.5",
+      "state_transport": "runtime-generated UTF-8 state file",
+      "state_file": "js_data/darkonejsp3.bottom-area-state.txt",
+      "state_file_packaged": false,
+      "poll_interval_ms": 100,
+      "jscript_panels_poll_file": false,
+      "jsplitter_host_polls_file": true,
+      "notification_fast_path_retained": true,
+      "full_host_backing_repaints": true,
+      "layout_gap_covered_by_host": true,
+      "restart_persistence_tests": true,
+      "jscript_write_text_file_call": "two-argument canonical form",
+      "legacy_state_file_migrated": true,
+      "jscript_panels_read_on_initialisation": true,
+      "failed_write_diagnostics": true,
+      "failed_write_retry": true,
+      "factory_reset_command_file": "js_data/darkonejsp3.reset-command.txt",
+      "factory_reset_cross_host_bridge": true,
+      "jsplitter_state_relay": true,
+      "display_waveform_automatic_consumer": true,
+      "display_waveform_additional_poller": false,
+      "transparent_resolved_colour": "DarkOne dark grey RGB 24,24,24",
+      "transparent_cross_host_uniformity": true,
+      "full_background_mode_matrix_validated": true,
+      "reset_command_poll_interval_ms": 500,
+      "reset_command_acknowledged_after_processing": true,
+      "jscript_initialisation_guard": true,
+      "saved_background_applied_before_first_paint": true,
+      "divider_only_changes_skip_jscript_visual_rebuild": true,
+      "obsolete_jscript_file_sync_removed": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

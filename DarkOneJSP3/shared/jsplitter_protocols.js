@@ -244,9 +244,9 @@ var DarkOneProtocol = (function () {
                 label: 'DarkOne grey' },
             { id: baseId + 3, mode: dividerModes.darkOneDark,
                 label: 'DarkOne dark grey' },
-            { id: baseId + 5, mode: dividerModes.columnsUi,
+            { id: baseId + 4, mode: dividerModes.columnsUi,
                 label: 'Columns UI global background' },
-            { id: baseId + 4, mode: dividerModes.custom, custom: true }
+            { id: baseId + 5, mode: dividerModes.custom, custom: true }
         ];
     }
 
@@ -262,8 +262,98 @@ var DarkOneProtocol = (function () {
         menuOptions: dividerMenuOptions
     });
 
+    var bottomAreaNotifications = Object.freeze({
+        query: 'DarkOneJSP3.BottomArea.Query',
+        set: 'DarkOneJSP3.BottomArea.Set',
+        state: 'DarkOneJSP3.BottomArea.State'
+    });
+
+    var bottomAreaDefaults = Object.freeze({
+        backgroundMode: dividerModes.darkOne,
+        backgroundCustomColour: 0xff000000,
+        dividerMode: dividerModes.darkOneDark,
+        dividerCustomColour: 0xff000000
+    });
+
+    function bottomAreaState(backgroundMode, backgroundCustomColour,
+            dividerMode, dividerCustomColour) {
+        return {
+            backgroundMode: DarkOneColour.normaliseMode(
+                backgroundMode,
+                dividerModeValues,
+                bottomAreaDefaults.backgroundMode
+            ),
+            backgroundCustomColour: DarkOneColour.opaque(backgroundCustomColour),
+            dividerMode: DarkOneColour.normaliseMode(
+                dividerMode,
+                dividerModeValues,
+                bottomAreaDefaults.dividerMode
+            ),
+            dividerCustomColour: DarkOneColour.opaque(dividerCustomColour)
+        };
+    }
+
+    function serialiseBottomAreaState(state) {
+        state = state || bottomAreaDefaults;
+        state = bottomAreaState(
+            state.backgroundMode,
+            state.backgroundCustomColour,
+            state.dividerMode,
+            state.dividerCustomColour
+        );
+        return bottomArea.version + '|' +
+            String(state.backgroundMode) + '|' +
+            String(state.backgroundCustomColour >>> 0) + '|' +
+            String(state.dividerMode) + '|' +
+            String(state.dividerCustomColour >>> 0);
+    }
+
+    function parseBottomAreaState(data) {
+        if (data && typeof data === 'object') {
+            return bottomAreaState(
+                data.backgroundMode,
+                data.backgroundCustomColour,
+                data.dividerMode,
+                data.dividerCustomColour
+            );
+        }
+        var parts = String(data || '').split('|');
+        if (parts.length !== 5 || parts[0] !== bottomArea.version) return null;
+        var backgroundMode = Number(parts[1]);
+        var backgroundCustomColour = Number(parts[2]);
+        var dividerMode = Number(parts[3]);
+        var dividerCustomColour = Number(parts[4]);
+        if (!isFinite(backgroundMode) || !isFinite(backgroundCustomColour) ||
+                !isFinite(dividerMode) || !isFinite(dividerCustomColour)) return null;
+        return bottomAreaState(
+            backgroundMode,
+            backgroundCustomColour,
+            dividerMode,
+            dividerCustomColour
+        );
+    }
+
+    function bottomAreaMenuOptions(baseId, transparentLabel) {
+        var options = dividerMenuOptions(baseId);
+        options[0].label = String(transparentLabel || 'Transparent / inherit parent');
+        return options;
+    }
+
+    var bottomArea = Object.freeze({
+        version: 'v1',
+        notifications: bottomAreaNotifications,
+        modes: dividerModes,
+        modeValues: dividerModeValues,
+        defaults: bottomAreaDefaults,
+        state: bottomAreaState,
+        serialiseState: serialiseBottomAreaState,
+        parseState: parseBottomAreaState,
+        menuOptions: bottomAreaMenuOptions
+    });
+
     return Object.freeze({
         startup: startup,
-        divider: divider
+        divider: divider,
+        bottomArea: bottomArea
     });
 })();

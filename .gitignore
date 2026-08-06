@@ -1,1 +1,9 @@
+# Runtime-generated DarkOneJSP3 bridge files
+js_data/darkonejsp3.bottom-area-state.txt
+js_data/darkonejsp3.reset-command.txt
+
+# Legacy v0.9.22-v0.9.23 runtime location
+DarkOneJSP3/shared/bottom-area-state.txt
+
+# IDE
 .idea

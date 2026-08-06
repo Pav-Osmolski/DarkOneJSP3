@@ -236,6 +236,7 @@ function _albumart(x, y, w, h) {
 
 	this.dispose = function () {
 		this.cancel_wheel_selection();
+		this.reset_images();
 	}
 
 	this.rbtn_up = function (x, y) {

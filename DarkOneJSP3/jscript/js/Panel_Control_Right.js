@@ -68,7 +68,7 @@ function getButtonMenu(x, y) {
 
 // ----- DRAW -----
 function on_paint(gr) {
-	gr.FillRectangle(0, 0, ww, wh, p_backcol);
+	darkOnePaintBottomAreaBackground(gr);
 for (var i = 0; i < 7; i++) g_btns && gr.DrawBitmap(g_btns, padX + qx[i] + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 42 * i, 0, 36, 36);
 	darkOneDrawText(gr, "VOLUME", btn_font, btnsCol.text_normal, rbx + padX, by1, bbw, Math.ceil(bbh / 3 * 2), 1);
 	buttonsDraw(gr);
@@ -112,6 +112,7 @@ function on_size() {
 	i_size = ww / 105 * 3 * (typeof darkOneIconScale == 'function' ? darkOneIconScale() : 1.0);
 	buttonsSizes();
 	buttonsRefresh();
+	darkOneRequestBottomAreaState();
 }
 
 function on_volume_change(val) {
@@ -124,7 +125,7 @@ function on_notify_data(name, info) {
 	if (typeof darkOneHandleNotify == 'function') {
 		var change = darkOneHandleNotify(name, info);
 		if (change) {
-			if (darkOneNotifyAffects(change, 'controls')) {
+					if (darkOneNotifyAffects(change, 'controls')) {
 				buttonsOptions();
 				buttonsSizes();
 				buttonsRefresh();
@@ -154,17 +155,11 @@ function on_notify_data(name, info) {
 
 function on_colours_changed() {
 	get_colours();
-	buttonsColours();
-	if (volknob) {
-		volknob.line_normal = vknbOpt.line_normal;
-		volknob.line_hover = vknbOpt.line_normal;
-		volknob.inactive_colour = vknbOpt.inactive_colour;
-		volknob.active_colour = vknbOpt.active_colour;
-	}
-	window.Repaint();
+	darkOneApplyBottomAreaAppearance();
 }
 
 function on_script_unload() {
+	if (typeof darkOneDisposeBottomAreaBridge == 'function') darkOneDisposeBottomAreaBridge();
 	if (darkOneVolumeCadenceOwner) darkOneVolumeCadenceOwner.dispose();
 	volume_knob_repaint.cancel();
 	volknob && volknob.dispose();

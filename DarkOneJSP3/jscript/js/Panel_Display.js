@@ -10,7 +10,7 @@ var DARKONE_DISPLAY_ACCENT_MENU_OPTIONS = [
 
 // ----- DRAW -----
 function on_paint(gr) {
-	gr.FillRectangle(0, 0, ww, wh, p_backcol);
+	darkOnePaintBottomAreaBackground(gr);
 	display_system.draw(gr);
 }
 
@@ -83,6 +83,7 @@ function on_size() {
 	ww = window.Width;
 	wh = window.Height;
 	display_system.initPos();
+	darkOneRequestBottomAreaState();
 }
 
 function on_volume_change(val) {
@@ -95,7 +96,7 @@ function on_notify_data(name, info) {
 	if (typeof darkOneHandleNotify == 'function') {
 		var change = darkOneHandleNotify(name, info);
 		if (change) {
-			if (darkOneNotifyAffects(change, 'display')) {
+					if (darkOneNotifyAffects(change, 'display')) {
 				var accent_changed = darkOneNotifyMatches(change, 'DARKONEJSP3.DISPLAY.ACCENT.');
 				var font_changed = change.all;
 				for (var i = 0; !font_changed && i < change.names.length; i++) {
@@ -151,13 +152,11 @@ function on_playback_stop(reason) {
 }
 
 function on_script_unload() {
+	if (typeof darkOneDisposeBottomAreaBridge == 'function') darkOneDisposeBottomAreaBridge();
 	display_system.onUnload();
 }
 
 function on_colours_changed() {
 	get_colours();
-	display_system.InitColours();
-	display_system.setColours();
-	display_system.resetRenderedImages();
-	window.Repaint();
+	darkOneApplyBottomAreaAppearance();
 }

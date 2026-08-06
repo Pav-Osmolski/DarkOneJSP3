@@ -26,6 +26,462 @@ function get_colours() {
 }
 get_colours();
 
+// Shared bottom-area appearance. These helpers deliberately live in the
+// long-standing global configuration import so older saved control/display
+// entries receive the feature without requiring a new @import line.
+var DARKONE_RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
+var DARKONE_BOTTOM_AREA_PROTOCOL_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_STATE_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
+var DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
+var DARKONE_RESET_COMMAND_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
+var DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY = 250;
+var darkOneBottomAreaStateRetryTimer = null;
+var darkOneBottomAreaInitialised = false;
+var darkOneResetCommandSequence = 0;
+var DARKONE_BOTTOM_AREA_NOTIFICATIONS = Object.freeze({
+    query : 'DarkOneJSP3.BottomArea.Query',
+    set : 'DarkOneJSP3.BottomArea.Set',
+    state : 'DarkOneJSP3.BottomArea.State'
+});
+var DARKONE_BOTTOM_MODE_TRANSPARENT = 0;
+var DARKONE_BOTTOM_MODE_BLACK = 1;
+var DARKONE_BOTTOM_MODE_DARKONE = 2;
+var DARKONE_BOTTOM_MODE_CUSTOM = 3;
+var DARKONE_BOTTOM_MODE_DARKONE_DARK = 4;
+var DARKONE_BOTTOM_MODE_COLUMNS_UI = 5;
+var DARKONE_BOTTOM_MODE_VALUES = [0, 1, 2, 3, 4, 5];
+var DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.MODE';
+var DARKONE_BOTTOM_BACKGROUND_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR';
+var DARKONE_BOTTOM_DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.MODE';
+var DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR';
+var DARKONE_BOTTOM_BACKGROUND_DEFAULT = DARKONE_BOTTOM_MODE_DARKONE;
+var DARKONE_BOTTOM_DIVIDER_DEFAULT = DARKONE_BOTTOM_MODE_DARKONE_DARK;
+var DARKONE_BOTTOM_CUSTOM_DEFAULT = 0xff000000;
+
+function darkOneBottomMenuOptions(baseId, transparentLabel) {
+    return [
+        { id : baseId, mode : DARKONE_BOTTOM_MODE_TRANSPARENT, label : transparentLabel },
+        { id : baseId + 1, mode : DARKONE_BOTTOM_MODE_BLACK, label : 'Black' },
+        { id : baseId + 2, mode : DARKONE_BOTTOM_MODE_DARKONE, label : 'DarkOne grey' },
+        { id : baseId + 3, mode : DARKONE_BOTTOM_MODE_DARKONE_DARK, label : 'DarkOne dark grey' },
+        { id : baseId + 4, mode : DARKONE_BOTTOM_MODE_COLUMNS_UI, label : 'Columns UI global background' },
+        { id : baseId + 5, mode : DARKONE_BOTTOM_MODE_CUSTOM, custom : true }
+    ];
+}
+var DARKONE_BOTTOM_BACKGROUND_MENU_OPTIONS = darkOneBottomMenuOptions(
+    9800,
+    'Transparent / inherit parent'
+);
+var DARKONE_BOTTOM_DIVIDER_MENU_OPTIONS = darkOneBottomMenuOptions(
+    9820,
+    'Transparent / inherit background'
+);
+
+function darkOneBottomOpaque(colour) {
+    return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
+}
+function darkOneBottomHex(colour) {
+    var value = ((Number(colour) >>> 0) & 0x00ffffff).toString(16).toUpperCase();
+    while (value.length < 6) value = '0' + value;
+    return '#' + value;
+}
+function darkOneBottomParseColour(value) {
+    value = String(value || '').replace(/^\s+|\s+$/g, '');
+    var match = value.match(/^#?([0-9a-f]{6})$/i);
+    if (match) return 0xff000000 + parseInt(match[1], 16);
+    match = value.match(/^\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*$/);
+    if (!match) return null;
+    function channel(number) { return Math.max(0, Math.min(255, parseInt(number, 10))); }
+    return 0xff000000 + channel(match[1]) * 0x10000 + channel(match[2]) * 0x100 + channel(match[3]);
+}
+function darkOneBottomNormaliseMode(value, fallback) {
+    value = Math.round(Number(value));
+    return DARKONE_BOTTOM_MODE_VALUES.indexOf(value) >= 0 ? value : fallback;
+}
+function darkOneBottomBackgroundMode() {
+    return darkOneBottomNormaliseMode(
+        window.GetProperty(DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
+        DARKONE_BOTTOM_BACKGROUND_DEFAULT
+    );
+}
+function darkOneBottomDividerMode() {
+    return darkOneBottomNormaliseMode(
+        window.GetProperty(DARKONE_BOTTOM_DIVIDER_MODE_PROPERTY, DARKONE_BOTTOM_DIVIDER_DEFAULT),
+        DARKONE_BOTTOM_DIVIDER_DEFAULT
+    );
+}
+function darkOneBottomBackgroundCustomColour() {
+    return darkOneBottomOpaque(window.GetProperty(
+        DARKONE_BOTTOM_BACKGROUND_CUSTOM_PROPERTY,
+        DARKONE_BOTTOM_CUSTOM_DEFAULT
+    ));
+}
+function darkOneBottomDividerCustomColour() {
+    return darkOneBottomOpaque(window.GetProperty(
+        DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY,
+        DARKONE_BOTTOM_CUSTOM_DEFAULT
+    ));
+}
+function darkOneBottomAreaState() {
+    return {
+        backgroundMode : darkOneBottomBackgroundMode(),
+        backgroundCustomColour : darkOneBottomBackgroundCustomColour(),
+        dividerMode : darkOneBottomDividerMode(),
+        dividerCustomColour : darkOneBottomDividerCustomColour()
+    };
+}
+function darkOneBottomAreaSerialiseState(state) {
+    state = state || darkOneBottomAreaState();
+    return DARKONE_BOTTOM_AREA_PROTOCOL_VERSION + '|' +
+        String(darkOneBottomNormaliseMode(state.backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT)) + '|' +
+        String(darkOneBottomOpaque(state.backgroundCustomColour) >>> 0) + '|' +
+        String(darkOneBottomNormaliseMode(state.dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT)) + '|' +
+        String(darkOneBottomOpaque(state.dividerCustomColour) >>> 0);
+}
+function darkOneBottomAreaParseState(data) {
+    if (data && typeof data == 'object') {
+        return {
+            backgroundMode : darkOneBottomNormaliseMode(data.backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
+            backgroundCustomColour : darkOneBottomOpaque(data.backgroundCustomColour),
+            dividerMode : darkOneBottomNormaliseMode(data.dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT),
+            dividerCustomColour : darkOneBottomOpaque(data.dividerCustomColour)
+        };
+    }
+    var parts = String(data || '').split('|');
+    if (parts.length !== 5 || parts[0] !== DARKONE_BOTTOM_AREA_PROTOCOL_VERSION) return null;
+    var backgroundMode = Number(parts[1]);
+    var backgroundCustomColour = Number(parts[2]);
+    var dividerMode = Number(parts[3]);
+    var dividerCustomColour = Number(parts[4]);
+    if (!isFinite(backgroundMode) || !isFinite(backgroundCustomColour) ||
+            !isFinite(dividerMode) || !isFinite(dividerCustomColour)) return null;
+    return {
+        backgroundMode : darkOneBottomNormaliseMode(backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
+        backgroundCustomColour : darkOneBottomOpaque(backgroundCustomColour),
+        dividerMode : darkOneBottomNormaliseMode(dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT),
+        dividerCustomColour : darkOneBottomOpaque(dividerCustomColour)
+    };
+}
+function darkOneBottomBackgroundColour() {
+    var mode = darkOneBottomBackgroundMode();
+    if (mode === DARKONE_BOTTOM_MODE_BLACK) return 0xff000000;
+    if (mode === DARKONE_BOTTOM_MODE_DARKONE) return 0xff202020;
+    if (mode === DARKONE_BOTTOM_MODE_DARKONE_DARK) return 0xff181818;
+    if (mode === DARKONE_BOTTOM_MODE_COLUMNS_UI) return darkOneBottomOpaque(ui_backcol || 0xff202020);
+    if (mode === DARKONE_BOTTOM_MODE_CUSTOM) return darkOneBottomBackgroundCustomColour();
+    // Native JScript Panel and JSplitter child windows do not alpha-compose
+    // reliably across component hosts. Only Transparent / inherit parent reaches
+    // this fallback and resolves to the established recessed DarkOne backing.
+    return 0xff181818;
+}
+function darkOnePaintBottomAreaBackground(gr) {
+    // Transparent / inherit parent is resolved to the common #181818 parent
+    // tone rather than skipping paint and exposing component-specific backings.
+    gr.FillRectangle(0, 0, ww, wh, p_backcol);
+}
+function darkOneApplyBottomAreaAppearance() {
+    p_backcol = darkOneBottomBackgroundColour();
+    if (typeof buttonsColours == 'function') buttonsColours();
+    if (typeof volknob != 'undefined' && volknob && typeof vknbOpt != 'undefined') {
+        volknob.line_normal = vknbOpt.line_normal;
+        volknob.line_hover = vknbOpt.line_normal;
+        volknob.inactive_colour = vknbOpt.inactive_colour;
+        volknob.active_colour = vknbOpt.active_colour;
+    }
+    if (typeof display_system != 'undefined' && display_system) {
+        display_system.InitColours();
+        display_system.setColours();
+        display_system.resetRenderedImages();
+    }
+    try { window.Repaint(); } catch (e) {}
+}
+function darkOneApplyBottomAreaState(state, repaint) {
+    state = darkOneBottomAreaParseState(state);
+    if (!state) return false;
+
+    var current = darkOneBottomAreaState();
+    var backgroundChanged = current.backgroundMode !== state.backgroundMode ||
+        (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0);
+    var dividerChanged = current.dividerMode !== state.dividerMode ||
+        (current.dividerCustomColour >>> 0) !== (state.dividerCustomColour >>> 0);
+
+    var values = {};
+    values[DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY] = state.backgroundMode;
+    values[DARKONE_BOTTOM_BACKGROUND_CUSTOM_PROPERTY] = state.backgroundCustomColour;
+    values[DARKONE_BOTTOM_DIVIDER_MODE_PROPERTY] = state.dividerMode;
+    values[DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY] = state.dividerCustomColour;
+    var result = darkOneApplySharedValues(values);
+    result.backgroundChanged = backgroundChanged;
+    result.dividerChanged = dividerChanged;
+    result.changed = backgroundChanged || dividerChanged;
+
+    // The three JScript panels do not draw the host-owned side dividers.
+    // Store divider changes for their shared menu state, but rebuild visual
+    // resources only when the background itself changes.
+    if (backgroundChanged && repaint !== false) darkOneApplyBottomAreaAppearance();
+    return result;
+}
+function darkOneEnsureRuntimeDataFolder() {
+    try { utils.CreateFolder(DARKONE_RUNTIME_DATA_DIR); } catch (e) {}
+}
+function darkOneLogRuntimeWriteFailure(label, path, detail) {
+    try {
+        console.log('[DarkOneJSP3] Unable to write ' + label + ' at "' + path + '": ' + detail);
+    } catch (e) {}
+}
+function darkOneTryWriteRuntimeFile(path, content, label) {
+    darkOneEnsureRuntimeDataFolder();
+    try {
+        var result = utils.WriteTextFile(path, String(content));
+        if (result === false) {
+            darkOneLogRuntimeWriteFailure(label, path, 'utils.WriteTextFile returned false');
+            return false;
+        }
+        return true;
+    } catch (e) {
+        darkOneLogRuntimeWriteFailure(label, path, String(e));
+    }
+    return false;
+}
+function darkOneReadBottomAreaStatePath(path) {
+    try {
+        var serialised = utils.ReadTextFile(path, 65001);
+        var state = darkOneBottomAreaParseState(serialised);
+        return state ? { state : state, serialised : darkOneBottomAreaSerialiseState(state) } : null;
+    } catch (e) {}
+    return null;
+}
+function darkOneReadBottomAreaStateFile() {
+    var current = darkOneReadBottomAreaStatePath(DARKONE_BOTTOM_AREA_STATE_FILE);
+    if (current) return current;
+    var legacy = darkOneReadBottomAreaStatePath(DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE);
+    if (!legacy) return null;
+    // Migrate v0.9.22/v0.9.23 state out of the maintained source tree.
+    darkOneWriteBottomAreaStateFile(legacy.state);
+    return legacy;
+}
+function darkOneCancelBottomAreaStateRetry() {
+    if (!darkOneBottomAreaStateRetryTimer) return;
+    try { window.ClearTimeout(darkOneBottomAreaStateRetryTimer); } catch (e) {}
+    darkOneBottomAreaStateRetryTimer = null;
+}
+function darkOneScheduleBottomAreaStateRetry(serialised) {
+    darkOneCancelBottomAreaStateRetry();
+    try {
+        darkOneBottomAreaStateRetryTimer = window.SetTimeout(function () {
+            darkOneBottomAreaStateRetryTimer = null;
+            darkOneTryWriteRuntimeFile(
+                DARKONE_BOTTOM_AREA_STATE_FILE,
+                serialised,
+                'shared bottom-area state retry'
+            );
+        }, DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY);
+    } catch (e) {
+        darkOneLogRuntimeWriteFailure(
+            'shared bottom-area state retry',
+            DARKONE_BOTTOM_AREA_STATE_FILE,
+            String(e)
+        );
+    }
+}
+function darkOneWriteBottomAreaStateFile(state) {
+    state = darkOneBottomAreaParseState(state) || darkOneBottomAreaState();
+    var serialised = darkOneBottomAreaSerialiseState(state);
+    darkOneCancelBottomAreaStateRetry();
+    if (darkOneTryWriteRuntimeFile(
+            DARKONE_BOTTOM_AREA_STATE_FILE,
+            serialised,
+            'shared bottom-area state')) {
+        return true;
+    }
+    darkOneScheduleBottomAreaStateRetry(serialised);
+    return false;
+}
+function darkOneBroadcastBottomAreaState(state) {
+    state = darkOneBottomAreaParseState(state) || darkOneBottomAreaState();
+    try {
+        window.NotifyOthers(
+            DARKONE_BOTTOM_AREA_NOTIFICATIONS.state,
+            darkOneBottomAreaSerialiseState(state)
+        );
+    } catch (e) {}
+}
+function darkOneSendBottomAreaState(state) {
+    state = darkOneBottomAreaParseState(state) || darkOneBottomAreaState();
+    darkOneApplyBottomAreaState(state);
+    darkOneWriteBottomAreaStateFile(state);
+    // Notify the other JScript Panel instances directly. JSplitter runs in a
+    // separate component host and follows the same state file instead.
+    darkOneBroadcastBottomAreaState(state);
+}
+function darkOneInitialiseBottomAreaState(queryPeers) {
+    if (darkOneBottomAreaInitialised) return false;
+    darkOneBottomAreaInitialised = true;
+
+    var fileState = darkOneReadBottomAreaStateFile();
+    if (fileState) {
+        // Do not depend on property differences or on_colours_changed callback
+        // ordering: resolve the first visible background unconditionally below.
+        darkOneApplyBottomAreaState(fileState.state, false);
+    } else {
+        darkOneWriteBottomAreaStateFile(darkOneBottomAreaState());
+    }
+
+    if (queryPeers !== false) {
+        // Query same-component peers once. Continuous disk polling is deliberately
+        // reserved for the Bottom Controls JSplitter host.
+        try { window.NotifyOthers(DARKONE_BOTTOM_AREA_NOTIFICATIONS.query, 'v1'); } catch (e) {}
+    }
+
+    // p_backcol starts at DarkOne grey. Explicitly resolve the saved mode before
+    // the first paint even when window properties already match the state file.
+    darkOneApplyBottomAreaAppearance();
+    return true;
+}
+function darkOneRequestBottomAreaState() {
+    return darkOneInitialiseBottomAreaState(true);
+}
+function darkOneDisposeBottomAreaBridge() {
+    darkOneCancelBottomAreaStateRetry();
+}
+function darkOneResetBottomAreaDefaults() {
+    darkOneSendBottomAreaState({
+        backgroundMode : DARKONE_BOTTOM_BACKGROUND_DEFAULT,
+        backgroundCustomColour : DARKONE_BOTTOM_CUSTOM_DEFAULT,
+        dividerMode : DARKONE_BOTTOM_DIVIDER_DEFAULT,
+        dividerCustomColour : DARKONE_BOTTOM_CUSTOM_DEFAULT
+    });
+}
+function darkOneCreateResetCommand(scope) {
+    scope = darkOneJsp3ResetCommandScope(scope);
+    if (!scope) return null;
+    var issuedAt = new Date().getTime();
+    darkOneResetCommandSequence++;
+    var commandId = String(issuedAt) + '-' + String(darkOneResetCommandSequence) + '-' +
+        String(Math.floor(Math.random() * 0x1000000));
+    return darkOneJsp3SerialiseResetCommand(commandId, issuedAt, scope);
+}
+function darkOneWriteResetCommand(scope) {
+    var command = darkOneCreateResetCommand(scope);
+    if (!command) return false;
+    if (darkOneTryWriteRuntimeFile(
+            DARKONE_RESET_COMMAND_FILE,
+            command,
+            'factory-reset command')) return true;
+    // One immediate retry gives transient file locks a second chance before the
+    // initiating panel reloads and its timers are destroyed.
+    if (darkOneTryWriteRuntimeFile(
+            DARKONE_RESET_COMMAND_FILE,
+            command,
+            'factory-reset command retry')) return true;
+    try {
+        utils.MessageBox(
+            'The factory-reset command could not be written to:\n\n' +
+                DARKONE_RESET_COMMAND_FILE +
+                '\n\nJScript Panel settings will still reset, but JSplitter-owned settings may remain unchanged. Check folder permissions and the foobar2000 console.',
+            'DarkOneJSP3 reset warning',
+            MB_OK | MB_ICONEXCLAMATION
+        );
+    } catch (e) {}
+    return false;
+}
+function darkOnePickBottomAreaColour(current, title) {
+    current = darkOneBottomOpaque(current);
+    if (typeof DarkOneColour != 'undefined' && DarkOneColour &&
+            typeof DarkOneColour.pickJscript == 'function') {
+        return DarkOneColour.pickJscript(
+            current,
+            title,
+            'Enter a colour as #RRGGBB or R,G,B.'
+        );
+    }
+    try {
+        if (typeof utils.ColourPicker == 'function') {
+            var chosen = utils.ColourPicker(current, true);
+            return chosen === null || typeof chosen == 'undefined'
+                ? null : darkOneBottomOpaque(chosen);
+        }
+    } catch (e) { return null; }
+    try {
+        return darkOneBottomParseColour(utils.InputBox(
+            'Enter a colour as #RRGGBB or R,G,B.',
+            title,
+            darkOneBottomHex(current)
+        ));
+    } catch (e2) {}
+    return null;
+}
+function darkOneAppendBottomColourOptions(menu, options, selectedMode, customColour) {
+    var first = options[0].id;
+    var last = options[options.length - 1].id;
+    var selectedId = first;
+    for (var i = 0; i < options.length; i++) {
+        var option = options[i];
+        menu.AppendMenuItem(
+            MF_STRING,
+            option.id,
+            option.custom ? 'Custom colour... (' + darkOneBottomHex(customColour) + ')' : option.label
+        );
+        if (option.mode === selectedMode) selectedId = option.id;
+    }
+    menu.CheckMenuRadioItem(first, last, selectedId);
+}
+function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) {
+    darkOneAppendBottomColourOptions(
+        background,
+        DARKONE_BOTTOM_BACKGROUND_MENU_OPTIONS,
+        darkOneBottomBackgroundMode(),
+        darkOneBottomBackgroundCustomColour()
+    );
+    background.AppendTo(appearance, MF_STRING, 'Bottom area background');
+    darkOneAppendBottomColourOptions(
+        divider,
+        DARKONE_BOTTOM_DIVIDER_MENU_OPTIONS,
+        darkOneBottomDividerMode(),
+        darkOneBottomDividerCustomColour()
+    );
+    divider.AppendTo(appearance, MF_STRING, 'Bottom area side divider colour');
+}
+function darkOneBottomOptionForId(options, id) {
+    for (var i = 0; i < options.length; i++) if (options[i].id === id) return options[i];
+    return null;
+}
+function darkOneHandleBottomAreaMenuSelection(id) {
+    var option = darkOneBottomOptionForId(DARKONE_BOTTOM_BACKGROUND_MENU_OPTIONS, id);
+    var state;
+    var chosen;
+    if (option) {
+        state = darkOneBottomAreaState();
+        if (option.custom) {
+            chosen = darkOnePickBottomAreaColour(
+                state.backgroundCustomColour,
+                'DarkOneJSP3 bottom area background'
+            );
+            if (chosen === null) return true;
+            state.backgroundCustomColour = chosen;
+        }
+        state.backgroundMode = option.mode;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    option = darkOneBottomOptionForId(DARKONE_BOTTOM_DIVIDER_MENU_OPTIONS, id);
+    if (option) {
+        state = darkOneBottomAreaState();
+        if (option.custom) {
+            chosen = darkOnePickBottomAreaColour(
+                state.dividerCustomColour,
+                'DarkOneJSP3 bottom area side dividers'
+            );
+            if (chosen === null) return true;
+            state.dividerCustomColour = chosen;
+        }
+        state.dividerMode = option.mode;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    return false;
+}
+
 function repeat(str, num) {
     num = Number(num);
     var result = '';
@@ -206,6 +662,7 @@ function darkOneOpenFolder(folder) {
 }
 function darkOneSettingCategory(name) {
     name = String(name || '');
+    if (name.indexOf('DARKONEJSP3.BOTTOM.') === 0) return 'bottom';
     if (name.indexOf('DARKONEJSP3.DISPLAY.') === 0) return 'display';
     if (name.indexOf('DARKONEJSP3.CONTROL.') === 0 ||
         name === 'DARKONEJSP3.FONT.SCALE' ||
@@ -275,6 +732,30 @@ function darkOneSetSharedProperty(name, value) {
     darkOneSetSharedProperties(values);
 }
 function darkOneHandleNotify(name, info) {
+    if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.state) {
+        var peerState = darkOneBottomAreaParseState(info);
+        if (!peerState) return false;
+        return darkOneApplyBottomAreaState(peerState);
+    }
+    // v0.9.21 sent Set notifications while assuming JScript Panel and
+    // JSplitter shared one notification bus. Accept them as a compatibility
+    // bridge, persist the state, then rebroadcast it to JScript peers.
+    if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.set) {
+        var legacyState = darkOneBottomAreaParseState(info);
+        if (!legacyState) return false;
+        var legacyResult = darkOneApplyBottomAreaState(legacyState);
+        darkOneWriteBottomAreaStateFile(legacyState);
+        darkOneBroadcastBottomAreaState(legacyState);
+        return legacyResult;
+    }
+    if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.query) {
+        // A peer may query before this panel's first on_size callback. Initialise
+        // once without recursively querying peers, then answer from local state.
+        darkOneInitialiseBottomAreaState(false);
+        darkOneBroadcastBottomAreaState(darkOneBottomAreaState());
+        return false;
+    }
+
     if (name == 'DarkOneJSP3.Settings.Batch') {
         try {
             var batch = typeof info == 'string' ? JSON.parse(info) : info;
@@ -438,6 +919,10 @@ function darkOneHandleResetNotification(name, info) {
     var role = typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '';
     if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;
     darkOneJsp3ApplyRoleReset(role, scope);
+    if ((scope == 'appearance' || scope == 'all') &&
+            typeof darkOneResetBottomAreaDefaults == 'function') {
+        darkOneResetBottomAreaDefaults();
+    }
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;
 }
@@ -449,8 +934,13 @@ function darkOneConfirmFactoryReset(scope) {
         MB_YESNO | MB_ICONQUESTION
     );
     if (result !== IDYES) return false;
+    darkOneWriteResetCommand(scope);
     darkOneApplyResetDefaults(scope);
-    try { window.NotifyOthers('DarkOneJSP3.Reset.Properties', JSON.stringify({ version : 1, scope : scope })); } catch (e) {}
+    if ((scope == 'appearance' || scope == 'all') &&
+            typeof darkOneResetBottomAreaDefaults == 'function') {
+        darkOneResetBottomAreaDefaults();
+    }
+    try { window.NotifyOthers(DARKONEJSP3_RESET_NOTIFICATION, JSON.stringify({ version : 1, scope : scope })); } catch (e) {}
     try { window.Reload(); } catch (e2) { window.Repaint(); }
     return true;
 }
@@ -458,12 +948,18 @@ function darkOneConfirmFactoryReset(scope) {
 function darkOneToolsMenu(x, y) {
     var menus = [];
     var m = window.CreatePopupMenu(); menus.push(m);
+    var appearance = window.CreatePopupMenu(); menus.push(appearance);
+    var bottomBackground = window.CreatePopupMenu(); menus.push(bottomBackground);
+    var bottomDivider = window.CreatePopupMenu(); menus.push(bottomDivider);
     var fonts = window.CreatePopupMenu(); menus.push(fonts);
     var control = window.CreatePopupMenu(); menus.push(control);
     var labels = window.CreatePopupMenu(); menus.push(labels);
     var values = window.CreatePopupMenu(); menus.push(values);
     var sc = window.CreatePopupMenu(); menus.push(sc);
     var reset = window.CreatePopupMenu(); menus.push(reset);
+
+    darkOneAppendBottomAreaAppearanceMenu(appearance, bottomBackground, bottomDivider);
+    appearance.AppendTo(m, MF_STRING, 'Appearance');
 
     control.AppendMenuItem(MF_GRAYED, 0, 'Current: ' + darkOneControlFontName());
     control.AppendMenuItem(MF_STRING, 9201, 'Set font family...');
@@ -525,6 +1021,8 @@ function darkOneToolsMenu(x, y) {
     for (var i = menus.length - 1; i >= 0; i--) {
         try { menus[i].Dispose(); } catch (e) {}
     }
+
+    if (darkOneHandleBottomAreaMenuSelection(idx)) return true;
 
     var weightMap = {
         9210 : DWRITE_FONT_WEIGHT_NORMAL,

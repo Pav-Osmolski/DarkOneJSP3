@@ -122,7 +122,7 @@ function darkOneJsp3ResetScope(data) {
 }
 
 function darkOneJsp3HandleReset(name, data) {
-    if (name !== 'DarkOneJSP3.Reset.Properties') return false;
+    if (name !== DARKONEJSP3_RESET_NOTIFICATION) return false;
     var scope = darkOneJsp3ResetScope(data);
     var role = typeof DARKONEJSP3_RESET_ROLE == 'string' ? DARKONEJSP3_RESET_ROLE : '';
     if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;

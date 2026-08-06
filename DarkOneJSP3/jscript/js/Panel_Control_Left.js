@@ -83,7 +83,7 @@ TimeOpt();
 
 // ----- DRAW -----
 function on_paint(gr) {
-	gr.FillRectangle(0, 0, ww, wh, p_backcol);
+	darkOnePaintBottomAreaBackground(gr);
 if (g_btns) {
 		gr.DrawBitmap(g_btns, padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 294, 0, 36, 36);
 		gr.DrawBitmap(g_btns, (ww - area / 8) - padX + (bbw - i_size) / 2, padY + (bbh - i_size) / 2, i_size, i_size, 420, 0, 36, 36);
@@ -121,13 +121,15 @@ function on_size() {
 	i_size = ww / 105 * 3 * (typeof darkOneIconScale == 'function' ? darkOneIconScale() : 1.0);
 	buttonsSizes();
 	buttonsRefresh();
+	darkOneRequestBottomAreaState();
 }
 
 function on_notify_data(name, info) {
 	if (darkOneHandleResetNotification(name, info)) return;
 	if (typeof darkOneHandleNotify != 'function') return;
 	var change = darkOneHandleNotify(name, info);
-	if (!change || !darkOneNotifyAffects(change, 'controls')) return;
+	if (!change) return;
+	if (!darkOneNotifyAffects(change, 'controls')) return;
 	buttonsOptions();
 	buttonsSizes();
 	buttonsRefresh();
@@ -136,11 +138,11 @@ function on_notify_data(name, info) {
 
 function on_colours_changed() {
 	get_colours();
-	buttonsColours();
-	window.Repaint();
+	darkOneApplyBottomAreaAppearance();
 }
 
 function on_script_unload() {
+	if (typeof darkOneDisposeBottomAreaBridge == 'function') darkOneDisposeBottomAreaBridge();
 	buttonsUnload();
 	disposeImage(g_btns);
 	g_btns = null;

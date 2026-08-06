@@ -244,10 +244,11 @@ replace the edit control's internal native background.
 
 Waveform background does not match the host
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Choose the required Host background from the narrow JSplitter spacer menu.
+Keep Host background set to Automatic to follow the shared Bottom area
+background, or choose a fixed colour from the narrow JSplitter spacer menu.
 Waveform Minibar paints its own child window, so disable its Transparent
-background, set both custom background swatches to the same explicit RGB value
-and disable Draw window border. The default host colour is RGB 32, 32, 32.
+background, set both custom background swatches to the matching explicit RGB
+value and disable Draw window border. Automatic is the default host mode.
 
 The waveform host menu cannot be found
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

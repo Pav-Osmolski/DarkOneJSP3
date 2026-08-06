@@ -63,6 +63,15 @@ var DARKONEJSP3_RESET_REGISTRY = {
         },
         behaviour: {}
     },
+    "bottom-controls": {
+        appearance: {
+            "DARKONEJSP3.BOTTOM.BACKGROUND.MODE": 2,
+            "DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR": 0xff000000,
+            "DARKONEJSP3.BOTTOM.DIVIDER.MODE": 4,
+            "DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR": 0xff000000
+        },
+        behaviour: {}
+    },
     "info-stack": {
         appearance: {
             "DarkOneJSP3.InfoStack.BackgroundColour": 0xff181818,
@@ -93,13 +102,55 @@ var DARKONEJSP3_RESET_REGISTRY = {
     "display-waveform": {
         appearance: {
             "DarkOneJSP3.DisplayWaveform.BackgroundColour": 0xff202020,
-            "DarkOneJSP3.DisplayWaveform.BackgroundMode": 2,
-            "DarkOneJSP3.DisplayWaveform.HideWhenStopped": true
+            "DarkOneJSP3.DisplayWaveform.BackgroundMode": 6
         },
-        behaviour: { "DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay": 200 }
+        behaviour: {
+            "DarkOneJSP3.DisplayWaveform.HideWhenStopped": true,
+            "DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay": 200
+        }
     }
 
 };
+
+
+// Cross-component factory-reset command protocol. JScript Panel 3 and
+// JSplitter do not share a notification bus, so the initiating JScript panel
+// writes one short-lived command into js_data. The Bottom Controls JSplitter
+// consumes it and rebroadcasts the established reset notification inside the
+// JSplitter host domain.
+var DARKONEJSP3_RESET_NOTIFICATION = "DarkOneJSP3.Reset.Properties";
+var DARKONEJSP3_RESET_COMMAND_VERSION = "v1";
+var DARKONEJSP3_RESET_COMMAND_MAX_AGE = 30000;
+
+function darkOneJsp3ResetCommandScope(value) {
+    value = String(value == null ? "" : value).toLowerCase();
+    return value === "appearance" || value === "behaviour" || value === "all"
+        ? value
+        : null;
+}
+
+function darkOneJsp3SerialiseResetCommand(commandId, issuedAt, scope) {
+    commandId = String(commandId || "").replace(/[|\r\n]/g, "");
+    issuedAt = Math.round(Number(issuedAt));
+    scope = darkOneJsp3ResetCommandScope(scope);
+    if (!commandId || !isFinite(issuedAt) || issuedAt <= 0 || !scope) return null;
+    return DARKONEJSP3_RESET_COMMAND_VERSION + "|" + commandId + "|" +
+        String(issuedAt) + "|" + scope;
+}
+
+function darkOneJsp3ParseResetCommand(data, now) {
+    var parts = String(data || "").split("|");
+    if (parts.length !== 4 || parts[0] !== DARKONEJSP3_RESET_COMMAND_VERSION) return null;
+    var commandId = String(parts[1] || "");
+    var issuedAt = Math.round(Number(parts[2]));
+    var scope = darkOneJsp3ResetCommandScope(parts[3]);
+    now = Math.round(Number(now));
+    if (!isFinite(now)) now = new Date().getTime();
+    if (!commandId || !isFinite(issuedAt) || issuedAt <= 0 || !scope) return null;
+    var age = now - issuedAt;
+    if (age < -5000 || age > DARKONEJSP3_RESET_COMMAND_MAX_AGE) return null;
+    return { id: commandId, issuedAt: issuedAt, scope: scope };
+}
 
 
 function darkOneJsp3AddOptionalButtonDefaults(role, count) {
