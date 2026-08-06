@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.29
+DarkOneJSP3 v0.9.31
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -86,6 +86,14 @@ user-components-x64\foo_jscript_panel3\samples\
 
 Current highlights
 ------------------
+- JS Playlist caches visible-row selection and playback state, reuses row objects
+  during sequential scrolling and caches resolved column geometry.
+- Dot Matrix values render directly from cached sprite bitmaps; control-panel
+  resize callbacks reuse button/knob objects, and InfoStack reuses its resolved
+  render model and unchanged fonts.
+- Queue Viewer uses bounded scan slices and constant-time visible-row selection
+  checks, while Album Art creates blurred backgrounds only when a blur-using
+  layout actually paints.
 - Configurable InfoStack tabs, titles, responsive font scaling, background and
   inactive-tab colour, including an explicit Columns UI global background mode.
 - Shared customisable colour for the two upper Album Art/Spectrum divider

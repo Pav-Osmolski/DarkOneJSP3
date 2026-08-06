@@ -104,11 +104,10 @@ function on_notify_data(name, info) {
 					font_changed = property_name.indexOf('DARKONEJSP3.DISPLAY.') === 0 &&
 						property_name.indexOf('DARKONEJSP3.DISPLAY.ACCENT.') !== 0;
 				}
-				if (font_changed) display_system.InitFonts();
+				if (font_changed) display_system.InitFonts(true);
 				if (accent_changed) {
 					display_system.InitColours();
 					display_system.setColours();
-					display_system.resetRenderedImages();
 				}
 				window.Repaint();
 			}

@@ -77,145 +77,11 @@ function darkOneCreateTintedSpriteRow(source, source_y, width, height, colour) {
 	}
 }
 
-// ----- BASE IMAGE OBJECT -----
-function BaseImage() {
-	this.image = null;
-	this.bitmap = null;
-	this.curVal = "";
-}
-
-BaseImage.prototype.reset = function() {
-	this.curVal = "";
-};
-
-BaseImage.prototype.commitBitmap = function() {
-	disposeImage(this.bitmap);
-	this.bitmap = DarkOnePerformance.toBitmap(this.image, false);
-};
-
-BaseImage.prototype.dispose = function() {
-	disposeImage(this.bitmap);
-	disposeImage(this.image);
-	this.bitmap = null;
-	this.image = null;
-};
-
-BaseImage.prototype.paint = function(gr, dx, dy, dw, dh) {
-	if (this.bitmap) {
-		gr.DrawBitmap(this.bitmap, dx, dy, dw, dh, 0, 0, this.bitmap.Width, this.bitmap.Height);
-	} else if (this.image) {
-		gr.DrawImage(this.image, dx, dy, dw, dh, 0, 0, this.image.Width, this.image.Height);
-	}
-};
-
-BaseImage.prototype.isDrawDigit = function(digitValue, index) {
-	return this.curVal == null || this.curVal == "" || digitValue != this.curVal.charAt(index);
-};
-
-function darkOneInheritImage(ctor) {
-	ctor.prototype = Object.create(BaseImage.prototype);
-	ctor.prototype.constructor = ctor;
-}
-
-// ----- CREATE TRACKNUMBER IMAGE -----
-function NumImage() {
-	BaseImage.call(this);
-	this.image = utils.CreateImage(216, 60);
-
-	this.init = function(curNo) {
-		var self = this;
-		darkOneUseImageGraphics(this.image, function (gr) {
-			for (var i = 0; i < 4; i++) self.drawDigit(gr, curNo, i);
-		});
-		this.curVal = curNo;
-		this.commitBitmap();
-	};
-
-	this.draw = function(curNo) {
-		if (this.curVal != curNo) this.init(curNo);
-	}
-
-	this.drawDigit = function(gr, curNo, index) {
-		var digitValue = curNo.charAt(index);
-
-		if (this.isDrawDigit(digitValue, index)) {
-			var xoffset = index * 54;
-			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, digitValue == " " ? 648 : digitValue * 54, 54, 60);
-		}
-	}
-}
-
-// ----- CREATE TIME IMAGE -----
-function TimeImage() {
-	BaseImage.call(this);
-	this.image = utils.CreateImage(360, 60);
-
-	this.init = function(time) {
-		var self = this;
-		darkOneUseImageGraphics(this.image, function (gr) {
-			for (var i = 0; i < 6; i++) self.drawDigit(gr, time, i < 2 ? i : i < 4 ? i + 1 : i + 2, i < 2 ? 0 : i < 4 ? -36 : -72);
-			display_system.drawMatrixSpriteToImage(gr, 108, 0, 18, 60, 702, 18, 60);
-			display_system.drawMatrixSpriteToImage(gr, 234, 0, 18, 60, 702, 18, 60);
-		});
-		this.curVal = time;
-		this.commitBitmap();
-	};
-
-	this.draw = function(time) {
-		if (this.curVal != time) this.init(time);
-	}
-
-	this.drawDigit = function(gr, time, index, offset) {
-		var digitValue = time.charAt(index);
-
-		if (this.isDrawDigit(digitValue, index)) {
-			var xoffset = index * 54 + offset;
-			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-			display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, isNaN(digitValue) ? 0 : digitValue * 54, 54, 60);
-		}
-	}
-}
-
-// ----- CREATE BITRATE IMAGE -----
-function BitrateImage() {
-	BaseImage.call(this);
-	this.image = utils.CreateImage(270, 60);
-
-	this.init = function(bitrate) {
-		var self = this;
-		darkOneUseImageGraphics(this.image, function (gr) {
-			for (var i = 0; i < 5; i++) self.drawDigit(gr, bitrate, i);
-		});
-		this.curVal = bitrate;
-		this.commitBitmap();
-	};
-
-	this.draw = function(bitrate) {
-		if (this.curVal != bitrate) this.init(bitrate);
-	}
-
-	this.drawDigit = function(gr, bitrate, index) {
-		var digitValue = bitrate.charAt(index);
-
-		if (this.isDrawDigit(digitValue, index)) {
-			var xoffset = index * 54;
-			gr.FillRectangle(xoffset, 0, 54, 60, p_backcol);
-
-			if (digitValue != " ") {
-				var tmp = digitValue * 54;
-				if (!isNaN(tmp)) display_system.drawMatrixSpriteToImage(gr, xoffset, 0, 54, 60, tmp, 54, 60);
-			}
-		}
-	}
-}
-
-// Attach the shared bitmap lifecycle and digit-comparison methods. BaseImage.call()
-// initialises instance state, while these prototype links provide reset(),
-// commitBitmap(), paint(), dispose() and isDrawDigit().
-darkOneInheritImage(NumImage);
-darkOneInheritImage(TimeImage);
-darkOneInheritImage(BitrateImage);
+// ----- DIRECT DOT-MATRIX RENDERING -----
+// Values are drawn directly from the cached Direct2D sprite sheet. Earlier
+// builds rebuilt mutable off-screen images and converted them to new device
+// bitmaps whenever time, bitrate or track numbers changed. Direct sprite draws
+// remove that steady resource churn while preserving the same source geometry.
 
 // ----- TITLE-FORMAT CACHE -----
 var tf_display_lossless = fb.TitleFormat("$if($stricmp(%__encoding%,lossless),1)");
@@ -287,7 +153,7 @@ function DisplaySystem() {
 		this.time_left = this.x + this.pxSize * 162;
 	}
 
-	this.InitFonts = function() {
+	this.InitFonts = function(force) {
 		var master_scale = typeof darkOneDisplayFontScale == 'function' ? darkOneDisplayFontScale() : 1.0;
 		var label_scale = typeof darkOneDisplayLabelFontScale == 'function' ? darkOneDisplayLabelFontScale() : 1.0;
 		var value_scale = typeof darkOneDisplayValueFontScale == 'function' ? darkOneDisplayValueFontScale() : 1.0;
@@ -295,14 +161,20 @@ function DisplaySystem() {
 		var label_weight = typeof darkOneDisplayLabelFontWeight == 'function' ? darkOneDisplayLabelFontWeight() : DWRITE_FONT_WEIGHT_BLACK;
 		var value_name = typeof darkOneDisplayValueFontName == 'function' ? darkOneDisplayValueFontName() : "Microsoft Sans Serif";
 		var value_weight = typeof darkOneDisplayValueFontWeight == 'function' ? darkOneDisplayValueFontWeight() : DWRITE_FONT_WEIGHT_NORMAL;
+		var label_size = Math.max(1, Math.round(this.pxSize * 7 * master_scale * label_scale));
+		var value_size = Math.max(1, Math.round(this.pxSize * 29 * master_scale * value_scale));
+		var font_key = [label_name, label_weight, label_size, value_name, value_weight, value_size].join('|');
+		if (!force && this.font_key === font_key && this.font_arial && this.font_serif) return false;
 
-		this.font_arial = darkOneCreateFont(label_name, Math.max(1, Math.round(this.pxSize * 7 * master_scale * label_scale)), 0, label_weight);
-		this.font_serif = darkOneCreateFont(value_name, Math.max(1, Math.round(this.pxSize * 29 * master_scale * value_scale)), 0, value_weight);
+		this.font_key = font_key;
+		this.font_arial = darkOneCreateFont(label_name, label_size, 0, label_weight);
+		this.font_serif = darkOneCreateFont(value_name, value_size, 0, value_weight);
 		this.value_label_widths = {};
 		for (var i = 0; i < DARKONE_DISPLAY_VALUE_LABELS.length; i++) {
 			this.value_label_widths[DARKONE_DISPLAY_VALUE_LABELS[i]] = darkOneCalcTextWidth(DARKONE_DISPLAY_VALUE_LABELS[i], this.font_arial);
 		}
 		this.value_label_widths["TIME REMAINING"] = darkOneCalcTextWidth("TIME REMAINING", this.font_arial);
+		return true;
 	}
 
 	this.traceMouse = function(x, y) {
@@ -322,10 +194,8 @@ function DisplaySystem() {
 
 	this.refreshAccentSprites = function() {
 		this.disposeAccentSprites();
-		this.matrix_source_image = g_matrix_source;
 		this.matrix_bitmap = g_matrix;
 		this.matrix_source_y = 0;
-		this.icon_source_image = g_icons_source;
 		this.icon_bitmap = g_icons;
 		this.icon_source_y = 0;
 
@@ -349,26 +219,18 @@ function DisplaySystem() {
 		this.custom_icons_bitmap = DarkOnePerformance.toBitmap(this.custom_icons_source, false);
 
 		if (this.custom_matrix_source && this.custom_matrix_bitmap) {
-			this.matrix_source_image = this.custom_matrix_source;
 			this.matrix_bitmap = this.custom_matrix_bitmap;
 		}
 		if (this.custom_icons_source && this.custom_icons_bitmap) {
-			this.icon_source_image = this.custom_icons_source;
 			this.icon_bitmap = this.custom_icons_bitmap;
 		}
 	};
 
-	// Direct panel painting uses cached Direct2D bitmaps. Mutable off-screen
-	// digit images must compose from IJSImage sources via DrawImage; using a
-	// device bitmap on an image graphics target can silently produce no glyphs.
+	// Direct panel painting uses cached Direct2D bitmaps. Values are composed
+	// from sprite-sheet source rectangles without rebuilding mutable images.
 	this.drawMatrixSprite = function(gr, dx, dy, dw, dh, sx, sw, sh) {
 		if (!this.matrix_bitmap) return;
 		gr.DrawBitmap(this.matrix_bitmap, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
-	};
-
-	this.drawMatrixSpriteToImage = function(gr, dx, dy, dw, dh, sx, sw, sh) {
-		if (!this.matrix_source_image) return;
-		gr.DrawImage(this.matrix_source_image, dx, dy, dw, dh, sx, this.matrix_source_y, sw, sh);
 	};
 
 	this.drawVolumeMatrix = function(gr, volume) {
@@ -395,11 +257,33 @@ function DisplaySystem() {
 		gr.DrawBitmap(bitmap, dx, dy, dw, dh, sx, source_y, 54, 36, active ? 1.0 : 0.02);
 	};
 
-	this.resetRenderedImages = function() {
-		if (!this.images) return;
-		for (var i = 0; i < this.images.length; i++) {
-			if (this.images[i]) this.images[i].reset();
-		}
+	this.drawMatrixDigit = function(gr, character, dx, dy, dw, dh) {
+		var source_x = -1;
+		if (character >= '0' && character <= '9') source_x = Number(character) * 54;
+		else if (character == '-') source_x = 738;
+		if (source_x >= 0) this.drawMatrixSprite(gr, dx, dy, dw, dh, source_x, 54, 60);
+	};
+
+	this.drawTrackNumberMatrix = function(gr, text, base_x) {
+		var unit = this.pxSize / 3;
+		for (var i = 0; i < 4; i++)
+			this.drawMatrixDigit(gr, text.charAt(i), base_x + i * 54 * unit, this.img_y, 54 * unit, this.img_h);
+	};
+
+	this.drawTimeMatrix = function(gr, text, base_x) {
+		var unit = this.pxSize / 3;
+		var text_indexes = [0, 1, 3, 4, 6, 7];
+		var x_offsets = [0, 54, 126, 180, 252, 306];
+		for (var i = 0; i < text_indexes.length; i++)
+			this.drawMatrixDigit(gr, text.charAt(text_indexes[i]), base_x + x_offsets[i] * unit, this.img_y, 54 * unit, this.img_h);
+		this.drawMatrixSprite(gr, base_x + 108 * unit, this.img_y, 18 * unit, this.img_h, 702, 18, 60);
+		this.drawMatrixSprite(gr, base_x + 234 * unit, this.img_y, 18 * unit, this.img_h, 702, 18, 60);
+	};
+
+	this.drawBitrateMatrix = function(gr, text, base_x) {
+		var unit = this.pxSize / 3;
+		for (var i = 0; i < 5; i++)
+			this.drawMatrixDigit(gr, text.charAt(i), base_x + i * 54 * unit, this.img_y, 54 * unit, this.img_h);
 	};
 
 	this.InitColours = function() {
@@ -435,7 +319,6 @@ function DisplaySystem() {
 		if (custom_colour != null) window.SetProperty(DARKONE_DISPLAY_CUSTOM_COLOUR_PROPERTY, Number(custom_colour));
 		this.InitColours();
 		this.setColours();
-		this.resetRenderedImages();
 	}
 
 	this.setDisplayStyle = function(style) {
@@ -444,28 +327,11 @@ function DisplaySystem() {
 		if (this.display_style == style) return false;
 
 		this.display_style = style;
-		this.InitImages();
 		this.init();
 		window.Repaint();
 		return true;
 	};
 
-	this.InitImages = function() {
-		if (this.images) {
-			for (var i = 0; i < this.images.length; i++) {
-				if (this.images[i]) this.images[i].dispose();
-			}
-		}
-
-		this.images = [];
-
-		if (this.display_style == 1) {
-			this.images[0] = new NumImage();
-			this.images[1] = new NumImage();
-			this.images[2] = new TimeImage();
-			this.images[3] = new BitrateImage();
-		}
-	};
 
 	this.setColours = function() {
 		this.Colours = [];
@@ -567,10 +433,8 @@ function DisplaySystem() {
 		if (this.display_style == 1) {
 			if (fb.IsPlaying) {
 				if (this.Trackinfo) {
-					this.images[0].draw(this.TrackNo);
-					this.images[0].paint(gr, this.x, this.img_y, this.pxSize * 72, this.img_h);
-					this.images[1].draw(this.TotalNo);
-					this.images[1].paint(gr, this.x + this.pxSize * 72, this.img_y, this.pxSize * 72, this.img_h);
+					this.drawTrackNumberMatrix(gr, this.TrackNo, this.x);
+					this.drawTrackNumberMatrix(gr, this.TotalNo, this.x + this.pxSize * 72);
 				} else {
 					this.drawMatrixSprite(gr, this.x, this.img_y, this.pxSize * 104, this.img_h, 1260, 312, 60);
 				}
@@ -584,14 +448,12 @@ function DisplaySystem() {
 					var g = t_rem && fb.PlaybackLength < 0 ? false : true;
 					if (g) {
 						var t = t_rem ? this.Remain : this.Elapse;
-						this.images[2].draw(t);
-						this.images[2].paint(gr, this.time_left, this.img_y, this.pxSize * 120, this.img_h);
+						this.drawTimeMatrix(gr, t, this.time_left);
 					} else {
 						this.drawMatrixSprite(gr, this.time_left, this.img_y, this.pxSize * 116, this.img_h, 900, 348, 60);
 					}
 
-					this.images[3].draw(this.Bitrate);
-					this.images[3].paint(gr, this.x + this.pxSize * 282, this.img_y, this.pxSize * 90, this.img_h);
+					this.drawBitrateMatrix(gr, this.Bitrate, this.x + this.pxSize * 282);
 				}
 			}
 		} else {
@@ -653,11 +515,6 @@ function DisplaySystem() {
 			this.setTrackNo();
 			this.setPBTime();
 			this.setBitrate();
-			if (this.images) {
-				for (var i = 0; i < this.images.length; i++) {
-					if (this.images[i]) this.images[i].reset();
-				}
-			}
 		}
 		window.Repaint();
 	}
@@ -666,8 +523,6 @@ function DisplaySystem() {
 		darkOneDisplayVolumeCadence.dispose();
 		volume_change_deadline.cancel();
 		volume_repaint.cancel();
-		if (this.images) for (var i = 0; i < this.images.length; i++) if (this.images[i]) this.images[i].dispose();
-		this.images = [];
 		this.font_arial = null;
 		this.font_serif = null;
 		this.value_label_widths = null;
@@ -683,7 +538,6 @@ function DisplaySystem() {
 	};
 
 	this.InitColours();
-	this.InitImages();
 	this.init();
 }
 

@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Album Art - Enhanced"
-// @version "0.1.0"
+// @version "0.1.1"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"

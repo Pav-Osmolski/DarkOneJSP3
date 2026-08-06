@@ -1,5 +1,5 @@
 {
-  "version": "0.9.29",
+  "version": "0.9.31",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -674,7 +674,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.6.5",
+      "version": "0.7.1",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -719,7 +719,14 @@
       "bottom_area_one_time_initialisation_tests": true,
       "bottom_area_divider_only_efficiency_tests": true,
       "waveform_reset_scope_tests": true,
-      "album_art_unload_bitmap_disposal_tests": true
+      "album_art_unload_bitmap_disposal_tests": true,
+      "playlist_visible_row_reuse_tests": true,
+      "playlist_selection_state_cache_tests": true,
+      "display_direct_sprite_rendering_tests": true,
+      "control_resize_reuse_tests": true,
+      "queue_scan_budget_tests": true,
+      "info_stack_render_model_cache_tests": true,
+      "album_art_lazy_blur_tests": true
     },
     "rendering_optimisation": {
       "version": "0.1.4",
@@ -819,7 +826,7 @@
         "DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR"
       ],
       "runtime_tests": true,
-      "version": "0.2.5",
+      "version": "0.2.6",
       "state_transport": "runtime-generated UTF-8 state file",
       "state_file": "js_data/darkonejsp3.bottom-area-state.txt",
       "state_file_packaged": false,
@@ -849,6 +856,20 @@
       "saved_background_applied_before_first_paint": true,
       "divider_only_changes_skip_jscript_visual_rebuild": true,
       "obsolete_jscript_file_sync_removed": true
+    },
+    "rendering_efficiency_v0930": {
+      "js_playlist_selection_and_playback_state_cached": true,
+      "js_playlist_visible_rows_reused": true,
+      "js_playlist_column_geometry_cached": true,
+      "control_button_geometry_reused_on_resize": true,
+      "display_dot_matrix_direct_sprite_rendering": true,
+      "display_font_key_cache": true,
+      "queue_selection_lookup_constant_time": true,
+      "queue_scan_budget_ms": 5,
+      "queue_scan_yield_ms": 5,
+      "info_stack_render_model_cached": true,
+      "playlist_manager_paint_uses_count_snapshot": true,
+      "album_art_blur_generated_on_demand": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

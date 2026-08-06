@@ -228,7 +228,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.6.5',
+            'version': '0.7.1',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -366,7 +366,7 @@ def run(ctx: ValidationContext) -> None:
             'background_default': 'DarkOne grey',
             'divider_default': 'DarkOne dark grey',
             'quick_search_frame_unchanged': True,
-            'version': '0.2.5',
+            'version': '0.2.6',
             'transparent_resolved_colour': 'DarkOne dark grey RGB 24,24,24',
             'transparent_cross_host_uniformity': True,
             'full_background_mode_matrix_validated': True,
@@ -687,16 +687,16 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.6.1"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.1')
+        if '// @version "0.6.2"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.2')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
             errors.append('DarkOneJSP3 Queue Viewer standalone reset imports are incomplete')
 
     generic_queue_entry = samples / 'Queue Viewer.txt'
-    if generic_queue_entry.exists() and '// @version "0.6.1"' not in text(generic_queue_entry):
-        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.1')
+    if generic_queue_entry.exists() and '// @version "0.6.2"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.2')
 
     queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
     if queue_source.exists():
@@ -977,7 +977,7 @@ def run(ctx: ValidationContext) -> None:
         album_art_body = text(album_art_entry)
         for token in [
             '// @name "Album Art - Enhanced"',
-            '// @version "0.1.0"',
+            '// @version "0.1.1"',
             '// @author "marc2003 / DeViLhoOD"',
             'albumart.dispose();',
         ]:
@@ -1050,8 +1050,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.0"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.0')
+        if '// @version "0.6.1"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.1')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1153,9 +1153,14 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'g_playlist_render_cache.getConfigured(this.track_index, forceFresh, paintState.dynamicGeneration)',
             'g_playlist_render_cache.configure(g_tf_pattern, secondaryPattern, lovedSync);',
-            'dynamicGeneration: g_playlist_dynamic_generation',
-            'var paintState = {',
+            'paintState.dynamicGeneration = g_playlist_dynamic_generation;',
+            'var paintState = g_playlist_paint_state;',
             'this.repaintTrack = function (trackIndex)',
+            'this.refreshSelectionCache = function ()',
+            'item.is_selected = item.type == 0 && plman.IsPlaylistItemSelected(',
+            'this.allowItemReuse && !forceFocus',
+            'var reusable = {};',
+            'this.buildPaintColumns = function ()',
         ]:
             if token not in body:
                 errors.append('JS Playlist row-cache optimisation is missing: ' + token)
@@ -1174,7 +1179,9 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_header)
         for token in [
             'this.columnsDirty = true;',
+            'this.columnsVersion = 0;',
             'if (!this.columnsDirty) return;',
+            'this.columnsVersion++;',
             'this.invalidateColumns();',
         ]:
             if token not in body:
@@ -1202,19 +1209,29 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'DarkOnePerformance.toBitmap(g_matrix_source, false)',
             'DarkOnePerformance.toBitmap(g_icons_source, false)',
-            'BaseImage.prototype.commitBitmap = function()',
-            'gr.DrawBitmap(this.bitmap,',
-            'this.drawMatrixSpriteToImage = function(',
-            'gr.DrawImage(this.matrix_source_image,',
+            'this.drawMatrixSprite = function(',
+            'gr.DrawBitmap(this.matrix_bitmap,',
+            'this.drawMatrixDigit = function(',
+            'this.drawTrackNumberMatrix = function(',
+            'this.drawTimeMatrix = function(',
+            'this.drawBitrateMatrix = function(',
             'this.setDisplayStyle = function(style)',
+            'if (!force && this.font_key === font_key',
             'this.value_label_widths = {};',
             'this.value_label_widths[valueLabel]',
         ]:
             if token not in body:
                 errors.append('Display bitmap/measurement optimisation is missing: ' + token)
-        object_prefix = body.split('// ----- TITLE-FORMAT CACHE -----', 1)[0]
-        if 'display_system.drawMatrixSprite(gr,' in object_prefix:
-            errors.append('Display off-screen digit composition still uses the panel bitmap path')
+        for obsolete in [
+            'function BaseImage()',
+            'function NumImage()',
+            'function TimeImage()',
+            'function BitrateImage()',
+            'this.drawMatrixSpriteToImage = function(',
+            'this.InitImages = function()',
+        ]:
+            if obsolete in body:
+                errors.append('Display retains an obsolete composite-bitmap path: ' + obsolete)
 
     display_panel = project / 'jscript' / 'js' / 'Panel_Display.js'
     if display_panel.exists():
@@ -1252,8 +1269,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.5"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.5')
+        if '// @version "0.5.6"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.6')
         if 'samples\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
         if 'samples\\shared\\ui_cadence.js' not in body:
@@ -1479,8 +1496,8 @@ def run(ctx: ValidationContext) -> None:
         # however, every referenced repository image must also be present.
         repository_only_assets = {
             'assets/darkonejsp3-logo.png',
-            'assets/darkonejsp3-screenshot-main.jpg',
-            'assets/darkonejsp3-screenshot-albumnotes.jpg',
+            'assets/darkonejsp3-screenshot-main.webp',
+            'assets/darkonejsp3-screenshot-albumnotes.webp',
         }
         readme_targets = re.findall(r'\[[^\]]+\]\(([^)]+)\)', readme_body)
         readme_targets += re.findall(r'<img\s+[^>]*src=["\']([^"\']+)', readme_body, re.I)
@@ -1715,9 +1732,10 @@ def run(ctx: ValidationContext) -> None:
             'DarkOneColour.normaliseMode(',
             'DarkOneColour.columnsUi(4, DARKONE_DISPLAY_DEFAULT_BLUE)',
             'if (this.accent_mode == DARKONE_DISPLAY_ACCENT_DEFAULT) return;',
-            'darkOneInheritImage(NumImage);',
-            'darkOneInheritImage(TimeImage);',
-            'darkOneInheritImage(BitrateImage);',
+            'this.refreshAccentSprites = function()',
+            'this.custom_matrix_bitmap = DarkOnePerformance.toBitmap(',
+            'this.custom_icons_bitmap = DarkOnePerformance.toBitmap(',
+            'this.drawStatusIcon = function(',
         ]:
             if token not in body:
                 errors.append('Display selected-item accent is missing: ' + token)
@@ -2181,8 +2199,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Display volume-cadence follower is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.20-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.25-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.21-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.26-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():
@@ -2284,6 +2302,152 @@ def run(ctx: ValidationContext) -> None:
         for forbidden in ['new VolumeImage()', 'this.images[4]', 'function VolumeImage()']:
             if forbidden in body:
                 errors.append('Display still rebuilds an off-screen volume bitmap while dragging: ' + forbidden)
+
+        # Calls made through the shared configuration helper must exist on the
+        # real DisplaySystem implementation. Runtime mocks must not invent APIs
+        # that were removed by later rendering optimisations.
+        config_global = project / 'jscript' / 'js' / 'Config_Global_Script.js'
+        if config_global.exists():
+            config_body = text(config_global)
+            exported_methods = set(re.findall(r'this\.([A-Za-z_$][\w$]*)\s*=\s*function\s*\(', body))
+            called_methods = set(re.findall(r'display_system\.([A-Za-z_$][\w$]*)\s*\(', config_body))
+            missing_methods = sorted(called_methods - exported_methods)
+            for method in missing_methods:
+                errors.append('Config_Global_Script calls missing DisplaySystem method: ' + method)
+            if 'resetRenderedImages' in config_body:
+                errors.append('Config_Global_Script retains the removed composite-image cache API: resetRenderedImages')
+
+    # v0.9.30 rendering and allocation hot-path invariants.
+    if js_playlist_rows.exists():
+        body = text(js_playlist_rows)
+        for token in [
+            'var is_item_selected = this.type == 0 && this.is_selected;',
+            'this.refreshSelectionCache = function ()',
+            'this.allowItemReuse = true;',
+            'reusable[oldKey] = oldItem;',
+            'item = reusable[key];',
+            'paintState.columns = this.buildPaintColumns();',
+            'var cacheKey = p.headerBar.columnsVersion',
+            'if (this.paintColumnsKey == cacheKey) return this.paintColumns;',
+            'this.group_width_font_key',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist hot-path cache/reuse optimisation is missing: ' + token)
+        draw_start = body.find('this.draw = function (gr) {', body.find('function oList'))
+        draw_end = body.find('\n\tthis.isHoverObject', draw_start)
+        draw_body = body[draw_start:draw_end] if draw_start >= 0 and draw_end > draw_start else ''
+        for forbidden in ['plman.IsPlaylistItemSelected(', 'plman.GetPlayingItemLocation(']:
+            if forbidden in draw_body:
+                errors.append('JS Playlist draw path retains a native per-frame call: ' + forbidden)
+        item_check_start = body.find('this.check = function (event, x, y)', body.find('function oItem'))
+        item_check_end = body.find('\nfunction oList', item_check_start)
+        item_check_body = body[item_check_start:item_check_end] if item_check_start >= 0 and item_check_end > item_check_start else ''
+        if 'plman.IsPlaylistItemSelected(' in item_check_body:
+            errors.append('JS Playlist mouse path retains per-row native selection lookups')
+
+    playlist_main = samples / 'jsplaylist' / 'main.js'
+    if playlist_main.exists():
+        body = text(playlist_main)
+        for token in [
+            'var g_playlist_paint_state = {',
+            'function update_playlist_playback_state()',
+            'g_playlist_paint_state.playingPlaylist =',
+            'if (p.list) p.list.refreshSelectionCache();',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist playback/selection state cache is missing: ' + token)
+
+    button_common = project / 'jscript' / 'js' / 'Buttons_CommonButtonOptions.js'
+    text_button = project / 'jscript' / 'js' / 'Object_Textbutton.js'
+    if button_common.exists():
+        body = text(button_common)
+        for token in ['btn_font_key', 'if (font_key != btn_font_key || !btn_font)']:
+            if token not in body:
+                errors.append('Control-button font reuse is missing: ' + token)
+    if text_button.exists() and 'this.updateLayout = function(x, y, w, h, size_options)' not in text(text_button):
+        errors.append('TextButton geometry reuse is missing')
+    for path in control_panels:
+        if path.exists():
+            body = text(path)
+            for token in ['function buttonsLayout()', 'if (Buttons.a_0) buttonsLayout();']:
+                if token not in body:
+                    errors.append(rel(path) + ' does not reuse existing button objects during resize: ' + token)
+    if volume_knob.exists() and 'this.updateLayout = function(x, y, w, h)' not in text(volume_knob):
+        errors.append('Volume knob geometry reuse is missing')
+    if right_control.exists():
+        body = text(right_control)
+        for token in ['if (volknob) volknob.dispose();', 'volknob.updateLayout(']:
+            if token not in body:
+                errors.append('Control Right volume-knob lifecycle optimisation is missing: ' + token)
+
+    queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
+    if queue_source.exists():
+        body = text(queue_source)
+        for token in [
+            'this.selected_lookup = {};',
+            'this.rebuild_selection_lookup = function ()',
+            'return !!this.selected_lookup[index];',
+            'var budgetMs = 5;',
+            'var batchSize = 16;',
+            '}, 5);',
+        ]:
+            if token not in body:
+                errors.append('Queue Viewer scan/selection optimisation is missing: ' + token)
+        if 'return this.selected_indices.indexOf(index) !== -1;' in body:
+            errors.append('Queue Viewer retains linear per-row selection lookup')
+
+    manager_source = samples / 'smooth' / 'jsspm.js'
+    if manager_source.exists():
+        body = text(manager_source)
+        draw_start = body.find('this.draw = function (gr)')
+        draw_end = body.find('\n\tthis.', draw_start + 20)
+        draw_body = body[draw_start:draw_end] if draw_start >= 0 and draw_end > draw_start else ''
+        if 'plman.PlaylistCount' in draw_body:
+            errors.append('Smooth Playlist Manager draw path still reads PlaylistCount')
+        if 'var total = this.playlistCountSnapshot;' not in body:
+            errors.append('Smooth Playlist Manager does not use its callback-maintained playlist count')
+
+    info_stack = project / 'jsplitter' / '03_info_stack_tabs.js'
+    if info_stack.exists():
+        body = text(info_stack)
+        for token in [
+            'var infoStackRenderModel = {',
+            'function rebuildInfoStackRenderModel()',
+            'var visible = infoStackRenderModel.visible;',
+            'var rects = infoStackRenderModel.rects;',
+            'var infoStackFontKey =',
+            'if (!force && key === infoStackFontKey) return false;',
+        ]:
+            if token not in body:
+                errors.append('InfoStack render-model/font cache is missing: ' + token)
+        paint_start = body.find('function on_paint(gr)')
+        paint_end = body.find('\nfunction ', paint_start + 10)
+        paint_body = body[paint_start:paint_end] if paint_start >= 0 and paint_end > paint_start else ''
+        for forbidden in ['visibleIndexes()', 'tabLabel(', 'backgroundColour()', 'tabAccentColour()']:
+            if forbidden in paint_body:
+                errors.append('InfoStack paint path retains uncached property/layout work: ' + forbidden)
+
+    albumart_source = samples / 'js' / 'albumart.js'
+    if albumart_source.exists():
+        body = text(albumart_source)
+        for token in [
+            'this.ensure_blur = function ()',
+            'if (this.is_review_panel)\n\t\t\tthis.ensure_blur();',
+            'this.cancel_blur_generation = function ()',
+            'this.blur_source = img;',
+            'source.StackBlur(120);',
+            'this.cancel_blur_generation();',
+        ]:
+            if token not in body:
+                errors.append('Album Art lazy-blur lifecycle is missing: ' + token)
+        metadb_start = body.find('this.metadb_changed = function ()')
+        metadb_end = body.find('\n\tthis.move = function', metadb_start)
+        metadb_body = body[metadb_start:metadb_end] if metadb_start >= 0 and metadb_end > metadb_start else ''
+        if 'img.StackBlur(' in metadb_body:
+            errors.append('Album Art still performs blur generation synchronously during metadata changes')
+    text_display = samples / 'js' / 'text_display.js'
+    if text_display.exists() and 'albumart.ensure_blur();' not in text(text_display):
+        errors.append('Text Display does not request Album Art blur lazily')
 
     ctx.version = version
     ctx.build = build

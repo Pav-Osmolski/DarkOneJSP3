@@ -191,7 +191,6 @@ function darkOneApplyBottomAreaAppearance() {
     if (typeof display_system != 'undefined' && display_system) {
         display_system.InitColours();
         display_system.setColours();
-        display_system.resetRenderedImages();
     }
     try { window.Repaint(); } catch (e) {}
 }

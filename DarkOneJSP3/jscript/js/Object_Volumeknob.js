@@ -39,6 +39,15 @@ function VolumeKnob(x, y, w, h, options) {
 		}
 	});
 
+	this.updateLayout = function(x, y, w, h) {
+		this.left = x;
+		this.top = y;
+		this.w = w;
+		this.h = h;
+		this.right = x + w;
+		this.bottom = y + h;
+	};
+
 	this.traceMouse = function(x, y) {
 		return x >= this.left && x <= this.right && y >= this.top && y <= this.bottom;
 	}

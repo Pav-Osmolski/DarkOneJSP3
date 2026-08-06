@@ -1,6 +1,58 @@
 DarkOneJSP3 Changelog
 =====================
 
+v0.9.31 - Display startup regression hotfix
+-------------------------------------------
+
+- Fixed the Display panel failing during bottom-area appearance initialisation
+  because Config_Global_Script.js still called the removed
+  `DisplaySystem.resetRenderedImages()` composite-cache API.
+- Removed the obsolete call; the optimised direct-sprite Display path now refreshes
+  through its current `InitColours()` and `setColours()` methods only.
+- Corrected the bottom-area runtime test so it no longer supplies a mock method
+  that does not exist on the real DisplaySystem implementation.
+- Added static API validation that compares every `display_system` method called by
+  Config_Global_Script.js with methods actually exported by Object_DisplaySystem.js.
+- Advanced Display to 3.0.25, shared bottom-area appearance to 0.2.6 and the
+  release validator to 0.7.1.
+
+v0.9.30 - Rendering performance and allocation optimisation
+-----------------------------------------------------------
+
+- Cached JS Playlist selection and playback state outside the row paint path,
+  removing native playlist-manager calls from every visible-row draw and mouse
+  move.
+- Reused JS Playlist visible-row objects during sequential scrolling and cached
+  resolved column geometry until the header layout, row height or rating width
+  changes. Group-header right-field measurements are now retained until their
+  fonts change.
+- Reused existing control-panel TextButton and VolumeKnob instances during
+  window resizing, added geometry-update methods and cached unchanged control
+  fonts. Style/property changes still rebuild resources deliberately.
+- Replaced mutable Dot Matrix number/time/bitrate image rebuilding with direct
+  source-rectangle draws from cached Direct2D sprite sheets. Display fonts and
+  value-label measurements are now recreated only when their effective key
+  changes.
+- Changed Queue Viewer visible-row selection checks to a constant-time lookup
+  and reduced large source scans to 5 ms work slices with a 5 ms yield and
+  batched elapsed-time checks.
+- Cached the InfoStack visible tabs, labels, rectangles, resolved background and
+  inactive accent colour, and reused the tab font when its effective size is
+  unchanged.
+- Removed Playlist Manager PlaylistCount reads from its paint path in favour of
+  the callback-maintained snapshot.
+- Deferred Album Art blur generation until a blur-using layout actually paints,
+  coalesced repeated demand and added cancellation/disposal for pending blur
+  sources and timers.
+- Expanded release validation for native-call-free playlist painting, row and
+  geometry reuse, control resize reuse, direct Dot Matrix rendering, font
+  caches, Queue Viewer scan budgets, InfoStack render-model caching and lazy
+  Album Art blur lifecycle.
+- Advanced Control Left to 3.0.21, Control Right to 3.0.26, Display to 3.0.24,
+  Queue Viewer to 0.6.2, JS Playlist to 0.6.1, Playlist Manager to 0.5.6, Album
+  Art to 0.1.1, InfoStack controller to 0.6.26 and the release validator to
+  0.7.0.
+
 v0.9.29 - Release hardening and runtime efficiency
 --------------------------------------------------
 

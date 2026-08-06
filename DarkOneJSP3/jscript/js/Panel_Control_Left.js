@@ -23,6 +23,18 @@ function buttonsRefresh() {
 	for (var j = 0; j < 8; j++) if (b_btns[j].Exists) Buttons["b_" + j] = new TextButton(b_btns[j].Text.toUpperCase(), OptBtnCmd, padX + bxf * (j < 5 ? (j * 2 + 3) : (j * 2 - 3)), j < 5 ? padY : by1, bbw, bbh, btn1Siz, btn1Opt, btnsCol, "", b_btns[j]);
 }
 
+function buttonsLayout() {
+	var qx = [0, rbx, 0, bxf * 3, bxf * 5, rbx];
+	for (var i = 0; i < 6; i++) {
+		var primary = Buttons["a_" + i];
+		if (primary) primary.updateLayout(padX + qx[i], i > 1 ? by1 : padY, bbw, bbh, i > 1 ? btn1Siz : btn2Siz);
+	}
+	for (var j = 0; j < 8; j++) {
+		var optional = Buttons["b_" + j];
+		if (optional) optional.updateLayout(padX + bxf * (j < 5 ? (j * 2 + 3) : (j * 2 - 3)), j < 5 ? padY : by1, bbw, bbh, btn1Siz);
+	}
+}
+
 // ----- CREATE BUTTON MENU -----
 
 function getButtonMenu(x, y) {
@@ -120,7 +132,8 @@ function on_size() {
 	wh = window.Height;
 	i_size = ww / 105 * 3 * (typeof darkOneIconScale == 'function' ? darkOneIconScale() : 1.0);
 	buttonsSizes();
-	buttonsRefresh();
+	if (Buttons.a_0) buttonsLayout();
+	else buttonsRefresh();
 	darkOneRequestBottomAreaState();
 }
 

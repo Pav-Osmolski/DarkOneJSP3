@@ -49,6 +49,43 @@ function _albumart(x, y, w, h) {
 		this.pending_id = -1;
 	}
 
+
+	this.cancel_blur_generation = function () {
+		if (this.blur_timer) {
+			window.ClearTimeout(this.blur_timer);
+			this.blur_timer = 0;
+		}
+
+		if (this.blur_source) {
+			this.blur_source.Dispose();
+			this.blur_source = null;
+		}
+	}
+
+	this.ensure_blur = function () {
+		if (this.bitmap.blur || !this.blur_source || this.blur_timer)
+			return;
+
+		var self = this;
+		this.blur_timer = window.SetTimeout(function () {
+			self.blur_timer = 0;
+			var source = self.blur_source;
+			self.blur_source = null;
+			if (!source)
+				return;
+
+			try {
+				source.StackBlur(120);
+				self.bitmap.blur = source.CreateBitmap();
+			} catch (e) {
+				console.log('[Album Art - Enhanced] Could not create blurred artwork: ' + e.message);
+			} finally {
+				source.Dispose();
+			}
+			window.Repaint();
+		}, 1);
+	}
+
 	this.commit_artwork_id = function (id) {
 		this.cancel_wheel_selection();
 
@@ -178,11 +215,11 @@ function _albumart(x, y, w, h) {
 			this.bitmap.normal = img.CreateBitmap();
 
 			if (this.want_blur()) {
-				img.StackBlur(120);
-				this.bitmap.blur = img.CreateBitmap();
+				// Defer expensive blur work until a blur-using layout actually paints.
+				this.blur_source = img;
+			} else {
+				img.Dispose();
 			}
-
-			img.Dispose();
 		}
 
 		window.Repaint();
@@ -210,6 +247,12 @@ function _albumart(x, y, w, h) {
 	}
 
 	this.paint = function (gr) {
+		// Legacy saved AllMusic review entries call albumart.paint() but do not
+		// explicitly request the deferred blur introduced in v0.1.1. Keep that
+		// path compatible by treating review-panel painting as blur demand.
+		if (this.is_review_panel)
+			this.ensure_blur();
+
 		if (!this.bitmap.normal)
 			return;
 
@@ -221,6 +264,7 @@ function _albumart(x, y, w, h) {
 	}
 
 	this.reset_images = function () {
+		this.cancel_blur_generation();
 		if (this.bitmap.normal) {
 			this.bitmap.normal.Dispose();
 			this.bitmap.normal = null;
@@ -366,6 +410,8 @@ function _albumart(x, y, w, h) {
 	this.pending_id = -1;
 	this.wheel_timer = 0;
 	this.wheel_debounce_ms = 80;
+	this.blur_timer = 0;
+	this.blur_source = null;
 	this.help_text = utils.ReadUTF8(fb.ComponentPath + 'samples\\text\\albumart_help');
 
 	this.bitmap = {

@@ -537,10 +537,6 @@ function oBrowser() {
 	this.draw = function (gr) {
 		drawBackground(gr)
 
-		if (this.playlistCountSnapshot != plman.PlaylistCount) {
-			this.populate();
-		}
-
 		this.getlimits();
 
 		if (this.rows.length > 0) {
@@ -596,7 +592,7 @@ function oBrowser() {
 		this.scrollbar.draw(gr);
 
 		if (ppt.showHeaderBar) {
-			var total = plman.PlaylistCount;
+			var total = this.playlistCountSnapshot;
 			var boxText = this.rows.length == total ? String(total) : this.rows.length + " of " + total;
 			boxText += total == 1 ? " playlist" : " playlists";
 			draw_header_bar(gr, boxText, this);

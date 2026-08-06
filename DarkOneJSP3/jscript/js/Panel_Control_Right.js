@@ -54,7 +54,22 @@ function buttonsRefresh() {
 	qx = [0, bxf * 3, bxf * 5, bxf * 7, bxf * 9, bxf * 11, rbx, 0, 0];
 	for (var i = 0; i < 9; i++) Buttons["a_" + i] = new TextButton(a_name[i], a_func[i], padX + qx[i], i == 7 ? by1 : i == 8 ? by2 : padY, bbw, bbh, i < 7 ? btn2Siz : btn1Siz, i < 7 ? btn2Opt : btn1Opt, btnsCol);
 	for (var j = 0; j < 10; j++) if (b_btns[j].Exists) Buttons["b_" + j] = new TextButton(b_btns[j].Text.toUpperCase(), OptBtnCmd, padX + bxf * (j < 5 ? (j * 2 + 3) : (j * 2 - 7)), j < 5 ? by1 : by2, bbw, bbh, btn1Siz, btn1Opt, btnsCol, "", b_btns[j]);
+	if (volknob) volknob.dispose();
 	volknob = new VolumeKnob(padX + rbx, wh - area / 8 - padY, bbw, bbw, vknbOpt);
+}
+
+function buttonsLayout() {
+	qx = [0, bxf * 3, bxf * 5, bxf * 7, bxf * 9, bxf * 11, rbx, 0, 0];
+	for (var i = 0; i < 9; i++) {
+		var primary = Buttons["a_" + i];
+		if (primary) primary.updateLayout(padX + qx[i], i == 7 ? by1 : i == 8 ? by2 : padY, bbw, bbh, i < 7 ? btn2Siz : btn1Siz);
+	}
+	for (var j = 0; j < 10; j++) {
+		var optional = Buttons["b_" + j];
+		if (optional) optional.updateLayout(padX + bxf * (j < 5 ? (j * 2 + 3) : (j * 2 - 7)), j < 5 ? by1 : by2, bbw, bbh, btn1Siz);
+	}
+	if (volknob) volknob.updateLayout(padX + rbx, wh - area / 8 - padY, bbw, bbw);
+	else volknob = new VolumeKnob(padX + rbx, wh - area / 8 - padY, bbw, bbw, vknbOpt);
 }
 
 // ----- CREATE BUTTON MENU -----
@@ -111,7 +126,8 @@ function on_size() {
 	wh = window.Height;
 	i_size = ww / 105 * 3 * (typeof darkOneIconScale == 'function' ? darkOneIconScale() : 1.0);
 	buttonsSizes();
-	buttonsRefresh();
+	if (Buttons.a_0) buttonsLayout();
+	else buttonsRefresh();
 	darkOneRequestBottomAreaState();
 }
 

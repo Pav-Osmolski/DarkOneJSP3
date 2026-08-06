@@ -36,6 +36,29 @@ function TextButton(text, func, x, y, w, h, size_options, options, colours, tipt
 	this.funcOption = funcOption;
 	this.state = ButtonStates.normal;
 
+	this.updateLayout = function(x, y, w, h, size_options) {
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+
+		var names = "text_x_margin;text_y_margin;func_left_pad;func_top_pad;func_right_pad;func_bottom_pad".split(";");
+		for (var i = 0; i < names.length; i++)
+			this[names[i]] = size_options && size_options[names[i]] != null ? size_options[names[i]] : 0;
+
+		this.left = this.x + this.func_left_pad;
+		this.top = this.y + this.func_top_pad;
+		this.w_ = this.w - this.func_left_pad - this.func_right_pad;
+		this.h_ = this.h - this.func_top_pad - this.func_bottom_pad;
+		this.right = this.x + this.w - this.func_right_pad;
+		this.bottom = this.y + this.h - this.func_bottom_pad;
+
+		var diameter = Math.floor(Math.min(this.w_ - this.line_width, this.h_ - this.line_width) / 2);
+		this.arc_size = size_options && size_options.arc_size != null
+			? Math.min(diameter, size_options.arc_size)
+			: Math.min(diameter, Math.min(this.w, this.h) / 6);
+	}
+
 	this.traceMouse = function(x, y) {
 		if (this.state == ButtonStates.hide) return false;
 

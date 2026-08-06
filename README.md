@@ -1,8 +1,8 @@
 ![Version](https://img.shields.io/github/v/release/Pav-Osmolski/DarkOneJSP3?display_name=release&style=flat-square)
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2.x-1f6feb?style=flat-square)
 ![Architecture](https://img.shields.io/badge/Architecture-64--bit-555555?style=flat-square)
-![JScript Panel 3.8.5](https://img.shields.io/badge/JScript%20Panel%203-Required-8a2be2?style=flat-square)
-![JSplitter 4.x](https://img.shields.io/badge/JSplitter-Required-7b68ee?style=flat-square)
+![JScript Panel 3](https://img.shields.io/badge/JScript%20Panel%203-3.8.5-8a2be2?style=flat-square)
+![JSplitter](https://img.shields.io/badge/JSplitter-4.1.12-7b68ee?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/Pav-Osmolski/DarkOneJSP3?style=flat-square)
 
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.29
+  <strong>Current stable release:</strong> v0.9.31
 </p>
 
 > [!IMPORTANT]
@@ -58,8 +58,10 @@ workflow of the original theme.
 * Enhanced optional scripted Queue Viewer with multi-selection, keyboard
   navigation and source-item commands.
 * Optional startup transitions with native-window reveal hardening.
-* Demand-driven playlist rendering with cached title formatting and Direct2D
-  bitmap reuse.
+* Demand-driven playlist rendering with cached selection/playback state, reused
+  visible rows, cached column geometry and Direct2D bitmap reuse.
+* Direct Dot Matrix sprite rendering, cached InfoStack layout and on-demand Album
+  Art blur generation reduce resource churn in common rendering paths.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
 * Uniform resolved inheritance for the composite bottom area, avoiding mixed
@@ -67,7 +69,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.29** is the current stable release.
+**DarkOneJSP3 v0.9.31** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -75,9 +77,9 @@ starting layout.
 
 ## Screenshots
 
-![Main view](assets/darkonejsp3-screenshot-main.jpg)
+![Main view](assets/darkonejsp3-screenshot-main.webp)
 
-![InfoStack Album Notes functionality](assets/darkonejsp3-screenshot-albumnotes.jpg)
+![InfoStack Album Notes functionality](assets/darkonejsp3-screenshot-albumnotes.webp)
 
 ## Enhanced Sample Library
 
@@ -237,8 +239,8 @@ regenerate the FCL.
 assets/
 ├── darkonejsp3-logo.png                    Repository artwork used by this README
 ├── darkonejsp3-social.jpg                  Promotional artwork used by the Wiki
-├── darkonejsp3-screenshot-albumnotes.jpg   Album Notes and InfoStack screenshot
-└── darkonejsp3-screenshot-main.jpg         Main DarkOneJSP3 interface screenshot
+├── darkonejsp3-screenshot-albumnotes.webp  Album Notes and InfoStack screenshot
+└── darkonejsp3-screenshot-main.webp        Main DarkOneJSP3 interface screenshot
 
 DarkOneJSP3/
 ├── docs/                  Documentation, changelog, credits and user guides
@@ -298,24 +300,6 @@ Preserve all existing author headers, credits and third-party licence notices.
 No blanket licence is asserted over inherited DarkOne artwork or third-party
 component or sample code. Do not redistribute foobar2000 binaries. See the
 [Credits](DarkOneJSP3/docs/CREDITS.txt) for detailed attribution.
-
-## Contributing
-
-Bug reports and focused pull requests are welcome once the repository is open
-for public collaboration.
-
-Please include:
-
-* the foobar2000, Columns UI, JScript Panel and JSplitter versions;
-* the exact panel or script involved;
-* clear reproduction steps;
-* relevant console output;
-* screenshots where useful; and
-* confirmation that the issue occurs on the current stable release.
-
-Keep changes narrowly scoped, preserve existing author and licence notices, and
-do not regenerate or modify `DarkOneJSP3/fcl/DarkOneJSP3.fcl` as part of
-routine patches.
 
 ## Disclaimer
 

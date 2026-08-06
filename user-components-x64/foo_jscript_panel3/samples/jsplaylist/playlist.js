@@ -25,6 +25,10 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 	this.heightInRow = heightInRow;
 	this.groupRowDelta = groupRowDelta;
 	this.obj = obj;
+	this.is_selected = false;
+	this.group_width_font_key = '';
+	this.group_r1_width = 0;
+	this.group_r2_width = 0;
 
 	if (this.type == 1 && this.metadb) {
 		var tfo = get_tfo(p.list.groupby[cGroup.pattern_idx].l1 + "^^" + p.list.groupby[cGroup.pattern_idx].r1 + "^^" + p.list.groupby[cGroup.pattern_idx].l2 + "^^" + p.list.groupby[cGroup.pattern_idx].r2);
@@ -64,9 +68,6 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 			var tf2_h = 0;
 		}
 
-		columns.mood_x = ww;
-		columns.rating_x = ww;
-
 		var lovedSync = paintState.lovedSync;
 		var secondaryPattern = paintState.secondaryPattern;
 		var forceFresh = is_playing && g_playlist_render_cache && g_playlist_render_cache.requiresCurrentRefresh();
@@ -80,13 +81,14 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 		var tf_arr = renderData.primary;
 		var tf2_arr = renderData.secondary;
 
-		for (var j = 0; j < p.headerBar.columns.length; j++) {
-			if (p.headerBar.columns[j].w > 0) {
-				var cx = p.headerBar.columns[j].x + g_z5;
-				var cw = (Math.abs(p.headerBar.w * p.headerBar.columns[j].percent / 100000)) - g_z10;
-				switch (p.headerBar.columns[j].ref) {
+		for (var j = 0; j < paintState.columns.length; j++) {
+			var column = paintState.columns[j];
+			if (column.w > 0) {
+				var cx = column.x;
+				var cw = column.w;
+				switch (column.ref) {
 				case "State":
-					switch (p.headerBar.columns[j].align) {
+					switch (column.align) {
 					case 0:
 						// do nothing
 						break;
@@ -113,19 +115,7 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 					}
 					break;
 				case "Mood":
-					columns.mood_w = cRow.playlist_h;
-					p.headerBar.columns[j].minWidth = 36;
-					switch (p.headerBar.columns[j].align) {
-					case 0:
-						columns.mood_x = cx;
-						break;
-					case 1:
-						columns.mood_x = cx + (cw - columns.mood_w);
-						break;
-					case 2:
-						columns.mood_x = cx + ((cw - columns.mood_w) / 2);
-						break;
-					}
+					column.source.minWidth = 36;
 
 					if (lovedSync) {
 						this.mood = renderData.loved;
@@ -136,27 +126,15 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 					gr.WriteTextSimple(this.mood == 0 ? chars.heart_off : chars.heart_on, g_font_fluent_20, mood_colour, columns.mood_x, this.y, columns.mood_w, cRow.playlist_h, 2, 2);
 					break;
 				case "Rating":
-					cw = p.headerBar.columns[j].w - g_z5;
-					p.headerBar.columns[j].minWidth = columns.rating_w; // columns.rating_w set inside get_font
-					switch (p.headerBar.columns[j].align) {
-					case 0:
-						columns.rating_x = cx;
-						break;
-					case 1:
-						columns.rating_x = cx + (cw - columns.rating_w);
-						break;
-					case 2:
-						columns.rating_x = cx + ((cw - columns.rating_w) /2);
-						break;
-					}
+					column.source.minWidth = columns.rating_w; // columns.rating_w set inside get_font
 
 					this.rating = StripCode(tf_arr[j], chars.etx) || 0;
 					gr.WriteTextSimple(chars.rating_off.repeat(5), g_font_fluent_20, rating_colour & 0x20ffffff, columns.rating_x, this.y, columns.rating_w, cRow.playlist_h, 0, 2);
 					gr.WriteTextSimple(chars.rating_on.repeat(this.rating), g_font_fluent_20, rating_colour, columns.rating_x, this.y, columns.rating_w, cRow.playlist_h, 0, 2);
 					break;
 				default:
-					this.drawText(gr, tf_arr[j], g_font_12, txt_color, cx, tf1_y, cw, tf1_h, p.headerBar.columns[j].align);
-					if (cList.enableExtraLine) this.drawText(gr, tf2_arr[j], g_font_12, fader_txt, cx, tf2_y, cw, tf2_h, p.headerBar.columns[j].align);
+					this.drawText(gr, tf_arr[j], g_font_12, txt_color, cx, tf1_y, cw, tf1_h, column.align);
+					if (cList.enableExtraLine) this.drawText(gr, tf2_arr[j], g_font_12, fader_txt, cx, tf2_y, cw, tf2_h, column.align);
 					break;
 				}
 			}
@@ -176,7 +154,7 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 	}
 
 	this.draw = function (gr, x, y, w, h, paintState) {
-		var is_item_selected = this.type == 0 && plman.IsPlaylistItemSelected(g_active_playlist, this.track_index);
+		var is_item_selected = this.type == 0 && this.is_selected;
 		var cover_size = 0;
 		this.x = x;
 		this.y = y;
@@ -220,8 +198,14 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 
 			var text_left_padding = g_z2;
 			var scrollbar_gap = (p.scrollbar.visible && (p.list.totalRows > p.list.totalRowVisible)) ? 0 : cScrollBar.width;
-			var lg1_right_field_w = this.r1.calc_width2(g_font_group1) + 20;
-			var lg2_right_field_w = this.r2.calc_width2(g_font_group2) + 20;
+			var width_font_key = [g_font_group1.Name, g_font_group1.Size, g_font_group1.Weight, g_font_group2.Name, g_font_group2.Size, g_font_group2.Weight].join('|');
+			if (this.group_width_font_key !== width_font_key) {
+				this.group_width_font_key = width_font_key;
+				this.group_r1_width = this.r1.calc_width2(g_font_group1) + 20;
+				this.group_r2_width = this.r2.calc_width2(g_font_group2) + 20;
+			}
+			var lg1_right_field_w = this.group_r1_width;
+			var lg2_right_field_w = this.group_r2_width;
 
 			var group_text_colour = g_colour_highlight;
 			var group_text_colour_fader = setAlpha(group_text_colour, 180);
@@ -266,7 +250,7 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 	}
 
 	this.check = function (event, x, y) {
-		var is_item_selected = plman.IsPlaylistItemSelected(g_active_playlist, this.track_index);
+		var is_item_selected = this.type == 0 && this.is_selected;
 		var groupDelta = this.groupRowDelta * cRow.playlist_h;
 		this.ishover = (x >= this.x && x < this.x + this.w && y >= this.y && y < this.y + this.h - groupDelta);
 
@@ -614,6 +598,7 @@ function oList(object_name) {
 		if (this.handleList) this.handleList.Dispose();
 		this.handleList = plman.GetPlaylistItems(g_active_playlist);
 		this.count = this.handleList.Count;
+		this.allowItemReuse = false;
 		this.init_groups();
 		this.getStartOffsetFromFocusId();
 	}
@@ -759,6 +744,55 @@ function oList(object_name) {
 		return 0;
 	}
 
+	this.itemKey = function (type, track_index, group_index, groupRowDelta) {
+		return type + ':' + track_index + ':' + group_index + ':' + groupRowDelta;
+	}
+
+	this.refreshSelectionCache = function () {
+		for (var i = 0; i < this.items.length; i++) {
+			var item = this.items[i];
+			item.is_selected = item.type == 0 && plman.IsPlaylistItemSelected(g_active_playlist, item.track_index);
+		}
+	}
+
+	this.buildPaintColumns = function () {
+		var cacheKey = p.headerBar.columnsVersion + '|' + columns.rating_w + '|' + cRow.playlist_h;
+		if (this.paintColumnsKey == cacheKey) return this.paintColumns;
+
+		var result = [];
+		columns.mood_x = ww;
+		columns.rating_x = ww;
+		for (var j = 0; j < p.headerBar.columns.length; j++) {
+			var source = p.headerBar.columns[j];
+			var width = source.w > 0
+				? (Math.abs(p.headerBar.w * source.percent / 100000) - g_z10)
+				: 0;
+			var column = {
+				source: source,
+				ref: source.ref,
+				align: source.align,
+				x: source.x + g_z5,
+				w: width
+			};
+			if (source.ref == 'Mood' && source.w > 0) {
+				columns.mood_w = cRow.playlist_h;
+				if (source.align == 0) columns.mood_x = column.x;
+				else if (source.align == 1) columns.mood_x = column.x + (column.w - columns.mood_w);
+				else columns.mood_x = column.x + ((column.w - columns.mood_w) / 2);
+			}
+			if (source.ref == 'Rating' && source.w > 0) {
+				var ratingWidth = source.w - g_z5;
+				if (source.align == 0) columns.rating_x = column.x;
+				else if (source.align == 1) columns.rating_x = column.x + (ratingWidth - columns.rating_w);
+				else columns.rating_x = column.x + ((ratingWidth - columns.rating_w) / 2);
+			}
+			result.push(column);
+		}
+		this.paintColumnsKey = cacheKey;
+		this.paintColumns = result;
+		return result;
+	}
+
 	this.scrollItems = function (delta, scrollstep, from_mouse_wheel) {
 		if (from_mouse_wheel && !cList.wheel_snap) {
 			scroll_wheel_freely(delta);
@@ -791,95 +825,77 @@ function oList(object_name) {
 	}
 
 	this.setItems = function (forceFocus) {
-		var track_index_in_group = 0;
-		var row_index = 0;
-		if (forceFocus) { // from focus item centered in panel
-			if (this.totalRows > this.totalRowVisible) {
-				var i = this.getStartOffsetFromFocusId();
-				if (this.totalRows - this.offset <= this.totalRowVisible) {
-					var total_rows_to_draw = this.totalRows < this.totalRowVisible ? this.totalRows : this.totalRowVisible;
-				} else {
-					var total_rows_to_draw = this.totalRows < this.totalRowToLoad ? this.totalRows : this.totalRowToLoad;
-				}
+		if (forceFocus) {
+			this.getStartOffsetFromFocusId();
+		} else if (typeof this.offset == 'undefined') {
+			this.getStartOffsetFromFocusId();
+		}
 
-				this.items.splice(0, this.items.length);
-				while (i < this.offset + total_rows_to_draw) {
-					this.getTrackId(i);
-					if (this.s_groupheader_line_id >= 0) { // group header
-						this.items.push(new oItem(row_index, 1, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, 0, this.s_group_height, this.s_groupheader_line_id, this.groups[this.s_group_id]));
-						i += this.s_group_height - this.s_groupheader_line_id;
-						row_index += this.s_group_height - this.s_groupheader_line_id;
-					} else { // track row
-						track_index_in_group = this.s_track_id - this.groups[this.s_group_id].start;
-						this.items.push(new oItem(row_index, 0, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, track_index_in_group, 1, 0, null));
-						i++;
-						row_index++;
-					}
-				}
-			} else {
-				this.offset = 0;
-				var i = 0; // offset = 0
+		if (this.totalRows <= this.totalRowVisible) this.offset = 0;
+		var startRow = this.totalRows > this.totalRowVisible ? this.offset : 0;
+		var rowsToLoad;
+		if (this.totalRows <= this.totalRowVisible) {
+			rowsToLoad = this.totalRows;
+		} else if (this.totalRows - this.offset <= this.totalRowVisible) {
+			rowsToLoad = Math.min(this.totalRows, this.totalRowVisible);
+		} else {
+			rowsToLoad = Math.min(this.totalRows, this.totalRowToLoad);
+		}
 
-				this.items.splice(0, this.items.length);
-				while (i < this.totalRows) {
-					this.getTrackId(i);
-					if (this.s_groupheader_line_id >= 0) { // group header
-						this.items.push(new oItem(row_index, 1, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, 0, this.s_group_height, this.s_groupheader_line_id, this.groups[this.s_group_id]));
-						i += this.s_group_height - this.s_groupheader_line_id;
-						row_index += this.s_group_height - this.s_groupheader_line_id;
-					} else { // track row
-						track_index_in_group = this.s_track_id - this.groups[this.s_group_id].start;
-						this.items.push(new oItem(row_index, 0, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, track_index_in_group, 1, 0, null));
-						i++;
-						row_index++;
-					}
-				}
-			}
-		} else { // fill items from current offset
-			if (this.totalRows > this.totalRowVisible) {
-				if (typeof this.offset == "undefined") {
-					this.getStartOffsetFromFocusId();
-				}
-
-				var i = this.offset;
-				if (this.totalRows - this.offset <= this.totalRowVisible) {
-					var total_rows_to_draw = this.totalRows < this.totalRowVisible ? this.totalRows : this.totalRowVisible;
-				} else {
-					var total_rows_to_draw = this.totalRows < this.totalRowToLoad ? this.totalRows : this.totalRowToLoad;
-				}
-
-				this.items.splice(0, this.items.length);
-				while (i < this.offset + total_rows_to_draw) {
-					this.getTrackId(i);
-					if (this.s_groupheader_line_id >= 0) { // group header
-						this.items.push(new oItem(row_index, 1, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, 0, this.s_group_height, this.s_groupheader_line_id, this.groups[this.s_group_id]));
-						i += this.s_group_height - this.s_groupheader_line_id;
-						row_index += this.s_group_height - this.s_groupheader_line_id;
-					} else { // track row
-						track_index_in_group = this.s_track_id - this.groups[this.s_group_id].start;
-						this.items.push(new oItem(row_index, 0, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, track_index_in_group, 1, 0, null));
-						i++;
-						row_index++;
-					}
-				}
-			} else {
-				var i = 0; // offset = 0
-				this.items.splice(0, this.items.length);
-				while (i < this.totalRows) {
-					this.getTrackId(i);
-					if (this.s_groupheader_line_id >= 0) { // group header
-						this.items.push(new oItem(row_index, 1, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, 0, this.s_group_height, this.s_groupheader_line_id, this.groups[this.s_group_id]));
-						i += this.s_group_height - this.s_groupheader_line_id;
-						row_index += this.s_group_height - this.s_groupheader_line_id;
-					} else { // track row
-						track_index_in_group = this.s_track_id - this.groups[this.s_group_id].start;
-						this.items.push(new oItem(row_index, 0, this.handleList.GetItem(this.s_track_id), this.s_track_id, this.s_group_id, track_index_in_group, 1, 0, null));
-						i++;
-						row_index++;
-					}
-				}
+		var reusable = {};
+		if (this.allowItemReuse && !forceFocus) {
+			for (var oldIndex = 0; oldIndex < this.items.length; oldIndex++) {
+				var oldItem = this.items[oldIndex];
+				var oldKey = this.itemKey(oldItem.type, oldItem.track_index, oldItem.group_index, oldItem.groupRowDelta);
+				reusable[oldKey] = oldItem;
 			}
 		}
+
+		var nextItems = [];
+		var row_index = 0;
+		var row = startRow;
+		var limit = startRow + rowsToLoad;
+		while (row < limit) {
+			this.getTrackId(row);
+			var type = this.s_groupheader_line_id >= 0 ? 1 : 0;
+			var track_index_in_group = type == 0
+				? this.s_track_id - this.groups[this.s_group_id].start
+				: 0;
+			var groupRowDelta = type == 1 ? this.s_groupheader_line_id : 0;
+			var key = this.itemKey(type, this.s_track_id, this.s_group_id, groupRowDelta);
+			var item = reusable[key];
+			if (item) {
+				delete reusable[key];
+				item.row_index = row_index;
+				item.ishover = false;
+			} else {
+				item = new oItem(
+					row_index,
+					type,
+					this.handleList.GetItem(this.s_track_id),
+					this.s_track_id,
+					this.s_group_id,
+					track_index_in_group,
+					type == 1 ? this.s_group_height : 1,
+					groupRowDelta,
+					type == 1 ? this.groups[this.s_group_id] : null
+				);
+			}
+			nextItems.push(item);
+
+			if (type == 1) {
+				var consumed = this.s_group_height - this.s_groupheader_line_id;
+				row += consumed;
+				row_index += consumed;
+			} else {
+				row++;
+				row_index++;
+			}
+		}
+
+		this.items = nextItems;
+		this.allowItemReuse = true;
+		this.refreshSelectionCache();
 	}
 
 	this.getOffsetFromCursorPos = function () {
@@ -935,21 +951,16 @@ function oList(object_name) {
 			? this.w
 			: this.w - cScrollBar.width;
 
-		this.nowplaying = plman.GetPlayingItemLocation();
 		var secondaryPattern = cList.enableExtraLine ? g_tf2_pattern : "";
 		var lovedSync = properties.use_foo_lastfm_playcount_sync && foo_lastfm_playcount_sync;
 		if (g_playlist_render_cache) {
 			g_playlist_render_cache.configure(g_tf_pattern, secondaryPattern, lovedSync);
 		}
-		var paintState = {
-			isPlaying: fb.IsPlaying,
-			isPaused: fb.IsPaused,
-			playingPlaylist: this.nowplaying ? this.nowplaying.PlaylistIndex : -1,
-			playingItem: this.nowplaying ? this.nowplaying.PlaylistItemIndex : -1,
-			secondaryPattern: secondaryPattern,
-			lovedSync: lovedSync,
-			dynamicGeneration: g_playlist_dynamic_generation
-		};
+		var paintState = g_playlist_paint_state;
+		paintState.secondaryPattern = secondaryPattern;
+		paintState.lovedSync = lovedSync;
+		paintState.dynamicGeneration = g_playlist_dynamic_generation;
+		paintState.columns = this.buildPaintColumns();
 
 		var fin = this.items.length;
 		for (var i = 0; i < fin; i++) {
@@ -1374,6 +1385,9 @@ function oList(object_name) {
 	this.count = this.handleList.Count;
 	this.groups = [];
 	this.items = [];
+	this.allowItemReuse = false;
+	this.paintColumns = [];
+	this.paintColumnsKey = '';
 	this.groupby = [];
 	this.totalGroupBy = 0;
 	this.SHIFT_start_id = null;

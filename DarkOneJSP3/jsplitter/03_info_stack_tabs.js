@@ -1,6 +1,8 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
+// v0.6.26 caches resolved tab geometry, labels, colours and unchanged font resources.
+//
 // v0.6.25 separates InfoStack-only colour state and controller bridges into
 // focused include helpers while preserving the established script context,
 // menu IDs, saved properties and notification behaviour.
@@ -121,6 +123,15 @@ var tabY = 0;
 var tabAreaHeight = 18;
 var contentHeight = 1;
 var font = gdi.Font('Segoe UI', 10, 0);
+var infoStackFontKey = '';
+var infoStackRenderModel = {
+    visible: [],
+    labels: [],
+    rects: [],
+    backgroundMode: 0,
+    backgroundColour: 0,
+    tabAccentColour: 0
+};
 
 // JSplitter exposes these values in docs/Flags.js, but does not inject that
 // documentation file into each panel script automatically. Keep the small
@@ -187,6 +198,29 @@ function visibleIndexes() {
     return result;
 }
 
+function rebuildInfoStackRenderModel() {
+    var visible = visibleIndexes();
+    var labels = [];
+    var rects = [];
+    var baseWidth = visible.length ? Math.floor(ww / visible.length) : 0;
+    for (var slot = 0; slot < visible.length; slot++) {
+        var index = visible[slot];
+        var x = slot * baseWidth;
+        labels.push(tabLabel(index));
+        rects.push({
+            index: index,
+            x: x,
+            width: slot === visible.length - 1 ? ww - x : baseWidth
+        });
+    }
+    infoStackRenderModel.visible = visible;
+    infoStackRenderModel.labels = labels;
+    infoStackRenderModel.rects = rects;
+    infoStackRenderModel.backgroundMode = backgroundMode();
+    infoStackRenderModel.backgroundColour = backgroundColour();
+    infoStackRenderModel.tabAccentColour = tabAccentColour();
+}
+
 function ensureActiveTab() {
     var visible = visibleIndexes();
 
@@ -216,13 +250,18 @@ function automaticFontSize() {
     return DOJSP3.clamp(Math.round(baseSize * automaticFontScale() / 100), 8, 48);
 }
 
-function rebuildFont() {
+function rebuildFont(force) {
     var configured = Number(window.GetProperty(FONT_PROPERTY, 0)) || 0;
     var size = configured > 0
         ? DOJSP3.clamp(Math.round(configured), 8, 48)
         : automaticFontSize();
+    var key = 'Segoe UI|' + size + '|0';
+    if (!force && key === infoStackFontKey) return false;
+
     font = gdi.Font('Segoe UI', size, 0);
+    infoStackFontKey = key;
     tabHeight = Math.max(16, font.Height + 2);
+    return true;
 }
 
 function configuredTabAreaHeight() {
@@ -283,6 +322,7 @@ function layoutInfoStack() {
         DOJSP3.move(child, 0, 0, ww, contentHeight);
     }
     applyVisibility();
+    rebuildInfoStackRenderModel();
     if (!startupReadiness.isReady() && allChildrenAvailable) {
         startupReadiness.signal();
     }
@@ -349,6 +389,7 @@ function setTabLabel(index, value) {
         // comfortably descriptive labels.
         window.SetProperty(labelProperty(index), value.substring(0, 40));
     }
+    rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
 }
 
@@ -372,6 +413,7 @@ function applyLabelPreset(useTitleCase) {
             useTitleCase ? INFO_PANELS[i].defaultLabel : INFO_PANELS[i].uppercaseLabel
         );
     }
+    rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
 }
 
@@ -379,13 +421,14 @@ function resetAllLabels() {
     for (var i = 0; i < INFO_PANELS.length; i++) {
         window.SetProperty(labelProperty(i), INFO_PANELS[i].defaultLabel);
     }
+    rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
 }
 
 function tabFromPoint(x, y) {
     if (y < tabY || y >= tabY + tabAreaHeight || x < 0 || x >= ww) return -1;
 
-    var visible = visibleIndexes();
+    var visible = infoStackRenderModel.visible;
     if (!visible.length) return -1;
 
     var slot = DOJSP3.clamp(Math.floor(x * visible.length / Math.max(1, ww)), 0, visible.length - 1);
@@ -393,6 +436,7 @@ function tabFromPoint(x, y) {
 }
 
 function on_colours_changed() {
+    rebuildInfoStackRenderModel();
     window.Repaint();
 }
 
@@ -404,23 +448,17 @@ function on_size(width, height) {
 }
 
 function on_paint(gr) {
-    var mode = backgroundMode();
-    if (mode !== BACKGROUND_TRANSPARENT) {
-        gr.FillSolidRect(0, 0, ww, wh, backgroundColour());
+    if (infoStackRenderModel.backgroundMode !== BACKGROUND_TRANSPARENT) {
+        gr.FillSolidRect(0, 0, ww, wh, infoStackRenderModel.backgroundColour);
     }
 
-    var visible = visibleIndexes();
-    if (!visible.length) return;
-
-    var baseWidth = Math.floor(ww / visible.length);
-    for (var slot = 0; slot < visible.length; slot++) {
-        var index = visible[slot];
-        var x = slot * baseWidth;
-        var width = slot === visible.length - 1 ? ww - x : baseWidth;
-        var colour = index === activeIndex
+    var rects = infoStackRenderModel.rects;
+    for (var slot = 0; slot < rects.length; slot++) {
+        var rect = rects[slot];
+        var colour = rect.index === activeIndex
             ? DOJSP3.colours.buttonActive
-            : (index === hoverIndex ? DOJSP3.colours.buttonHover : tabAccentColour());
-        gr.GdiDrawText(tabLabel(index), font, colour, x, tabY, width, tabAreaHeight, TAB_TEXT_FLAGS);
+            : (rect.index === hoverIndex ? DOJSP3.colours.buttonHover : infoStackRenderModel.tabAccentColour);
+        gr.GdiDrawText(infoStackRenderModel.labels[slot], font, colour, rect.x, tabY, rect.width, tabAreaHeight, TAB_TEXT_FLAGS);
     }
 }
 

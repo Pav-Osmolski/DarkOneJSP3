@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.29 Validation Report
+DarkOneJSP3 v0.9.31 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,19 @@ validation and the audited-file count.
 
 Checks
 ------
+- JS Playlist visible rows cache selection state and the current playback
+  location outside paint/mouse hot paths; sequential viewport changes reuse
+  surviving row objects and pre-resolved column geometry.
+- Control-panel resize callbacks update existing button and volume-knob geometry
+  rather than recreating interaction objects, while unchanged control and
+  InfoStack fonts are retained by effective-key caches.
+- Queue Viewer selection membership is constant-time and large source scans are
+  bounded to 5 ms slices with 5 ms yields and batched clock checks.
+- InfoStack painting consumes one invalidation-driven render model containing
+  visible tabs, labels, rectangles and resolved colours instead of repeatedly
+  reading properties during paint and mouse movement.
+- Album Art blur work is deferred until a blur-using layout paints, generated
+  once per source and cancelled/disposed safely on metadata changes or unload.
 - Bottom-area state is shared through js_data\darkonejsp3.bottom-area-state.txt
   so the three JScript Panel instances and the Bottom Controls JSplitter host do
   not depend on cross-component NotifyOthers delivery. Legacy state stored under
@@ -23,6 +36,9 @@ Checks
   updates. Repeated resize callbacks do not reread the file or query peers.
 - Divider-only changes persist and update shared menus without rebuilding
   JScript control or Display visual resources.
+- Shared bottom-area appearance refreshes call only methods exported by the real
+  DisplaySystem implementation; validation rejects mocks or compatibility helpers
+  that invent removed Display cache APIs.
 - Only the Bottom Controls JSplitter polls continuously. Visible bottom-area
   state is checked at 100 ms, while the factory-reset command is checked at
   500 ms through the same timer and acknowledged after successful processing.
@@ -102,9 +118,9 @@ Checks
   interval to avoid starving native visualisers.
 - Trailing volume-state deadlines extend without clearing and recreating a timer
   for every on_volume_change callback.
-- Dot Matrix volume output renders directly from the cached matrix sprite bitmap
-  instead of rebuilding and disposing an off-screen volume bitmap during every
-  drag update.
+- Dot Matrix track numbers, time, bitrate and volume output render directly from
+  cached matrix sprite bitmaps instead of rebuilding and disposing mutable
+  composite images as values change.
 - JS Playlist render-cache tests cover repeated hits, row/handle/all invalidation,
   title-format changes, playback-generation reuse, clock-field overlays,
   cross-column $puts/$get compatibility and bounded cache size.
@@ -114,12 +130,11 @@ Checks
 - Album covers, immutable control sprites and display sprite output use reusable
   Direct2D bitmaps with explicit disposal checks.
 - Centre Display style tests verify that Plain Font and Dot Matrix selections are
-  persisted, rebuild style-specific render state and repaint immediately. Mutable
-  dot-matrix value images compose from IJSImage sprite sources, while final panel
-  painting retains cached IJSBitmap output.
-- NumImage, TimeImage and BitrateImage explicitly inherit the shared BaseImage
-  lifecycle and digit-comparison methods; runtime tests instantiate each class and
-  exercise reset, bitmap commit, disposal and isDrawDigit behaviour.
+  persisted, initialise style-specific values and repaint immediately without
+  rebuilding composite digit images. Direct matrix-draw tests verify source
+  geometry and ensure value painting creates no mutable images or new bitmaps.
+- Display font-key tests verify repeated unchanged layout calls reuse fonts and
+  cached value-label measurements.
 - Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose,
   CreateProfiler and profiler Reset are called directly rather than gated by
   typeof == "function".

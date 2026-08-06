@@ -60,6 +60,7 @@ function oColumn() {
 
 function oHeaderBar() {
 	this.columnsDirty = true;
+	this.columnsVersion = 0;
 
 	this.invalidateColumns = function () {
 		this.columnsDirty = true;
@@ -129,6 +130,7 @@ function oHeaderBar() {
 			}
 		}
 		this.columnsDirty = false;
+		this.columnsVersion++;
 	}
 
 	this.drawHiddenPanel = function (gr) {

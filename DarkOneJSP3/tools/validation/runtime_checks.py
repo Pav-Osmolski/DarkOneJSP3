@@ -1124,38 +1124,64 @@ def run(ctx: ValidationContext) -> None:
             errors.append('InfoStack tab-colour runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
-        # Exercise display-accent mode compatibility and selected-item resolution.
-        display_accent_smoke = f"""
+        # Exercise display-accent compatibility, direct Dot Matrix sprite painting,
+        # font-key reuse and style changes without composite bitmap rebuilding.
+        display_direct_smoke = f"""
     const fs = require('fs');
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
-    const performanceSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'performance_utils.js'))}, 'utf8');
-    const uiCadenceSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'ui_cadence.js'))}, 'utf8');
-    let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
-    const start = source.indexOf('function DisplaySystem()');
-    if (start < 0) throw new Error('DisplaySystem constructor not found');
-    source = source.slice(0,  source.indexOf('// ----- BASE IMAGE OBJECT -----')) + '\\n' + source.slice(start);
+    const source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
     const properties = new Map();
     let repaints = 0;
+    let repaintRects = 0;
+    let fontCreations = 0;
+    let bitmapConversions = 0;
+    let mutableImageCreations = 0;
+    let matrixDraws = 0;
+    function makeImage(width, height) {{
+        return {{
+            Width: width, Height: height, Path: 'mock.png',
+            GetGraphics() {{ return {{ DrawImage() {{}}, FillRectangle() {{}}, DrawImageWithMask() {{}} }}; }},
+            ReleaseGraphics() {{}}, ApplyEffect() {{}}, Dispose() {{}}
+        }};
+    }}
     const windowMock = {{
         GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
         SetProperty(name, value) {{ properties.set(name, value); }},
         GetColourCUI(index) {{ return index === 4 ? 0xff556677 : 0xff112233; }},
-        Repaint() {{ repaints++; }},
-        NotifyOthers() {{}}
+        Repaint() {{ repaints++; }}, RepaintRect() {{ repaintRects++; }}, NotifyOthers() {{}},
+        SetTimeout(fn) {{ return 1; }}, ClearTimeout() {{}}
     }};
-    const noopImage = {{ Dispose(){{}}, GetGraphics(){{return {{}};}}, ReleaseGraphics(){{}}, Width:1, Height:1 }};
-    const factory = new Function('window','fb','safeGdiImage','utils','disposeImage','combColours','p_backcol','ui_btntxtcol',
-        'tf_display_lossless','tf_display_lossy','tf_display_hires','tf_display_multich','tf_display_md5','tf_display_replaygain',
-        'tf_display_tracknumber_exists','tf_display_totaltracks_exists','tf_display_tracknumber','tf_display_totaltracks','tf_display_bitrate',
-        'imgPath','DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL',
-        'darkOneCreateFont','evalTitleFormat','TimeFmt','pad','pad_right','clearPanelTimer','section',
-        colourSource + '\\n' + performanceSource + '\\n' + uiCadenceSource + '\\n' + source + '\\nreturn {{ DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED }};');
-    const api = factory(windowMock, {{IsPlaying:false, PlaybackLength:0, PlaybackTime:0}}, function(){{return null;}},
-        {{CreateImage(){{return noopImage;}}}}, function(){{}}, function(){{return 0xff000000;}}, 0xff000000, 0xffffffff,
-        '', '', '', '', '', '', '', '', '', '', '', '', 900, 400, function(){{return {{}};}}, function(){{return ''; }}, function(){{return ''; }},
-        function(){{return ''; }}, function(){{return ''; }}, function(v){{return v;}}, function(v){{return v;}}, function(){{return null;}},
-        {{sac:0,pbo:1,pbt:2,vol:3,bit:4}});
-    const display = new api.DisplaySystem();
+    const fbMock = {{
+        IsPlaying: false, IsPaused: false, PlaybackLength: 0, PlaybackTime: 0,
+        Volume: -12.5, StopAfterCurrent: false,
+        TitleFormat() {{ return {{ Eval() {{ return ''; }} }}; }}
+    }};
+    const performanceMock = {{
+        toBitmap(image) {{ if (!image) return null; bitmapConversions++; return {{Width:image.Width,Height:image.Height,Dispose(){{}}}}; }},
+        createRepaintScheduler() {{ return {{request(){{}},reschedule(){{}},cancel(){{}}}}; }},
+        createTrailingDeadline() {{ return {{touch(){{}},cancel(){{}}}}; }}
+    }};
+    const cadenceMock = {{ createVolumeFollower() {{ return {{getInterval(){{return 16;}},dispose(){{}}}}; }} }};
+    const factory = new Function(
+        'window','fb','plman','safeGdiImage','utils','disposeImage','combColours','p_backcol','ui_btntxtcol',
+        'DarkOneUiCadence','DarkOnePerformance','DarkOneColour','imgPath','console',
+        'DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL','darkOneCreateFont','darkOneCalcTextWidth','darkOneDrawText',
+        'TimeFmt','pad','pad_right','clearPanelTimer','ww','wh',
+        colourSource + '\\n' + source + '\\nreturn {{display_system, DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED}};'
+    );
+    const api = factory(
+        windowMock, fbMock, {{PlaybackOrder:0}}, () => makeImage(1500, 400),
+        {{CreateImage(width,height){{mutableImageCreations++;return makeImage(width,height);}}}},
+        image => {{if(image&&image.Dispose)image.Dispose();}}, () => 0xff010101, 0xff202020, 0xffffffff,
+        cadenceMock, performanceMock,
+        {{normaliseMode(mode,allowed,fallback){{return allowed.indexOf(Number(mode))>=0?Number(mode):fallback;}},columnsUi(){{return 0xff556677;}}}},
+        '', console, 900, 400,
+        (name,size,style,weight) => {{fontCreations++;return {{Name:name,Size:size,Weight:weight,Height:size}};}},
+        (text,font) => String(text).length * (font ? font.Size : 1), () => {{}},
+        value => String(value), (value,length) => String(value).padStart(length,' '),
+        (value,length) => String(value).padEnd(length,' '), () => {{}}, 400, 80
+    );
+    const display = api.display_system;
     if (display.accent_mode !== 0 || (display.active_colour >>> 0) !== 0xff298fcc)
         throw new Error('Default display accent changed');
     display.setAccent(1, 0xff123456);
@@ -1164,69 +1190,40 @@ def run(ctx: ValidationContext) -> None:
     display.setAccent(2);
     if (display.accent_mode !== 2 || (display.active_colour >>> 0) !== 0xff556677)
         throw new Error('Display accent does not follow Columns UI selected-item background');
-    let rebuilt = 0;
+
+    display.initPos();
+    const fontsAfterFirstLayout = fontCreations;
+    display.initPos();
+    if (fontCreations !== fontsAfterFirstLayout)
+        throw new Error('Unchanged display layout recreated fonts');
+
     let initialised = 0;
-    display.InitImages = function() {{ rebuilt++; }};
     display.init = function() {{ initialised++; }};
+    const repaintBeforeStyle = repaints;
     if (display.setDisplayStyle(1) !== true || display.display_style !== 1 || properties.get('Display Style') !== 1)
         throw new Error('Dot Matrix display style was not activated and persisted');
-    if (rebuilt !== 1 || initialised !== 1 || repaints !== 1)
-        throw new Error('Display style change did not rebuild, initialise and repaint exactly once');
-    if (display.setDisplayStyle(1) !== false || rebuilt !== 1 || initialised !== 1 || repaints !== 1)
+    if (initialised !== 1 || repaints !== repaintBeforeStyle + 1)
+        throw new Error('Display style change did not initialise and repaint exactly once');
+    if (display.setDisplayStyle(1) !== false || initialised !== 1 || repaints !== repaintBeforeStyle + 1)
         throw new Error('Redundant display style selection performed unnecessary work');
-    if (display.setDisplayStyle(0) !== true || display.display_style !== 0 || properties.get('Display Style') !== 0)
-        throw new Error('Plain Font display style was not restored');
-    """
-        result = subprocess.run([node, '-e', display_accent_smoke], capture_output=True, text=True)
-        if result.returncode:
-            errors.append('Display accent runtime smoke test failed: ' +
-                          (result.stdout + result.stderr).strip())
 
-        # Exercise the mutable Dot Matrix image classes themselves. The constructors
-        # initialise BaseImage state with BaseImage.call(), but they also require the
-        # shared prototype methods to be attached explicitly. Missing inheritance
-        # causes a JScript runtime error at the first isDrawDigit() call.
-        display_image_inheritance_smoke = f"""
-    const fs = require('fs');
-    let source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Object_DisplaySystem.js'))}, 'utf8');
-    const end = source.indexOf('// ----- TITLE-FORMAT CACHE -----');
-    if (end < 0) throw new Error('Display image-class boundary not found');
-    source = source.slice(0, end);
-    function makeImage(width, height) {{
-        return {{
-            Width: width, Height: height,
-            GetGraphics() {{ return {{ DrawImage() {{}}, FillRectangle() {{}} }}; }},
-            ReleaseGraphics() {{}},
-            CreateBitmap() {{ return {{ Width: width, Height: height, Dispose() {{}} }}; }},
-            Dispose() {{}}
-        }};
-    }}
-    const factory = new Function('window','DarkOneUiCadence','safeGdiImage','DarkOnePerformance','utils','imgPath','disposeImage','console',
-        source + '\\nreturn {{ NumImage, TimeImage, BitrateImage }};');
-    const api = factory({{}}, {{ createVolumeFollower() {{ return {{}}; }} }}, function() {{ return null; }},
-        {{ toBitmap(image) {{ return image ? image.CreateBitmap() : null; }} }},
-        {{ CreateImage(width, height) {{ return makeImage(width, height); }} }}, '', function() {{}}, console);
-    for (const name of ['NumImage', 'TimeImage', 'BitrateImage']) {{
-        const image = new api[name]();
-        for (const method of ['reset', 'commitBitmap', 'dispose', 'paint', 'isDrawDigit']) {{
-            if (typeof image[method] !== 'function')
-                throw new Error(name + ' is missing inherited method ' + method);
-        }}
-        if (image.isDrawDigit('1', 0) !== true)
-            throw new Error(name + ' initial digit comparison failed');
-        image.curVal = '1';
-        if (image.isDrawDigit('1', 0) !== false)
-            throw new Error(name + ' cached digit comparison failed');
-        image.reset();
-        if (image.curVal !== '')
-            throw new Error(name + ' reset did not restore the empty value');
-        image.commitBitmap();
-        image.dispose();
-    }}
+    display.pxSize = 1;
+    display.img_y = 0;
+    display.img_h = 20;
+    const graph = {{DrawBitmap(){{matrixDraws++;}}}};
+    const imagesBeforeDraw = mutableImageCreations;
+    const conversionsBeforeDraw = bitmapConversions;
+    display.drawTrackNumberMatrix(graph, '0012', 0);
+    display.drawTimeMatrix(graph, '01:23:45', 0);
+    display.drawBitrateMatrix(graph, '320  ', 0);
+    if (matrixDraws !== 4 + 8 + 3)
+        throw new Error('Direct Dot Matrix sprite draw count changed: ' + matrixDraws);
+    if (mutableImageCreations !== imagesBeforeDraw || bitmapConversions !== conversionsBeforeDraw)
+        throw new Error('Dot Matrix value painting rebuilt mutable images or bitmaps');
     """
-        result = subprocess.run([node, '-e', display_image_inheritance_smoke], capture_output=True, text=True)
+        result = subprocess.run([node, '-e', display_direct_smoke], capture_output=True, text=True)
         if result.returncode:
-            errors.append('Display image inheritance runtime smoke test failed: ' +
+            errors.append('Display direct-rendering runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise the opt-in information-page background modes, including the
@@ -1561,7 +1558,6 @@ def run(ctx: ValidationContext) -> None:
         let repaints = 0;
         let intervalCalls = 0;
         let appearanceApplications = 0;
-        let displayResourceResets = 0;
         const windowMock = {{
             GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
             SetProperty(name, value) {{ properties.set(name, value); }},
@@ -1598,8 +1594,7 @@ def run(ctx: ValidationContext) -> None:
             function() {{ appearanceApplications++; }},
             {{
                 InitColours() {{ appearanceApplications++; }},
-                setColours() {{ appearanceApplications++; }},
-                resetRenderedImages() {{ displayResourceResets++; }}
+                setColours() {{ appearanceApplications++; }}
             }}
         );
         return {{
@@ -1612,8 +1607,7 @@ def run(ctx: ValidationContext) -> None:
             }},
             get repaints() {{ return repaints; }},
             get intervalCalls() {{ return intervalCalls; }},
-            get appearanceApplications() {{ return appearanceApplications; }},
-            get displayResourceResets() {{ return displayResourceResets; }}
+            get appearanceApplications() {{ return appearanceApplications; }}
         }};
     }}
 
@@ -1644,8 +1638,7 @@ def run(ctx: ValidationContext) -> None:
     firstPaintPanel.api.paint({{ FillRectangle(x,y,w,h,colour) {{ firstPaintFills.push(colour >>> 0); }} }});
     if (firstPaintFills.length !== 1 || firstPaintFills[0] !== 0xff000000)
         throw new Error('Saved Black background was not applied before the first JScript paint');
-    if (firstPaintPanel.appearanceApplications !== 3 || firstPaintPanel.displayResourceResets !== 1 ||
-            firstPaintPanel.repaints !== 1)
+    if (firstPaintPanel.appearanceApplications !== 3 || firstPaintPanel.repaints !== 1)
         throw new Error('First bottom-area initialisation did not resolve appearance exactly once');
     const firstQueryCount = firstPaintPanel.notifications.filter(
         item => item[0] === 'DarkOneJSP3.BottomArea.Query').length;
@@ -1770,7 +1763,6 @@ def run(ctx: ValidationContext) -> None:
     }});
     const dividerOnlyRepaints = panelA.repaints;
     const dividerOnlyAppearance = panelA.appearanceApplications;
-    const dividerOnlyDisplayResets = panelA.displayResourceResets;
     panelA.api.send({{
         backgroundMode: 3,
         backgroundCustomColour: 0xff123456,
@@ -1780,8 +1772,7 @@ def run(ctx: ValidationContext) -> None:
     if (panelA.api.state().dividerMode !== 1)
         throw new Error('Divider-only state did not update the JScript menu properties');
     if (panelA.repaints !== dividerOnlyRepaints ||
-            panelA.appearanceApplications !== dividerOnlyAppearance ||
-            panelA.displayResourceResets !== dividerOnlyDisplayResets)
+            panelA.appearanceApplications !== dividerOnlyAppearance)
         throw new Error('Divider-only state rebuilt JScript visual resources');
 
     panelA.api.send({{
@@ -2706,6 +2697,9 @@ let lastDelay = 0;
 let loads = [];
 let idWrites = 0;
 let bitmapDisposals = 0;
+let bitmapCreations = 0;
+let imageDisposals = 0;
+let blurCalls = 0;
 const windowMock = {
     SetTimeout(fn, delay) {
         const id = nextTimer++;
@@ -2738,9 +2732,9 @@ function makeImage(id) {
         Width: 100,
         Height: 100,
         Path: 'art-' + id + '.jpg',
-        CreateBitmap() { return {Dispose() { bitmapDisposals++; }}; },
-        StackBlur() {},
-        Dispose() {}
+        CreateBitmap() { bitmapCreations++; return {Width:100,Height:100,Dispose() { bitmapDisposals++; }}; },
+        StackBlur() { blurCalls++; },
+        Dispose() { imageDisposals++; }
     };
 }
 const panel = {
@@ -2835,6 +2829,40 @@ assert(timers.size === 0 && albumart.pending_id === -1,
 assert(bitmapDisposals === disposalsBeforeUnload + 1 &&
        albumart.bitmap.normal === null && albumart.bitmap.blur === null,
        'Album Art unload did not dispose its active Direct2D bitmaps');
+
+
+// Blur generation must be lazy: metadata changes create only the normal bitmap,
+// paint-time demand schedules one trailing blur, and unload cancels pending work.
+panel.text_objects = [{name: 'allmusic'}];
+const reviewArt = new AlbumArt(0, 0, 100, 100);
+reviewArt.metadb_changed();
+assert(reviewArt.bitmap.normal && !reviewArt.bitmap.blur && reviewArt.blur_source,
+       'Review Album Art did not retain a lazy blur source');
+assert(blurCalls === 0, 'Album Art blurred synchronously during metadata change');
+const creationsBeforeBlur = bitmapCreations;
+// Legacy stored review entries rely on albumart.paint() itself to request
+// the blurred backing; repeated paints must still coalesce to one task.
+reviewArt.paint({});
+reviewArt.paint({});
+assert(timers.size === 1 && lastDelay === 1,
+       'Repeated blur demand did not coalesce to one deferred task');
+runTimers();
+assert(blurCalls === 1 && bitmapCreations === creationsBeforeBlur + 1 && reviewArt.bitmap.blur,
+       'Deferred Album Art blur was not generated exactly once');
+const reviewBitmapDisposals = bitmapDisposals;
+reviewArt.dispose();
+assert(bitmapDisposals === reviewBitmapDisposals + 2 &&
+       reviewArt.bitmap.normal === null && reviewArt.bitmap.blur === null,
+       'Review Album Art did not dispose normal and blurred bitmaps');
+
+const cancelledBlur = new AlbumArt(0, 0, 100, 100);
+cancelledBlur.metadb_changed();
+cancelledBlur.ensure_blur();
+const blurBeforeCancel = blurCalls;
+cancelledBlur.dispose();
+runTimers();
+assert(blurCalls === blurBeforeCancel && cancelledBlur.blur_source === null,
+       'Album Art unload did not cancel pending lazy blur work');
 """ % albumart_source
         result = subprocess.run([node, '-e', albumart_smoke],
                                 capture_output=True, text=True)

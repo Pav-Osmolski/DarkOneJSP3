@@ -4,7 +4,7 @@
 
 var appPreset = window.GetProperty("Buttons appearance preset", 1);
 var depthPreset = window.GetProperty("Buttons depth preset", 0);
-var btn1Opt = {}, btn2Opt = {}, btnsCol = {}, btn1Siz = {}, btn2Siz = {}, vknbOpt = {}, btn_font = null;
+var btn1Opt = {}, btn2Opt = {}, btnsCol = {}, btn1Siz = {}, btn2Siz = {}, vknbOpt = {}, btn_font = null, btn_font_key = '';
 var area, bxf, bbw, bbh, by1, by2, padX, padY, rbx = 0, btn_panel;
 
 function buttonsOptions() {
@@ -70,7 +70,11 @@ function buttonsSizes() {
 	btn1Siz.func_left_pad = appPreset == 2 ? bbw / 25 : appPreset > 2 ? bbw / 2 - bbh / 4 : 0;
 	btn1Siz.func_right_pad = btn1Siz.func_left_pad;
 	btn1Siz.func_top_pad = appPreset == 1 ? Math.floor(bbh / 3 * 2) : appPreset == 2 ? Math.ceil(bbh / 2) : appPreset > 2 ? bbh / 2 : 0;
-	btn_font = darkOneCreateFont(btn1Opt.font_name, btn1Siz.font_size, 0, btn1Opt.font_weight);
+	var font_key = [btn1Opt.font_name, btn1Siz.font_size, btn1Opt.font_weight].join('|');
+	if (font_key != btn_font_key || !btn_font) {
+		btn_font_key = font_key;
+		btn_font = darkOneCreateFont(btn1Opt.font_name, btn1Siz.font_size, 0, btn1Opt.font_weight);
+	}
 
 	if (btn_panel != 3) {
 		btn2Siz.func_left_pad = appPreset == 2 || appPreset == 5 ? bbw / 25 : appPreset == 3 ? (bbw - bbh) / 2 : 0;

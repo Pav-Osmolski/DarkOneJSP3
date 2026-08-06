@@ -77,6 +77,7 @@ function _text_display(x, y, w, h, buttons_or_rating) {
 	this.paint = function (gr) {
 		if (this.properties.albumart.enabled) {
 			if (this.properties.albumart_blur.enabled) {
+				albumart.ensure_blur();
 				_drawImage(gr, albumart.bitmap.blur, 0, 0, panel.w, panel.h, image.crop);
 				_drawOverlay(gr, 0, 0, panel.w, panel.h, 120);
 			} else {

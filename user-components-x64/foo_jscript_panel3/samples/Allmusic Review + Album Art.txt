@@ -18,6 +18,7 @@ var albumart = new _albumart(margin, margin, 0, 0);
 var white = RGB(255, 255, 255);
 
 allmusic.paint = function (gr) {
+	albumart.ensure_blur();
 	_drawImage(gr, albumart.bitmap.blur, 0, 0, panel.w, panel.h, image.crop);
 	_drawOverlay(gr, 0, 0, panel.w, panel.h, 180);
 

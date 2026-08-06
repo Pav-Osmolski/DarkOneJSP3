@@ -80,18 +80,18 @@ REQUIRED_PATHS = (
 )
 
 EXPECTED_MODULE_VERSIONS = {
-    'control_left': ('3.0.20-jsp3-3.8.5', 'Control Left'),
-    'control_right': ('3.0.25-jsp3-3.8.5', 'Control Right'),
-    'display': ('3.0.23-jsp3-3.8.5', 'Display'),
-    'queue_viewer': ('0.6.1', 'Queue Viewer'),
+    'control_left': ('3.0.21-jsp3-3.8.5', 'Control Left'),
+    'control_right': ('3.0.26-jsp3-3.8.5', 'Control Right'),
+    'display': ('3.0.25-jsp3-3.8.5', 'Display'),
+    'queue_viewer': ('0.6.2', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.4', 'MusicBrainz'),
-    'js_playlist': ('0.6.0', 'JS Playlist'),
-    'playlist_manager': ('0.5.5', 'Playlist Manager'),
+    'js_playlist': ('0.6.1', 'JS Playlist'),
+    'playlist_manager': ('0.5.6', 'Playlist Manager'),
     'network_headers': ('0.6.2', 'network-header identity'),
     'album_notes': ('0.6.8', 'Album Notes'),
-    'album_art': ('0.1.0', 'Album Art'),
-    'info_stack_controller': ('0.6.25', 'InfoStack controller'),
+    'album_art': ('0.1.1', 'Album Art'),
+    'info_stack_controller': ('0.6.26', 'InfoStack controller'),
     'startup_controller': ('0.7.36', 'startup controller'),
     'main_columns_controller': ('0.7.36', 'Main Columns controller'),
     'page_background': ('0.1.3', 'page-background module'),
@@ -103,11 +103,11 @@ EXPECTED_MODULE_VERSIONS = {
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.6.5', 'release-validator module'),
+    'release_validator': ('0.7.1', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
-    'bottom_area_appearance': ('0.2.5', 'shared bottom-area appearance'),
+    'bottom_area_appearance': ('0.2.6', 'shared bottom-area appearance'),
 }
 
 SEMVER_MODULES = ()

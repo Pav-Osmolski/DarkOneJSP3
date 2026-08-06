@@ -99,6 +99,7 @@ function tabAccentColour() {
 }
 
 function repaintTabArea() {
+    if (typeof rebuildInfoStackRenderModel === 'function') rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
 }
 
@@ -131,6 +132,7 @@ function setBackgroundMode(mode) {
             BACKGROUND_DARKONE_DARK
         )
     );
+    if (typeof rebuildInfoStackRenderModel === 'function') rebuildInfoStackRenderModel();
     window.Repaint();
 }
 

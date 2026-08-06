@@ -25,8 +25,14 @@ function _queue_viewer(x, y, w, h) {
         return index >= 0 && index < this.count;
     }
 
+    this.rebuild_selection_lookup = function () {
+        this.selected_lookup = {};
+        for (var i = 0; i < this.selected_indices.length; i++)
+            this.selected_lookup[this.selected_indices[i]] = true;
+    }
+
     this.is_selected = function (index) {
-        return this.selected_indices.indexOf(index) !== -1;
+        return !!this.selected_lookup[index];
     }
 
     this.normalise_selection = function (indices) {
@@ -42,6 +48,7 @@ function _queue_viewer(x, y, w, h) {
     this.set_selection = function (indices, focus_index, anchor_index, ensure_visible) {
         var selected = this.normalise_selection(indices || []);
         this.selected_indices = selected;
+        this.rebuild_selection_lookup();
 
         if (selected.length === 0) {
             this.selected_index = -1;
@@ -70,6 +77,7 @@ function _queue_viewer(x, y, w, h) {
     this.clear_selection = function () {
         if (!this.selected_indices.length && this.selected_index === -1) return false;
         this.selected_indices = [];
+        this.rebuild_selection_lookup();
         this.selected_index = -1;
         this.anchor_index = -1;
         window.RepaintRect(this.x, this.y, this.w, this.h);
@@ -522,6 +530,7 @@ function _queue_viewer(x, y, w, h) {
     this.restore_selection = function (snapshot) {
         if (!snapshot || (!snapshot.exact.length && !snapshot.source.length)) {
             this.selected_indices = [];
+            this.rebuild_selection_lookup();
             this.selected_index = -1;
             this.anchor_index = -1;
             return;
@@ -570,6 +579,7 @@ function _queue_viewer(x, y, w, h) {
         }
         selected = this.normalise_selection(selected);
         this.selected_indices = selected;
+        this.rebuild_selection_lookup();
         this.selected_index = selected.indexOf(active) !== -1
             ? active
             : (selected.length ? selected[selected.length - 1] : -1);
@@ -646,7 +656,14 @@ function _queue_viewer(x, y, w, h) {
         if (!this.scan_state || generation !== this.scan_generation) return;
         var state = this.scan_state;
         var sliceStarted = Date.now();
-        var budgetMs = 12;
+        var budgetMs = 5;
+        var batchSize = 16;
+        var batchRemaining = batchSize;
+        var withinBudget = function () {
+            if (--batchRemaining > 0) return true;
+            batchRemaining = batchSize;
+            return Date.now() - sliceStarted < budgetMs;
+        };
 
         while (state.playlist_index < state.playlist_count && Date.now() - sliceStarted < budgetMs) {
             if (!state.items) {
@@ -661,7 +678,7 @@ function _queue_viewer(x, y, w, h) {
                 }
             }
 
-            while (state.item_index < state.item_count && Date.now() - sliceStarted < budgetMs) {
+            while (state.item_index < state.item_count && withinBudget()) {
                 var itemIndex = state.item_index++;
                 state.processed_items++;
                 try {
@@ -700,7 +717,7 @@ function _queue_viewer(x, y, w, h) {
         this.scan_timer = window.SetTimeout(function () {
             self.scan_timer = 0;
             self.scan_chunk(generation);
-        }, 0);
+        }, 5);
     }
 
     this.finish_scan = function (generation) {
@@ -751,6 +768,7 @@ function _queue_viewer(x, y, w, h) {
         this.data = [];
         this.count = 0;
         this.selected_indices = [];
+        this.rebuild_selection_lookup();
         this.selected_index = -1;
         this.anchor_index = -1;
     }
@@ -768,6 +786,7 @@ function _queue_viewer(x, y, w, h) {
     this.data = [];
     this.hover_index = -1;
     this.selected_indices = [];
+    this.selected_lookup = {};
     this.selected_index = -1;
     this.anchor_index = -1;
     this.pending_selection = null;
