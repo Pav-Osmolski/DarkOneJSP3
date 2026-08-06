@@ -60,12 +60,9 @@ workflow of the original theme.
 * Optional startup transitions with native-window reveal hardening.
 * Demand-driven playlist rendering with cached selection/playback state, reused
   visible rows, cached column geometry and Direct2D bitmap reuse.
-* Direct Dot Matrix sprite rendering, cached InfoStack layout and on-demand Album
-  Art blur generation reduce resource churn in common rendering paths.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
-* Uniform resolved inheritance for the composite bottom area, avoiding mixed
-  native JSP3 and JSplitter backing colours.
+* Consistent, configurable bottom-area colours across JSP3 and JSplitter.
 
 ## Current release
 
