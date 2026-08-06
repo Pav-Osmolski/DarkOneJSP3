@@ -384,10 +384,17 @@ function darkOneWriteResetCommand(scope) {
     } catch (e) {}
     return false;
 }
+function darkOneNormaliseBottomPickerChoice(value) {
+    if (value === null || typeof value === 'undefined') return null;
+    var number = Number(value);
+    if (!isFinite(number) || Math.floor(number) !== number) return null;
+    if (number < -2147483648 || number > 4294967295) return null;
+    return darkOneBottomOpaque(number);
+}
 function darkOnePickBottomAreaColour(current, title) {
     current = darkOneBottomOpaque(current);
-    if (typeof DarkOneColour != 'undefined' && DarkOneColour &&
-            typeof DarkOneColour.pickJscript == 'function') {
+    if (typeof DarkOneColour !== 'undefined' &&
+            typeof DarkOneColour.pickJscript !== 'undefined') {
         return DarkOneColour.pickJscript(
             current,
             title,
@@ -395,19 +402,27 @@ function darkOnePickBottomAreaColour(current, title) {
         );
     }
     try {
-        if (typeof utils.ColourPicker == 'function') {
-            var chosen = utils.ColourPicker(current, true);
-            return chosen === null || typeof chosen == 'undefined'
-                ? null : darkOneBottomOpaque(chosen);
+        if (typeof utils !== 'undefined' &&
+                typeof utils.ColourPicker !== 'undefined') {
+            var chosen = darkOneNormaliseBottomPickerChoice(
+                utils.ColourPicker(Number(current) | 0)
+            );
+            return chosen !== null && chosen !== current ? chosen : null;
         }
-    } catch (e) { return null; }
+    } catch (e) {
+        try {
+            console.log('[DarkOneJSP3] JScript Panel ColourPicker failed (' +
+                title + '): ' + (e && e.message ? e.message : String(e)));
+        } catch (e2) {}
+        return null;
+    }
     try {
         return darkOneBottomParseColour(utils.InputBox(
             'Enter a colour as #RRGGBB or R,G,B.',
             title,
             darkOneBottomHex(current)
         ));
-    } catch (e2) {}
+    } catch (e3) {}
     return null;
 }
 function darkOneAppendBottomColourOptions(menu, options, selectedMode, customColour) {
@@ -1016,12 +1031,22 @@ function darkOneToolsMenu(x, y) {
     m.AppendMenuItem(MF_STRING, 9121, 'Configure script...');
     m.AppendMenuItem(MF_STRING, 9122, 'Reload this panel');
 
-    var idx = m.TrackPopupMenu(x, y);
-    for (var i = menus.length - 1; i >= 0; i--) {
-        try { menus[i].Dispose(); } catch (e) {}
+    var idx = 0;
+    var bottomAreaHandled = false;
+    try {
+        idx = m.TrackPopupMenu(x, y);
+        // Route every bottom-area command through one path. The native picker
+        // remains inside the popup lifetime used by the confirmed live fix,
+        // while finally guarantees every native menu is disposed on success,
+        // cancellation or any later exception.
+        bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);
+    } finally {
+        for (var i = menus.length - 1; i >= 0; i--) {
+            try { menus[i].Dispose(); } catch (disposeError) {}
+        }
     }
 
-    if (darkOneHandleBottomAreaMenuSelection(idx)) return true;
+    if (bottomAreaHandled) return true;
 
     var weightMap = {
         9210 : DWRITE_FONT_WEIGHT_NORMAL,

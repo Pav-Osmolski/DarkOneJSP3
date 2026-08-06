@@ -228,7 +228,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.7.1',
+            'version': '0.7.7',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -266,6 +266,10 @@ def run(ctx: ValidationContext) -> None:
             'waveform_automatic_background_tests': True,
             'transparent_bottom_area_resolution_tests': True,
             'bottom_area_full_mode_matrix_tests': True,
+            'native_colour_picker_unknown_type_tests': True,
+            'bottom_area_live_menu_picker_tests': True,
+            'bottom_area_menu_end_to_end_tests': True,
+            'native_colour_picker_result_validation_tests': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -304,17 +308,22 @@ def run(ctx: ValidationContext) -> None:
             'colour_consolidation', {})
         expected_colour_consolidation = {
             'shared_helper': 'DarkOneJSP3/shared/colour_utils.js',
-            'version': '0.1.0',
+            'version': '0.1.4',
             'declarative_menu_mapping': True,
             'explicit_menu_id_to_mode_mapping': True,
             'jsplitter_picker_signature':
                 'utils.ColourPicker(window_id, default_colour)',
             'jscript_panel_picker_signature':
-                'utils.ColourPicker(default_colour, true)',
+                'utils.ColourPicker(default_colour)',
             'cancel_preserves_existing_colour': True,
             'text_fallback_only_when_native_picker_unavailable': True,
             'saved_property_names_unchanged': True,
             'saved_mode_values_unchanged': True,
+            'native_method_unknown_type_supported': True,
+            'strict_function_type_guard_rejected': True,
+            'finite_32bit_picker_results_only': True,
+            'contextual_picker_failure_logging': True,
+            'unchanged_native_result_treated_as_cancel': True,
         }
         for key, expected in expected_colour_consolidation.items():
             if colour_consolidation.get(key) != expected:
@@ -366,7 +375,7 @@ def run(ctx: ValidationContext) -> None:
             'background_default': 'DarkOne grey',
             'divider_default': 'DarkOne dark grey',
             'quick_search_frame_unchanged': True,
-            'version': '0.2.6',
+            'version': '0.2.12',
             'transparent_resolved_colour': 'DarkOne dark grey RGB 24,24,24',
             'transparent_cross_host_uniformity': True,
             'full_background_mode_matrix_validated': True,
@@ -383,6 +392,11 @@ def run(ctx: ValidationContext) -> None:
             'notification_fast_path_retained': True,
             'failed_write_diagnostics': True,
             'failed_write_retry': True,
+            'native_custom_colour_picker_supported': True,
+            'custom_colour_picker_while_menu_alive': True,
+            'popup_menu_cleanup_finally': True,
+            'single_bottom_menu_dispatch': True,
+            'end_to_end_menu_tests': True,
             'factory_reset_command_file': 'js_data/darkonejsp3.reset-command.txt',
             'factory_reset_cross_host_bridge': True,
             'jsplitter_state_relay': True,
@@ -2040,9 +2054,38 @@ def run(ctx: ValidationContext) -> None:
     colour_helper = project / 'shared' / 'colour_utils.js'
     if colour_helper.exists():
         body = text(colour_helper)
+        forbidden_picker_guards = [
+            r"typeof\s+utils\.ColourPicker\s*={2,3}\s*['\"]function['\"]",
+            r"typeof\s+utils\.ColourPicker\s*!={1,2}\s*['\"]unknown['\"]",
+        ]
+        for pattern in forbidden_picker_guards:
+            if re.search(pattern, body):
+                errors.append('Shared colour helper uses an unreliable native ColourPicker type guard')
+        if body.count("typeof utils.ColourPicker !== 'undefined'") < 2:
+            errors.append('Shared colour helper does not support native ColourPicker methods reported as unknown')
+        if 'utils.ColourPicker(current, true)' in body:
+            errors.append('Shared colour helper uses an unsupported two-argument JScript Panel ColourPicker call')
+        if 'nativeSigned: function (colour)' not in body:
+            errors.append('Shared colour helper does not expose signed native-colour conversion')
+        if 'normalisePickerChoice: function (value)' not in body:
+            errors.append('Shared colour helper does not validate native picker results')
+        if "if (!isFinite(number) || Math.floor(number) !== number) return null;" not in body:
+            errors.append('Shared colour helper does not reject non-finite or fractional picker results')
+        if 'number < -2147483648 || number > 4294967295' not in body:
+            errors.append('Shared colour helper does not enforce signed/unsigned 32-bit picker bounds')
+        if 'logPickerFailure: function (host, context, error)' not in body:
+            errors.append('Shared colour helper does not provide contextual picker diagnostics')
+        if 'var chosen = utils.ColourPicker(this.nativeSigned(current));' not in body:
+            errors.append('Shared colour helper does not pass a signed 32-bit colour to JScript Panel ColourPicker')
+        if 'var chosen = utils.ColourPicker(0, this.nativeSigned(current));' not in body:
+            errors.append('Shared colour helper does not pass a signed 32-bit colour to JSplitter ColourPicker')
+
         for token in [
             'var DarkOneColour = Object.freeze({',
             'opaque: function (colour)',
+            'nativeSigned: function (colour)',
+            'normalisePickerChoice: function (value)',
+            'logPickerFailure: function (host, context, error)',
             'toHex: function (colour)',
             'columnsUi: function (index, fallback)',
             'parseOpaque: function (value)',
@@ -2053,6 +2096,51 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('Shared colour helper is missing: ' + token)
+
+    global_config = project / 'jscript' / 'js' / 'Config_Global_Script.js'
+    if global_config.exists():
+        body = text(global_config)
+        if re.search(r'''typeof\s+utils\.ColourPicker\s*={2,3}\s*['"]function['"]''', body):
+            errors.append('Bottom-area custom-colour fallback uses an unreliable native ColourPicker type guard')
+        if "typeof utils.ColourPicker !== 'undefined'" not in body:
+            errors.append('Bottom-area custom-colour fallback does not accept native ColourPicker methods reported as unknown')
+        if 'utils.ColourPicker(current, true)' in body:
+            errors.append('Bottom-area custom-colour fallback uses an unsupported two-argument JScript Panel picker call')
+        if 'utils.ColourPicker(Number(current) | 0)' not in body:
+            errors.append('Bottom-area custom-colour fallback does not pass a signed 32-bit colour to JScript Panel ColourPicker')
+        if 'function darkOneNormaliseBottomPickerChoice(value)' not in body or \
+                'number < -2147483648 || number > 4294967295' not in body:
+            errors.append('Bottom-area legacy picker fallback lacks strict finite 32-bit result validation')
+        if "typeof DarkOneColour.pickJscript !== 'undefined'" not in body:
+            errors.append('Bottom-area picker does not prefer the canonical shared colour helper')
+        for forbidden in [
+            'DARKONE_BOTTOM_COLOUR_PICKER_DELAY',
+            'darkOneBottomAreaPickerTimer',
+            'darkOneQueueBottomAreaColourPicker',
+            'darkOneCancelBottomAreaColourPicker',
+            'bottomCustomHandled',
+            'bottomCustomOption',
+        ]:
+            if forbidden in body:
+                errors.append('Bottom-area custom-colour picker retains obsolete or duplicate dispatch code: ' + forbidden)
+        for token in [
+            "chosen = darkOnePickBottomAreaColour(",
+            "state.backgroundCustomColour = chosen;",
+            "state.dividerCustomColour = chosen;",
+            "bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);",
+            "try {\n        idx = m.TrackPopupMenu(x, y);",
+            "} finally {\n        for (var i = menus.length - 1; i >= 0; i--)",
+        ]:
+            if token not in body:
+                errors.append('Bottom-area menu hardening is missing: ' + token)
+        tools_start = body.find('function darkOneToolsMenu(x, y)')
+        tools_end = body.find('function darkOneSetFontWeightProperty', tools_start)
+        tools_body = body[tools_start:tools_end if tools_end > tools_start else len(body)]
+        if tools_body.count('darkOneHandleBottomAreaMenuSelection(idx)') != 1:
+            errors.append('Bottom-area commands do not use exactly one menu dispatch path')
+        if tools_body.count('.Dispose()') != 1:
+            errors.append('DarkOne Tools menu cleanup is not centralised in one finally-protected loop')
+
 
     jsplitter_shared = project / 'jsplitter' / 'shared.js'
     if jsplitter_shared.exists() and \
@@ -2199,8 +2287,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Display volume-cadence follower is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.21-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.26-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.27-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.32-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():
@@ -2208,6 +2296,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(path)
         if 'DarkOneJSP3\\jscript\\js\\Buttons_OptionalMenu.js' not in body:
             errors.append(rel(path) + ' does not import the shared optional-button menu')
+        if 'DarkOneJSP3\\shared\\colour_utils.js' not in body:
+            errors.append(rel(path) + ' does not import the shared colour helper')
         if '@version "' + expected_version + '"' not in body:
             errors.append(rel(path) + ' has the wrong consolidated control-panel version')
 

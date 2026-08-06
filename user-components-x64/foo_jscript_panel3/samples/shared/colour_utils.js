@@ -8,6 +8,19 @@ var DarkOneColour = Object.freeze({
         return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
     },
 
+    nativeSigned: function (colour) {
+        return Number(colour) | 0;
+    },
+
+    normalisePickerChoice: function (value) {
+        if (value === null || typeof value === 'undefined') return null;
+        var number = Number(value);
+        if (!isFinite(number) || Math.floor(number) !== number) return null;
+        // Native hosts may return either signed LONG values or unsigned ARGB.
+        if (number < -2147483648 || number > 4294967295) return null;
+        return this.opaque(number);
+    },
+
     toHex: function (colour) {
         var rgb = (Number(colour) >>> 0) & 0x00ffffff;
         var value = rgb.toString(16).toUpperCase();
@@ -42,8 +55,16 @@ var DarkOneColour = Object.freeze({
     },
 
     isChoice: function (value) {
-        return value !== null && typeof value !== 'undefined' &&
-            !isNaN(Number(value));
+        return this.normalisePickerChoice(value) !== null;
+    },
+
+    logPickerFailure: function (host, context, error) {
+        try {
+            if (typeof console === 'undefined' || typeof console.log === 'undefined') return;
+            var label = context ? ' (' + context + ')' : '';
+            var message = error && error.message ? error.message : String(error);
+            console.log('[DarkOneJSP3] ' + host + ' ColourPicker failed' + label + ': ' + message);
+        } catch (ignored) {}
     },
 
     normaliseMode: function (value, allowedModes, fallback) {
@@ -93,13 +114,18 @@ var DarkOneColour = Object.freeze({
     pickJsplitter: function (current, title, prompt) {
         current = this.opaque(current);
         var pickerAvailable = typeof utils !== 'undefined' &&
-            typeof utils.ColourPicker === 'function';
+            typeof utils.ColourPicker !== 'undefined';
 
         if (pickerAvailable) {
             try {
-                var chosen = utils.ColourPicker(0, current);
-                return this.isChoice(chosen) ? this.opaque(chosen) : null;
+                var chosen = utils.ColourPicker(0, this.nativeSigned(current));
+                var normalised = this.normalisePickerChoice(chosen);
+                // Both supported native pickers return their supplied default
+                // when the dialog is cancelled. Treat an unchanged result as
+                // cancellation so selecting Custom never changes mode on Cancel.
+                return normalised !== null && normalised !== current ? normalised : null;
             } catch (e) {
+                this.logPickerFailure('JSplitter', title, e);
                 return null;
             }
         }
@@ -114,16 +140,17 @@ var DarkOneColour = Object.freeze({
     pickJscript: function (current, title, prompt) {
         current = this.opaque(current);
         var pickerAvailable = typeof utils !== 'undefined' &&
-            typeof utils.ColourPicker === 'function';
+            typeof utils.ColourPicker !== 'undefined';
 
         if (pickerAvailable) {
             try {
-                // JScript Panel's optional true flag raises on Cancel, allowing
-                // callers to distinguish cancellation from choosing the current
-                // colour and to preserve the existing mode reliably.
-                var chosen = utils.ColourPicker(current, true);
-                return this.isChoice(chosen) ? this.opaque(chosen) : null;
+                // JScript Panel 3 uses the one-argument native signature and
+                // expects a signed 32-bit colour at the host boundary.
+                var chosen = utils.ColourPicker(this.nativeSigned(current));
+                var normalised = this.normalisePickerChoice(chosen);
+                return normalised !== null && normalised !== current ? normalised : null;
             } catch (e) {
+                this.logPickerFailure('JScript Panel', title, e);
                 return null;
             }
         }

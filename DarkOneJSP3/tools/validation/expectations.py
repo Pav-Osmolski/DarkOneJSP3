@@ -80,9 +80,9 @@ REQUIRED_PATHS = (
 )
 
 EXPECTED_MODULE_VERSIONS = {
-    'control_left': ('3.0.21-jsp3-3.8.5', 'Control Left'),
-    'control_right': ('3.0.26-jsp3-3.8.5', 'Control Right'),
-    'display': ('3.0.25-jsp3-3.8.5', 'Display'),
+    'control_left': ('3.0.27-jsp3-3.8.5', 'Control Left'),
+    'control_right': ('3.0.32-jsp3-3.8.5', 'Control Right'),
+    'display': ('3.0.31-jsp3-3.8.5', 'Display'),
     'queue_viewer': ('0.6.2', 'Queue Viewer'),
     'allmusic': ('0.6.4', 'AllMusic'),
     'musicbrainz': ('0.6.4', 'MusicBrainz'),
@@ -95,7 +95,7 @@ EXPECTED_MODULE_VERSIONS = {
     'startup_controller': ('0.7.36', 'startup controller'),
     'main_columns_controller': ('0.7.36', 'Main Columns controller'),
     'page_background': ('0.1.3', 'page-background module'),
-    'colour_helpers': ('0.1.0', 'colour-helper module'),
+    'colour_helpers': ('0.1.4', 'colour-helper module'),
     'performance_helpers': ('0.1.4', 'performance-helper module'),
     'ui_cadence': ('0.1.1', 'UI-cadence protocol module'),
     'playlist_render_cache': ('0.1.0', 'playlist render-cache module'),
@@ -103,11 +103,11 @@ EXPECTED_MODULE_VERSIONS = {
     'optional_button_menu': ('0.1.0', 'optional-button menu module'),
     'info_stack_colours': ('0.1.0', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.7.1', 'release-validator module'),
+    'release_validator': ('0.7.7', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
-    'bottom_area_appearance': ('0.2.6', 'shared bottom-area appearance'),
+    'bottom_area_appearance': ('0.2.12', 'shared bottom-area appearance'),
 }
 
 SEMVER_MODULES = ()

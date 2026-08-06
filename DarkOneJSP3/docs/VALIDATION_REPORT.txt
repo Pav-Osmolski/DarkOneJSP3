@@ -1,4 +1,4 @@
-DarkOneJSP3 v0.9.31 Validation Report
+DarkOneJSP3 v0.9.37 Validation Report
 =====================================
 
 Scope
@@ -11,6 +11,20 @@ validation and the audited-file count.
 
 Checks
 ------
+- Shared colour-picker helpers and the legacy bottom-area fallback accept
+  native `utils.ColourPicker` methods even when JScript Panel reports their
+  type as `unknown`; strict function-only guards are rejected. Opaque ARGB
+  values are converted to signed 32-bit integers at the native picker boundary,
+  and returned values must be finite integers inside the supported signed or
+  unsigned 32-bit range.
+- Picker exceptions produce contextual console diagnostics. An unchanged native
+  result is treated as cancellation so an existing mode and colour are not
+  replaced when the dialog is dismissed.
+- The real DarkOne Tools menu hierarchy is executed end to end for both Custom
+  command IDs. Tests verify signed picker arguments, selected-state persistence,
+  cancellation, failure handling and exactly-once disposal of every popup menu.
+  The production menu uses one bottom-area dispatch path protected by
+  `try/finally` cleanup.
 - JS Playlist visible rows cache selection state and the current playback
   location outside paint/mouse hot paths; sequential viewport changes reuse
   surviving row objects and pre-resolved column geometry.

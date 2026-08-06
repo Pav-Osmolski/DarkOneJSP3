@@ -770,24 +770,49 @@ def run(ctx: ValidationContext) -> None:
             errors.append('JS Playlist render-cache runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
-        # Exercise the shared colour conversions, declarative menu mapping and
-        # host-specific picker cancellation/fallback behaviour.
+        # Exercise colour conversion, strict native-result validation,
+        # cancellation, contextual diagnostics and host-specific signatures.
         colour_helper_smoke = f"""
     const fs = require('fs');
     const source = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
     let pickerCalls = [];
     let inputCalls = 0;
+    let logs = [];
+    let pickerResult = null;
+    let pickerError = null;
     const utilsMock = {{
-        ColourPicker() {{ pickerCalls.push([...arguments]); return null; }},
+        ColourPicker() {{
+            const args = [...arguments];
+            const nativeColour = Number(args[args.length - 1]);
+            if (!Number.isInteger(nativeColour) || nativeColour < -2147483648 || nativeColour > 2147483647)
+                throw new Error('Overflow');
+            pickerCalls.push(args);
+            if (pickerError) throw pickerError;
+            return pickerResult === '__DEFAULT__' ? nativeColour : pickerResult;
+        }},
         InputBox() {{ inputCalls++; return '#123456'; }}
     }};
-    const factory = new Function('utils', source + '\\nreturn DarkOneColour;');
-    const colour = factory(utilsMock);
+    const consoleMock = {{log(message) {{ logs.push(String(message)); }}}};
+    const factory = new Function('utils', 'console', source + '\\nreturn DarkOneColour;');
+    const colour = factory(utilsMock, consoleMock);
     function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    assert(source.indexOf('utils.ColourPicker(current, true)') === -1,
+        'Shared helper still contains the unsupported two-argument JScript Panel picker call');
+    assert(source.indexOf('utils.ColourPicker(this.nativeSigned(current))') !== -1,
+        'Shared helper omits signed JScript Panel picker conversion');
+    assert(source.indexOf('utils.ColourPicker(0, this.nativeSigned(current))') !== -1,
+        'Shared helper omits signed JSplitter picker conversion');
     assert((colour.opaque(0x00123456) >>> 0) === 0xff123456, 'Opaque conversion failed');
     assert(colour.toHex(0xff123456) === '#123456', 'Hex conversion failed');
     assert((colour.parseOpaque('18, 52, 86') >>> 0) === 0xff123456, 'RGB parsing failed');
     assert((colour.parseOpaque('300, 0, 86') >>> 0) === 0xffff0056, 'RGB channel clamping failed');
+    assert((colour.normalisePickerChoice(-15654349) >>> 0) === 0xff112233,
+        'Signed native picker result was rejected');
+    assert((colour.normalisePickerChoice(0xff112233) >>> 0) === 0xff112233,
+        'Unsigned native picker result was rejected');
+    [Infinity, -Infinity, NaN, 1.5, -2147483649, 4294967296, 'not-a-colour'].forEach(value =>
+        assert(colour.normalisePickerChoice(value) === null,
+            'Invalid native picker result was accepted: ' + String(value)));
     assert(colour.normaliseMode(4, [0, 1, 2, 4, 5, 3], 1) === 4, 'Sparse mode 4 was rejected');
     assert(colour.normaliseMode(99, [0, 1, 2, 4, 5, 3], 1) === 1, 'Invalid mode fallback failed');
     const options = [
@@ -804,30 +829,72 @@ def run(ctx: ValidationContext) -> None:
     assert(menu.radio.join(',') === '10,12,11', 'Declarative menu selected the wrong id');
     assert(menu.items[2][2] === 'Custom colour... (#123456)', 'Custom menu label is wrong');
     assert(colour.optionForId(options, 12).mode === 2, 'Menu id did not resolve to mode');
-    assert(colour.pickJsplitter(0xff112233, 'Test', 'Prompt') === null,
-        'Cancelling the JSplitter picker changed the colour');
-    assert(inputCalls === 0 && pickerCalls[0].length === 2,
-        'JSplitter cancel incorrectly opened fallback or used wrong signature');
+
+    pickerResult = '__DEFAULT__';
+    assert(colour.pickJsplitter(0xff112233, 'Divider test', 'Prompt') === null,
+        'Unchanged JSplitter picker result did not preserve the current mode');
+    assert(pickerCalls[0].length === 2 && pickerCalls[0][1] < 0 &&
+        (pickerCalls[0][1] >>> 0) === 0xff112233,
+        'JSplitter picker did not receive the required signed 32-bit colour');
+    pickerResult = (0xff445566 | 0);
+    assert((colour.pickJsplitter(0xff112233, 'Divider test', 'Prompt') >>> 0) === 0xff445566,
+        'JSplitter picker did not normalise its selected colour');
+
+    pickerResult = '__DEFAULT__';
+    assert(colour.pickJscript(0xff112233, 'Panel test', 'Prompt') === null,
+        'Unchanged JScript Panel picker result did not preserve the current mode');
+    assert(pickerCalls[pickerCalls.length - 1].length === 1 &&
+        pickerCalls[pickerCalls.length - 1][0] < 0 &&
+        (pickerCalls[pickerCalls.length - 1][0] >>> 0) === 0xff112233,
+        'JScript Panel picker did not receive the required signed 32-bit colour');
+    pickerResult = (0xff667788 | 0);
+    assert((colour.pickJscript(0xff112233, 'Panel test', 'Prompt') >>> 0) === 0xff667788,
+        'JScript Panel picker did not normalise its selected colour');
+
+    pickerResult = Infinity;
+    assert(colour.pickJscript(0xff112233, 'Invalid result', 'Prompt') === null,
+        'Non-finite JScript Panel picker result changed the colour');
+    pickerError = new Error('native failure');
+    logs = [];
+    assert(colour.pickJscript(0xff112233, 'Display accent', 'Prompt') === null,
+        'JScript Panel picker exception changed the colour');
+    assert(logs.some(line => line.indexOf('JScript Panel ColourPicker failed (Display accent): native failure') !== -1),
+        'JScript Panel picker failure lacked contextual diagnostics');
+    pickerError = new Error('splitter failure');
+    logs = [];
+    assert(colour.pickJsplitter(0xff112233, 'InfoStack background', 'Prompt') === null,
+        'JSplitter picker exception changed the colour');
+    assert(logs.some(line => line.indexOf('JSplitter ColourPicker failed (InfoStack background): splitter failure') !== -1),
+        'JSplitter picker failure lacked contextual diagnostics');
+    pickerError = null;
+
     delete utilsMock.ColourPicker;
-    assert((colour.pickJsplitter(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
-        'JSplitter text fallback failed when the native picker was unavailable');
-    utilsMock.ColourPicker = function() {{ pickerCalls.push([...arguments]); return null; }};
     inputCalls = 0;
-    assert(colour.pickJscript(0xff112233, 'Test', 'Prompt') === null,
-        'Cancelling the JScript Panel picker changed the colour');
-    assert(inputCalls === 0 && pickerCalls[pickerCalls.length - 1].length === 2 &&
-        pickerCalls[pickerCalls.length - 1][1] === true,
-        'JScript Panel cancel incorrectly opened fallback or used wrong signature');
-    utilsMock.ColourPicker = function() {{ throw new Error('cancel'); }};
-    inputCalls = 0;
-    assert(colour.pickJscript(0xff112233, 'Test', 'Prompt') === null && inputCalls === 0,
-        'JScript Panel picker exception incorrectly opened the text fallback');
-    utilsMock.ColourPicker = function() {{ throw new Error('cancel'); }};
-    assert(colour.pickJsplitter(0xff112233, 'Test', 'Prompt') === null && inputCalls === 0,
-        'JSplitter picker exception incorrectly opened the text fallback');
-    delete utilsMock.ColourPicker;
     assert((colour.pickJscript(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
         'JScript Panel text fallback failed when the native picker was unavailable');
+    assert((colour.pickJsplitter(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff123456,
+        'JSplitter text fallback failed when the native picker was unavailable');
+    assert(inputCalls === 2, 'Text fallback was not used exactly once per unavailable native picker');
+
+    // JScript Panel 3 may report native COM methods as typeof "unknown".
+    const unknownTypeSource = source.replace(/typeof utils\\.ColourPicker/g, "'unknown'");
+    pickerCalls = [];
+    inputCalls = 0;
+    pickerResult = (0xff445566 | 0);
+    utilsMock.ColourPicker = function() {{
+        const args = [...arguments];
+        const nativeColour = Number(args[args.length - 1]);
+        if (nativeColour < -2147483648 || nativeColour > 2147483647) throw new Error('Overflow');
+        pickerCalls.push(args);
+        return pickerResult;
+    }};
+    const unknownTypeColour = new Function('utils', 'console', unknownTypeSource + '\\nreturn DarkOneColour;')(utilsMock, consoleMock);
+    assert((unknownTypeColour.pickJscript(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff445566,
+        'JScript Panel native picker reported as unknown was not invoked');
+    assert((unknownTypeColour.pickJsplitter(0xff112233, 'Test', 'Prompt') >>> 0) === 0xff445566,
+        'JSplitter native picker reported as unknown was not invoked');
+    assert(inputCalls === 0 && pickerCalls.length === 2,
+        'Unknown-type native picker incorrectly fell back to text entry');
     """
         result = subprocess.run([node, '-e', colour_helper_smoke],
                                 capture_output=True, text=True)
@@ -1522,12 +1589,39 @@ def run(ctx: ValidationContext) -> None:
     const bottomEnd = configSource.indexOf('function repeat(', bottomStart);
     if (bottomStart < 0 || bottomEnd < 0) throw new Error('JScript bottom-area compatibility block is missing');
     const bottomSource = configSource.slice(bottomStart, bottomEnd);
+    function extractFunction(source, name) {{
+        const marker = 'function ' + name + '(';
+        const start = source.indexOf(marker);
+        if (start < 0) throw new Error('Missing function: ' + name);
+        const brace = source.indexOf('{{', start);
+        let depth = 0;
+        let quote = null;
+        let escaped = false;
+        for (let i = brace; i < source.length; i++) {{
+            const ch = source[i];
+            if (quote) {{
+                if (escaped) escaped = false;
+                else if (ch === '\\\\') escaped = true;
+                else if (ch === quote) quote = null;
+                continue;
+            }}
+            if (ch === '"' || ch === "'") {{ quote = ch; continue; }}
+            if (ch === '{{') depth++;
+            else if (ch === '}}' && --depth === 0) return source.slice(start, i + 1);
+        }}
+        throw new Error('Unterminated function: ' + name);
+    }}
+    const toolsMenuSource = extractFunction(configSource, 'darkOneToolsMenu');
+    const weightMenuSource = extractFunction(configSource, 'darkOneAppendWeightMenu');
 
     const files = Object.create(null);
     const NEW_STATE = 'P:\\\\js_data\\\\darkonejsp3.bottom-area-state.txt';
     const LEGACY_STATE = 'P:\\\\DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';
     const RESET_COMMAND = 'P:\\\\js_data\\\\darkonejsp3.reset-command.txt';
     let failWrites = 0;
+    let bottomPickerCalls = 0;
+    let bottomPickerResult = (0xff556677 | 0);
+    let bottomPickerError = null;
     const logs = [];
     const readCounts = Object.create(null);
     function fileUtils() {{
@@ -1546,7 +1640,15 @@ def run(ctx: ValidationContext) -> None:
                 return true;
             }},
             RemovePath(path) {{ delete files[path]; return true; }},
-            ColourPicker() {{ return 0xff556677; }},
+            ColourPicker() {{
+                const args = [...arguments];
+                const nativeColour = Number(args[args.length - 1]);
+                if (!Number.isInteger(nativeColour) || nativeColour < -2147483648 || nativeColour > 2147483647)
+                    throw new Error('Overflow');
+                bottomPickerCalls++;
+                if (bottomPickerError) throw bottomPickerError;
+                return bottomPickerResult === '__DEFAULT__' ? nativeColour : bottomPickerResult;
+            }},
             MessageBox() {{ return 1; }}
         }};
     }}
@@ -1558,6 +1660,24 @@ def run(ctx: ValidationContext) -> None:
         let repaints = 0;
         let intervalCalls = 0;
         let appearanceApplications = 0;
+        let popupCommand = 0;
+        let popupMenus = [];
+        function createPopupMenu() {{
+            const menu = {{
+                disposed: 0,
+                items: [],
+                children: [],
+                AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
+                AppendMenuSeparator() {{}},
+                CheckMenuRadioItem() {{}},
+                CheckMenuItem() {{}},
+                AppendTo(parent, flags, label) {{ parent.children.push([this, label]); }},
+                TrackPopupMenu() {{ return popupCommand; }},
+                Dispose() {{ this.disposed++; }}
+            }};
+            popupMenus.push(menu);
+            return menu;
+        }}
         const windowMock = {{
             GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
             SetProperty(name, value) {{ properties.set(name, value); }},
@@ -1566,7 +1686,9 @@ def run(ctx: ValidationContext) -> None:
             SetInterval() {{ intervalCalls++; throw new Error('JScript panels must not poll the runtime file'); }},
             ClearInterval() {{}},
             SetTimeout(fn, delay) {{ timers.push([fn, delay]); return timers.length; }},
-            ClearTimeout(id) {{ if (id > 0 && id <= timers.length) timers[id - 1] = null; }}
+            ClearTimeout(id) {{ if (id > 0 && id <= timers.length) timers[id - 1] = null; }},
+            CreatePopupMenu: createPopupMenu,
+            Reload() {{}}, ShowProperties() {{}}, ShowConfigure() {{}}
         }};
         function applyValues(values) {{
             const names = [];
@@ -1574,17 +1696,25 @@ def run(ctx: ValidationContext) -> None:
             return {{ handled: true, all: false, names, categories: {{ bottom: true }} }};
         }}
         const factory = new Function(
-            'window', 'fb', 'utils', 'MF_STRING', 'MB_OK', 'MB_ICONEXCLAMATION',
+            'window', 'fb', 'utils', 'MF_STRING', 'MF_GRAYED', 'MB_OK', 'MB_ICONEXCLAMATION',
             'ui_backcol', 'p_backcol', 'ww', 'wh', 'console', 'darkOneApplySharedValues',
             'buttonsColours', 'display_system',
-            resetSource + '\\n' + bottomSource +
-            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,apply:darkOneApplyBottomAreaState,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand}};'
+            resetSource + '\\n' + bottomSource + '\\n' +
+            'function darkOneControlFontName(){{return "Segoe UI";}}\\n' +
+            'function darkOneControlFontWeight(){{return 400;}}\\n' +
+            'function darkOneDisplayLabelFontName(){{return "Segoe UI";}}\\n' +
+            'function darkOneDisplayLabelFontWeight(){{return 400;}}\\n' +
+            'function darkOneDisplayValueFontName(){{return "Segoe UI";}}\\n' +
+            'function darkOneDisplayValueFontWeight(){{return 400;}}\\n' +
+            'var DWRITE_FONT_WEIGHT_NORMAL=400,DWRITE_FONT_WEIGHT_MEDIUM=500,DWRITE_FONT_WEIGHT_SEMI_BOLD=600,DWRITE_FONT_WEIGHT_BOLD=700,DWRITE_FONT_WEIGHT_BLACK=900;\\n' +
+            weightMenuSource + '\\n' + toolsMenuSource +
+            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,apply:darkOneApplyBottomAreaState,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,toolsMenu:darkOneToolsMenu}};'
         );
         const api = factory(
             windowMock,
             {{ ProfilePath: 'P:\\\\' }},
             fileUtils(),
-            0, 0, 0,
+            0, 1, 0, 0,
             0xff445566,
             0xff202020,
             320,
@@ -1607,6 +1737,8 @@ def run(ctx: ValidationContext) -> None:
             }},
             get repaints() {{ return repaints; }},
             get intervalCalls() {{ return intervalCalls; }},
+            setPopupCommand(value) {{ popupCommand = value; popupMenus = []; }},
+            get popupMenus() {{ return popupMenus; }},
             get appearanceApplications() {{ return appearanceApplications; }}
         }};
     }}
@@ -1656,6 +1788,64 @@ def run(ctx: ValidationContext) -> None:
     panelB.api.request();
     if (panelA.intervalCalls || panelB.intervalCalls)
         throw new Error('JScript panels retain redundant continuous file pollers');
+
+    // Exercise the real DarkOne Tools hierarchy and command dispatcher. Each
+    // native popup must be disposed exactly once for selection, cancellation
+    // and picker failure, while state changes only for a valid new colour.
+    function assertMenusDisposedOnce(panel, label) {{
+        if (panel.popupMenus.length !== 13 || panel.popupMenus.some(menu => menu.disposed !== 1))
+            throw new Error(label + ' did not dispose every DarkOne Tools popup exactly once');
+    }}
+
+    bottomPickerCalls = 0;
+    bottomPickerError = null;
+    bottomPickerResult = (0xff556677 | 0);
+    const pickerPanel = makePanel();
+    pickerPanel.api.request();
+    pickerPanel.setPopupCommand(9805);
+    if (!pickerPanel.api.toolsMenu(10, 20))
+        throw new Error('Bottom background Custom colour command was not handled through DarkOne Tools');
+    if (bottomPickerCalls !== 1 || pickerPanel.api.state().backgroundMode !== 3 ||
+            (pickerPanel.api.state().backgroundCustomColour >>> 0) !== 0xff556677)
+        throw new Error('DarkOne Tools background picker did not apply the selected colour');
+    assertMenusDisposedOnce(pickerPanel, 'Background Custom selection');
+    if (files[NEW_STATE].split('|').slice(1, 3).join('|') !== '3|4283786871')
+        throw new Error('Background Custom selection was not persisted through the runtime state file');
+
+    bottomPickerResult = (0xff667788 | 0);
+    pickerPanel.setPopupCommand(9825);
+    if (!pickerPanel.api.toolsMenu(10, 20))
+        throw new Error('Bottom divider Custom colour command was not handled through DarkOne Tools');
+    if (bottomPickerCalls !== 2 || pickerPanel.api.state().dividerMode !== 3 ||
+            (pickerPanel.api.state().dividerCustomColour >>> 0) !== 0xff667788)
+        throw new Error('DarkOne Tools divider picker did not apply the selected colour');
+    assertMenusDisposedOnce(pickerPanel, 'Divider Custom selection');
+
+    const beforeCancel = JSON.stringify(pickerPanel.api.state());
+    bottomPickerResult = '__DEFAULT__';
+    pickerPanel.setPopupCommand(9805);
+    if (!pickerPanel.api.toolsMenu(10, 20))
+        throw new Error('Cancelled background Custom command was not handled');
+    if (JSON.stringify(pickerPanel.api.state()) !== beforeCancel)
+        throw new Error('Cancelling the native picker changed the bottom-area mode or colour');
+    assertMenusDisposedOnce(pickerPanel, 'Cancelled Custom selection');
+
+    const beforeFailure = JSON.stringify(pickerPanel.api.state());
+    bottomPickerResult = (0xff778899 | 0);
+    bottomPickerError = new Error('simulated picker failure');
+    pickerPanel.setPopupCommand(9825);
+    if (!pickerPanel.api.toolsMenu(10, 20))
+        throw new Error('Failed divider Custom command was not handled');
+    if (JSON.stringify(pickerPanel.api.state()) !== beforeFailure)
+        throw new Error('Picker failure changed the bottom-area mode or colour');
+    if (!logs.some(line => line.indexOf('ColourPicker failed') !== -1 &&
+            line.indexOf('bottom area side dividers') !== -1))
+        throw new Error('Bottom-area picker failure lacked contextual console diagnostics');
+    assertMenusDisposedOnce(pickerPanel, 'Failed Custom selection');
+    bottomPickerError = null;
+
+    // Restore the migrated baseline before exercising the isolated JSplitter host.
+    files[NEW_STATE] = 'v1|1|4278190080|4|4278190080';
 
     const hostProperties = new Map();
     const hostNotifications = [];
