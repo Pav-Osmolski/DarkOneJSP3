@@ -228,7 +228,7 @@ def run(ctx: ValidationContext) -> None:
         expected_validation_tooling = {
             'entry_point': 'DarkOneJSP3/tools/validate_release.py',
             'package': 'DarkOneJSP3/tools/validation',
-            'version': '0.7.7',
+            'version': '0.8.0',
             'static_checks_module': 'validation/static_checks.py',
             'runtime_checks_module': 'validation/runtime_checks.py',
             'shared_context_module': 'validation/context.py',
@@ -270,6 +270,11 @@ def run(ctx: ValidationContext) -> None:
             'bottom_area_live_menu_picker_tests': True,
             'bottom_area_menu_end_to_end_tests': True,
             'native_colour_picker_result_validation_tests': True,
+            'stopped_volume_label_state_tests': True,
+            'queue_targeted_refresh_tests': True,
+            'queue_progressive_scan_tests': True,
+            'queue_scan_handle_allocation_tests': True,
+            'queue_stale_cache_recovery_tests': True,
         }
         for key, expected in expected_validation_tooling.items():
             if validation_tooling.get(key) != expected:
@@ -521,19 +526,57 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest does not identify the reset-aware Queue wrapper')
         if queue_manifest.get('generic_sample_participates_in_factory_reset') is not False:
             errors.append('Manifest incorrectly marks the generic Queue sample reset-aware')
-        if queue_manifest.get('recommended_component') != 'native Queue Viewer':
-            errors.append('Manifest does not recommend the native Queue Viewer')
-        if queue_manifest.get('native_component_full_editing') is not True:
-            errors.append('Manifest omits native Queue Viewer editing support')
-        if queue_manifest.get('scripted_viewer_optional') is not True or                 queue_manifest.get('scripted_mutation_support') is not False:
-            errors.append('Manifest does not describe the scripted Queue Viewer limitation')
-        for flag in ['scripted_multi_selection', 'scripted_keyboard_navigation']:
+        if queue_manifest.get('recommended_component') != 'scripted Queue Viewer':
+            errors.append('Manifest does not recommend the scripted Queue Viewer')
+        if queue_manifest.get('native_component_full_editing') is not True or queue_manifest.get('native_viewer_optional') is not True:
+            errors.append('Manifest does not preserve the native Queue Viewer as an optional full editor')
+        if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
+            errors.append('Manifest does not describe the writable scripted Queue Viewer')
+        if queue_manifest.get('direct_bridge_writable') is not True or queue_manifest.get('stale_generation_rejection') is not True:
+            errors.append('Manifest omits writable queue-bridge safety')
+        for flag in [
+            'processed_command_file_acknowledgement',
+            'processed_command_file_removed',
+            'acknowledged_generation_wait',
+            'mixed_source_all_move_variant_validation',
+            'native_viewer_required_for_bundled_fcl_import',
+        ]:
+            if queue_manifest.get(flag) is not True:
+                errors.append('Manifest Queue Viewer hardening flag is missing: ' + flag)
+        if queue_manifest.get('state_publication_retry_ms') != 50 or \
+                queue_manifest.get('state_publication_retry_limit') != 3:
+            errors.append('Manifest Queue Viewer state-publication retry policy is incorrect')
+        fcl_policy = manifest.get('fcl_policy', {})
+        if fcl_policy.get('bundled_layouts') != ['DarkOneJSP3', 'DarkOneJSP3 Native Queue'] or \
+                fcl_policy.get('default_layout') != 'DarkOneJSP3' or \
+                fcl_policy.get('native_queue_layout') != 'DarkOneJSP3 Native Queue' or \
+                fcl_policy.get('native_queue_component_required_for_import') is not True:
+            errors.append('Manifest bundled-FCL Queue Viewer layout policy is incorrect')
+        expected_mutations = ['remove item', 'remove selected items', 'clear playback queue',
+                              'move up', 'move down', 'move to top', 'move to bottom']
+        if queue_manifest.get('scripted_mutation_commands') != expected_mutations:
+            errors.append('Manifest scripted Queue Viewer mutation command list is incorrect')
+        for flag in [
+            'scripted_multi_selection', 'scripted_keyboard_navigation',
+            'targeted_queue_refresh', 'progressive_results',
+            'source_identity_validation', 'playlist_snapshot_validation',
+            'selected_source_handle_list_disposal',
+        ]:
             if queue_manifest.get(flag) is not True:
                 errors.append('Manifest Queue Viewer enhancement is missing: ' + flag)
+        if queue_manifest.get('full_scan_playlist_handle_lists') is not False:
+            errors.append('Manifest does not reject Queue Viewer full-scan handle-list allocation')
+        if queue_manifest.get('scan_work_budget_ms') != 5 or queue_manifest.get('scan_yield_ms') != 1:
+            errors.append('Manifest Queue Viewer scan cadence is not 5 ms work / 1 ms yield')
+        if queue_manifest.get('targeted_refresh_origins') != ['user_removed', 'playback_advance']:
+            errors.append('Manifest Queue Viewer targeted refresh origins are incorrect')
+        if queue_manifest.get('playlist_scan_priority') != [
+                'previous queue sources', 'active playlist', 'remaining playlists']:
+            errors.append('Manifest Queue Viewer playlist priority is incorrect')
         queue_panel = next((panel for panel in manifest.get('panels', [])
                             if isinstance(panel, dict) and panel.get('title') == 'DOJSP3.Queue'), None)
-        if not queue_panel or queue_panel.get('type') != 'Queue Viewer' or                 queue_panel.get('source') != 'native component':
-            errors.append('Manifest does not use the native Queue Viewer for DOJSP3.Queue')
+        if not queue_panel or queue_panel.get('type') != 'JScript Panel 3' or                 queue_panel.get('source') != 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt' or                 queue_panel.get('script') != 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt':
+            errors.append('Manifest does not use the scripted Queue Viewer for DOJSP3.Queue')
         allmusic_manifest = manifest.get('enhancements', {}).get('allmusic', {})
         for flag in [
             'managed_same_album_reactivation',
@@ -701,16 +744,23 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.6.2"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.6.2')
+        if '// @version "0.8.1"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.1')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
             errors.append('DarkOneJSP3 Queue Viewer standalone reset imports are incomplete')
+        for token in [
+            '@import "%fb2k_profile_path%DarkOneJSP3\\shared\\queue_bridge.js"',
+            'var DARKONEJSP3_QUEUE_BRIDGE_ENABLED = true;',
+            'function on_playlists_changed() { queue.source_topology_changed(); }',
+        ]:
+            if token not in body:
+                errors.append('DarkOneJSP3 Queue Viewer direct bridge wrapper is incomplete: ' + token)
 
     generic_queue_entry = samples / 'Queue Viewer.txt'
-    if generic_queue_entry.exists() and '// @version "0.6.2"' not in text(generic_queue_entry):
-        errors.append('Generic enhanced Queue Viewer entry version is not 0.6.2')
+    if generic_queue_entry.exists() and '// @version "0.8.1"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.8.1')
 
     queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
     if queue_source.exists():
@@ -724,8 +774,18 @@ def run(ctx: ValidationContext) -> None:
             "handles.RunContextCommand('Properties')",
             'plman.ExecutePlaylistDefaultAction',
             'utils.SetClipboardText',
-            'this.restore_selection(this.pending_selection)',
+            'this.apply_queue_data(state.data, this.pending_selection)',
             "case 1407:",
+            "case 1410:",
+            "case 1415:",
+            "case 0x2E: // Delete",
+            "this.request_queue_mutation = function",
+            "'Remove item from queue'",
+            "'Move to top'",
+            "'Clear playback queue'",
+            'this.bridge_min_generation = 0',
+            'stateGeneration >= this.bridge_min_generation',
+            'acknowledgedGeneration',
         ]:
             if token not in body:
                 errors.append('Queue Viewer navigation/command support is missing: ' + token)
@@ -1505,6 +1565,17 @@ def run(ctx: ValidationContext) -> None:
             errors.append('README.md is missing the Enhanced Sample Library section')
         if f']({enhanced_samples_target})' not in readme_body:
             errors.append('README.md is missing a link to the enhanced sample guide')
+        for token in [
+            '[Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)',
+            '`DarkOneJSP3 Native Queue`',
+        ]:
+            if token not in readme_body:
+                errors.append('README.md Queue Viewer/FCL documentation is missing: ' + token)
+        installation_body = text(docs / 'INSTALLATION.txt') if (docs / 'INSTALLATION.txt').exists() else ''
+        docs_readme_body = text(docs / 'README.txt') if (docs / 'README.txt').exists() else ''
+        for label, body in [('INSTALLATION.txt', installation_body), ('docs/README.txt', docs_readme_body)]:
+            if 'Queue Viewer' not in body or 'DarkOneJSP3 Native Queue' not in body or 'FCL' not in body:
+                errors.append(label + ' does not preserve the Queue Viewer/two-layout FCL documentation')
         # Promotional artwork is maintained in the GitHub repository and may be
         # omitted from runtime release archives. When an assets folder is present,
         # however, every referenced repository image must also be present.
@@ -1610,7 +1681,7 @@ def run(ctx: ValidationContext) -> None:
             'DarkOneJSP3-managed defaults',
             'DarkOne dark grey: RGB 24, 24, 24',
             'Generic upstream',
-            'Optional scripted Queue Viewer',
+            'Scripted Queue Viewer',
             'Album Art/Spectrum side dividers',
             'Side divider colour',
             'InfoStack tab strip',
@@ -2392,6 +2463,10 @@ def run(ctx: ValidationContext) -> None:
         for forbidden in ['new VolumeImage()', 'this.images[4]', 'function VolumeImage()']:
             if forbidden in body:
                 errors.append('Display still rebuilds an off-screen volume bitmap while dragging: ' + forbidden)
+        if 'valueColour = v_change ? ui_btntxtcol : this.Colours[8];' in body:
+            errors.append('Display TIME label still inherits the temporary volume highlight')
+        if not re.search(r'case\s+2:\s*valueColour\s*=\s*this\.Colours\[8\]\s*;', body):
+            errors.append('Display TIME label is not bound solely to the playback-state colour')
 
         # Calls made through the shared configuration helper must exist on the
         # real DisplaySystem implementation. Runtime mocks must not invent APIs
@@ -2477,14 +2552,68 @@ def run(ctx: ValidationContext) -> None:
             'this.selected_lookup = {};',
             'this.rebuild_selection_lookup = function ()',
             'return !!this.selected_lookup[index];',
+            'this.refresh_known_queue_sources = function ()',
+            'this.playlist_snapshot_matches = function ()',
+            'this.build_scan_playlist_order = function (playlist_count)',
+            'this.publish_scan_data = function (state, force)',
             'var budgetMs = 5;',
             'var batchSize = 16;',
-            '}, 5);',
+            '}, 1);',
+            "this.source_id_tfo = fb.TitleFormat('%path%|%subsong%');",
+            "this.queue_total_tfo = fb.TitleFormat('[%queue_total%]');",
+            'this.request_bridge_refresh = function (force_log, delay, require_new, minimum_generation)',
+            'this.apply_bridge_state = function (state, force_log)',
+            'state.early_complete = true;',
         ]:
             if token not in body:
                 errors.append('Queue Viewer scan/selection optimisation is missing: ' + token)
         if 'return this.selected_indices.indexOf(index) !== -1;' in body:
             errors.append('Queue Viewer retains linear per-row selection lookup')
+        scan_start = body.find('this.scan_chunk = function (generation)')
+        scan_end = body.find('this.finish_scan = function (generation)', scan_start)
+        scan_body = body[scan_start:scan_end] if scan_start >= 0 and scan_end > scan_start else ''
+        if 'GetPlaylistItems(' in scan_body:
+            errors.append('Queue Viewer full scan still allocates playlist handle lists')
+        if 'release_scan_items' in body:
+            errors.append('Queue Viewer retains obsolete scan handle-list disposal code')
+        if 'this.playback_queue_changed = function (origin)' not in body:
+            errors.append('Queue Viewer discards playback queue change origins')
+
+    queue_bridge = project / 'shared' / 'queue_bridge.js'
+    root_controller = project / 'jsplitter' / '01_root.js'
+    if queue_bridge.exists():
+        body = text(queue_bridge)
+        for token in ["var VERSION = 'v2';", "var FILE_NAME = 'darkonejsp3.queue-state.json';",
+                      "var COMMAND_FILE_NAME = 'darkonejsp3.queue-command.json';",
+                      "var RESULT_FILE_NAME = 'darkonejsp3.queue-command-result.json';",
+                      'function serialise(value)', 'function parse(value)',
+                      'function serialiseCommand(value)', 'function parseCommand(value)',
+                      'function serialiseResult(value)', 'function parseResult(value)', 'function token(value)']:
+            if token not in body:
+                errors.append('Direct queue bridge protocol is incomplete: ' + token)
+    if root_controller.exists():
+        body = text(root_controller)
+        for token in ['plman.GetPlaybackQueueContents()', 'function on_playback_queue_changed(origin)',
+                      'writeQueueBridgeState()', 'initialiseQueueBridge();',
+                      'initialiseQueueCommandBridge();', 'plman.RemoveItemFromPlaybackQueue(',
+                      'plman.RemoveItemsFromPlaybackQueue(', 'plman.FlushPlaybackQueue()',
+                      'function queueBridgeSnapshotItem(item)', 'RestorePlaylistSource:',
+                      'item: queueBridgeSnapshotItem(contents[n])',
+                      'function queueBridgePlaylistItemCount(playlistIndex)',
+                      "typeof plman.PlaylistItemCount === 'function'",
+                      'plman.AddPlaylistItemToPlaybackQueue(', 'plman.AddItemToPlaybackQueue(',
+                      'QUEUE_BRIDGE_COMMAND_FILE', 'QUEUE_BRIDGE_RESULT_FILE',
+                      'utils.WriteTextFile(', 'QUEUE_BRIDGE_STATE_FILE',
+                      'function acknowledgeQueueBridgeCommandFile()',
+                      'utils.RemovePath(QUEUE_BRIDGE_COMMAND_FILE)',
+                      'QUEUE_BRIDGE_STATE_RETRY_LIMIT', 'queueBridgePublishedGeneration']:
+            if token not in body:
+                errors.append('JSplitter root direct queue bridge is incomplete: ' + token)
+        guard_start = body.find('function queueBridgeCanRestorePlaylistSource(item)')
+        guard_end = body.find('function queueBridgeRestoreQueue(rows)', guard_start)
+        guard_body = body[guard_start:guard_end] if guard_start >= 0 and guard_end > guard_start else ''
+        if 'plman.GetPlaylistItemCount(' in guard_body:
+            errors.append('JSplitter queue restore guard uses the JSP3 GetPlaylistItemCount API instead of the JSplitter/SMP PlaylistItemCount API')
 
     manager_source = samples / 'smooth' / 'jsspm.js'
     if manager_source.exists():

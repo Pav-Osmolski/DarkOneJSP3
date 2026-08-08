@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Display Panel"
-// @version "3.0.31-jsp3-3.8.5"
+// @version "3.0.32-jsp3-3.8.5"
 // @author "tedGo / DeViLhoOD"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\ui_cadence.js"

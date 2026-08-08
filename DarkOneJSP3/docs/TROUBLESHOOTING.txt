@@ -119,13 +119,13 @@ font is Arial Black with DirectWrite Black/900 weight.
 
 Information page background does not match the tab strip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Right-click inside Biography, Last.fm, Album Notes, Properties or the optional
+Right-click inside Biography, Last.fm, Album Notes, Properties or the
 scripted Queue Viewer and open Page background colour. Choose Transparent /
 inherit parent to reveal the InfoStack backing colour, Columns UI global
 background to follow the active Columns UI background colour, or select an
 explicit colour for that page. Each JScript Panel page remembers its own value.
-The native Queue Viewer and Playlists page use their own component or panel
-appearance settings.
+The optional native Queue Viewer and Playlists page use their own component or
+panel appearance settings.
 
 InfoStack labels sit too high or low
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -229,11 +229,40 @@ Playlist Manager position does not restore as expected
 
 Scripted Queue scan appears delayed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The optional scripted queue viewer begins its incremental %queue_indexes% scan
-after the Queue tab receives a paint callback. Open the Queue tab and allow the
-scan to complete. Use the native Queue Viewer component for full editing,
-including adding, removing and reordering entries. When using the script, load
-the DarkOneJSP3 wrapper rather than the generic sample entry.
+The DarkOneJSP3 Queue Viewer should normally report that it loaded queue entries
+through the direct JSplitter queue bridge. DOJSP3.Root owns
+`js_data\darkonejsp3.queue-state.json` and refreshes it from
+`plman.GetPlaybackQueueContents()`, so the project wrapper should not perform a
+playlist-wide `%queue_indexes%` scan on first display.
+
+If the bridge file is unavailable, invalid or explicitly reports that direct
+queue enumeration failed, the viewer automatically falls back to the standalone
+incremental scanner. That fallback still prioritises likely source playlists,
+publishes results progressively and stops early for non-empty queues when
+`%queue_total%` confirms that all queue positions have been found. An empty
+queue cannot be proven without a complete fallback scan.
+
+If a DarkOneJSP3 installation unexpectedly logs `Scanned ... items across ...
+playlists`, confirm that DOJSP3.Root is using the supplied current root script
+and load the DarkOneJSP3 wrapper rather than the generic sample entry:
+`DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt`.
+
+Scripted Queue editing commands are missing or disabled
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The recommended DarkOneJSP3 wrapper enables queue mutation only after it has
+received a writable state from DOJSP3.Root. Right-click a queue entry and check
+for Remove item from queue, Move up/down, Move to top/bottom and Clear playback
+queue.
+
+If those commands are absent, confirm that the panel is loading the project
+wrapper rather than the generic `samples\Queue Viewer.txt` entry. The generic
+Enhanced Sample Library entry is intentionally read-only outside DarkOneJSP3.
+
+If the commands are present but a mutation is rejected, the queue probably
+changed before JSplitter consumed the command. The bridge intentionally rejects
+stale generations rather than applying an operation to the wrong queue. The
+viewer refreshes the authoritative state automatically; retry the command after
+that refresh.
 
 Queue Viewer reports jsp3EnhancedHandleSampleReset is undefined
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -406,10 +435,11 @@ invoke that object's action instead.
 
 Page background colour is missing from Queue
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The recommended native Queue Viewer is not a JScript Panel and therefore does
-not expose DarkOneJSP3's Page background colour menu. That menu belongs to the
-optional scripted Queue Viewer fallback. Configure the native component through
-its own component menu.
+The recommended scripted Queue Viewer is a JScript Panel and should expose the
+shared Page background colour menu. If it does not, confirm that DOJSP3.Queue is
+loading `DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt` rather than the
+optional native Queue Viewer component. The native alternative uses its own
+component-owned appearance controls.
 
 Waveform host settings do not appear
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

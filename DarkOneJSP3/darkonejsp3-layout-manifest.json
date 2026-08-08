@@ -1,5 +1,5 @@
 {
-  "version": "0.9.37",
+  "version": "1.0.3",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -65,8 +65,9 @@
     {
       "number": 5,
       "title": "DOJSP3.Queue",
-      "type": "Queue Viewer",
-      "source": "native component"
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt",
+      "script": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt"
     },
     {
       "number": 6,
@@ -109,7 +110,7 @@
       "title": "DOJSP3.Display",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt",
-      "version": "3.0.31-jsp3-3.8.5"
+      "version": "3.0.32-jsp3-3.8.5"
     },
     {
       "number": 13,
@@ -304,16 +305,15 @@
     "queue_viewer": {
       "incremental_queue_indexes_scan": true,
       "lazy_visible_scan": true,
-      "handle_list_disposal": true,
       "item_accurate_progress": true,
       "progress_repaint_throttle_ms": 75,
       "source_playlist_navigation": true,
       "factory_reset_wrapper": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt",
       "generic_sample_participates_in_factory_reset": false,
-      "recommended_component": "native Queue Viewer",
+      "recommended_component": "scripted Queue Viewer",
       "native_component_full_editing": true,
-      "scripted_viewer_optional": true,
-      "scripted_mutation_support": false,
+      "scripted_viewer_optional": false,
+      "scripted_mutation_support": true,
       "scripted_multi_selection": true,
       "scripted_keyboard_navigation": true,
       "scripted_source_item_commands": [
@@ -324,7 +324,73 @@
         "copy item titles",
         "copy file paths"
       ],
-      "scripted_limitation": "JScript Panel 3 does not expose playback-queue mutation functions"
+      "scripted_limitation": "Standalone JScript Panel use remains read-only when the DarkOneJSP3 JSplitter bridge is unavailable",
+      "targeted_queue_refresh": true,
+      "targeted_refresh_origins": [
+        "user_removed",
+        "playback_advance"
+      ],
+      "full_scan_discovery_origins": [
+        "bridge unavailable or invalid",
+        "standalone initial display",
+        "standalone user_added",
+        "manual fallback re-scan",
+        "stale fallback source cache"
+      ],
+      "full_scan_playlist_handle_lists": false,
+      "scan_work_budget_ms": 5,
+      "scan_yield_ms": 1,
+      "progressive_results": true,
+      "playlist_scan_priority": [
+        "previous queue sources",
+        "active playlist",
+        "remaining playlists"
+      ],
+      "source_identity_validation": true,
+      "playlist_snapshot_validation": true,
+      "selected_source_handle_list_disposal": true,
+      "direct_jsplitter_queue_bridge": true,
+      "direct_bridge_owner": "DOJSP3.Root",
+      "direct_bridge_api": "plman.GetPlaybackQueueContents()",
+      "direct_bridge_state_file": "js_data/darkonejsp3.queue-state.json",
+      "direct_bridge_state_packaged": false,
+      "direct_bridge_generation_retry_ms": 20,
+      "direct_bridge_generation_retry_attempts": 10,
+      "direct_bridge_source_topology_refresh": true,
+      "direct_bridge_detached_item_preservation": true,
+      "standalone_queue_indexes_fallback": true,
+      "fallback_queue_total_early_termination": true,
+      "targeted_queue_refresh_scope": "standalone/fallback mode",
+      "native_viewer_optional": true,
+      "scripted_mutation_owner": "DOJSP3.Root (JSplitter)",
+      "scripted_mutation_transport": "file-backed versioned command bridge",
+      "scripted_mutation_commands": [
+        "remove item",
+        "remove selected items",
+        "clear playback queue",
+        "move up",
+        "move down",
+        "move to top",
+        "move to bottom"
+      ],
+      "scripted_keyboard_delete": true,
+      "direct_bridge_command_file": "js_data/darkonejsp3.queue-command.json",
+      "direct_bridge_result_file": "js_data/darkonejsp3.queue-command-result.json",
+      "direct_bridge_protocol_version": "v2",
+      "direct_bridge_writable": true,
+      "direct_bridge_command_poll_ms": 25,
+      "stale_generation_rejection": true,
+      "duplicate_occurrence_safe_removal": true,
+      "detached_item_reorder_preservation": true,
+      "playlist_source_snapshot_before_reorder_flush": true,
+      "playlist_backed_reorder_preservation": true,
+      "processed_command_file_acknowledgement": true,
+      "processed_command_file_removed": true,
+      "state_publication_retry_ms": 50,
+      "state_publication_retry_limit": 3,
+      "acknowledged_generation_wait": true,
+      "mixed_source_all_move_variant_validation": true,
+      "native_viewer_required_for_bundled_fcl_import": true
     },
     "optional_buttons": {
       "configuration_retained_when_disabled": true,
@@ -680,7 +746,7 @@
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
       "package": "DarkOneJSP3/tools/validation",
-      "version": "0.7.7",
+      "version": "0.8.0",
       "static_checks_module": "validation/static_checks.py",
       "runtime_checks_module": "validation/runtime_checks.py",
       "shared_context_module": "validation/context.py",
@@ -736,7 +802,20 @@
       "native_colour_picker_unknown_type_tests": true,
       "bottom_area_live_menu_picker_tests": true,
       "bottom_area_menu_end_to_end_tests": true,
-      "native_colour_picker_result_validation_tests": true
+      "native_colour_picker_result_validation_tests": true,
+      "stopped_volume_label_state_tests": true,
+      "queue_targeted_refresh_tests": true,
+      "queue_progressive_scan_tests": true,
+      "queue_scan_handle_allocation_tests": true,
+      "queue_stale_cache_recovery_tests": true,
+      "queue_direct_jsplitter_bridge_tests": true,
+      "queue_bridge_generation_race_tests": true,
+      "queue_total_early_termination_tests": true,
+      "queue_command_acknowledgement_tests": true,
+      "queue_state_publication_retry_tests": true,
+      "queue_acknowledged_generation_wait_tests": true,
+      "queue_mixed_source_all_move_variant_tests": true,
+      "queue_viewer_requirement_fcl_policy_checked": true
     },
     "rendering_optimisation": {
       "version": "0.1.4",
@@ -760,7 +839,8 @@
       "display_volume_direct_sprite_rendering": true,
       "native_visualiser_message_loop_friendly": true,
       "volume_drag_visual_preview_decoupled": true,
-      "volume_write_minimum_interval_ms": 16
+      "volume_write_minimum_interval_ms": 16,
+      "stopped_volume_only_highlights_volume_label": true
     },
     "adaptive_volume_cadence": {
       "version": "0.1.1",
@@ -904,7 +984,14 @@
     "required": false,
     "patched_or_generated": false,
     "user_managed": true,
-    "included_in_hotfixes": false
+    "included_in_hotfixes": false,
+    "bundled_layouts": [
+      "DarkOneJSP3",
+      "DarkOneJSP3 Native Queue"
+    ],
+    "default_layout": "DarkOneJSP3",
+    "native_queue_layout": "DarkOneJSP3 Native Queue",
+    "native_queue_component_required_for_import": true
   },
   "features": {
     "info_stack_tab_area_menu": {

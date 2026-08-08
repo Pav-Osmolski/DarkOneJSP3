@@ -17,19 +17,19 @@ Column
    │  │  ├─ JScript Panel 3 02          DOJSP3.LastfmBio
    │  │  ├─ JScript Panel 3 03          DOJSP3.LastfmInfo
    │  │  ├─ JScript Panel 3 04          DOJSP3.AlbumNotes
-   │  │  ├─ Queue Viewer                   DOJSP3.Queue
-   │  │  └─ JScript Panel 3 05          DOJSP3.Properties
+   │  │  ├─ JScript Panel 3 05          DOJSP3.Queue
+   │  │  └─ JScript Panel 3 06          DOJSP3.Properties
    │  ├─ JSplitter 04                   DOJSP3.ArtSpectrum
-   │  │  ├─ JScript Panel 3 06          DOJSP3.AlbumArt
+   │  │  ├─ JScript Panel 3 07          DOJSP3.AlbumArt
    │  │  └─ Enhanced Spectrum Analyser  DOJSP3.Spectrum
-   │  └─ JScript Panel 3 07             DOJSP3.Playlist
+   │  └─ JScript Panel 3 08             DOJSP3.Playlist
    └─ JSplitter 05                      DOJSP3.Controls
-      ├─ JScript Panel 3 08             DOJSP3.ControlsLeft
+      ├─ JScript Panel 3 09             DOJSP3.ControlsLeft
       ├─ Quick Search Toolbar           DOJSP3.QuickSearch
       ├─ JSplitter 06                   DOJSP3.DisplayStack
-      │  ├─ JScript Panel 3 09          DOJSP3.Display
+      │  ├─ JScript Panel 3 10          DOJSP3.Display
       │  └─ Waveform Minibar (mod)      DOJSP3.Waveform
-      └─ JScript Panel 3 10             DOJSP3.ControlsRight
+      └─ JScript Panel 3 11             DOJSP3.ControlsRight
 
 JScript Panel 3 script assignments
 ----------------------------------
@@ -37,23 +37,18 @@ JScript Panel 3 script assignments
 02  samples\Last.fm Bio.txt
 03  samples\Last.fm Artist Info + User Info.txt
 04  samples\Album Notes.txt
-05  samples\Properties.txt
-06  samples\Album Art.txt
-07  samples\JS Playlist.txt
-08  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
-09  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
-10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
+05  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+06  samples\Properties.txt
+07  samples\Album Art.txt
+08  samples\JS Playlist.txt
+09  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
+10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
+11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
 
-Optional scripted Queue replacement
------------------------------------
-Replace the native Queue Viewer child with a JScript Panel 3 instance only when
-the lightweight scripted viewer is preferred. Keep the exact title DOJSP3.Queue
-and load:
-
-  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
-
-The scripted viewer cannot add, remove, reorder or clear queue entries because
-those playback-queue mutation functions are not exposed by JScript Panel 3.
+Optional native Queue replacement
+---------------------------------
+The separate native Queue Viewer component remains supported as an
+interchangeable DOJSP3.Queue child for users who prefer its native interface.
 
 JSplitter loader and controller assignments
 -------------------------------------------
@@ -79,10 +74,13 @@ Title rules
 -----------
 - Visible InfoStack tab text can be renamed without changing the DOJSP3.* title.
 - The fourth InfoStack child must be DOJSP3.AlbumNotes.
-- DOJSP3.Queue should use the native Queue Viewer component for complete queue
-  editing.
-- The optional scripted replacement must load the DarkOneJSP3 Queue Viewer
-  wrapper rather than the generic sample and must retain the title DOJSP3.Queue.
+- DOJSP3.Queue should use a JScript Panel 3 instance loading the DarkOneJSP3
+  Queue Viewer wrapper. This is the recommended editable queue implementation.
+- The generic enhanced Queue Viewer sample is standalone and read-only; the
+  project wrapper is required to activate the JSplitter enumeration/mutation
+  bridge.
+- The optional native Queue Viewer may replace DOJSP3.Queue without changing
+  the custom title.
 - Do not duplicate a DOJSP3.* title elsewhere in the same layout hierarchy.
 
 Relationship to the original DarkOne2021 PSS layout
@@ -103,6 +101,8 @@ panels.
 FCL note
 --------
 This panel map is the authoritative setup reference. The full package also
-contains an optional maintainer-exported FCL in DarkOneJSP3\fcl. Importing it
-is not the recommended first method and it remains installation-specific.
-Project tooling and hotfixes do not patch or generate the FCL.
+contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with the default
+`DarkOneJSP3` scripted-queue layout and the alternative `DarkOneJSP3 Native
+Queue` layout. Importing it is not the recommended first method and it remains
+installation-specific. Project tooling and hotfixes do not patch or generate
+the FCL.

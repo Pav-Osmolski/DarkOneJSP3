@@ -1204,6 +1204,7 @@ def run(ctx: ValidationContext) -> None:
     let bitmapConversions = 0;
     let mutableImageCreations = 0;
     let matrixDraws = 0;
+    const drawnLabels = [];
     function makeImage(width, height) {{
         return {{
             Width: width, Height: height, Path: 'mock.png',
@@ -1233,7 +1234,7 @@ def run(ctx: ValidationContext) -> None:
         'window','fb','plman','safeGdiImage','utils','disposeImage','combColours','p_backcol','ui_btntxtcol',
         'DarkOneUiCadence','DarkOnePerformance','DarkOneColour','imgPath','console',
         'DWRITE_FONT_WEIGHT_BLACK','DWRITE_FONT_WEIGHT_NORMAL','darkOneCreateFont','darkOneCalcTextWidth','darkOneDrawText',
-        'TimeFmt','pad','pad_right','clearPanelTimer','ww','wh',
+        'TimeFmt','pad','pad_right','ww','wh',
         colourSource + '\\n' + source + '\\nreturn {{display_system, DisplaySystem, DARKONE_DISPLAY_ACCENT_DEFAULT, DARKONE_DISPLAY_ACCENT_CUSTOM, DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED}};'
     );
     const api = factory(
@@ -1244,7 +1245,8 @@ def run(ctx: ValidationContext) -> None:
         {{normaliseMode(mode,allowed,fallback){{return allowed.indexOf(Number(mode))>=0?Number(mode):fallback;}},columnsUi(){{return 0xff556677;}}}},
         '', console, 900, 400,
         (name,size,style,weight) => {{fontCreations++;return {{Name:name,Size:size,Weight:weight,Height:size}};}},
-        (text,font) => String(text).length * (font ? font.Size : 1), () => {{}},
+        (text,font) => String(text).length * (font ? font.Size : 1),
+        (gr,text,font,colour,x,y,w,h,flags) => drawnLabels.push({{text:String(text),colour:colour >>> 0}}),
         value => String(value), (value,length) => String(value).padStart(length,' '),
         (value,length) => String(value).padEnd(length,' '), () => {{}}, 400, 80
     );
@@ -1277,7 +1279,7 @@ def run(ctx: ValidationContext) -> None:
     display.pxSize = 1;
     display.img_y = 0;
     display.img_h = 20;
-    const graph = {{DrawBitmap(){{matrixDraws++;}}}};
+    const graph = {{DrawBitmap(){{matrixDraws++;}},DrawRectangle(){{}}}};
     const imagesBeforeDraw = mutableImageCreations;
     const conversionsBeforeDraw = bitmapConversions;
     display.drawTrackNumberMatrix(graph, '0012', 0);
@@ -1287,6 +1289,43 @@ def run(ctx: ValidationContext) -> None:
         throw new Error('Direct Dot Matrix sprite draw count changed: ' + matrixDraws);
     if (mutableImageCreations !== imagesBeforeDraw || bitmapConversions !== conversionsBeforeDraw)
         throw new Error('Dot Matrix value painting rebuilt mutable images or bitmaps');
+
+    function labelColour(label) {{
+        const match = drawnLabels.find(item => item.text === label);
+        if (!match) throw new Error('Display label was not drawn: ' + label);
+        return match.colour;
+    }}
+
+    // A volume change may temporarily replace the numeric readout, but while
+    // playback is stopped it must not activate TIME or TIME REMAINING.
+    fbMock.IsPlaying = false;
+    display.setColours();
+    display.VolumeChange(fbMock.Volume);
+    drawnLabels.length = 0;
+    display.draw(graph);
+    if (labelColour('TIME') !== (display.inactive_colour >>> 0))
+        throw new Error('Stopped volume change activated TIME');
+    if (labelColour('VOLUME') !== (0xffffffff >>> 0))
+        throw new Error('Stopped volume change did not activate VOLUME');
+
+    display.NotifyData('remTime', true);
+    drawnLabels.length = 0;
+    display.draw(graph);
+    if (labelColour('TIME REMAINING') !== (display.inactive_colour >>> 0))
+        throw new Error('Stopped volume change activated TIME REMAINING');
+    if (labelColour('VOLUME') !== (0xffffffff >>> 0))
+        throw new Error('Stopped remaining-time volume change did not activate VOLUME');
+
+    // During playback the normal time label remains active while VOLUME is
+    // temporarily active, preserving the established playing-state behaviour.
+    fbMock.IsPlaying = true;
+    display.setColours();
+    display.NotifyData('remTime', false);
+    drawnLabels.length = 0;
+    display.draw(graph);
+    if (labelColour('TIME') !== (0xffffffff >>> 0) ||
+        labelColour('VOLUME') !== (0xffffffff >>> 0))
+        throw new Error('Playing volume label state changed unexpectedly');
     """
         result = subprocess.run([node, '-e', display_direct_smoke], capture_output=True, text=True)
         if result.returncode:
@@ -2176,6 +2215,7 @@ def run(ctx: ValidationContext) -> None:
     const fs = require('fs');
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
     const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+    const queueBridgeSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'queue_bridge.js'))}, 'utf8');
     const rootSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '01_root.js'))}, 'utf8');
     const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
     const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
@@ -2234,15 +2274,69 @@ def run(ctx: ValidationContext) -> None:
         Repaint() {{}}, RepaintRect() {{}}, SetCursor() {{}}, Reload() {{}}
     }};
     const rootFactory = new Function(
-        'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset',
+        'window','fb','plman','include','utils','DOJSP3','darkOneJsp3HandleReset',
         'setTimeout','clearTimeout','console',
-        colourSource + '\\n' + protocolSource + '\\n' + rootSource + '\\nreturn {{on_size,on_notify_data,startupTransition,startupMinimumDelay,startupSafetyTimeout}};'
+        colourSource + '\\n' + protocolSource + '\\n' + queueBridgeSource + '\\n' + rootSource + '\\nreturn {{on_size,on_notify_data,on_playback_queue_changed,startupTransition,startupMinimumDelay,startupSafetyTimeout}};'
     );
     const infoFactory = new Function(
         'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
         colourSource + '\\n' + protocolSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
     );
-    const root = rootFactory(rootWindow, {{ProfilePath:''}}, function(){{}}, {{}}, DOJSP3,
+    const bridgeWrites = new Map();
+    const queueStatePath = 'js_data\\\\darkonejsp3.queue-state.json';
+    let stateWriteFailures = 0;
+    let stateWriteAttempts = 0;
+    let rootQueueContents = [];
+    const rootFb = {{ProfilePath:'', TitleFormat() {{ return {{EvalWithMetadb(handle) {{
+        return String(handle.Path || '') + '|' + String(handle.SubSong || 0);
+    }}}}; }}}};
+    const sourceHandles = new Map();
+    function sourceKey(p, i) {{ return p + ':' + i; }}
+    let playlistQueueAdds = 0;
+    let detachedQueueAdds = 0;
+    const rootPlman = {{
+        PlaylistCount: 10,
+        PlaylistItemCount() {{ return 100; }},
+        GetPlaybackQueueContents() {{ return rootQueueContents.slice(); }},
+        RemoveItemFromPlaybackQueue(index) {{ rootQueueContents.splice(index, 1); }},
+        RemoveItemsFromPlaybackQueue(indexes) {{
+            const remove = new Set(indexes);
+            rootQueueContents = rootQueueContents.filter((item, index) => !remove.has(index));
+        }},
+        FlushPlaybackQueue() {{
+            // Model native playback-queue wrappers as live objects whose source
+            // coordinates cease to be reliable once the queue is flushed.
+            rootQueueContents.forEach(item => {{
+                item.PlaylistIndex = -1;
+                item.PlaylistItemIndex = -1;
+            }});
+            rootQueueContents = [];
+        }},
+        AddPlaylistItemToPlaybackQueue(playlist, item) {{
+            playlistQueueAdds++;
+            rootQueueContents.push({{PlaylistIndex:playlist,PlaylistItemIndex:item,
+                Handle:sourceHandles.get(sourceKey(playlist,item))}});
+        }},
+        AddItemToPlaybackQueue(handle) {{
+            detachedQueueAdds++;
+            rootQueueContents.push({{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:handle}});
+        }}
+    }};
+    const rootUtils = {{
+        CreateFolder() {{ return true; }},
+        IsFile(path) {{ return bridgeWrites.has(path); }},
+        ReadTextFile(path) {{ return bridgeWrites.get(path) || ''; }},
+        RemovePath(path) {{ return bridgeWrites.delete(path); }},
+        WriteTextFile(path, content) {{
+            if (path === queueStatePath) {{
+                stateWriteAttempts++;
+                if (stateWriteFailures > 0) {{ stateWriteFailures--; return false; }}
+            }}
+            bridgeWrites.set(path, content);
+            return true;
+        }}
+    }};
+    const root = rootFactory(rootWindow, rootFb, rootPlman, function(){{}}, rootUtils, DOJSP3,
         function(){{return false;}}, fakeSetTimeout, fakeClearTimeout, console);
     const info = infoFactory(infoWindow, {{ProfilePath:'',ShowPopupMessage(){{}}}}, function(){{}},
         {{InputBox(){{return '0';}}}}, DOJSP3, function(){{return false;}},
@@ -2250,6 +2344,185 @@ def run(ctx: ValidationContext) -> None:
     rootNotify = root.on_notify_data;
     infoNotify = info.on_notify_data;
     function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+    assert(bridgeWrites.size === 1,
+        'Root did not publish exactly one direct queue bridge state during startup');
+    const initialQueueState = JSON.parse([...bridgeWrites.values()][0]);
+    assert(initialQueueState.available === true && initialQueueState.writable === true &&
+        initialQueueState.capabilities.includes('removeMany') && initialQueueState.entries.length === 0,
+        'Root startup writable queue bridge state was invalid');
+    rootQueueContents = [
+        {{PlaylistIndex:4, PlaylistItemIndex:7, Handle:{{Path:'C:/Music/a.flac',SubSong:0}}}},
+        {{PlaylistIndex:0xffffffff, PlaylistItemIndex:0xffffffff, Handle:{{Path:'C:/Detached/b.flac',SubSong:2}}}}
+    ];
+    sourceHandles.set(sourceKey(4,7), rootQueueContents[0].Handle);
+    root.on_playback_queue_changed(0);
+    const populatedQueueState = JSON.parse([...bridgeWrites.values()][0]);
+    assert(populatedQueueState.entries.length === 2 &&
+        populatedQueueState.entries[0].queueIndex === 1 &&
+        populatedQueueState.entries[0].playlistIndex === 4 &&
+        populatedQueueState.entries[0].playlistItemIndex === 7 &&
+        populatedQueueState.entries[0].sourceId === 'C:/Music/a.flac|0',
+        'Root did not serialise direct queue source data correctly');
+    assert(populatedQueueState.entries[1].playlistIndex === -1 &&
+        populatedQueueState.entries[1].playlistItemIndex === -1 &&
+        populatedQueueState.entries[1].sourceId === 'C:/Detached/b.flac|2',
+        'Root did not normalise detached direct queue items');
+    const beforeRetryGeneration = populatedQueueState.generation;
+    const attemptsBeforeRetry = stateWriteAttempts;
+    rootQueueContents = [
+        {{PlaylistIndex:4, PlaylistItemIndex:7, Handle:{{Path:'C:/Music/a.flac',SubSong:0}}}}
+    ];
+    stateWriteFailures = 1;
+    root.on_playback_queue_changed(0);
+    const failedState = JSON.parse(bridgeWrites.get(queueStatePath));
+    assert(failedState.generation === beforeRetryGeneration,
+        'Failed queue-state write incorrectly appeared as a published generation');
+    runTimerWithDelay(50);
+    const retriedState = JSON.parse(bridgeWrites.get(queueStatePath));
+    assert(retriedState.generation === beforeRetryGeneration + 1 && retriedState.entries.length === 1,
+        'Queue bridge did not retry the failed state publication without skipping generations');
+    assert(stateWriteAttempts === attemptsBeforeRetry + 2,
+        'Queue bridge state retry performed an unexpected number of writes');
+
+    rootQueueContents = [
+        {{PlaylistIndex:4, PlaylistItemIndex:7, Handle:{{Path:'C:/Music/a.flac',SubSong:0}}}},
+        {{PlaylistIndex:0xffffffff, PlaylistItemIndex:0xffffffff, Handle:{{Path:'C:/Detached/b.flac',SubSong:2}}}}
+    ];
+    root.on_playback_queue_changed(0);
+    const commandPath = 'js_data\\\\darkonejsp3.queue-command.json';
+    const resultPath = 'js_data\\\\darkonejsp3.queue-command-result.json';
+    const currentBeforeRemove = JSON.parse(bridgeWrites.get(queueStatePath));
+    bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:'remove-1',session:currentBeforeRemove.session,
+        generation:currentBeforeRemove.generation,action:'remove',queueIndexes:[1]}}));
+    runTimerWithDelay(25);
+    assert(rootQueueContents.length === 1 && rootQueueContents[0].Handle.Path === 'C:/Detached/b.flac',
+        'Root writable bridge did not remove the requested queue occurrence');
+    const removeResult = JSON.parse(bridgeWrites.get(resultPath));
+    assert(removeResult.accepted === true && removeResult.id === 'remove-1',
+        'Root writable bridge did not acknowledge the removal');
+    assert(!bridgeWrites.has(commandPath),
+        'Root writable bridge did not remove the processed command file');
+
+    rootQueueContents = [
+        {{PlaylistIndex:1, PlaylistItemIndex:1, Handle:{{Path:'C:/Music/one.flac',SubSong:0}}}},
+        {{PlaylistIndex:1, PlaylistItemIndex:2, Handle:{{Path:'C:/Music/two.flac',SubSong:0}}}},
+        {{PlaylistIndex:-1, PlaylistItemIndex:-1, Handle:{{Path:'C:/Detached/three.flac',SubSong:0}}}}
+    ];
+    sourceHandles.set(sourceKey(1,1), rootQueueContents[0].Handle);
+    sourceHandles.set(sourceKey(1,2), rootQueueContents[1].Handle);
+    root.on_playback_queue_changed(0);
+    const reorderState = JSON.parse(bridgeWrites.get('js_data\\\\darkonejsp3.queue-state.json'));
+    bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:'move-bottom',session:reorderState.session,
+        generation:reorderState.generation,action:'moveBottom',queueIndexes:[1]}}));
+    runTimerWithDelay(25);
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Music/two.flac,C:/Detached/three.flac,C:/Music/one.flac',
+        'Root writable bridge did not preserve order/handles while moving an item to the bottom');
+    assert(rootQueueContents[0].PlaylistIndex === 1 && rootQueueContents[0].PlaylistItemIndex === 2 &&
+        rootQueueContents[2].PlaylistIndex === 1 && rootQueueContents[2].PlaylistItemIndex === 1,
+        'Root writable bridge lost playlist-backed queue source coordinates during reorder');
+    assert(rootQueueContents[1].PlaylistIndex === -1 && rootQueueContents[1].PlaylistItemIndex === -1,
+        'Root writable bridge incorrectly attached a detached queue entry during reorder');
+    assert(playlistQueueAdds === 2 && detachedQueueAdds === 1,
+        'Root writable bridge did not restore playlist-backed entries through AddPlaylistItemToPlaybackQueue');
+    const movedState = JSON.parse(bridgeWrites.get('js_data\\\\darkonejsp3.queue-state.json'));
+    bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:'stale',session:movedState.session,
+        generation:movedState.generation - 1,action:'clear',queueIndexes:[]}}));
+    runTimerWithDelay(25);
+    const staleResult = JSON.parse(bridgeWrites.get(resultPath));
+    assert(staleResult.accepted === false && rootQueueContents.length === 3,
+        'Root writable bridge did not reject a stale-generation command');
+
+
+    function setMixedQueue() {{
+        rootQueueContents = [
+            {{PlaylistIndex:2,PlaylistItemIndex:10,Handle:{{Path:'C:/Move/a.flac',SubSong:0}}}},
+            {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Move/b.flac',SubSong:0}}}},
+            {{PlaylistIndex:2,PlaylistItemIndex:11,Handle:{{Path:'C:/Move/c.flac',SubSong:0}}}},
+            {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Move/d.flac',SubSong:0}}}},
+            {{PlaylistIndex:3,PlaylistItemIndex:5,Handle:{{Path:'C:/Move/e.flac',SubSong:0}}}}
+        ];
+        sourceHandles.set(sourceKey(2,10), rootQueueContents[0].Handle);
+        sourceHandles.set(sourceKey(2,11), rootQueueContents[2].Handle);
+        sourceHandles.set(sourceKey(3,5), rootQueueContents[4].Handle);
+        playlistQueueAdds = 0;
+        detachedQueueAdds = 0;
+        root.on_playback_queue_changed(0);
+    }}
+    function assertMixedSources(label) {{
+        const expected = {{
+            'C:/Move/a.flac':'2:10', 'C:/Move/b.flac':'-1:-1',
+            'C:/Move/c.flac':'2:11', 'C:/Move/d.flac':'-1:-1',
+            'C:/Move/e.flac':'3:5'
+        }};
+        rootQueueContents.forEach(item => {{
+            const actual = item.PlaylistIndex + ':' + item.PlaylistItemIndex;
+            assert(actual === expected[item.Handle.Path], label + ' changed source association for ' + item.Handle.Path);
+        }});
+        assert(playlistQueueAdds === 3 && detachedQueueAdds === 2,
+            label + ' did not rebuild playlist-backed/detached entries through the correct APIs');
+    }}
+    function sendCurrentQueueCommand(id, action, queueIndexes) {{
+        const current = JSON.parse(bridgeWrites.get(queueStatePath));
+        bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:id,session:current.session,
+            generation:current.generation,action:action,queueIndexes:queueIndexes}}));
+        runTimerWithDelay(25);
+        assert(!bridgeWrites.has(commandPath), id + ' left a processed command file behind');
+        return JSON.parse(bridgeWrites.get(resultPath));
+    }}
+
+    setMixedQueue();
+    assert(sendCurrentQueueCommand('move-up','moveUp',[2,3]).accepted === true,
+        'Move-up command was not accepted');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Move/b.flac,C:/Move/c.flac,C:/Move/a.flac,C:/Move/d.flac,C:/Move/e.flac',
+        'Move up did not preserve adjacent selected-row order');
+    assertMixedSources('Move up');
+
+    setMixedQueue();
+    assert(sendCurrentQueueCommand('move-down','moveDown',[2,3]).accepted === true,
+        'Move-down command was not accepted');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Move/a.flac,C:/Move/d.flac,C:/Move/b.flac,C:/Move/c.flac,C:/Move/e.flac',
+        'Move down did not preserve adjacent selected-row order');
+    assertMixedSources('Move down');
+
+    setMixedQueue();
+    assert(sendCurrentQueueCommand('move-top','moveTop',[2,4]).accepted === true,
+        'Move-to-top command was not accepted');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Move/b.flac,C:/Move/d.flac,C:/Move/a.flac,C:/Move/c.flac,C:/Move/e.flac',
+        'Move to top did not preserve selected-row relative order');
+    assertMixedSources('Move to top');
+
+    setMixedQueue();
+    assert(sendCurrentQueueCommand('move-bottom-all','moveBottom',[1,3]).accepted === true,
+        'Move-to-bottom command was not accepted');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Move/b.flac,C:/Move/d.flac,C:/Move/e.flac,C:/Move/a.flac,C:/Move/c.flac',
+        'Move to bottom did not preserve selected-row relative order');
+    assertMixedSources('Move to bottom');
+
+
+    rootQueueContents = [
+        {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Q/a.flac',SubSong:0}}}},
+        {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Q/dup.flac',SubSong:0}}}},
+        {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Q/c.flac',SubSong:0}}}},
+        {{PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{{Path:'C:/Q/dup.flac',SubSong:0}}}}
+    ];
+    root.on_playback_queue_changed(0);
+    const multiState = JSON.parse(bridgeWrites.get('js_data\\\\darkonejsp3.queue-state.json'));
+    bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:'remove-many',session:multiState.session,
+        generation:multiState.generation,action:'removeMany',queueIndexes:[2,4]}}));
+    runTimerWithDelay(25);
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') === 'C:/Q/a.flac,C:/Q/c.flac',
+        'Root writable bridge did not remove the exact selected duplicate queue occurrences');
+    const clearState = JSON.parse(bridgeWrites.get('js_data\\\\darkonejsp3.queue-state.json'));
+    bridgeWrites.set(commandPath, JSON.stringify({{version:'v2',id:'clear-all',session:clearState.session,
+        generation:clearState.generation,action:'clear',queueIndexes:[]}}));
+    runTimerWithDelay(25);
+    assert(rootQueueContents.length === 0, 'Root writable bridge did not clear the playback queue');
+
     info.requestStartupControlState();
     assert(info.getState().join(',') === '0,250,2000,true', 'Initial root state did not reach InfoStack');
     const darkDividerState = info.parseDividerState('v1|4|4279383126');
@@ -3188,6 +3461,373 @@ assert(blurCalls === blurBeforeCancel && cancelledBlur.blur_source === null,
                                 capture_output=True, text=True)
         if result.returncode:
             errors.append('Queue Viewer runtime smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise the real incremental discovery and targeted-refresh paths.
+        # This specifically guards against complete playlist handle-list
+        # allocation and against discarding the playback queue change origin.
+        queue_scan_smoke = """
+const fs = require('fs');
+const source = fs.readFileSync(QUEUE_SOURCE_PATH, 'utf8');
+function assert(condition, message) { if (!condition) throw new Error(message); }
+let timers = new Map();
+let nextTimer = 1;
+let timerDelays = [];
+const windowMock = {
+    Name: 'Queue', RepaintRect() {}, Repaint() {}, SetCursor() {},
+    SetTimeout(fn, delay) {
+        const id = nextTimer++;
+        timers.set(id, fn);
+        timerDelays.push(delay);
+        return id;
+    },
+    ClearTimeout(id) { timers.delete(id); }
+};
+function runOneTimer() {
+    const item = timers.entries().next();
+    if (item.done) return false;
+    const id = item.value[0];
+    const fn = item.value[1];
+    timers.delete(id);
+    fn();
+    return true;
+}
+function drainTimers(limit, onStep) {
+    let count = 0;
+    while (runOneTimer()) {
+        count++;
+        if (onStep) onStep();
+        if (count > limit) throw new Error('Queue Viewer timer loop did not settle');
+    }
+}
+const playlists = [[], [], []];
+for (let p = 0; p < 3; p++) {
+    for (let i = 0; i < 40; i++) {
+        playlists[p].push({
+            Path: `C:/P${p}/${i}.flac`, SubSong: 0,
+            text: `P${p}-${i}`, queue: ''
+        });
+    }
+}
+playlists[0][10].queue = '2';
+playlists[1][5].queue = '1,3';
+let getPlaylistItemsCalls = 0;
+let evaluatedPlaylists = [];
+function HandleList(items) {
+    this.items = items || [];
+    Object.defineProperty(this, 'Count', {get: () => this.items.length});
+}
+HandleList.prototype.GetItem = function(index) { return this.items[index]; };
+HandleList.prototype.AddItem = function(item) { this.items.push(item); };
+HandleList.prototype.Dispose = function() {};
+HandleList.prototype.RunContextCommand = function() { return true; };
+const plman = {
+    PlaylistCount: 3,
+    ActivePlaylist: 1,
+    GetPlaylistItemCount(index) { return playlists[index].length; },
+    GetPlaylistName(index) { return `Playlist ${index}`; },
+    GetPlaylistItems(index) {
+        getPlaylistItemsCalls++;
+        return new HandleList(playlists[index]);
+    },
+    ClearPlaylistSelection() {}, SetPlaylistSelectionSingle() {},
+    SetPlaylistFocusItem() {}, ExecutePlaylistDefaultAction() {}
+};
+function currentQueueTotal() {
+    const seen = new Set();
+    for (const playlist of playlists) {
+        for (const item of playlist) {
+            for (const value of String(item.queue || '').match(/\\d+/g) || []) seen.add(Number(value));
+        }
+    }
+    return seen.size;
+}
+const fb = {
+    CreateHandleList(handle) { return new HandleList(handle ? [handle] : []); },
+    TitleFormat(format) {
+        return {EvalPlaylistItem(playlist, itemIndex) {
+            const item = playlists[playlist][itemIndex];
+            if (format === '[%queue_indexes%]') {
+                evaluatedPlaylists.push(playlist);
+                return item.queue;
+            }
+            if (format === '[%queue_total%]') return item.queue ? String(currentQueueTotal()) : '';
+            if (format === '%path%|%subsong%') return item.Path + '|' + item.SubSong;
+            return item.text;
+        }};
+    }
+};
+const panel = {
+    list_objects: [], row_height: 20,
+    fonts: {normal: {}}, colours: {text: 1, highlight: 2},
+    m: {AppendMenuItem() {}, AppendMenuSeparator() {}}
+};
+const utils = {
+    IsKeyPressed() { return false; }, SetClipboardText() {},
+    IsFile() { return true; }, InputBox() { return ''; }
+};
+function ScrollButton() {
+    this.lbtn_up = function() {};
+    this.move = function() { return false; };
+    this.paint = function() {};
+}
+const factory = new Function(
+    'panel', 'window', 'plman', 'fb', 'utils', '_scale', '_sb', 'chars', '_',
+    'setAlpha', 'EnableMenuIf', 'MF_STRING', 'VK_CONTROL', 'VK_SHIFT',
+    'VK_UP', 'VK_DOWN', 'VK_HOME', 'VK_END', 'VK_PGUP', 'VK_PGDN',
+    'VK_RETURN', 'VK_ESCAPE', 'IDC_ARROW', 'DWRITE_TEXT_ALIGNMENT_CENTER',
+    'DWRITE_PARAGRAPH_ALIGNMENT_CENTER', 'DWRITE_WORD_WRAPPING_NO_WRAP',
+    'DWRITE_TRIMMING_GRANULARITY_CHARACTER', 'DWRITE_TEXT_ALIGNMENT_LEADING',
+    '_p', 'console', '_explorer', 'PlaybackQueueOrigin',
+    source + '\\nreturn _queue_viewer;'
+);
+const QueueViewer = factory(
+    panel, windowMock, plman, fb, utils, value => value, ScrollButton,
+    {up: 'u', down: 'd'}, {bind: (fn, context) => fn.bind(context)},
+    colour => colour, () => 0, 0, 0x11, 0x10, 0x26, 0x28, 0x24, 0x23,
+    0x21, 0x22, 0x0d, 0x1b, 0, 0, 0, 0, 0, 0,
+    function(name, value) { this.value = value; }, console, () => {},
+    {user_added: 0, user_removed: 1, playback_advance: 2}
+);
+const queue = new QueueViewer(0, 0, 200, 200);
+queue.rows = 5;
+queue.data = [{
+    queue_index: 1, playlist_index: 0, playlist_item_index: 10,
+    source_id: 'C:/P0/10.flac|0', text: 'old'
+}];
+queue.count = 1;
+queue.has_scanned = true;
+queue.dirty = false;
+const realNow = Date.now;
+let fakeNow = 0;
+Date.now = () => fakeNow++;
+queue.update(true);
+let progressiveResultSeen = false;
+drainTimers(10000, () => {
+    if (queue.scanning && queue.count > 0) progressiveResultSeen = true;
+});
+Date.now = realNow;
+assert(getPlaylistItemsCalls === 0,
+       'Queue Viewer full scan allocated complete playlist handle lists');
+assert(evaluatedPlaylists[0] === 0,
+       'Queue Viewer did not prioritise the previous source playlist');
+assert(evaluatedPlaylists.indexOf(1) !== -1 && evaluatedPlaylists.indexOf(2) === -1,
+       'Queue Viewer did not stop after %queue_total% confirmed all queue entries');
+assert(queue.data.map(row => row.queue_index).join(',') === '1,2,3',
+       'Queue Viewer full discovery rows were incorrect');
+assert(progressiveResultSeen,
+       'Queue Viewer did not publish queue rows before full-scan completion');
+assert(timerDelays.slice(1).every(delay => delay === 1),
+       'Queue Viewer incremental scan did not use a 1 ms yield');
+assert(queue.playlist_snapshot.length === 3,
+       'Queue Viewer did not retain its playlist topology snapshot');
+
+playlists[0][10].queue = '';
+playlists[1][5].queue = '1,2';
+evaluatedPlaylists = [];
+timerDelays = [];
+queue.playback_queue_changed(1);
+assert(!queue.dirty && timers.size === 0,
+       'Queue removal did not use the targeted refresh path');
+assert(queue.data.map(row => row.queue_index).join(',') === '1,2',
+       'Queue removal targeted refresh produced incorrect rows');
+assert(evaluatedPlaylists.length === 2,
+       'Queue removal scanned more than the two unique cached sources');
+
+playlists[1][5].queue = '1';
+evaluatedPlaylists = [];
+queue.playback_queue_changed(2);
+assert(!queue.dirty && queue.data.map(row => row.queue_index).join(',') === '1',
+       'Playback advance did not update cached sources immediately');
+assert(evaluatedPlaylists.length === 1,
+       'Playback advance did not deduplicate cached source locations');
+
+playlists[2][3].queue = '2';
+evaluatedPlaylists = [];
+queue.playback_queue_changed(0);
+assert(queue.dirty, 'User-added queue item did not require discovery');
+queue.on_visible_paint();
+Date.now = () => fakeNow++;
+drainTimers(10000);
+Date.now = realNow;
+assert(queue.data.map(row => row.queue_index).join(',') === '1,2',
+       'User-added queue item was not discovered by a full scan');
+
+playlists[1][5].Path = 'C:/P1/replaced.flac';
+queue.playback_queue_changed(1);
+assert(queue.dirty,
+       'Stale cached source identity did not fall back to a full scan');
+
+queue.on_visible_paint();
+Date.now = () => fakeNow++;
+assert(runOneTimer(), 'Queue Viewer did not start the stale-cache recovery scan');
+playlists[2].push({Path: 'C:/P2/new.flac', SubSong: 0, text: 'new', queue: ''});
+drainTimers(10000);
+Date.now = realNow;
+assert(queue.dirty && !queue.scanning,
+       'Playlist changes during a scan were not rejected for a clean restart');
+queue.on_visible_paint();
+Date.now = () => fakeNow++;
+drainTimers(10000);
+Date.now = realNow;
+assert(!queue.dirty && queue.playlist_snapshot[2].slice(-2) === '41',
+       'Queue Viewer did not recover with a fresh playlist snapshot');
+
+assert(!queue.bridge_mode && !queue.bridge_writable && !queue.remove_selected_from_queue(),
+       'Standalone Queue Viewer unexpectedly exposed writable queue mutations');
+""".replace('QUEUE_SOURCE_PATH',
+               json.dumps(str(project / 'jscript' / 'js' / 'Queue_Viewer.js')))
+        result = subprocess.run([node, '-e', queue_scan_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Queue Viewer scan optimisation runtime test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # Exercise the project-only JSplitter direct queue bridge end-to-end on
+        # the JScript Panel consumer path. The fallback scanner must remain
+        # completely idle while a valid bridge generation is available.
+        queue_bridge_smoke = f"""
+const fs = require('fs');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'queue_bridge.js'))}, 'utf8');
+const queueSource = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Queue_Viewer.js'))}, 'utf8');
+function assert(condition, message) {{ if (!condition) throw new Error(message); }}
+let timers = new Map();
+let nextTimer = 1;
+const windowMock = {{
+    Name: 'Queue', RepaintRect() {{}}, Repaint() {{}}, SetCursor() {{}},
+    SetTimeout(fn, delay) {{ const id = nextTimer++; timers.set(id, {{fn, delay}}); return id; }},
+    ClearTimeout(id) {{ timers.delete(id); }}
+}};
+function runOneTimer() {{
+    const item = timers.entries().next();
+    if (item.done) return false;
+    timers.delete(item.value[0]);
+    item.value[1].fn();
+    return true;
+}}
+function drainTimers(limit) {{
+    let count = 0;
+    while (runOneTimer()) if (++count > limit) throw new Error('Bridge timer loop did not settle');
+}}
+const playlists = [[
+    {{Path:'C:/Music/a.flac', SubSong:0, text:'Artist A - A'}},
+    {{Path:'C:/Music/b.flac', SubSong:0, text:'Artist B - B'}}
+]];
+let queueIndexEvaluations = 0;
+const plman = {{
+    PlaylistCount: 1, ActivePlaylist: 0,
+    GetPlaylistItemCount(index) {{ return playlists[index].length; }},
+    GetPlaylistName() {{ return 'Main'; }},
+    GetPlaylistItems() {{ throw new Error('Bridge path must not allocate playlist lists'); }},
+    ClearPlaylistSelection() {{}}, SetPlaylistSelectionSingle() {{}},
+    SetPlaylistFocusItem() {{}}, ExecutePlaylistDefaultAction() {{}}
+}};
+function HandleList() {{ this.items=[]; Object.defineProperty(this,'Count',{{get:()=>this.items.length}}); }}
+HandleList.prototype.AddItem=function(item){{this.items.push(item);}};
+HandleList.prototype.GetItem=function(index){{return this.items[index];}};
+HandleList.prototype.Dispose=function(){{}};
+HandleList.prototype.RunContextCommand=function(){{return true;}};
+const fb = {{
+    ProfilePath: 'P:/',
+    CreateHandleList() {{ return new HandleList(); }},
+    TitleFormat(format) {{ return {{EvalPlaylistItem(playlist, itemIndex) {{
+        const item = playlists[playlist][itemIndex];
+        if (format === '[%queue_indexes%]') {{ queueIndexEvaluations++; return ''; }}
+        if (format === '[%queue_total%]') return '';
+        if (format === '%path%|%subsong%') return item.Path + '|' + item.SubSong;
+        return item.text;
+    }}}}; }}
+}};
+let bridgeText = '';
+let commandText = '';
+let resultText = '';
+const utils = {{
+    IsKeyPressed() {{ return false; }}, SetClipboardText() {{}}, CreateFolder() {{ return true; }},
+    IsFile(path) {{ return path === 'P:/js_data\\\\darkonejsp3.queue-state.json' ||
+        (path === 'P:/js_data\\\\darkonejsp3.queue-command-result.json' && !!resultText); }},
+    ReadTextFile(path, codepage) {{
+        if (path === 'P:/js_data\\\\darkonejsp3.queue-command-result.json') return resultText;
+        return bridgeText;
+    }},
+    WriteTextFile(path, content) {{
+        if (path === 'P:/js_data\\\\darkonejsp3.queue-command.json') {{ commandText = content; return true; }}
+        return false;
+    }},
+    InputBox() {{ return ''; }}
+}};
+const panel = {{list_objects:[],row_height:20,fonts:{{normal:{{}}}},colours:{{text:1,highlight:2}},m:{{AppendMenuItem(){{}},AppendMenuSeparator(){{}}}}}};
+function ScrollButton() {{ this.lbtn_up=function(){{}}; this.move=function(){{return false;}}; this.paint=function(){{}}; }}
+const factory = new Function(
+    'panel','window','plman','fb','utils','_scale','_sb','chars','_','setAlpha','EnableMenuIf','MF_STRING',
+    'VK_CONTROL','VK_SHIFT','VK_UP','VK_DOWN','VK_HOME','VK_END','VK_PGUP','VK_PGDN','VK_RETURN','VK_ESCAPE',
+    'IDC_ARROW','DWRITE_TEXT_ALIGNMENT_CENTER','DWRITE_PARAGRAPH_ALIGNMENT_CENTER','DWRITE_WORD_WRAPPING_NO_WRAP',
+    'DWRITE_TRIMMING_GRANULARITY_CHARACTER','DWRITE_TEXT_ALIGNMENT_LEADING','_p','console','_explorer','PlaybackQueueOrigin',
+    protocolSource + '\\nvar DARKONEJSP3_QUEUE_BRIDGE_ENABLED = true;\\n' + queueSource + '\\nreturn _queue_viewer;'
+);
+const QueueViewer = factory(panel,windowMock,plman,fb,utils,v=>v,ScrollButton,{{up:'u',down:'d'}},{{bind:(fn,c)=>fn.bind(c)}},
+    c=>c,()=>0,0,0x11,0x10,0x26,0x28,0x24,0x23,0x21,0x22,0x0d,0x1b,0,0,0,0,0,0,
+    function(name,value){{this.value=value;}},console,()=>{{}},{{user_added:0,user_removed:1,playback_advance:2}});
+function state(generation, entries, available=true, writable=true) {{
+    return JSON.stringify({{version:'v2',session:'session-a',generation,available,writable,
+        capabilities:['remove','removeMany','clear','moveUp','moveDown','moveTop','moveBottom'],entries}});
+}}
+bridgeText = state(1,[
+    {{queueIndex:1,playlistIndex:0,playlistItemIndex:1,sourceId:'C:/Music/b.flac|0'}},
+    {{queueIndex:2,playlistIndex:-1,playlistItemIndex:-1,sourceId:'C:/Detached/c.flac|0'}}
+]);
+const queue = new QueueViewer(0,0,200,200);
+queue.rows=5;
+queue.on_visible_paint();
+drainTimers(20);
+assert(queue.bridge_mode && queue.count === 2, 'Queue Viewer did not enter direct bridge mode');
+assert(queueIndexEvaluations === 0, 'Direct bridge unexpectedly evaluated %queue_indexes%');
+assert(queue.data[0].text === 'Artist B - B', 'Bridge did not format a valid playlist source');
+assert(queue.data[1].text === 'c.flac', 'Bridge did not preserve a detached queue item');
+assert(!queue.source_row_valid(1), 'Detached bridge item was incorrectly treated as a live playlist source');
+
+bridgeText = state(2,[{{queueIndex:1,playlistIndex:0,playlistItemIndex:0,sourceId:'C:/Music/a.flac|0'}}]);
+queue.playback_queue_changed(1);
+drainTimers(20);
+assert(queue.count === 1 && queue.data[0].text === 'Artist A - A', 'Queue removal did not refresh from direct bridge');
+assert(queueIndexEvaluations === 0, 'Queue removal fell back to playlist scanning');
+
+// Simulate callback ordering where JScript Panel observes the event before
+// JSplitter has written its next generation. The consumer must retry briefly,
+// not launch a 38k-item discovery scan.
+queue.playback_queue_changed(0);
+assert(runOneTimer(), 'Bridge refresh did not perform its first generation check');
+assert(timers.size === 1, 'Bridge refresh did not schedule a generation retry');
+bridgeText = state(3,[
+    {{queueIndex:1,playlistIndex:0,playlistItemIndex:0,sourceId:'C:/Music/a.flac|0'}},
+    {{queueIndex:2,playlistIndex:0,playlistItemIndex:1,sourceId:'C:/Music/b.flac|0'}}
+]);
+drainTimers(20);
+assert(queue.count === 2 && queue.bridge_mode, 'Bridge generation retry did not consume the JSplitter update');
+assert(queueIndexEvaluations === 0 && !queue.scanning, 'Bridge generation race triggered a fallback scan');
+
+queue.select_only(0, false);
+assert(queue.remove_selected_from_queue(), 'Writable bridge did not accept remove command');
+const removeCommand = JSON.parse(commandText);
+assert(removeCommand && removeCommand.action === 'remove' &&
+    removeCommand.queueIndexes.join(',') === '1' && removeCommand.generation === 3,
+    'Queue Viewer serialised the remove command incorrectly');
+resultText = JSON.stringify({{version:'v2',id:removeCommand.id,session:'session-a',accepted:true,generation:4,message:''}});
+assert(runOneTimer(), 'Queue Viewer did not consume the writable command acknowledgement');
+assert(runOneTimer(), 'Queue Viewer did not check the acknowledged bridge generation');
+assert(queue.count === 2 && queue.bridge_generation === 3 && timers.size === 1,
+    'Queue Viewer accepted stale bridge state before the acknowledged generation was published');
+bridgeText = state(4,[
+    {{queueIndex:1,playlistIndex:0,playlistItemIndex:1,sourceId:'C:/Music/b.flac|0'}}
+]);
+drainTimers(30);
+assert(queue.count === 1 && queue.data[0].text === 'Artist B - B' && queue.bridge_generation === 4,
+    'Queue Viewer did not wait for and consume the acknowledged authoritative generation');
+assert(queueIndexEvaluations === 0, 'Writable command path triggered fallback queue scanning');
+"""
+        result = subprocess.run([node, '-e', queue_bridge_smoke],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append('Queue Viewer direct JSplitter bridge runtime test failed: ' +
                           (result.stdout + result.stderr).strip())
 
     with tempfile.TemporaryDirectory() as cache:

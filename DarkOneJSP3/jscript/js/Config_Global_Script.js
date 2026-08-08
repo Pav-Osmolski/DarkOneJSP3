@@ -535,11 +535,6 @@ function safeBitmapImage(path) {
 function disposeImage(img) {
     if (img) { try { img.Dispose(); } catch (e) {} }
 }
-function clearPanelTimer(timer_id) {
-    if (timer_id) { try { window.ClearTimeout(timer_id); } catch (e) {} }
-    return null;
-}
-
 // DirectWrite font strings and drawing adapters for the small subset of legacy GDI flags used by DarkOne.
 function darkOneCreateFont(name, size, style, weight) {
     style = Number(style) || 0;
@@ -819,7 +814,7 @@ function darkOneSetNumberProperty(name, title, defaultValue, minValue, maxValue)
         }
     } catch (e) {}
 }
-function darkOneSetFontFamilyProperty(name, title, currentValue, defaultValue) {
+function darkOneSetFontFamilyProperty(name, title, currentValue) {
     try {
         var value = String(utils.InputBox(
             'Enter an installed DirectWrite font family.\n\nExamples: Arial Black, Segoe UI, Bahnschrift, Microsoft Sans Serif',
@@ -1086,13 +1081,13 @@ function darkOneToolsMenu(x, y) {
         });
         window.Reload();
         break;
-    case 9201: darkOneSetFontFamilyProperty('DARKONEJSP3.CONTROL.FONT.NAME', 'DarkOneJSP3 control-panel font', darkOneControlFontName(), DARKONEJSP3_FONT_DEFAULTS.controlName); break;
+    case 9201: darkOneSetFontFamilyProperty('DARKONEJSP3.CONTROL.FONT.NAME', 'DarkOneJSP3 control-panel font', darkOneControlFontName()); break;
     case 9202: darkOneSetNumberProperty('DARKONEJSP3.FONT.SCALE', 'DarkOneJSP3 control-panel font scale', 1.0, 0.75, 1.75); break;
     case 9203: darkOneResetControlFont(); break;
-    case 9301: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.LABEL.FONT.NAME', 'DarkOneJSP3 display-caption font', darkOneDisplayLabelFontName(), DARKONEJSP3_FONT_DEFAULTS.displayLabelName); break;
+    case 9301: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.LABEL.FONT.NAME', 'DarkOneJSP3 display-caption font', darkOneDisplayLabelFontName()); break;
     case 9302: darkOneSetNumberProperty('DARKONEJSP3.DISPLAY.LABEL.FONT.SCALE', 'DarkOneJSP3 display-caption font scale', 1.0, 0.6, 2.0); break;
     case 9303: darkOneResetDisplayLabelFont(); break;
-    case 9401: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.VALUE.FONT.NAME', 'DarkOneJSP3 display-value font', darkOneDisplayValueFontName(), DARKONEJSP3_FONT_DEFAULTS.displayValueName); break;
+    case 9401: darkOneSetFontFamilyProperty('DARKONEJSP3.DISPLAY.VALUE.FONT.NAME', 'DarkOneJSP3 display-value font', darkOneDisplayValueFontName()); break;
     case 9402: darkOneSetNumberProperty('DARKONEJSP3.DISPLAY.VALUE.FONT.SCALE', 'DarkOneJSP3 display-value font scale', 1.0, 0.6, 2.0); break;
     case 9403: darkOneResetDisplayValueFont(); break;
     case 9500: darkOneResetAllFonts(); break;

@@ -1,5 +1,5 @@
-DarkOneJSP3 v0.9.37 Validation Report
-=====================================
+DarkOneJSP3 v1.0.3 Validation Report
+====================================
 
 Scope
 -----
@@ -11,6 +11,9 @@ validation and the audited-file count.
 
 Checks
 ------
+- Display label-state validation verifies that changing volume while playback is
+  stopped activates only VOLUME: TIME and TIME REMAINING remain inactive.
+  During playback, the normal time label and temporary VOLUME label remain active.
 - Shared colour-picker helpers and the legacy bottom-area fallback accept
   native `utils.ColourPicker` methods even when JScript Panel reports their
   type as `unknown`; strict function-only guards are rejected. Opaque ARGB
@@ -31,8 +34,28 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
-- Queue Viewer selection membership is constant-time and large source scans are
-  bounded to 5 ms slices with 5 ms yields and batched clock checks.
+- The project Queue Viewer consumes a versioned file-backed state produced by
+  the always-running root JSplitter through `plman.GetPlaybackQueueContents()`.
+  Valid bridge generations are applied without evaluating `%queue_indexes%` or
+  scanning playlists. The same bridge now accepts generation-bound mutation
+  commands for single/multi removal, clear and queue reordering; stale commands
+  are rejected, duplicate occurrences are addressed by queue position and
+  detached handles remain reorderable.
+  Reorder tests model live queue-wrapper invalidation at flush time and verify
+  that playlist-backed source coordinates are snapshotted beforehand. Move up,
+  Move down, Move to top and Move to bottom are all exercised with mixed
+  playlist-backed/detached queues and multi-selection, preserving Queue Viewer
+  title formatting, source associations and JS Playlist queue-position fields.
+- Processed queue command files are acknowledged and removed so the 25 ms root
+  poll does not repeatedly reread and parse an already-consumed payload. Failed
+  queue-state writes use bounded publication retries without falsely advancing
+  the published generation, and the Queue Viewer waits for an acknowledged
+  generation instead of accepting older bridge state.
+- The standalone/fallback Queue Viewer retains constant-time selection lookup,
+  5 ms work slices with 1 ms yields, no full-playlist handle-list allocation,
+  progressive publishing and targeted removal/playback-advance refreshes.
+  `%queue_total%` now terminates non-empty fallback discovery as soon as every
+  queue position has been found.
 - InfoStack painting consumes one invalidation-driven render model containing
   visible tabs, labels, rectangles and resolved colours instead of repeatedly
   reading properties during paint and mouse movement.
@@ -80,7 +103,10 @@ Checks
   script unload. Script unload also explicitly disposes active normal and blurred
   Direct2D bitmaps.
 - The repository README contains a dedicated Enhanced Sample Library section
-  and a direct link to the distributed ENHANCED_SAMPLES.txt guide.
+  and a direct link to the distributed ENHANCED_SAMPLES.txt guide. Requirements
+  documentation retains Queue Viewer and explains that it is optional for the
+  default manually constructed scripted-queue layout but required before
+  importing the bundled two-layout FCL.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3
   directory and every distributed top-level sample import resolves.
 - Enhanced sample entries contain no hard DarkOneJSP3 profile-path imports.
@@ -163,7 +189,7 @@ Checks
   background remains appearance-only.
 - Startup settings remain owned by the root controller and preserve the tested
   reveal timing and first-layout safeguards.
-- Biography, Last.fm, Album Notes, Properties and the optional scripted Queue
+- Biography, Last.fm, Album Notes, Properties and the scripted Queue
   Viewer use the shared Page background colour implementation and coordinated
   reset defaults.
 - InfoStack, page, side-divider and waveform palettes preserve their documented
@@ -211,10 +237,11 @@ Checks
 - Smooth-scroll refresh-rate tests verify that both panels update their live
   rate values, persist the selected property and reschedule active animation
   timers or frame loops without reverting to the 8 ms default.
-- The native Queue Viewer is identified as the recommended DOJSP3.Queue panel,
-  while the optional scripted viewer is verified for multi-selection, keyboard
-  navigation, source-item commands and the absence of unsupported mutation API
-  calls.
+- The scripted Queue Viewer is identified as the recommended DOJSP3.Queue panel.
+  Validation covers multi-selection, Delete-key removal, source-item commands,
+  writable bridge command serialisation, single/multi removal, clear, reorder,
+  stale-generation rejection, duplicate occurrences and standalone read-only
+  fallback behaviour. The optional native Queue Viewer remains supported.
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.

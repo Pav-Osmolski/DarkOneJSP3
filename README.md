@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v0.9.37
+  <strong>Current stable release:</strong> v1.0.3
 </p>
 
 > [!IMPORTANT]
@@ -55,8 +55,8 @@ workflow of the original theme.
 * Improved JS Playlist, Playlist Manager filtering and queue handling.
 * Smooth scrolling for JS Playlist and Playlist Manager,
   with custom refresh interval overrides.
-* Enhanced optional scripted Queue Viewer with multi-selection, keyboard
-  navigation and source-item commands.
+* Scripted Queue Viewer with direct JSplitter queue enumeration, multi-selection,
+  keyboard navigation, source-item commands and writable queue controls.
 * Optional startup transitions with native-window reveal hardening.
 * Demand-driven playlist rendering with cached selection/playback state, reused
   visible rows, cached column geometry and Direct2D bitmap reuse.
@@ -66,7 +66,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v0.9.37** is the current stable release.
+**DarkOneJSP3 v1.0.3** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -123,12 +123,13 @@ for standalone installation, compatibility guarantees and integration details.
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
 
-The native Queue Viewer component is recommended because it provides complete
-playback-queue editing. A bundled JScript Panel Queue Viewer script is included
-as an optional lightweight fallback with selection, keyboard navigation and
-source-item commands. JScript Panel 3 no longer exposes the playback-queue
-mutation functions required to add, remove, reorder or clear entries from a
-scripted panel.
+The bundled DarkOneJSP3 scripted Queue Viewer is the recommended queue panel.
+Inside the theme it uses the always-running JSplitter root as a direct,
+bidirectional playback-queue bridge, providing fast queue enumeration together
+with remove, multi-remove, clear and reorder controls. The separate native
+Queue Viewer component remains a supported alternative. When the enhanced Queue
+Viewer sample is used outside DarkOneJSP3, it remains read-only because the
+JSplitter mutation bridge is not present.
 
 Third-party component binaries are not included. Install compatible versions
 from their official project pages or trusted foobar2000 component sources
@@ -209,6 +210,10 @@ See:
 The included
 [`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a
 maintainer-exported convenience snapshot. It is not required.
+
+The FCL contains two saved layouts: `DarkOneJSP3` is the default and uses the
+recommended scripted Queue Viewer, while `DarkOneJSP3 Native Queue` uses the
+separate native Queue Viewer component.
 
 After importing it, compare the resulting layout with the documented panel
 titles and script assignments. The panel map remains the reference for the

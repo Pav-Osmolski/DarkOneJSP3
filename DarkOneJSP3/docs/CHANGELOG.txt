@@ -1,6 +1,169 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.3 - Queue bridge and release hardening
+-------------------------------------------
+
+- Acknowledged and removed processed Queue Viewer command files so the 25 ms
+  JSplitter command poll no longer rereads and reparses an already-consumed
+  command payload for the remainder of the session. A blank-file fallback is
+  retained for hosts where `utils.RemovePath()` is unavailable.
+- Added bounded retry of failed direct queue-state publication. Logical queue
+  generations remain authoritative while the published generation advances
+  only after a successful state write; the Queue Viewer now waits for the
+  generation named by an accepted command result instead of consuming older
+  bridge state.
+- Expanded permanent reorder regression coverage across Move up, Move down,
+  Move to top and Move to bottom with mixed playlist-backed and detached queue
+  entries, including adjacent and non-adjacent multi-selection ordering.
+- Restored Queue Viewer to the documented Requirements set and documented the
+  default `DarkOneJSP3` scripted-queue layout together with the alternative
+  `DarkOneJSP3 Native Queue` layout included in the bundled FCL.
+- Adopted the maintainer's revised concise README Highlights section and aligned
+  README, installation, layout, configuration and validation documentation with
+  the two-layout FCL description.
+- Removed the unused `clearPanelTimer()` helper, removed the unused
+  `defaultValue` font-family argument and its call-site arguments, removed the
+  unused queue-state `reason` argument, and corrected the root Queue Viewer
+  comment to describe the scripted viewer as recommended rather than optional.
+- Advanced Queue Viewer to 0.8.1, direct queue bridge to 0.2.3 and release
+  validator to 0.9.3.
+
+v1.0.2 - Queue reorder playlist-source API correction
+-----------------------------------------------------
+
+- Fixed the remaining Queue Viewer Move regression that caused title formatting
+  to fall back to literal filenames and cleared JS Playlist `%queue_index%`
+  badges after a reorder.
+- Corrected the JSplitter-side playlist-source validation to use the canonical
+  SMP-derived `plman.PlaylistItemCount()` API. v1.0.1 incorrectly called the
+  JScript Panel-style `plman.GetPlaylistItemCount()` method in the JSplitter
+  root; the caught failure therefore classified every moved queue item as
+  detached and rebuilt it with `AddItemToPlaybackQueue()`.
+- Retained a defensive `GetPlaylistItemCount()` fallback only for compatible
+  hosts, while preferring JSplitter's real `PlaylistItemCount()` API.
+- Strengthened runtime validation so the JSplitter mock exposes only
+  `PlaylistItemCount()` and verifies playlist-backed entries are restored via
+  `AddPlaylistItemToPlaybackQueue()` rather than the detached-handle path.
+- Added a static guard preventing the incorrect API from being reintroduced in
+  the playlist-source restore check.
+- Advanced the direct queue bridge to 0.2.2 and release validator to 0.9.1.
+
+v1.0.1 - Queue reorder source-association hotfix
+------------------------------------------------
+
+- Attempted to fix Move up, Move down, Move to top and Move to bottom rebuilding the
+  playback queue from live `FbPlaybackQueueItem` wrappers after they had been
+  invalidated by `FlushPlaybackQueue()`.
+- Snapshot playlist index, playlist-item index and handle data before the
+  destructive queue flush, then restore playlist-backed entries with
+  `AddPlaylistItemToPlaybackQueue()` and detached entries by handle.
+- Intended to preserve Queue Viewer title-format evaluation after reordering instead of
+  falling back to literal filenames.
+- Intended to preserve JS Playlist `%queue_index%` / queue-position badges after Queue
+  Viewer reordering by retaining each entry's playlist-source association.
+- Added regression coverage that deliberately invalidates live queue wrappers
+  during the flush and verifies source coordinates survive the reorder.
+- Advanced the direct queue-bridge module to 0.2.1.
+
+v1.0.0 - Writable scripted Queue Viewer milestone
+-------------------------------------------------
+
+- Promoted the DarkOneJSP3 scripted Queue Viewer to the recommended DOJSP3.Queue
+  implementation and moved the separate native Queue Viewer component to an
+  optional alternative role.
+- Extended the v0.9.40 direct JSplitter queue bridge into a bidirectional,
+  versioned state/command/result protocol. JScript Panel remains responsible for
+  presentation and selection while DOJSP3.Root performs authoritative queue
+  mutations through JSplitter.
+- Added Remove item from queue, Remove selected items from queue, Clear playback
+  queue, Move up, Move down, Move to top and Move to bottom commands.
+- Added Delete-key removal for the active Queue Viewer selection.
+- Bound every mutation command to the active bridge session and queue generation;
+  stale commands are rejected instead of being applied to a changed queue.
+- Addressed removals by queue position so duplicate queued occurrences can be
+  removed independently.
+- Reordering preserves the relative order of multi-selected rows and rebuilds
+  playlist-backed or detached queue entries through their live JSplitter queue
+  objects/handles.
+- Kept the standalone Enhanced Sample Library Queue Viewer read-only when the
+  DarkOneJSP3 JSplitter bridge is unavailable, preserving its incremental
+  `%queue_indexes%` fallback scanner and source-navigation commands.
+- Revised README, installation, panel-map, configuration, troubleshooting and
+  validation documentation around the scripted Queue Viewer as the default
+  recommended setup; the native Queue Viewer component is no longer a required
+  dependency.
+- Expanded validation for writable state capabilities, command serialisation,
+  duplicate-safe removal, multi-remove, clear, reorder, stale-generation
+  rejection, detached entries and standalone read-only behaviour.
+- Advanced Queue Viewer to 0.8.0, queue bridge to 0.2.0 and the release validator
+  to 0.9.0.
+
+v0.9.40 - Direct scripted Queue Viewer bridge
+---------------------------------------------
+
+- Added a project-only file-backed queue bridge owned by DOJSP3.Root. JSplitter
+  now enumerates the playback queue directly with `plman.GetPlaybackQueueContents()`
+  and publishes only the current queue entries to
+  `js_data\darkonejsp3.queue-state.json`.
+- Changed the DarkOneJSP3 scripted Queue Viewer to consume bridge generations
+  instead of scanning every playlist row on initial display or normal queue
+  changes. Short generation retries handle callback ordering without launching
+  a fallback scan prematurely.
+- Preserved queued handles whose source playlist no longer exists; they remain
+  visible while source-navigation commands are disabled safely.
+- Kept the standalone Enhanced Sample Library independent from DarkOneJSP3. Its
+  Queue Viewer continues to use the v0.9.39 incremental `%queue_indexes%`
+  fallback and targeted refresh implementation.
+- Added `%queue_total%` early termination to fallback discovery. Non-empty scans
+  stop as soon as every queue position has been found; empty queues still
+  require complete fallback discovery.
+- Added root refreshes for queue changes and playlist topology/item changes so
+  cached source positions remain current.
+- Added runtime coverage for bridge startup publication, direct consumption,
+  queue-change generation races, detached queue items, zero `%queue_indexes%`
+  evaluation in bridge mode and fallback early termination.
+- Advanced Queue Viewer to 0.7.0, startup controller to 0.7.37 and the release
+  validator to 0.8.0.
+
+v0.9.39 - Scripted Queue Viewer scan optimisation
+-------------------------------------------------
+
+- Added targeted queue refreshes for user removals and playback advance. These
+  common callbacks now reevaluate only the unique source locations already
+  represented by the queue instead of rescanning every item in every playlist.
+- Kept complete discovery scans for the initial display, user-added entries,
+  manual re-scan and recovery from stale playlist/source caches.
+- Removed redundant `GetPlaylistItems()` allocation from the full scan path;
+  scans now use one item-count snapshot per playlist with direct
+  `EvalPlaylistItem()` evaluation.
+- Reduced the incremental scan yield from 5 ms to 1 ms while retaining the
+  existing 5 ms work budget and batched elapsed-time checks.
+- Prioritised playlists containing previous queue sources, followed by the
+  active playlist and then remaining playlists.
+- Published discovered queue rows progressively at playlist boundaries so the
+  viewer becomes useful before a large full scan has completed.
+- Added playlist topology snapshots and queued-source identity checks. Stale
+  locations and playlists changed during a scan automatically fall back to a
+  new complete discovery scan.
+- Added runtime coverage for duplicate queue entries, targeted removals,
+  playback advance, user-added discovery, scan prioritisation, progressive
+  publishing, stale-source fallback and absence of full-scan handle lists.
+- Advanced Queue Viewer to 0.6.3 and the release validator to 0.7.9.
+
+v0.9.38 - Stopped-volume display label fix
+------------------------------------------
+
+- Fixed TIME or TIME REMAINING lighting up alongside VOLUME when the
+  volume changed while playback was stopped.
+- Bound the time label exclusively to the existing playback-state colour;
+  only VOLUME now receives the temporary volume-change highlight while
+  stopped. Playing-state behaviour remains unchanged.
+- Added runtime coverage for TIME, TIME REMAINING and VOLUME in stopped and
+  playing volume-change states, plus a static guard against reintroducing
+  the shared highlight expression.
+- Advanced Display to 3.0.32 and the release validator to 0.7.8.
+
 v0.9.37 - Custom colour release hardening
 -----------------------------------------
 

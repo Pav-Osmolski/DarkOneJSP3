@@ -40,7 +40,9 @@ than one foobar2000 theme.
 - MusicBrainz
 - Last.fm Biography and Artist/User Information
 - Properties
-- Queue Viewer
+- Queue Viewer — uses incremental `%queue_indexes%` discovery when run
+  standalone; `%queue_total%` allows non-empty scans to stop once all queue
+  positions have been found.
 
 DarkOneJSP3 adds coordinated layout, theme defaults and factory-reset controls
 on top of the same standalone sample implementations; it no longer owns their

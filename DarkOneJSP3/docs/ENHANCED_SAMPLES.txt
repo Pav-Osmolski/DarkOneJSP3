@@ -37,6 +37,11 @@ Compatibility design
   saved entries created before the standalone-sample refactor.
 - enhanced_page_background is the neutral _panel option;
   darkonejsp3_page_background remains a supported alias.
+- The standalone Queue Viewer deliberately uses its JScript Panel
+  `%queue_indexes%` discovery path and remains read-only. DarkOneJSP3's
+  project-specific wrapper instead enables the direct, writable JSplitter
+  queue bridge, while the component sample retains no project-folder runtime
+  dependency.
 
 DarkOneJSP3 integration
 -----------------------

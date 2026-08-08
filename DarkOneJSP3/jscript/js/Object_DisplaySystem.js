@@ -416,7 +416,7 @@ function DisplaySystem() {
 				valueOffset = this.pxSize * 72;
 				break;
 			case 2:
-				valueColour = v_change ? ui_btntxtcol : this.Colours[8];
+				valueColour = this.Colours[8];
 				valueOffset = this.pxSize * (this.display_style == 1 ? 162 : 169);
 				break;
 			case 3:

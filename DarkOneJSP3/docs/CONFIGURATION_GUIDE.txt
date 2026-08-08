@@ -61,7 +61,7 @@ Available when the panel contains text, list or display objects:
 Page background colour
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Available on Biography, Last.fm, Album Notes, Properties and the optional
+Available on Biography, Last.fm, Album Notes, Properties and the recommended
 scripted Queue Viewer. Each panel instance stores its choice independently.
 
 Choices:
@@ -73,8 +73,8 @@ Choices:
 - Custom colour...
 
 Transparent / inherit parent reveals the InfoStack backing colour. Columns UI
-global background follows the active Columns UI background colour. The native
-Queue Viewer component does not use this JScript Panel menu.
+global background follows the active Columns UI background colour. The optional native Queue Viewer component does not use this JScript Panel
+menu.
 
 Selection mode
 ~~~~~~~~~~~~~~
@@ -821,28 +821,44 @@ Configure... from the shared page controls in section 1.
 8. Queue Viewer
 ---------------
 
-Native Queue Viewer
-~~~~~~~~~~~~~~~~~~~
+Scripted Queue Viewer (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The native Queue Viewer component is the recommended DOJSP3.Queue panel. It
-provides complete playback-queue editing, including adding, removing and
-reordering entries. Its context menu is component-owned and can change with the
-installed component version; DarkOneJSP3 does not reproduce that upstream menu
-here.
-
-Give the component the exact custom title:
+Use a JScript Panel 3 instance with the exact custom title:
 
   DOJSP3.Queue
 
-Optional scripted Queue Viewer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Load the reset-aware wrapper rather than the generic sample entry:
+Load the reset-aware project wrapper rather than the generic sample entry:
 
   DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
 
-The script reconstructs queue order from %queue_indexes%, scans incrementally
-when painted and supports duplicate queue positions.
+Inside DarkOneJSP3 the wrapper uses a bidirectional, file-backed bridge owned by
+DOJSP3.Root. JSplitter calls `plman.GetPlaybackQueueContents()` directly and
+publishes only the current queue entries to
+`js_data\darkonejsp3.queue-state.json`. The JScript Panel therefore avoids
+playlist-wide `%queue_indexes%` discovery during normal theme use.
+
+The bridge is writable as well as readable. Queue mutations are sent back to
+DOJSP3.Root through versioned command/result files and executed by JSplitter
+against the authoritative playback queue. Commands are tied to the queue
+session and generation, so a stale command is rejected instead of being applied
+to a queue that changed between the menu click and execution.
+
+Queue editing commands:
+- Remove item from queue
+- Remove selected items from queue
+- Move up
+- Move down
+- Move to top
+- Move to bottom
+- Clear playback queue
+- Delete key: remove the current selection
+
+Reordering preserves the relative order of multi-selected rows. Duplicate queue
+occurrences are addressed by their queue positions, so removing one occurrence
+does not remove every matching source item. Detached queue items whose source
+playlist no longer exists remain reorderable because JSplitter retains their
+live handles.
 
 Selection and navigation:
 - Click: select one row
@@ -856,8 +872,9 @@ Selection and navigation:
 - Page Up/Page Down: move by the visible page
 - Enter or double-click: show the source playlist item
 - Escape: clear selection
+- Delete: remove the selected queue entry or entries
 
-Row commands:
+Source and utility commands:
 - Show source playlist item
 - Play source item now
 - Open containing folder
@@ -871,9 +888,28 @@ The script also appends Font size, Page background colour and Configure... from
 the shared page controls. It has no Selection mode submenu because queue rows
 already represent explicit source playlist items.
 
-JScript Panel 3 no longer exposes the playback-queue mutation functions needed
-to add, remove, reorder or clear entries. This panel is therefore a viewer and
-source-item navigator rather than a complete queue editor.
+Standalone Enhanced Sample Library behaviour
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The same Queue Viewer implementation remains usable as a standalone enhanced
+JScript Panel sample. Outside DarkOneJSP3 there is no JSplitter mutation bridge,
+so the generic sample intentionally remains read-only and uses the incremental
+`%queue_indexes%` fallback scanner. Previous queue-source playlists and the
+active playlist are prioritised, results are published progressively, removals
+and playback advance use targeted cached-source refreshes, and `%queue_total%`
+allows a non-empty discovery scan to stop as soon as every queue position has
+been found. An empty queue still requires a complete fallback scan because
+JScript Panel 3 exposes no direct queue enumeration API.
+
+Optional native Queue Viewer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The separate native Queue Viewer component remains supported as an
+interchangeable DOJSP3.Queue child. It is optional for the recommended manually
+constructed layout, but users who prefer its native interface may continue to
+use it with the same custom title. It must also be installed before importing
+the bundled FCL because that file contains the `DarkOneJSP3 Native Queue` saved
+layout in addition to the default scripted-queue `DarkOneJSP3` layout.
 
 9. Quick Search Toolbar and waveform area
 -----------------------------------------

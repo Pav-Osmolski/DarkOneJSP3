@@ -1,16 +1,19 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Queue Viewer"
-// @version "0.6.2"
+// @version "0.8.1"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\shared\sample_defaults.js"
 // @import "%fb2k_component_path%samples\shared\colour_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\queue_bridge.js"
 // @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Queue_Viewer.js"
 // ==/PREPROCESSOR==
+
+var DARKONEJSP3_QUEUE_BRIDGE_ENABLED = true;
 
 var panel = new _panel({ enhanced_page_background : true });
 var queue = new _queue_viewer(LM, TM, 0, 0);
@@ -31,6 +34,10 @@ function on_paint(gr) {
     queue.paint(gr);
 }
 function on_playback_queue_changed(origin) { queue.playback_queue_changed(origin); }
+function on_playlists_changed() { queue.source_topology_changed(); }
+function on_playlist_items_added(playlistIndex) { queue.source_topology_changed(); }
+function on_playlist_items_removed(playlistIndex, newCount) { queue.source_topology_changed(); }
+function on_playlist_items_reordered(playlistIndex) { queue.source_topology_changed(); }
 function on_script_unload() { queue.dispose(); }
 function on_size() {
     panel.size();

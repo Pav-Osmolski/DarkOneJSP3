@@ -1,5 +1,6 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+include(fb.ProfilePath + 'DarkOneJSP3\\shared\\queue_bridge.js');
 // v0.7.36 centralises startup-control serialisation, notification names and
 // readiness handshakes in the shared JSplitter protocol helper.
 
@@ -46,6 +47,384 @@ var safetyTimer = 0;
 var stageTimer = 0;
 var rootMainVisible = false;
 var rootControlsVisible = false;
+
+
+// Direct playback-queue bridge. JSplitter exposes GetPlaybackQueueContents(),
+// while JScript Panel 3 does not. Publish only the small queue state into
+// js_data so the recommended scripted Queue Viewer can avoid a full playlist scan.
+var QUEUE_BRIDGE_PROTOCOL = DarkOneQueueBridge;
+var QUEUE_BRIDGE_DATA_DIR = fb.ProfilePath + 'js_data\\';
+var QUEUE_BRIDGE_STATE_FILE = QUEUE_BRIDGE_DATA_DIR + QUEUE_BRIDGE_PROTOCOL.fileName;
+var QUEUE_BRIDGE_COMMAND_FILE = QUEUE_BRIDGE_DATA_DIR + QUEUE_BRIDGE_PROTOCOL.commandFileName;
+var QUEUE_BRIDGE_RESULT_FILE = QUEUE_BRIDGE_DATA_DIR + QUEUE_BRIDGE_PROTOCOL.resultFileName;
+var queueBridgeSession = Date.now().toString(36) + '-' +
+    Math.floor(Math.random() * 0x7fffffff).toString(36);
+var queueBridgeGeneration = 0;
+var queueBridgeRefreshTimer = 0;
+var queueBridgeStateRetryTimer = 0;
+var queueBridgeStateRetryAttempt = 0;
+var queueBridgePublishedGeneration = 0;
+var queueBridgeFailureLogged = false;
+var queueBridgeCommandTimer = 0;
+var queueBridgeLastCommandId = '';
+var queueBridgeMutationInProgress = false;
+var QUEUE_BRIDGE_COMMAND_POLL_MS = 25;
+var QUEUE_BRIDGE_STATE_RETRY_MS = 50;
+var QUEUE_BRIDGE_STATE_RETRY_LIMIT = 3;
+var queueBridgeSourceIdTfo = fb.TitleFormat('%path%|%subsong%');
+
+function normaliseQueueBridgeIndex(value) {
+    value = Number(value);
+    if (!isFinite(value) || value === 0xffffffff) return -1;
+    value = Math.round(value);
+    return value >= 0 ? value : -1;
+}
+
+function queueBridgeSourceId(handle) {
+    if (!handle) return '';
+    try { return String(queueBridgeSourceIdTfo.EvalWithMetadb(handle)); }
+    catch (e) {
+        try { return String(handle.Path || '') + '|' + String(handle.SubSong || 0); }
+        catch (ignored) { return ''; }
+    }
+}
+
+function queueBridgeState(generation) {
+    var entries = [];
+    var available = true;
+    try {
+        var contents = plman.GetPlaybackQueueContents();
+        for (var i = 0; i < contents.length; i++) {
+            var item = contents[i];
+            entries.push({
+                queueIndex: i + 1,
+                playlistIndex: normaliseQueueBridgeIndex(item.PlaylistIndex),
+                playlistItemIndex: normaliseQueueBridgeIndex(item.PlaylistItemIndex),
+                sourceId: queueBridgeSourceId(item.Handle)
+            });
+        }
+        queueBridgeFailureLogged = false;
+    } catch (e) {
+        available = false;
+        if (!queueBridgeFailureLogged) {
+            console.log('[DarkOneJSP3] Direct queue bridge unavailable; scripted Queue Viewer will use its JScript Panel fallback: ' + e.message);
+            queueBridgeFailureLogged = true;
+        }
+    }
+
+    return QUEUE_BRIDGE_PROTOCOL.state(
+        queueBridgeSession,
+        generation,
+        available,
+        entries,
+        available,
+        QUEUE_BRIDGE_PROTOCOL.capabilities
+    );
+}
+
+function publishQueueBridgeState(generation) {
+    var state = queueBridgeState(generation);
+    try {
+        utils.CreateFolder(QUEUE_BRIDGE_DATA_DIR);
+        var written = utils.WriteTextFile(
+            QUEUE_BRIDGE_STATE_FILE,
+            QUEUE_BRIDGE_PROTOCOL.serialise(state)
+        );
+        if (written === false) {
+            console.log('[DarkOneJSP3] Queue bridge state write failed: utils.WriteTextFile returned false');
+            return false;
+        }
+        queueBridgePublishedGeneration = Math.max(
+            queueBridgePublishedGeneration,
+            generation
+        );
+        if (queueBridgeStateRetryTimer) {
+            clearTimeout(queueBridgeStateRetryTimer);
+            queueBridgeStateRetryTimer = 0;
+        }
+        queueBridgeStateRetryAttempt = 0;
+        return true;
+    } catch (writeError) {
+        console.log('[DarkOneJSP3] Queue bridge state write failed: ' + writeError.message);
+        return false;
+    }
+}
+
+function retryQueueBridgeState() {
+    queueBridgeStateRetryTimer = 0;
+    if (queueBridgePublishedGeneration >= queueBridgeGeneration) {
+        queueBridgeStateRetryAttempt = 0;
+        return;
+    }
+    if (publishQueueBridgeState(queueBridgeGeneration)) return;
+    queueBridgeStateRetryAttempt++;
+    if (queueBridgeStateRetryAttempt < QUEUE_BRIDGE_STATE_RETRY_LIMIT) {
+        queueBridgeStateRetryTimer = setTimeout(
+            retryQueueBridgeState,
+            QUEUE_BRIDGE_STATE_RETRY_MS
+        );
+    } else {
+        console.log('[DarkOneJSP3] Queue bridge state publication retry limit reached; a later queue change will retry publication.');
+    }
+}
+
+function scheduleQueueBridgeStateRetry() {
+    if (queueBridgeStateRetryTimer ||
+        queueBridgePublishedGeneration >= queueBridgeGeneration) return;
+    queueBridgeStateRetryAttempt = 0;
+    queueBridgeStateRetryTimer = setTimeout(
+        retryQueueBridgeState,
+        QUEUE_BRIDGE_STATE_RETRY_MS
+    );
+}
+
+function writeQueueBridgeState() {
+    var generation = ++queueBridgeGeneration;
+    if (publishQueueBridgeState(generation)) return true;
+    scheduleQueueBridgeStateRetry();
+    return false;
+}
+
+function writeQueueBridgeResult(command, accepted, message) {
+    var value = QUEUE_BRIDGE_PROTOCOL.result(
+        command && command.id,
+        queueBridgeSession,
+        accepted === true,
+        queueBridgeGeneration,
+        message || ''
+    );
+    try {
+        utils.CreateFolder(QUEUE_BRIDGE_DATA_DIR);
+        var written = utils.WriteTextFile(
+            QUEUE_BRIDGE_RESULT_FILE,
+            QUEUE_BRIDGE_PROTOCOL.serialiseResult(value)
+        );
+        if (written === false) {
+            console.log('[DarkOneJSP3] Queue command result write failed: utils.WriteTextFile returned false');
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.log('[DarkOneJSP3] Queue command result write failed: ' + e.message);
+        return false;
+    }
+}
+
+function queueBridgeQueueIndexes(command, queueLength) {
+    var indexes = [];
+    var source = command && command.queueIndexes ? command.queueIndexes : [];
+    for (var i = 0; i < source.length; i++) {
+        var zeroBased = Math.round(Number(source[i])) - 1;
+        if (zeroBased >= 0 && zeroBased < queueLength && indexes.indexOf(zeroBased) === -1) {
+            indexes.push(zeroBased);
+        }
+    }
+    indexes.sort(function (a, b) { return a - b; });
+    return indexes;
+}
+
+function queueBridgeSnapshotItem(item) {
+    // FbPlaybackQueueItem objects are live queue wrappers. Capture the source
+    // coordinates before any destructive queue mutation so FlushPlaybackQueue()
+    // cannot invalidate the data needed to restore playlist-backed entries.
+    return {
+        Handle: item && item.Handle ? item.Handle : null,
+        PlaylistIndex: normaliseQueueBridgeIndex(item && item.PlaylistIndex),
+        PlaylistItemIndex: normaliseQueueBridgeIndex(item && item.PlaylistItemIndex),
+        RestorePlaylistSource: queueBridgeCanRestorePlaylistSource(item)
+    };
+}
+
+function queueBridgeReorder(contents, selectedIndexes, action) {
+    var rows = [];
+    var selected = Object.create(null);
+    for (var i = 0; i < selectedIndexes.length; i++) selected[selectedIndexes[i]] = true;
+    for (var n = 0; n < contents.length; n++) {
+        rows.push({ item: queueBridgeSnapshotItem(contents[n]), selected: selected[n] === true });
+    }
+
+    var temp;
+    if (action === 'moveUp') {
+        for (var up = 1; up < rows.length; up++) {
+            if (rows[up].selected && !rows[up - 1].selected) {
+                temp = rows[up - 1]; rows[up - 1] = rows[up]; rows[up] = temp;
+            }
+        }
+    } else if (action === 'moveDown') {
+        for (var down = rows.length - 2; down >= 0; down--) {
+            if (rows[down].selected && !rows[down + 1].selected) {
+                temp = rows[down + 1]; rows[down + 1] = rows[down]; rows[down] = temp;
+            }
+        }
+    } else if (action === 'moveTop' || action === 'moveBottom') {
+        var chosen = [];
+        var other = [];
+        for (var r = 0; r < rows.length; r++) (rows[r].selected ? chosen : other).push(rows[r]);
+        rows = action === 'moveTop' ? chosen.concat(other) : other.concat(chosen);
+    }
+    return rows;
+}
+
+function queueBridgePlaylistItemCount(playlistIndex) {
+    // JSplitter inherits the Spider Monkey Panel playlist API, where the
+    // canonical count method is PlaylistItemCount(). Keep the older JSP-style
+    // alias only as a defensive fallback for compatible hosts.
+    if (typeof plman.PlaylistItemCount === 'function') {
+        return plman.PlaylistItemCount(playlistIndex);
+    }
+    if (typeof plman.GetPlaylistItemCount === 'function') {
+        return plman.GetPlaylistItemCount(playlistIndex);
+    }
+    throw new Error('Playlist item count API is unavailable');
+}
+
+function queueBridgeCanRestorePlaylistSource(item) {
+    var playlistIndex = normaliseQueueBridgeIndex(item && item.PlaylistIndex);
+    var itemIndex = normaliseQueueBridgeIndex(item && item.PlaylistItemIndex);
+    if (playlistIndex < 0 || itemIndex < 0 || playlistIndex >= plman.PlaylistCount) return false;
+    try { return itemIndex < queueBridgePlaylistItemCount(playlistIndex); }
+    catch (e) { return false; }
+}
+
+function queueBridgeRestoreQueue(rows) {
+    // Validate live handles before destructive reconstruction so a malformed
+    // queue item cannot silently disappear after FlushPlaybackQueue().
+    for (var preflight = 0; preflight < rows.length; preflight++) {
+        if (!rows[preflight].item || !rows[preflight].item.Handle) {
+            throw new Error('Playback queue item has no live handle');
+        }
+    }
+
+    plman.FlushPlaybackQueue();
+    for (var i = 0; i < rows.length; i++) {
+        var item = rows[i].item;
+        var restored = false;
+        if (item.RestorePlaylistSource) {
+            try {
+                plman.AddPlaylistItemToPlaybackQueue(
+                    item.PlaylistIndex,
+                    item.PlaylistItemIndex
+                );
+                restored = true;
+            } catch (playlistError) {
+                restored = false;
+            }
+        }
+        if (!restored) plman.AddItemToPlaybackQueue(item.Handle);
+    }
+}
+
+function executeQueueBridgeCommand(command) {
+    if (!command || command.session !== queueBridgeSession) {
+        return { accepted: false, message: 'Queue session changed; refresh and retry.' };
+    }
+    if (command.generation !== queueBridgeGeneration) {
+        return { accepted: false, message: 'Playback queue changed before the command could be applied.' };
+    }
+
+    var contents;
+    try { contents = plman.GetPlaybackQueueContents(); }
+    catch (e) { return { accepted: false, message: 'Direct playback queue access failed: ' + e.message }; }
+
+    var indexes = queueBridgeQueueIndexes(command, contents.length);
+    if (command.action !== 'clear' && !indexes.length) {
+        return { accepted: false, message: 'No valid playback queue entries were selected.' };
+    }
+
+    queueBridgeMutationInProgress = true;
+    try {
+        switch (command.action) {
+        case 'remove':
+            plman.RemoveItemFromPlaybackQueue(indexes[0]);
+            break;
+        case 'removeMany':
+            plman.RemoveItemsFromPlaybackQueue(indexes);
+            break;
+        case 'clear':
+            plman.FlushPlaybackQueue();
+            break;
+        case 'moveUp':
+        case 'moveDown':
+        case 'moveTop':
+        case 'moveBottom':
+            queueBridgeRestoreQueue(queueBridgeReorder(contents, indexes, command.action));
+            break;
+        default:
+            return { accepted: false, message: 'Unsupported playback queue command.' };
+        }
+    } catch (e) {
+        return { accepted: false, message: 'Playback queue command failed: ' + e.message };
+    } finally {
+        queueBridgeMutationInProgress = false;
+    }
+
+    writeQueueBridgeState();
+    return { accepted: true, message: '' };
+}
+
+function acknowledgeQueueBridgeCommandFile() {
+    try {
+        var removed = utils.RemovePath(QUEUE_BRIDGE_COMMAND_FILE);
+        if (removed === false) throw new Error('utils.RemovePath returned false');
+        return true;
+    } catch (e) {
+        // Keep compatibility with hosts that cannot remove the bridge file.
+        // A blank acknowledgement still prevents a processed command payload
+        // from being replayed or reparsed indefinitely.
+        try {
+            var cleared = utils.WriteTextFile(QUEUE_BRIDGE_COMMAND_FILE, '');
+            if (cleared === false) throw new Error('utils.WriteTextFile returned false');
+            return true;
+        } catch (clearError) {
+            console.log('[DarkOneJSP3] Queue command acknowledgement failed: ' + clearError.message);
+            return false;
+        }
+    }
+}
+
+function pollQueueBridgeCommand() {
+    queueBridgeCommandTimer = 0;
+    try {
+        if (utils.IsFile(QUEUE_BRIDGE_COMMAND_FILE)) {
+            var command = QUEUE_BRIDGE_PROTOCOL.parseCommand(
+                utils.ReadTextFile(QUEUE_BRIDGE_COMMAND_FILE, 65001)
+            );
+            if (command) {
+                if (command.id !== queueBridgeLastCommandId) {
+                    // Mark first: even a failing mutation must never be replayed.
+                    queueBridgeLastCommandId = command.id;
+                    var outcome = executeQueueBridgeCommand(command);
+                    writeQueueBridgeResult(command, outcome.accepted, outcome.message);
+                }
+                // Commands are short-lived. Remove the processed/stale payload
+                // so the 25 ms poll normally performs only a cheap existence check.
+                acknowledgeQueueBridgeCommandFile();
+            }
+        }
+    } catch (e) {
+        console.log('[DarkOneJSP3] Queue command bridge failed: ' + e.message);
+    }
+    queueBridgeCommandTimer = setTimeout(pollQueueBridgeCommand, QUEUE_BRIDGE_COMMAND_POLL_MS);
+}
+
+function initialiseQueueCommandBridge() {
+    if (queueBridgeCommandTimer) clearTimeout(queueBridgeCommandTimer);
+    queueBridgeCommandTimer = setTimeout(pollQueueBridgeCommand, QUEUE_BRIDGE_COMMAND_POLL_MS);
+}
+
+function scheduleQueueBridgeRefresh() {
+    if (queueBridgeRefreshTimer) clearTimeout(queueBridgeRefreshTimer);
+    queueBridgeRefreshTimer = setTimeout(function () {
+        queueBridgeRefreshTimer = 0;
+        writeQueueBridgeState();
+    }, 10);
+}
+
+function initialiseQueueBridge() {
+    // writeQueueBridgeState() owns bounded publication retry, so startup does
+    // not need a second independent retry timer.
+    writeQueueBridgeState();
+}
 
 function startupTransition() {
     return STARTUP_PROTOCOL.normaliseValue(
@@ -374,6 +753,42 @@ function on_notify_data(name, data) {
     }
 }
 
+function on_playback_queue_changed(origin) {
+    // Queue mutations are republished once by the command bridge after the
+    // complete operation, avoiding transient partially-rebuilt reorder states.
+    if (queueBridgeMutationInProgress) return;
+    writeQueueBridgeState();
+}
+
+function on_playlists_changed() {
+    scheduleQueueBridgeRefresh();
+}
+
+function on_playlist_items_added(playlistIndex) {
+    scheduleQueueBridgeRefresh();
+}
+
+function on_playlist_items_removed(playlistIndex, newCount) {
+    scheduleQueueBridgeRefresh();
+}
+
+function on_playlist_items_reordered(playlistIndex) {
+    scheduleQueueBridgeRefresh();
+}
+
 function on_script_unload() {
     clearStartupTimers();
+    if (queueBridgeRefreshTimer) {
+        clearTimeout(queueBridgeRefreshTimer);
+        queueBridgeRefreshTimer = 0;
+    }
+    if (queueBridgeCommandTimer) {
+        clearTimeout(queueBridgeCommandTimer);
+        queueBridgeCommandTimer = 0;
+    }
 }
+
+// Publish a fresh session immediately. This overwrites any state file left by
+// an earlier foobar2000 run before the Queue Viewer has a chance to use it.
+initialiseQueueBridge();
+initialiseQueueCommandBridge();
