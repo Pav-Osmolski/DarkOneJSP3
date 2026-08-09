@@ -70,7 +70,11 @@ Choices:
 - DarkOne grey: RGB 32, 32, 32
 - DarkOne dark grey: RGB 24, 24, 24 (default)
 - Columns UI global background
-- Custom colour...
+- Custom colour (#RRGGBB)
+- Set custom colour...
+
+Selecting Custom colour immediately reapplies the remembered custom value. Use
+Set custom colour... to edit that stored value with the native picker.
 
 Transparent / inherit parent reveals the InfoStack backing colour. Columns UI
 global background follows the active Columns UI background colour. The optional native Queue Viewer component does not use this JScript Panel
@@ -211,7 +215,8 @@ Bottom area background
 - DarkOne grey (default)
 - DarkOne dark grey
 - Columns UI global background
-- Custom colour... (#RRGGBB)
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
 This single setting controls the bottom-left control panel, bottom-right control
 panel, centre Display panel and the Bottom Controls JSplitter backing behind
@@ -228,11 +233,17 @@ Bottom area side divider colour
 - DarkOne grey
 - DarkOne dark grey (default)
 - Columns UI global background
-- Custom colour... (#RRGGBB)
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
 This setting controls both lower vertical divider strips together. Transparent
 leaves the selected bottom-area background visible in their place. The Quick
 Search frame and interior remain fixed and are not affected.
+
+For both menus, Custom colour immediately reapplies the remembered custom value.
+Set custom colour... opens the native picker and, when a different colour is
+accepted, stores it and selects Custom. Cancelling or leaving the native picker
+unchanged is non-destructive.
 
 The shared properties are:
 - DARKONEJSP3.BOTTOM.BACKGROUND.MODE
@@ -326,9 +337,11 @@ Display Style
 Display accent colour
 - Default - DarkOne blue: #298FCC
 - Columns UI selected-item background
-- Custom colour... (#RRGGBB)
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
-The accent applies to Plain Font values and active indicators, Dot Matrix
+Custom colour reapplies the remembered value immediately; Set custom colour...
+opens the native picker. The accent applies to Plain Font values and active indicators, Dot Matrix
 digits and punctuation, and the stop-after-current and playback-order status
 icons. Switching away from Custom preserves the remembered custom value.
 Columns UI colour changes are applied live.
@@ -382,9 +395,11 @@ Choices:
 - DarkOne grey: RGB 32, 32, 32
 - DarkOne dark grey: RGB 24, 24, 24
 - Columns UI global background
-- Custom colour...
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
-One setting controls both upper dividers. Transparent removes their explicit
+Custom colour reapplies the remembered value immediately; Set custom colour...
+opens the native picker. One setting controls both upper dividers. Transparent removes their explicit
 fill while preserving width and alignment. The lower control-panel dividers
 are unaffected.
 
@@ -448,9 +463,11 @@ Tab font colour
 
 - Default - DarkOne blue: #298FCC
 - Columns UI selected-item background
-- Custom colour...
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
-This affects normal inactive labels. The active label remains white and the
+Custom colour reapplies the remembered value immediately; Set custom colour...
+opens the native picker. This affects normal inactive labels. The active label remains white and the
 hovered label remains grey.
 
 Tab area
@@ -470,7 +487,11 @@ Controls the JSplitter backing behind the information pages and tab strip:
 - DarkOne grey
 - DarkOne dark grey (default)
 - Columns UI global background
-- Custom colour...
+- Custom colour (#RRGGBB)
+- Set custom colour...
+
+Custom colour reapplies the remembered value immediately; Set custom colour...
+opens the native picker.
 
 Side divider colour
 ~~~~~~~~~~~~~~~~~~~
@@ -938,9 +959,11 @@ Host background
 - DarkOne grey: RGB 32, 32, 32
 - DarkOne dark grey: RGB 24, 24, 24
 - Columns UI global background
-- Custom colour...
+- Custom colour (#RRGGBB)
+- Set custom colour...
 
-Automatic follows the effective shared Bottom area background, including Black,
+Custom colour reapplies the remembered value immediately; Set custom colour...
+opens the native picker. Automatic follows the effective shared Bottom area background, including Black,
 both DarkOne greys, Columns UI and Custom. When the shared setting is
 Transparent / inherit parent, Automatic resolves it to the uniform DarkOne dark
 grey parent tone (`#181818`) rather than exposing the host's native backing. The

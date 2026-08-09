@@ -1,6 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
+// v0.7.37 separates selecting the remembered Custom divider colour from
+// editing that stored colour through the native picker.
+//
 // v0.7.36 centralises divider state serialisation, notifications, mode values
 // and menu mapping in the shared JSplitter protocol helper.
 
@@ -224,13 +227,16 @@ function on_mouse_rbtn_up(x, y) {
         dividerCustomColour(),
         MENU_STRING
     );
+    colourMenu.AppendMenuSeparator();
+    colourMenu.AppendMenuItem(MENU_STRING, 106, 'Set custom colour...');
     colourMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');
 
     var id = menu.TrackPopupMenu(x, y);
     var selected = DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id);
     if (selected) {
-        if (selected.custom) chooseCustomDividerColour();
-        else setDividerMode(selected.mode);
+        setDividerMode(selected.mode);
+    } else if (id === 106) {
+        chooseCustomDividerColour();
     }
 
     return true;

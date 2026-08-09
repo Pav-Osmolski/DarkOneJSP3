@@ -184,6 +184,8 @@ function _panel(options) {
 				this.page_background.custom.value,
 				MF_STRING
 			);
+			this.s15.AppendMenuSeparator();
+			this.s15.AppendMenuItem(MF_STRING, 130, 'Set custom colour...');
 			this.s15.AppendTo(this.m, MF_STRING, 'Page background colour');
 			this.m.AppendMenuSeparator();
 		} else if (this.custom_background) {
@@ -248,16 +250,18 @@ function _panel(options) {
 			window.ShowConfigure();
 			break;
 		case Boolean(background_option):
-			if (background_option.custom) {
-				var chosen = DarkOneColour.pickJscript(
-					this.page_background.custom.value,
-					window.Name,
-					'Enter a page background colour as #RRGGBB or R,G,B.'
-				);
-				if (chosen === null) break;
-				this.page_background.custom.value = chosen;
-			}
 			this.page_background.mode.value = background_option.mode;
+			window.Repaint();
+			break;
+		case idx == 130:
+			var chosen = DarkOneColour.pickJscript(
+				this.page_background.custom.value,
+				window.Name,
+				'Enter a page background colour as #RRGGBB or R,G,B.'
+			);
+			if (chosen === null) break;
+			this.page_background.custom.value = chosen;
+			this.page_background.mode.value = DARKONE_PAGE_BACKGROUND_CUSTOM;
 			window.Repaint();
 			break;
 		case idx > 999:

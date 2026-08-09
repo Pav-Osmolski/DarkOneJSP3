@@ -34,6 +34,8 @@ function on_mouse_rbtn_up(x, y) {
 		);
 
 		a[1].AppendTo(a[0], MF_STRING, "Display Style");
+		a[2].AppendMenuSeparator();
+		a[2].AppendMenuItem(MF_STRING, 23, "Set custom colour...");
 		a[2].AppendTo(a[0], MF_STRING, "Display accent colour");
 		a[0].AppendMenuSeparator();
 		a[0].AppendMenuItem(MF_STRING, 900, "DarkOne Tools...");
@@ -53,17 +55,18 @@ function on_mouse_rbtn_up(x, y) {
 					DARKONE_DISPLAY_ACCENT_MENU_OPTIONS,
 					idx
 				);
-				if (accent_option.custom) {
-					var chosen = DarkOneColour.pickJscript(
-						display_system.custom_accent_colour,
-						window.Name,
-						'Enter a display accent colour as #RRGGBB or R,G,B.'
-					);
-					if (chosen === null) break;
-					display_system.setAccent(accent_option.mode, chosen);
-				} else {
-					display_system.setAccent(accent_option.mode);
-				}
+				display_system.setAccent(accent_option.mode);
+				window.Repaint();
+				break;
+
+			case 23:
+				var chosen = DarkOneColour.pickJscript(
+					display_system.custom_accent_colour,
+					window.Name,
+					'Enter a display accent colour as #RRGGBB or R,G,B.'
+				);
+				if (chosen === null) break;
+				display_system.setAccent(DARKONE_DISPLAY_ACCENT_CUSTOM, chosen);
 				window.Repaint();
 				break;
 

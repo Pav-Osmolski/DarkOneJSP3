@@ -827,7 +827,7 @@ def run(ctx: ValidationContext) -> None:
     }};
     colour.appendRadioOptions(menu, options, 1, 0xff123456, 0);
     assert(menu.radio.join(',') === '10,12,11', 'Declarative menu selected the wrong id');
-    assert(menu.items[2][2] === 'Custom colour... (#123456)', 'Custom menu label is wrong');
+    assert(menu.items[2][2] === 'Custom colour (#123456)', 'Custom menu label is wrong');
     assert(colour.optionForId(options, 12).mode === 2, 'Menu id did not resolve to mode');
 
     pickerResult = '__DEFAULT__';
@@ -1841,46 +1841,65 @@ def run(ctx: ValidationContext) -> None:
     bottomPickerResult = (0xff556677 | 0);
     const pickerPanel = makePanel();
     pickerPanel.api.request();
-    pickerPanel.setPopupCommand(9805);
+    pickerPanel.setPopupCommand(9806);
     if (!pickerPanel.api.toolsMenu(10, 20))
-        throw new Error('Bottom background Custom colour command was not handled through DarkOne Tools');
+        throw new Error('Bottom background Set custom colour command was not handled through DarkOne Tools');
     if (bottomPickerCalls !== 1 || pickerPanel.api.state().backgroundMode !== 3 ||
             (pickerPanel.api.state().backgroundCustomColour >>> 0) !== 0xff556677)
         throw new Error('DarkOne Tools background picker did not apply the selected colour');
-    assertMenusDisposedOnce(pickerPanel, 'Background Custom selection');
-    if (files[NEW_STATE].split('|').slice(1, 3).join('|') !== '3|4283786871')
-        throw new Error('Background Custom selection was not persisted through the runtime state file');
+    assertMenusDisposedOnce(pickerPanel, 'Background custom edit');
+
+    // Reproduce the real regression: switch to a preset, then re-select the saved
+    // Custom radio option without changing RGB/HSL. No picker is needed and the
+    // stored custom colour must be restored immediately.
+    pickerPanel.setPopupCommand(9802);
+    pickerPanel.api.toolsMenu(10, 20);
+    const callsBeforeRestore = bottomPickerCalls;
+    pickerPanel.setPopupCommand(9805);
+    pickerPanel.api.toolsMenu(10, 20);
+    if (bottomPickerCalls !== callsBeforeRestore || pickerPanel.api.state().backgroundMode !== 3 ||
+            (pickerPanel.api.state().backgroundCustomColour >>> 0) !== 0xff556677)
+        throw new Error('Saved bottom background custom colour was not restored by the Custom radio option');
 
     bottomPickerResult = (0xff667788 | 0);
-    pickerPanel.setPopupCommand(9825);
+    pickerPanel.setPopupCommand(9826);
     if (!pickerPanel.api.toolsMenu(10, 20))
-        throw new Error('Bottom divider Custom colour command was not handled through DarkOne Tools');
-    if (bottomPickerCalls !== 2 || pickerPanel.api.state().dividerMode !== 3 ||
+        throw new Error('Bottom divider Set custom colour command was not handled through DarkOne Tools');
+    if (bottomPickerCalls !== callsBeforeRestore + 1 || pickerPanel.api.state().dividerMode !== 3 ||
             (pickerPanel.api.state().dividerCustomColour >>> 0) !== 0xff667788)
         throw new Error('DarkOne Tools divider picker did not apply the selected colour');
-    assertMenusDisposedOnce(pickerPanel, 'Divider Custom selection');
+    assertMenusDisposedOnce(pickerPanel, 'Divider custom edit');
+
+    pickerPanel.setPopupCommand(9823);
+    pickerPanel.api.toolsMenu(10, 20);
+    const dividerCallsBeforeRestore = bottomPickerCalls;
+    pickerPanel.setPopupCommand(9825);
+    pickerPanel.api.toolsMenu(10, 20);
+    if (bottomPickerCalls !== dividerCallsBeforeRestore || pickerPanel.api.state().dividerMode !== 3 ||
+            (pickerPanel.api.state().dividerCustomColour >>> 0) !== 0xff667788)
+        throw new Error('Saved divider custom colour was not restored by the Custom radio option');
 
     const beforeCancel = JSON.stringify(pickerPanel.api.state());
     bottomPickerResult = '__DEFAULT__';
-    pickerPanel.setPopupCommand(9805);
+    pickerPanel.setPopupCommand(9806);
     if (!pickerPanel.api.toolsMenu(10, 20))
-        throw new Error('Cancelled background Custom command was not handled');
+        throw new Error('Cancelled background custom edit was not handled');
     if (JSON.stringify(pickerPanel.api.state()) !== beforeCancel)
         throw new Error('Cancelling the native picker changed the bottom-area mode or colour');
-    assertMenusDisposedOnce(pickerPanel, 'Cancelled Custom selection');
+    assertMenusDisposedOnce(pickerPanel, 'Cancelled custom edit');
 
     const beforeFailure = JSON.stringify(pickerPanel.api.state());
     bottomPickerResult = (0xff778899 | 0);
     bottomPickerError = new Error('simulated picker failure');
-    pickerPanel.setPopupCommand(9825);
+    pickerPanel.setPopupCommand(9826);
     if (!pickerPanel.api.toolsMenu(10, 20))
-        throw new Error('Failed divider Custom command was not handled');
+        throw new Error('Failed divider custom edit was not handled');
     if (JSON.stringify(pickerPanel.api.state()) !== beforeFailure)
         throw new Error('Picker failure changed the bottom-area mode or colour');
     if (!logs.some(line => line.indexOf('ColourPicker failed') !== -1 &&
             line.indexOf('bottom area side dividers') !== -1))
         throw new Error('Bottom-area picker failure lacked contextual console diagnostics');
-    assertMenusDisposedOnce(pickerPanel, 'Failed Custom selection');
+    assertMenusDisposedOnce(pickerPanel, 'Failed custom edit');
     bottomPickerError = null;
 
     // Restore the migrated baseline before exercising the isolated JSplitter host.

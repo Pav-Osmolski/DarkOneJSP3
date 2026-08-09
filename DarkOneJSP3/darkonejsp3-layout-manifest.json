@@ -1,5 +1,5 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -110,7 +110,7 @@
       "title": "DOJSP3.Display",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt",
-      "version": "3.0.32-jsp3-3.8.5"
+      "version": "3.0.33-jsp3-3.8.5"
     },
     {
       "number": 13,
@@ -657,11 +657,13 @@
       ],
       "factory_reset_covered": true,
       "generic_samples_unchanged_unless_opted_in": true,
-      "shared_colour_helper": true
+      "shared_colour_helper": true,
+      "custom_colour_mode_and_picker_edit_separated": true,
+      "saved_custom_colour_reapplies_without_picker": true
     },
     "colour_consolidation": {
       "shared_helper": "DarkOneJSP3/shared/colour_utils.js",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "pure_operations": [
         "opaque conversion",
         "hex formatting",
@@ -684,7 +686,9 @@
       "strict_function_type_guard_rejected": true,
       "finite_32bit_picker_results_only": true,
       "contextual_picker_failure_logging": true,
-      "unchanged_native_result_treated_as_cancel": true
+      "unchanged_native_result_treated_as_cancel": true,
+      "custom_mode_reapplies_saved_colour": true,
+      "custom_edit_is_separate_command": true
     },
     "jsplitter_protocol_consolidation": {
       "shared_helper": "DarkOneJSP3/shared/jsplitter_protocols.js",
@@ -735,13 +739,14 @@
     "info_stack_controller_split": {
       "colour_helper": "DarkOneJSP3/jsplitter/info_stack_colours.js",
       "bridge_helper": "DarkOneJSP3/jsplitter/info_stack_bridges.js",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "layout_and_painting_remain_in_controller": true,
       "menu_ids_unchanged": true,
       "saved_properties_unchanged": true,
       "notification_names_unchanged": true,
       "property_ownership_unchanged": true,
-      "runtime_tests": true
+      "runtime_tests": true,
+      "custom_colour_mode_and_picker_edit_separated": true
     },
     "validation_tooling": {
       "entry_point": "DarkOneJSP3/tools/validate_release.py",
@@ -916,7 +921,7 @@
         "DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR"
       ],
       "runtime_tests": true,
-      "version": "0.2.12",
+      "version": "0.2.13",
       "state_transport": "runtime-generated UTF-8 state file",
       "state_file": "js_data/darkonejsp3.bottom-area-state.txt",
       "state_file_packaged": false,
@@ -950,7 +955,9 @@
       "custom_colour_picker_while_menu_alive": true,
       "popup_menu_cleanup_finally": true,
       "single_bottom_menu_dispatch": true,
-      "end_to_end_menu_tests": true
+      "end_to_end_menu_tests": true,
+      "custom_colour_mode_and_picker_edit_separated": true,
+      "saved_custom_colour_reapplies_without_picker": true
     },
     "rendering_efficiency_v0930": {
       "js_playlist_selection_and_playback_state_cached": true,

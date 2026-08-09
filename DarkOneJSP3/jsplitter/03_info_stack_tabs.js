@@ -1,6 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
+// v0.6.27 separates remembered Custom colour selection from native picker editing
+// for InfoStack tab, backing and shared side-divider colours.
+//
 // v0.6.26 caches resolved tab geometry, labels, colours and unchanged font resources.
 //
 // v0.6.25 separates InfoStack-only colour state and controller bridges into

@@ -110,7 +110,8 @@ package. The current menu is:
 
   Display accent colour > Default - DarkOne blue
   Display accent colour > Columns UI selected-item background
-  Display accent colour > Custom colour... (#RRGGBB)
+  Display accent colour > Custom colour (#RRGGBB)
+  Display accent colour > Set custom colour...
 
 Fonts look thinner than DarkOne2021
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -138,15 +139,15 @@ InfoStack custom colour does not change the active tab
 This is intentional. Tab font colour controls normal inactive labels. The active
 label remains white and a hovered label remains grey.
 
-InfoStack Custom colour opens a text-entry field
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+InfoStack Set custom colour... opens a text-entry field
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Reload JSplitter 03 from the supplied controller. The implementation uses the
 two-argument JSplitter form utils.ColourPicker(window_id, default_colour). The
 standard Windows colour dialog should open directly; text entry is only a
 fallback when the native picker cannot be invoked.
 
-Bottom-area Custom colour does not open or reports Overflow
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Bottom-area Set custom colour... does not open or reports Overflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Install the current shared colour helpers and reload the three bottom JScript
 panels. JScript Panel expects native picker colours as signed 32-bit integers,
 while DarkOneJSP3 stores opaque ARGB values in an unsigned form for persistence.
@@ -154,8 +155,10 @@ The supplied helper converts only at the native picker boundary. An `Overflow`
 message indicates mixed files from an older test build.
 
 Current builds log contextual messages beginning with `[DarkOneJSP3]` if a
-native JScript Panel or JSplitter picker throws. Cancelling the Windows colour
-dialog preserves the previous mode and colour.
+native JScript Panel or JSplitter picker throws. Cancelling the Windows colour dialog preserves the previous mode and colour.
+Selecting the Custom colour radio item itself does not open the picker; it
+immediately reapplies the remembered custom value. Use Set custom colour... only
+when editing that stored value.
 
 Optional button no longer works after a component update
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

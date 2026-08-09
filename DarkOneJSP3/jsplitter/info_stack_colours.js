@@ -156,6 +156,8 @@ function appendInfoStackTabColourMenu(menu) {
         storedCustomTabColour(),
         MENU_STRING
     );
+    menu.AppendMenuSeparator();
+    menu.AppendMenuItem(MENU_STRING, 803, 'Set custom colour...');
 }
 
 function appendInfoStackBackgroundMenu(menu) {
@@ -166,20 +168,28 @@ function appendInfoStackBackgroundMenu(menu) {
         storedCustomBackgroundColour(),
         MENU_STRING
     );
+    menu.AppendMenuSeparator();
+    menu.AppendMenuItem(MENU_STRING, 706, 'Set custom colour...');
 }
 
 function handleInfoStackColourMenu(id) {
     var selected = DarkOneColour.optionForId(TAB_COLOUR_MENU_OPTIONS, id);
     if (selected) {
-        if (selected.custom) setCustomTabColour();
-        else setTabColourMode(selected.mode);
+        setTabColourMode(selected.mode);
+        return true;
+    }
+    if (id === 803) {
+        setCustomTabColour();
         return true;
     }
 
     selected = DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id);
     if (selected) {
-        if (selected.custom) setCustomBackgroundColour();
-        else setBackgroundMode(selected.mode);
+        setBackgroundMode(selected.mode);
+        return true;
+    }
+    if (id === 706) {
+        setCustomBackgroundColour();
         return true;
     }
     return false;

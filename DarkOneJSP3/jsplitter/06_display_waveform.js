@@ -15,6 +15,9 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // v0.3.8 consolidates background-mode validation, menu mapping and custom
 // colour picking through the shared DarkOneJSP3 colour helper.
 //
+// v0.3.10 separates selecting the remembered Custom host colour from editing
+// that stored colour through the native picker.
+//
 // v0.3.9 adds Automatic as the default host-background mode. Automatic follows
 // the shared Bottom area background without adding another runtime-file poller;
 // Bottom Controls relays changed state inside the JSplitter notification domain.
@@ -359,6 +362,8 @@ function on_mouse_rbtn_up(x, y) {
         window.GetProperty(BACKGROUND_COLOUR_PROPERTY, DOJSP3.colours.bar),
         MENU_STRING
     );
+    backgroundMenu.AppendMenuSeparator();
+    backgroundMenu.AppendMenuItem(MENU_STRING, 107, 'Set custom colour...');
     backgroundMenu.AppendTo(menu, MENU_POPUP, 'Host background');
 
     menu.AppendMenuItem(MENU_STRING, 200, 'Force blank waveform when playback stops');
@@ -375,8 +380,9 @@ function on_mouse_rbtn_up(x, y) {
 
     var selectedBackground = DarkOneColour.optionForId(BACKGROUND_MENU_OPTIONS, id);
     if (selectedBackground) {
-        if (selectedBackground.custom) setCustomBackgroundColour();
-        else setBackgroundMode(selectedBackground.mode);
+        setBackgroundMode(selectedBackground.mode);
+    } else if (id === 107) {
+        setCustomBackgroundColour();
     } else if (id === 200) {
         var enabled = !hideWhenStopped();
         window.SetProperty(HIDE_ON_STOP_PROPERTY, enabled);

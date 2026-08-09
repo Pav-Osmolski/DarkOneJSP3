@@ -1,6 +1,23 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.4 - Remembered Custom colour selection and picker separation
+-----------------------------------------------------------------
+
+- Separated selecting a remembered Custom colour from editing that colour with
+  the native picker across bottom-area backgrounds/dividers, Display accent,
+  InfoStack backing/tab colours, upper side dividers, Display/Waveform host and
+  enhanced standalone JScript Panel page backgrounds.
+- Selecting Custom colour now immediately reapplies the last stored custom value,
+  fixing the case where switching to a fixed preset and back to Custom required
+  changing an RGB/HSL value before OK would take effect.
+- Added Set custom colour... as the dedicated native-picker action. Cancellation,
+  picker failure and an unchanged native result remain non-destructive.
+- Expanded runtime/static regression coverage for remembered-colour restoration
+  without a picker call and for the separate picker-edit commands.
+- Updated the bundled maintainer-exported FCL and refreshed current configuration,
+  troubleshooting, validation and Wiki documentation for the new menu behaviour.
+
 v1.0.3 - Queue bridge and release hardening
 -------------------------------------------
 

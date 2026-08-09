@@ -313,7 +313,7 @@ def run(ctx: ValidationContext) -> None:
             'colour_consolidation', {})
         expected_colour_consolidation = {
             'shared_helper': 'DarkOneJSP3/shared/colour_utils.js',
-            'version': '0.1.4',
+            'version': '0.1.5',
             'declarative_menu_mapping': True,
             'explicit_menu_id_to_mode_mapping': True,
             'jsplitter_picker_signature':
@@ -329,6 +329,8 @@ def run(ctx: ValidationContext) -> None:
             'finite_32bit_picker_results_only': True,
             'contextual_picker_failure_logging': True,
             'unchanged_native_result_treated_as_cancel': True,
+            'custom_mode_reapplies_saved_colour': True,
+            'custom_edit_is_separate_command': True,
         }
         for key, expected in expected_colour_consolidation.items():
             if colour_consolidation.get(key) != expected:
@@ -380,7 +382,7 @@ def run(ctx: ValidationContext) -> None:
             'background_default': 'DarkOne grey',
             'divider_default': 'DarkOne dark grey',
             'quick_search_frame_unchanged': True,
-            'version': '0.2.12',
+            'version': '0.2.13',
             'transparent_resolved_colour': 'DarkOne dark grey RGB 24,24,24',
             'transparent_cross_host_uniformity': True,
             'full_background_mode_matrix_validated': True,
@@ -402,6 +404,8 @@ def run(ctx: ValidationContext) -> None:
             'popup_menu_cleanup_finally': True,
             'single_bottom_menu_dispatch': True,
             'end_to_end_menu_tests': True,
+            'custom_colour_mode_and_picker_edit_separated': True,
+            'saved_custom_colour_reapplies_without_picker': True,
             'factory_reset_command_file': 'js_data/darkonejsp3.reset-command.txt',
             'factory_reset_cross_host_bridge': True,
             'jsplitter_state_relay': True,
@@ -457,13 +461,14 @@ def run(ctx: ValidationContext) -> None:
         expected_info_stack_split = {
             'colour_helper': 'DarkOneJSP3/jsplitter/info_stack_colours.js',
             'bridge_helper': 'DarkOneJSP3/jsplitter/info_stack_bridges.js',
-            'version': '0.1.0',
+            'version': '0.1.1',
             'layout_and_painting_remain_in_controller': True,
             'menu_ids_unchanged': True,
             'saved_properties_unchanged': True,
             'notification_names_unchanged': True,
             'property_ownership_unchanged': True,
             'runtime_tests': True,
+            'custom_colour_mode_and_picker_edit_separated': True,
         }
         for key, expected in expected_info_stack_split.items():
             if info_stack_split.get(key) != expected:
@@ -2198,6 +2203,8 @@ def run(ctx: ValidationContext) -> None:
             "chosen = darkOnePickBottomAreaColour(",
             "state.backgroundCustomColour = chosen;",
             "state.dividerCustomColour = chosen;",
+            "background.AppendMenuItem(MF_STRING, 9806, 'Set custom colour...');",
+            "divider.AppendMenuItem(MF_STRING, 9826, 'Set custom colour...');",
             "bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);",
             "try {\n        idx = m.TrackPopupMenu(x, y);",
             "} finally {\n        for (var i = menus.length - 1; i >= 0; i--)",
@@ -2358,8 +2365,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Display volume-cadence follower is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.27-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.32-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.28-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.33-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():

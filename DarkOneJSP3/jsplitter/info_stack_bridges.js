@@ -138,6 +138,8 @@ function appendInfoStackDividerMenu(menu) {
         dividerMenuCustomColour,
         MENU_STRING
     );
+    menu.AppendMenuSeparator();
+    menu.AppendMenuItem(MENU_STRING, 106, 'Set custom colour...');
 }
 
 function appendInfoStackStartupMenu(menu, transitionMenu) {
@@ -173,8 +175,11 @@ function appendInfoStackStartupMenu(menu, transitionMenu) {
 function handleInfoStackBridgeMenu(id) {
     var selected = DarkOneColour.optionForId(DIVIDER_MENU_OPTIONS, id);
     if (selected) {
-        if (selected.custom) chooseCustomDividerColour();
-        else setDividerState(selected.mode);
+        setDividerState(selected.mode);
+        return true;
+    }
+    if (id === 106) {
+        chooseCustomDividerColour();
         return true;
     }
 

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.3 Validation Report
+DarkOneJSP3 v1.0.4 Validation Report
 ====================================
 
 Scope
@@ -20,14 +20,18 @@ Checks
   values are converted to signed 32-bit integers at the native picker boundary,
   and returned values must be finite integers inside the supported signed or
   unsigned 32-bit range.
-- Picker exceptions produce contextual console diagnostics. An unchanged native
-  result is treated as cancellation so an existing mode and colour are not
-  replaced when the dialog is dismissed.
-- The real DarkOne Tools menu hierarchy is executed end to end for both Custom
-  command IDs. Tests verify signed picker arguments, selected-state persistence,
-  cancellation, failure handling and exactly-once disposal of every popup menu.
-  The production menu uses one bottom-area dispatch path protected by
-  `try/finally` cleanup.
+- Picker exceptions produce contextual console diagnostics. Because the native
+  picker cannot distinguish Cancel from OK with the supplied colour unchanged,
+  an unchanged result is treated as non-destructive cancellation. Custom mode
+  selection is therefore separate from picker editing: selecting Custom
+  immediately reapplies the remembered value, while Set custom colour... opens
+  the native picker.
+- The real DarkOne Tools menu hierarchy is executed end to end for both saved
+  Custom mode selection and Set custom colour... edit commands. Tests verify
+  signed picker arguments, remembered-colour reapplication without invoking the
+  picker, selected-state persistence, cancellation, failure handling and
+  exactly-once disposal of every popup menu. The production menu uses one
+  bottom-area dispatch path protected by `try/finally` cleanup.
 - JS Playlist visible rows cache selection state and the current playback
   location outside paint/mouse hot paths; sequential viewport changes reuse
   surviving row objects and pre-resolved column geometry.

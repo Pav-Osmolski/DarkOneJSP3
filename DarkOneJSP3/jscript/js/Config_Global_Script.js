@@ -434,7 +434,7 @@ function darkOneAppendBottomColourOptions(menu, options, selectedMode, customCol
         menu.AppendMenuItem(
             MF_STRING,
             option.id,
-            option.custom ? 'Custom colour... (' + darkOneBottomHex(customColour) + ')' : option.label
+            option.custom ? 'Custom colour (' + darkOneBottomHex(customColour) + ')' : option.label
         );
         if (option.mode === selectedMode) selectedId = option.id;
     }
@@ -447,6 +447,8 @@ function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) 
         darkOneBottomBackgroundMode(),
         darkOneBottomBackgroundCustomColour()
     );
+    background.AppendMenuSeparator();
+    background.AppendMenuItem(MF_STRING, 9806, 'Set custom colour...');
     background.AppendTo(appearance, MF_STRING, 'Bottom area background');
     darkOneAppendBottomColourOptions(
         divider,
@@ -454,6 +456,8 @@ function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) 
         darkOneBottomDividerMode(),
         darkOneBottomDividerCustomColour()
     );
+    divider.AppendMenuSeparator();
+    divider.AppendMenuItem(MF_STRING, 9826, 'Set custom colour...');
     divider.AppendTo(appearance, MF_STRING, 'Bottom area side divider colour');
 }
 function darkOneBottomOptionForId(options, id) {
@@ -466,30 +470,38 @@ function darkOneHandleBottomAreaMenuSelection(id) {
     var chosen;
     if (option) {
         state = darkOneBottomAreaState();
-        if (option.custom) {
-            chosen = darkOnePickBottomAreaColour(
-                state.backgroundCustomColour,
-                'DarkOneJSP3 bottom area background'
-            );
-            if (chosen === null) return true;
-            state.backgroundCustomColour = chosen;
-        }
         state.backgroundMode = option.mode;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    if (id === 9806) {
+        state = darkOneBottomAreaState();
+        chosen = darkOnePickBottomAreaColour(
+            state.backgroundCustomColour,
+            'DarkOneJSP3 bottom area background'
+        );
+        if (chosen === null) return true;
+        state.backgroundCustomColour = chosen;
+        state.backgroundMode = DARKONE_BOTTOM_MODE_CUSTOM;
         darkOneSendBottomAreaState(state);
         return true;
     }
     option = darkOneBottomOptionForId(DARKONE_BOTTOM_DIVIDER_MENU_OPTIONS, id);
     if (option) {
         state = darkOneBottomAreaState();
-        if (option.custom) {
-            chosen = darkOnePickBottomAreaColour(
-                state.dividerCustomColour,
-                'DarkOneJSP3 bottom area side dividers'
-            );
-            if (chosen === null) return true;
-            state.dividerCustomColour = chosen;
-        }
         state.dividerMode = option.mode;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    if (id === 9826) {
+        state = darkOneBottomAreaState();
+        chosen = darkOnePickBottomAreaColour(
+            state.dividerCustomColour,
+            'DarkOneJSP3 bottom area side dividers'
+        );
+        if (chosen === null) return true;
+        state.dividerCustomColour = chosen;
+        state.dividerMode = DARKONE_BOTTOM_MODE_CUSTOM;
         darkOneSendBottomAreaState(state);
         return true;
     }

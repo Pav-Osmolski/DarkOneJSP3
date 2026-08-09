@@ -97,7 +97,7 @@ var DarkOneColour = Object.freeze({
         for (var i = 0; i < options.length; i++) {
             var option = options[i];
             var label = option.custom
-                ? 'Custom colour... (' + this.toHex(customColour) + ')'
+                ? 'Custom colour (' + this.toHex(customColour) + ')'
                 : option.label;
             menu.AppendMenuItem(flags, option.id, label);
             minimumId = minimumId === null ? option.id : Math.min(minimumId, option.id);
