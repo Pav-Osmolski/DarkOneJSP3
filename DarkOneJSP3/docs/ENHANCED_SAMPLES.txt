@@ -26,6 +26,9 @@ Compatibility design
   whose panel configuration still contains an older JS Playlist or Smooth
   Playlist Manager entry script continue to receive the globals now used by the
   upgraded internal modules.
+- JS Playlist detects DarkOneJSP3 Quick Search `Search for same` metadata only
+  when the project runtime bridge is present. Standalone use remains independent
+  and does not acquire a Quick Search dependency or extra context menu.
 - Current enhanced entries import reusable files from samples\shared rather
   than %fb2k_profile_path%DarkOneJSP3\shared.
 - Existing DARKONEJSP3.*, JSPLAYLIST.* and SMOOTH.* property keys remain intact,

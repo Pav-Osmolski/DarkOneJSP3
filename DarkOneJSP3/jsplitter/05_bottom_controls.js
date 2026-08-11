@@ -19,12 +19,14 @@ var runtimeBridgePollTimer = null;
 var runtimeBridgePollTick = 0;
 var bottomAreaStateFileSnapshot = '';
 var lastResetCommandId = '';
+var lastQuickSearchLayoutCommandId = '';
 
 var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
 var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
+var QUICKSEARCH_LAYOUT_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.quicksearch-layout-command.txt';
 var RUNTIME_BRIDGE_POLL_INTERVAL = 100;
 var RESET_COMMAND_POLL_INTERVAL = 500;
 var RESET_COMMAND_POLL_DIVISOR = Math.max(1, Math.round(
@@ -35,6 +37,9 @@ var BOTTOM_BACKGROUND_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.MODE';
 var BOTTOM_BACKGROUND_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR';
 var BOTTOM_DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.MODE';
 var BOTTOM_DIVIDER_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR';
+var QUICKSEARCH_LAYOUT_LINES_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES';
+var QUICKSEARCH_LAYOUT_WIDTH_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT';
+var QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.LINE.PIXELS';
 
 function bottomAreaState() {
     return BOTTOM_AREA_PROTOCOL.state(
@@ -201,14 +206,79 @@ function syncResetCommandFile() {
     return processResetCommand(readResetCommandFile());
 }
 
+function readQuickSearchLayoutCommand() {
+    try {
+        var parts = String(utils.ReadTextFile(QUICKSEARCH_LAYOUT_COMMAND_FILE, 65001) || '').split('|');
+        if (parts[0] !== 'v1' && parts[0] !== 'v2' && parts[0] !== 'v3') return null;
+        if ((parts[0] === 'v1' && parts.length !== 4) ||
+            ((parts[0] === 'v2' || parts[0] === 'v3') && parts.length !== 5)) return null;
+        var id = String(parts[1] || '');
+        var lines = Math.round(Number(parts[2]));
+        var widthPercent = Math.round(Number(parts[3]));
+        var linePixels = parts[0] === 'v1' ? 24 : Math.round(Number(parts[4]));
+        if (!id || !isFinite(lines) || !isFinite(widthPercent) || !isFinite(linePixels)) return null;
+        // v1/v2 used 1-4 fixed line counts. Preserve 1/2 and safely migrate
+        // obsolete 3/4-line values to the new two-line maximum. v3 adds 0 = Auto.
+        if (parts[0] !== 'v3') lines = DOJSP3.clamp(lines, 1, 2);
+        else lines = DOJSP3.clamp(lines, 0, 2);
+        return {
+            id: id,
+            lines: lines,
+            widthPercent: DOJSP3.clamp(widthPercent, 20, 100),
+            linePixels: DOJSP3.clamp(linePixels, 24, 58)
+        };
+    } catch (e) {}
+    return null;
+}
+
+function acknowledgeQuickSearchLayoutCommand() {
+    try {
+        var result = utils.RemovePath(QUICKSEARCH_LAYOUT_COMMAND_FILE);
+        if (result === false) throw new Error('utils.RemovePath returned false');
+        return true;
+    } catch (e) {
+        return tryWriteRuntimeFile(
+            QUICKSEARCH_LAYOUT_COMMAND_FILE,
+            '',
+            'Quick Search layout acknowledgement'
+        );
+    }
+}
+
+function syncQuickSearchLayoutCommand() {
+    var command = readQuickSearchLayoutCommand();
+    if (!command) return false;
+    if (command.id === lastQuickSearchLayoutCommandId) {
+        acknowledgeQuickSearchLayoutCommand();
+        return false;
+    }
+    lastQuickSearchLayoutCommandId = command.id;
+    var oldLines = Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_LINES_PROPERTY, 2)));
+    var oldWidth = Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_WIDTH_PROPERTY, 44)));
+    var oldLinePixels = Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY, 24)));
+    window.SetProperty(QUICKSEARCH_LAYOUT_LINES_PROPERTY, command.lines);
+    window.SetProperty(QUICKSEARCH_LAYOUT_WIDTH_PROPERTY, command.widthPercent);
+    window.SetProperty(QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY, command.linePixels);
+    acknowledgeQuickSearchLayoutCommand();
+    var changed = oldLines !== command.lines || oldWidth !== command.widthPercent ||
+        oldLinePixels !== command.linePixels;
+    if (changed && ww > 0 && wh > 0) {
+        layoutBottomControls();
+        window.Repaint();
+    }
+    return changed;
+}
+
 function ensureRuntimeBridge() {
     if (runtimeBridgePollTimer) return;
     lastResetCommandId = String(window.GetProperty(LAST_RESET_COMMAND_PROPERTY, '') || '');
     syncBottomAreaStateFile(true);
     syncResetCommandFile();
+    syncQuickSearchLayoutCommand();
     runtimeBridgePollTick = 0;
     runtimeBridgePollTimer = setInterval(function () {
         syncBottomAreaStateFile(false);
+        syncQuickSearchLayoutCommand();
         runtimeBridgePollTick++;
         if (runtimeBridgePollTick >= RESET_COMMAND_POLL_DIVISOR) {
             runtimeBridgePollTick = 0;
@@ -266,21 +336,43 @@ function layoutBottomControls() {
     var maximumSideWidth = Math.max(1, DOJSP3.idiv(Math.max(1, ww - 1), 2));
     var sideWidth = DOJSP3.clamp(DOJSP3.mulDiv(ww, 21, 64), 1, maximumSideWidth);
     var panelWidth = DOJSP3.clamp(DOJSP3.mulDiv(ww, 5, 16), 1, ww);
+    var quickSearchWidthPercent = DOJSP3.clamp(
+        Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_WIDTH_PROPERTY, 44))),
+        20,
+        100
+    );
+    var quickSearchLines = DOJSP3.clamp(
+        Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_LINES_PROPERTY, 2))),
+        0,
+        2
+    );
     var quickSearchOuterWidth = DOJSP3.clamp(
-        DOJSP3.mulDiv(panelWidth, 7, 16),
+        DOJSP3.mulDiv(panelWidth, quickSearchWidthPercent, 100),
         1,
         ww
     );
-    var quickSearchHeight = DOJSP3.clamp(
-        Math.max(DOJSP3.mulDiv(wh, 13, 64), 26),
-        1,
-        wh
+    var quickSearchLinePixels = DOJSP3.clamp(
+        Math.round(Number(window.GetProperty(QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY, 24))),
+        24,
+        58
     );
-    var quickSearchTop = DOJSP3.clamp(
-        wh - (DOJSP3.idiv(wh, 8) + quickSearchHeight),
-        0,
-        Math.max(0, wh - quickSearchHeight)
-    );
+
+    // Quick Search owns the lower-left slot beneath ControlsLeft. Derive that
+    // slot first, then size inside it; fixed modes are preferred heights, never
+    // demands that can overlap the controls above. Automatic consumes the whole
+    // slot. This keeps every mode safe during aggressive vertical resizing.
+    var leftHeight = DOJSP3.clamp(DOJSP3.mulDiv(wh, 5, 8), 1, wh);
+    var quickSearchBottomInset = Math.max(2, DOJSP3.idiv(wh, 8));
+    var quickSearchGap = DOJSP3.clamp(DOJSP3.idiv(wh, 64), 2, 8);
+    var quickSearchAreaBottom = Math.max(0, wh - quickSearchBottomInset);
+    var quickSearchAreaTop = Math.min(quickSearchAreaBottom, leftHeight + quickSearchGap);
+    var quickSearchAvailableHeight = Math.max(1, quickSearchAreaBottom - quickSearchAreaTop);
+    var quickSearchPreferredHeight = 12 + quickSearchLinePixels * Math.max(1, quickSearchLines);
+    var quickSearchHeight = quickSearchLines === 0
+        ? quickSearchAvailableHeight
+        : Math.min(quickSearchPreferredHeight, quickSearchAvailableHeight);
+    quickSearchHeight = Math.max(1, quickSearchHeight);
+    var quickSearchTop = Math.max(0, quickSearchAreaBottom - quickSearchHeight);
     var displayHeight = DOJSP3.clamp(DOJSP3.mulDiv(ww, 3, 40), 1, wh);
     var displayTop = DOJSP3.clamp(
         DOJSP3.mulDiv(ww, 9, 640),
@@ -309,7 +401,7 @@ function layoutBottomControls() {
         Math.max(1, wh - quickSearchChildTop)
     );
 
-    DOJSP3.move(left, 0, 0, sideWidth, DOJSP3.clamp(DOJSP3.mulDiv(wh, 5, 8), 1, wh));
+    DOJSP3.move(left, 0, 0, sideWidth, leftHeight);
     DOJSP3.move(quickSearch,
         quickSearchLeft,
         quickSearchChildTop,
@@ -351,10 +443,9 @@ function on_paint(gr) {
         gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);
     }
 
-    // Match the original DarkOne2021/PSS Quick Search frame exactly:
-    // a two-pixel #696969 border with a #1e1e1e interior. The native
-    // Quick Search Toolbar must have its own frame set to None so it does
-    // not add a second white/sunken border over this frame.
+    // Match the original DarkOne2021/PSS Quick Search outer frame exactly:
+    // a two-pixel #696969 border with a #1e1e1e interior. The scripted
+    // Quick Search normally uses its own internal frame setting of None.
     gr.FillSolidRect(qsX, qsY, qsW, qsH, DOJSP3.colours.quickSearchBorder);
     gr.FillSolidRect(
         qsX + 2,

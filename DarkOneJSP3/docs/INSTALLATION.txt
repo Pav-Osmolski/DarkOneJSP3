@@ -125,9 +125,9 @@ This full package contains a maintainer-exported file at:
   DarkOneJSP3\fcl\DarkOneJSP3.fcl
 
 Importing it is optional and is not the primary setup method. The bundled FCL
-contains two saved layouts: `DarkOneJSP3` is the default and uses the scripted
-Queue Viewer, while `DarkOneJSP3 Native Queue` uses the separate native Queue
-Viewer component.
+contains two saved layouts: `DarkOneJSP3` uses the scripted Queue Viewer and
+scripted JScript Panel 3 Quick Search, while `DarkOneJSP3 Native` uses the
+native Queue Viewer and Quick Search Toolbar components.
 
 FCL files contain component-instance metadata that can vary between
 installations. After import, verify the complete hierarchy, custom titles and
@@ -181,7 +181,8 @@ as the consolidated InfoStack child.
 5. Confirm that both upper dividers (Black by default) and the lower dividers
    align.
 6. Confirm that the display and waveform occupy the lower centre area.
-7. Set Quick Search Toolbar to Frame style: None and RGB 30, 30, 30.
+7. Confirm `DOJSP3.QuickSearch` is a JScript Panel 3 instance loading the
+   DarkOneJSP3 Quick Search wrapper.
 8. Configure Waveform Minibar as described in CONFIGURATION_GUIDE.txt.
 9. Open the foobar2000 console and check for [DarkOneJSP3] errors.
 10. Export a working FCL for your own backup.

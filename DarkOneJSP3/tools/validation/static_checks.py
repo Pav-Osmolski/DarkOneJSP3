@@ -28,6 +28,9 @@ def run(ctx: ValidationContext) -> None:
         require(root / relative_path)
 
     # Package hygiene for a public release.
+    for prototype_note in [root / 'QUICK_SEARCH_TESTING.txt']:
+        if prototype_note.exists():
+            errors.append('Prototype testing note must not be distributed: ' + rel(prototype_note))
     all_files = [
         path for path in root.rglob('*')
         if path.is_file() and path.suffix.lower() != '.fcl'
@@ -45,7 +48,12 @@ def run(ctx: ValidationContext) -> None:
         if path.name.casefold() in {
                 'bottom-area-state.txt',
                 'darkonejsp3.bottom-area-state.txt',
-                'darkonejsp3.reset-command.txt'}:
+                'darkonejsp3.reset-command.txt',
+                'darkonejsp3.queue-state.json',
+                'darkonejsp3.queue-command.json',
+                'darkonejsp3.queue-command-result.json',
+                'darkonejsp3.quicksearch-layout-command.txt',
+                'darkonejsp3.quicksearch-context-tags.json'}:
             errors.append('Runtime-generated state must not be distributed: ' + relative)
     for paths in casefold_paths.values():
         if len(paths) > 1:
@@ -57,6 +65,11 @@ def run(ctx: ValidationContext) -> None:
         for runtime_path in [
                 'js_data/darkonejsp3.bottom-area-state.txt',
                 'js_data/darkonejsp3.reset-command.txt',
+                'js_data/darkonejsp3.queue-state.json',
+                'js_data/darkonejsp3.queue-command.json',
+                'js_data/darkonejsp3.queue-command-result.json',
+                'js_data/darkonejsp3.quicksearch-layout-command.txt',
+                'js_data/darkonejsp3.quicksearch-context-tags.json',
                 'DarkOneJSP3/shared/bottom-area-state.txt']:
             if runtime_path not in ignored:
                 errors.append('.gitignore does not exclude runtime state: ' + runtime_path)
@@ -537,6 +550,24 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest does not preserve the native Queue Viewer as an optional full editor')
         if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
             errors.append('Manifest does not describe the writable scripted Queue Viewer')
+        quick_search_manifest = manifest.get('enhancements', {}).get('quick_search', {})
+        if quick_search_manifest.get('version') != '0.1.14':
+            errors.append('Manifest Quick Search version is not 0.1.14')
+        if quick_search_manifest.get('implementation') != 'JScript Panel 3 with JSplitter parent-layout bridge':
+            errors.append('Manifest does not identify the scripted Quick Search architecture')
+        if quick_search_manifest.get('height_default') != '2 lines' or quick_search_manifest.get('responsive_font') is not True:
+            errors.append('Manifest does not describe the responsive Quick Search defaults')
+        if quick_search_manifest.get('custom_png') != 'DarkOneJSP3/images/quicksearch.png':
+            errors.append('Manifest Quick Search fixed custom-PNG location has drifted')
+        if quick_search_manifest.get('standard_results_lock_default_mask') != 31 or quick_search_manifest.get('standard_results_lock_deletion_allowed') is not True:
+            errors.append('Manifest Quick Search Standard-results lock defaults have drifted')
+        if quick_search_manifest.get('standard_results_lock_identity') != 'persistent playlist GUID + expected mask':
+            errors.append('Manifest Quick Search Standard-results lock identity has drifted')
+        if quick_search_manifest.get('search_for_same_js_playlist_integration') is not True:
+            errors.append('Manifest Quick Search JS Playlist integration flag has drifted')
+        if quick_search_manifest.get('native_component_alternative') != 'Quick Search Toolbar' or \
+                quick_search_manifest.get('native_component_used_by_current_bundled_fcl') is not True:
+            errors.append('Manifest does not preserve Quick Search Toolbar as the native FCL alternative')
         if queue_manifest.get('direct_bridge_writable') is not True or queue_manifest.get('stale_generation_rejection') is not True:
             errors.append('Manifest omits writable queue-bridge safety')
         for flag in [
@@ -552,11 +583,16 @@ def run(ctx: ValidationContext) -> None:
                 queue_manifest.get('state_publication_retry_limit') != 3:
             errors.append('Manifest Queue Viewer state-publication retry policy is incorrect')
         fcl_policy = manifest.get('fcl_policy', {})
-        if fcl_policy.get('bundled_layouts') != ['DarkOneJSP3', 'DarkOneJSP3 Native Queue'] or \
+        if fcl_policy.get('bundled_layouts') != ['DarkOneJSP3', 'DarkOneJSP3 Native'] or \
                 fcl_policy.get('default_layout') != 'DarkOneJSP3' or \
-                fcl_policy.get('native_queue_layout') != 'DarkOneJSP3 Native Queue' or \
-                fcl_policy.get('native_queue_component_required_for_import') is not True:
-            errors.append('Manifest bundled-FCL Queue Viewer layout policy is incorrect')
+                fcl_policy.get('native_layout') != 'DarkOneJSP3 Native' or \
+                fcl_policy.get('default_layout_queue') != 'scripted Queue Viewer' or \
+                fcl_policy.get('default_layout_search') != 'scripted JScript Panel 3 Quick Search' or \
+                fcl_policy.get('native_layout_queue') != 'Queue Viewer' or \
+                fcl_policy.get('native_layout_search') != 'Quick Search Toolbar' or \
+                fcl_policy.get('native_queue_component_required_for_import') is not True or \
+                fcl_policy.get('native_quick_search_component_required_for_import') is not True:
+            errors.append('Manifest bundled-FCL default/native layout policy is incorrect')
         expected_mutations = ['remove item', 'remove selected items', 'clear playback queue',
                               'move up', 'move down', 'move to top', 'move to bottom']
         if queue_manifest.get('scripted_mutation_commands') != expected_mutations:
@@ -1129,8 +1165,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.1"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.1')
+        if '// @version "0.6.2"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.2')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1144,6 +1180,19 @@ def run(ctx: ValidationContext) -> None:
     js_playlist_header = samples / 'jsplaylist' / 'headerbar.js'
     js_playlist_topbar = samples / 'jsplaylist' / 'topbar.js'
     js_playlist_cache = samples / 'jsplaylist' / 'render_cache.js'
+    if js_playlist_rows.exists():
+        body = text(js_playlist_rows)
+        for token in [
+            'DARKONE_JSPLAYLIST_QUICKSEARCH_CONTEXT_FILE',
+            'jsplaylist_quicksearch_context_tags()',
+            'jsplaylist_quicksearch_context_value(quicksearch_metadb, quicksearch_tags[qs])',
+            'jsplaylist_quicksearch_notify(quicksearch_tags[quicksearch_index], quicksearch_values[quicksearch_index])',
+            '"Search for same"',
+            '700 + qs',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist Quick Search context integration is missing: ' + token)
+
     if js_playlist_main.exists():
         body = text(js_playlist_main)
         for token in [
@@ -1419,6 +1468,24 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Sample-owned reset role remains in the DarkOneJSP3 registry: ' + role)
         if '"DARKONEJSP3.VOLUME.DRAG.REFRESH.MODE": 0' not in registry:
             errors.append('Control Right reset registry is missing the automatic volume-cadence default')
+        # The Bottom Controls JSplitter owns only the mirrored Quick Search
+        # geometry values. Font, placeholder and result-lock properties live in
+        # the JScript Panel instance and are reset by its scoped wrapper.
+        for forbidden in [
+            '"DARKONEJSP3.QUICKSEARCH.FONT.SIZE"',
+            '"DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE"',
+            '"DARKONEJSP3.QUICKSEARCH.SHOW.PLACEHOLDER"',
+            '"DARKONEJSP3.QUICKSEARCH.RESULT.STANDARD.LOCK.MASK"',
+        ]:
+            if forbidden in registry:
+                errors.append('JSplitter reset registry incorrectly owns a JScript Panel Quick Search property: ' + forbidden)
+        for required in [
+            '"DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES": 2',
+            '"DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT": 44',
+            '"DARKONEJSP3.QUICKSEARCH.LAYOUT.LINE.PIXELS": 24',
+        ]:
+            if required not in registry:
+                errors.append('Bottom Controls reset registry is missing Quick Search layout ownership: ' + required)
         for token in [
             'darkOneJsp3AddOptionalButtonDefaults("control-left", 8);',
             'darkOneJsp3AddOptionalButtonDefaults("control-right", 10);',
@@ -1570,17 +1637,34 @@ def run(ctx: ValidationContext) -> None:
             errors.append('README.md is missing the Enhanced Sample Library section')
         if f']({enhanced_samples_target})' not in readme_body:
             errors.append('README.md is missing a link to the enhanced sample guide')
+        readme_flat = re.sub(r'\s+', ' ', readme_body)
         for token in [
             '[Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)',
-            '`DarkOneJSP3 Native Queue`',
+            '`DarkOneJSP3 Native`',
+            'JScript Panel 3 Quick Search',
         ]:
-            if token not in readme_body:
-                errors.append('README.md Queue Viewer/FCL documentation is missing: ' + token)
+            if token not in readme_flat:
+                errors.append('README.md Queue Viewer/Quick Search/FCL documentation is missing: ' + token)
+        requirements_match = re.search(r'## Requirements\s+(.*?)(?:\n## |\Z)', readme_body, re.S)
+        if requirements_match:
+            requirements_body = requirements_match.group(1)
+            for component in ['Queue Viewer', 'Quick Search Toolbar']:
+                if component not in requirements_body:
+                    errors.append('README.md no longer lists ' + component + ' as a requirement')
         installation_body = text(docs / 'INSTALLATION.txt') if (docs / 'INSTALLATION.txt').exists() else ''
         docs_readme_body = text(docs / 'README.txt') if (docs / 'README.txt').exists() else ''
-        for label, body in [('INSTALLATION.txt', installation_body), ('docs/README.txt', docs_readme_body)]:
-            if 'Queue Viewer' not in body or 'DarkOneJSP3 Native Queue' not in body or 'FCL' not in body:
-                errors.append(label + ' does not preserve the Queue Viewer/two-layout FCL documentation')
+        install_match = re.search(r'1\. Requirements\n-+\n(.*?)\n2\. Back up first\n-+', installation_body, re.S)
+        install_requirements = install_match.group(1) if install_match else ''
+        environment_match = re.search(r'Supported environment\n-+\n(.*?)\nDocumentation map\n-+', docs_readme_body, re.S)
+        docs_environment = environment_match.group(1) if environment_match else ''
+        for label, body in [('INSTALLATION.txt requirements', install_requirements), ('docs/README.txt supported environment', docs_environment)]:
+            for component in ['Queue Viewer', 'Quick Search Toolbar']:
+                if component not in body:
+                    errors.append(label + ' no longer lists ' + component)
+        for label, body in [('README.md', readme_body), ('INSTALLATION.txt', installation_body)]:
+            for token in ['Quick Search Toolbar', 'DarkOneJSP3 Native', 'JScript Panel 3 Quick Search']:
+                if token not in body:
+                    errors.append(label + ' does not preserve the current default/native FCL layout description: ' + token)
         # Promotional artwork is maintained in the GitHub repository and may be
         # omitted from runtime release archives. When an assets folder is present,
         # however, every referenced repository image must also be present.
@@ -2621,6 +2705,46 @@ def run(ctx: ValidationContext) -> None:
         guard_body = body[guard_start:guard_end] if guard_start >= 0 and guard_end > guard_start else ''
         if 'plman.GetPlaylistItemCount(' in guard_body:
             errors.append('JSplitter queue restore guard uses the JSP3 GetPlaylistItemCount API instead of the JSplitter/SMP PlaylistItemCount API')
+
+    quick_search_wrapper = project / 'jscript' / 'DarkOneJSP3 - Quick Search.txt'
+    quick_search_source = project / 'jscript' / 'js' / 'Quick_Search.js'
+    if quick_search_wrapper.exists():
+        body = text(quick_search_wrapper)
+        for token in [
+            '// @version "0.1.14"',
+            'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
+            'samples\\jsplaylist\\inputbox.js',
+            'quickSearch.resetConfiguration(scope);',
+        ]:
+            if token not in body:
+                errors.append('Quick Search wrapper is incomplete: ' + token)
+        if '-test' in body:
+            errors.append('Quick Search wrapper still carries a test-build version marker')
+    if quick_search_source.exists():
+        body = text(quick_search_source)
+        for token in [
+            "var DARKONE_QUICKSEARCH_CUSTOM_ICON = DARKONE_QUICKSEARCH_IMAGE_FOLDER + 'quicksearch.png';",
+            "'Custom PNG (unavailable)'",
+            'this.input.quickSearchTextBand = function ()',
+            'this.standardPlaylistLockOwnedByQuickSearch = function (index)',
+            'this.releaseOwnedStandardLockForTarget = function (targetName)',
+            'this.outputPlaylistName = function (resultMode, text)',
+            'resultMode === QS_RESULT_STANDARD || handles.Count',
+            'plman.GetGUID(index)',
+            'plman.FindByGUID(this.properties.standardLockGuid)',
+            "standardLockTarget: String(window.GetProperty('DARKONEJSP3.QUICKSEARCH.RESULT.STANDARD.LOCK.TARGET'",
+            "standardLockGuid: String(window.GetProperty('DARKONEJSP3.QUICKSEARCH.RESULT.STANDARD.LOCK.GUID'",
+            'var QS_LOCK_RECOMMENDED = QS_LOCK_ADD | QS_LOCK_REMOVE | QS_LOCK_REORDER | QS_LOCK_REPLACE | QS_LOCK_RENAME;',
+            "scope !== 'appearance' && scope !== 'behaviour' && scope !== 'all'",
+            'Tag definitions, history and favourites are user data',
+        ]:
+            if token not in body:
+                errors.append('Scripted Quick Search hardening is missing: ' + token)
+        if 'utils.RemovePath(DARKONE_QUICKSEARCH_CONTEXT_FILE)' not in body:
+            errors.append('Scripted Quick Search does not remove its Search-for-same bridge file on unload')
+        for forbidden in ['RunCmdAsync', 'powershell', 'Set custom PNG path', 'Reset New Playlist mode after execution', 'fb.GetQueryItems']:
+            if forbidden.lower() in body.lower():
+                errors.append('Scripted Quick Search retains obsolete prototype code: ' + forbidden)
 
     manager_source = samples / 'smooth' / 'jsspm.js'
     if manager_source.exists():

@@ -16,7 +16,7 @@ Contents
 6. Main JS Playlist
 7. Biography, Last.fm and Properties
 8. Queue Viewer
-9. Quick Search Toolbar and waveform area
+9. Quick Search and waveform area
 10. Album Notes and online sources
 11. Standalone metadata panels
 12. Persistent-property reference
@@ -237,8 +237,9 @@ Bottom area side divider colour
 - Set custom colour...
 
 This setting controls both lower vertical divider strips together. Transparent
-leaves the selected bottom-area background visible in their place. The Quick
-Search frame and interior remain fixed and are not affected.
+leaves the selected bottom-area background visible in their place. Quick Search
+has independent frame and normal/error background settings and is not affected
+by this divider-colour setting.
 
 For both menus, Custom colour immediately reapplies the remembered custom value.
 Set custom colour... opens the native picker and, when a different colour is
@@ -926,25 +927,70 @@ Optional native Queue Viewer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The separate native Queue Viewer component remains supported as an
-interchangeable DOJSP3.Queue child. It is optional for the recommended manually
-constructed layout, but users who prefer its native interface may continue to
-use it with the same custom title. It must also be installed before importing
-the bundled FCL because that file contains the `DarkOneJSP3 Native Queue` saved
-layout in addition to the default scripted-queue `DarkOneJSP3` layout.
+interchangeable DOJSP3.Queue child for users who prefer its native interface.
 
-9. Quick Search Toolbar and waveform area
------------------------------------------
+9. Quick Search and waveform area
+---------------------------------
 
-Quick Search Toolbar
-~~~~~~~~~~~~~~~~~~~~
+Quick Search
+~~~~~~~~~~~~
 
-JSplitter paints the DarkOne frame. Configure the native toolbar as follows:
-- Frame style: None
-- Normal background: RGB 30, 30, 30
-- Custom icon: DarkOneJSP3\images\QS.bmp
+The recommended DOJSP3.QuickSearch child is a JScript Panel 3 instance loading:
 
-Grey or Sunken native frames create a double border. Other Quick Search
-commands and search-history behaviour belong to the native component.
+  DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
+
+Right-click inside the search control to configure it.
+
+Search in
+- Media library
+- Current playlist
+- Current playlist (inline)
+- All playlists
+
+Match
+- Match all
+- Match any
+- Exact
+- Prefix
+- Extended
+
+Results
+- Standard results playlist
+- New playlist
+- New autoplaylist (Media library only)
+
+The selected Results mode is persistent. The reusable Standard results playlist
+is protected by Results > Lock type. Recommended defaults disable adding,
+removing, reordering, replacing and renaming while still allowing the playlist
+itself to be removed. Quick Search temporarily releases only its own lock when
+it needs to refresh generated results.
+
+Appearance
+- Height: Automatic, 1 line, 2 lines (default)
+- Width: 20-100% of the left bottom-control area; default 44%
+- Font size: Automatic, fixed 8-48 px, or automatic base scale 50-200%
+- Show placeholder text
+- Built-in scalable icon
+- Custom PNG, available only when
+  <profile>\DarkOneJSP3\images\quicksearch.png exists
+- Optional search/result status indicator
+- Default or Custom normal/error foreground and background colours
+- Frame: None, Grey or Sunken
+
+Automatic height consumes the available lower-left slot. The fixed 1-line and
+2-line modes are preferred sizes that shrink safely when the foobar2000 window
+is too short, preventing overlap with the controls above. Automatic font sizing
+follows the Columns UI font and DarkOne responsive scale; fixed fonts are
+reduced only when required to fit the available height.
+
+The Custom PNG preserves transparency and aspect ratio while scaling inside the
+icon cell. There is no file picker or custom-path setting: add or replace
+quicksearch.png in the theme images folder, then reopen the context menu.
+
+History, favourites, custom tags, Autosearch, autocomplete and Search for same
+are configured from the same menu. Search for same entries are published to
+JS Playlist - Enhanced. JScript Panel cannot register the native global commands
+provided by the original Quick Search Toolbar component.
 
 Waveform host
 ~~~~~~~~~~~~~
@@ -963,15 +1009,15 @@ Host background
 - Set custom colour...
 
 Custom colour reapplies the remembered value immediately; Set custom colour...
-opens the native picker. Automatic follows the effective shared Bottom area background, including Black,
-both DarkOne greys, Columns UI and Custom. When the shared setting is
-Transparent / inherit parent, Automatic resolves it to the uniform DarkOne dark
-grey parent tone (`#181818`) rather than exposing the host's native backing. The
-Bottom Controls host remains the sole runtime-state poller and relays changed
-state within the JSplitter notification domain, so Display/Waveform does not add
-another poller. Existing explicitly selected fixed Host background modes are
-preserved; the fixed Transparent / inherit parent choice uses the same resolved
-tone.
+opens the native picker. Automatic follows the effective shared Bottom area
+background, including Black, both DarkOne greys, Columns UI and Custom. When the
+shared setting is Transparent / inherit parent, Automatic resolves it to the
+uniform DarkOne dark grey parent tone (#181818) rather than exposing the host's
+native backing. The Bottom Controls host remains the sole runtime-state poller
+and relays changed state within the JSplitter notification domain, so
+Display/Waveform does not add another poller. Existing explicitly selected fixed
+Host background modes are preserved; the fixed Transparent / inherit parent
+choice uses the same resolved tone.
 
 Other controls:
 - Force blank waveform when playback stops
@@ -984,8 +1030,8 @@ appearance and behaviour reset scopes do not alter one another.
 
 The host background paints the 20-pixel spacer and the area exposed while
 Waveform Minibar is hidden. The default reveal delay is 200 ms and suppresses a
-previous track's cached waveform while the new waveform becomes available.
-Try 300-500 ms on slower storage or with uncached tracks.
+previous track's cached waveform while the new waveform becomes available. Try
+300-500 ms on slower storage or with uncached tracks.
 
 For a continuous background, configure Waveform Minibar itself to use matching
 played and unplayed background RGB values, disable Transparent background and
@@ -1267,6 +1313,18 @@ Playlist Manager
   SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2
   SMOOTH.Enable Performance Profiling
 
+Quick Search
+  DARKONEJSP3.QUICKSEARCH.SOURCE
+  DARKONEJSP3.QUICKSEARCH.MATCH
+  DARKONEJSP3.QUICKSEARCH.RESULT.MODE
+  DARKONEJSP3.QUICKSEARCH.TARGET.PLAYLIST
+  DARKONEJSP3.QUICKSEARCH.RESULT.STANDARD.LOCK.MASK
+  DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES
+  DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT
+  DARKONEJSP3.QUICKSEARCH.FONT.SIZE
+  DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE
+  DARKONEJSP3.QUICKSEARCH.SHOW.PLACEHOLDER
+
 Waveform host
   DarkOneJSP3.DisplayWaveform.BackgroundMode
   DarkOneJSP3.DisplayWaveform.BackgroundColour
@@ -1319,4 +1377,7 @@ performance-diagnostic options. Playlist Manager also resets those behaviour set
 width, row height and alternating-row option belong to appearance. Full reset
 additionally clears its saved scroll anchors. InfoStack appearance reset
 restores the automatic font base scale to 100%, DarkOne dark grey page backing
-and Black upper side dividers.
+and Black upper side dividers. Quick Search honours the same reset scopes:
+appearance resets sizing, font, icon, frame and colours; behaviour resets search
+and result preferences. Tag definitions, history and favourites are preserved by
+scoped resets and cleared only by the panel's explicit complete reset.

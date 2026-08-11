@@ -25,11 +25,11 @@ Column
    │  └─ JScript Panel 3 08             DOJSP3.Playlist
    └─ JSplitter 05                      DOJSP3.Controls
       ├─ JScript Panel 3 09             DOJSP3.ControlsLeft
-      ├─ Quick Search Toolbar           DOJSP3.QuickSearch
+      ├─ JScript Panel 3 10             DOJSP3.QuickSearch
       ├─ JSplitter 06                   DOJSP3.DisplayStack
-      │  ├─ JScript Panel 3 10          DOJSP3.Display
+      │  ├─ JScript Panel 3 11          DOJSP3.Display
       │  └─ Waveform Minibar (mod)      DOJSP3.Waveform
-      └─ JScript Panel 3 11             DOJSP3.ControlsRight
+      └─ JScript Panel 3 12             DOJSP3.ControlsRight
 
 JScript Panel 3 script assignments
 ----------------------------------
@@ -42,13 +42,15 @@ JScript Panel 3 script assignments
 07  samples\Album Art.txt
 08  samples\JS Playlist.txt
 09  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
-10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
-11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
+10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
+11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
+12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
 
-Optional native Queue replacement
----------------------------------
-The separate native Queue Viewer component remains supported as an
-interchangeable DOJSP3.Queue child for users who prefer its native interface.
+Optional native-component layout
+--------------------------------
+The bundled `DarkOneJSP3 Native` preset uses the native Queue Viewer and Quick
+Search Toolbar components. The default `DarkOneJSP3` layout uses the scripted
+JScript Panel 3 Queue Viewer and Quick Search implementations shown above.
 
 JSplitter loader and controller assignments
 -------------------------------------------
@@ -102,7 +104,9 @@ FCL note
 --------
 This panel map is the authoritative setup reference. The full package also
 contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with the default
-`DarkOneJSP3` scripted-queue layout and the alternative `DarkOneJSP3 Native
-Queue` layout. Importing it is not the recommended first method and it remains
+`DarkOneJSP3` scripted Queue Viewer + scripted Quick Search layout and the
+alternative `DarkOneJSP3 Native` layout using the native Queue Viewer and Quick
+Search Toolbar components. Importing it is not the recommended first method and
+it remains
 installation-specific. Project tooling and hotfixes do not patch or generate
 the FCL.

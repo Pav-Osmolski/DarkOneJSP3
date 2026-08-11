@@ -1,3 +1,53 @@
+var DARKONE_JSPLAYLIST_QUICKSEARCH_CONTEXT_FILE = fb.ProfilePath + "js_data\\darkonejsp3.quicksearch-context-tags.json";
+var DARKONE_JSPLAYLIST_QUICKSEARCH_NOTIFY = "DarkOneJSP3.QuickSearch.SearchForSame";
+
+function jsplaylist_quicksearch_context_tags() {
+	try {
+		if (!utils.IsFile(DARKONE_JSPLAYLIST_QUICKSEARCH_CONTEXT_FILE)) return [];
+		var parsed = JSON.parse(utils.ReadTextFile(DARKONE_JSPLAYLIST_QUICKSEARCH_CONTEXT_FILE, 65001));
+		if (Object.prototype.toString.call(parsed) != "[object Array]") return [];
+		var output = [];
+		var seen = {};
+		for (var i = 0; i < parsed.length && output.length < 80; i++) {
+			var item = parsed[i] || {};
+			var name = String(item.name || "").replace(/^\s+|\s+$/g, "");
+			var value = String(item.value || "").replace(/^\s+|\s+$/g, "");
+			var key = name.toLowerCase();
+			if (!name || !value || seen[key]) continue;
+			seen[key] = true;
+			output.push({ name: name, value: value });
+		}
+		return output;
+	} catch (e) {}
+	return [];
+}
+
+function jsplaylist_quicksearch_context_value(metadb, tag) {
+	if (!metadb || !tag) return "";
+	var expressions = String(tag.value || "").split("|");
+	for (var i = 0; i < expressions.length; i++) {
+		var expression = String(expressions[i] || "").replace(/^\s+|\s+$/g, "");
+		if (!expression) continue;
+		try {
+			var value = String(get_tfo(expression).EvalWithMetadb(metadb) || "").replace(/^\s+|\s+$/g, "");
+			if (value) return value;
+		} catch (e) {}
+	}
+	return "";
+}
+
+function jsplaylist_quicksearch_notify(tag, value) {
+	if (!tag || !value) return false;
+	try {
+		window.NotifyOthers(DARKONE_JSPLAYLIST_QUICKSEARCH_NOTIFY, JSON.stringify({
+			text: String(value),
+			tagName: String(tag.name || "")
+		}));
+		return true;
+	} catch (e) {}
+	return false;
+}
+
 function oGroup(index, start, metadb, group_key) {
 	this.index = index;
 	this.start = start;
@@ -1118,7 +1168,10 @@ function oList(object_name) {
 		var sub = window.CreatePopupMenu();
 		var smooth = window.CreatePopupMenu();
 		var refresh = window.CreatePopupMenu();
+		var quicksearch = window.CreatePopupMenu();
 		var context = fb.CreateContextMenuManager();
+		var quicksearch_tags = jsplaylist_quicksearch_context_tags();
+		var quicksearch_values = [];
 
 		var can_remove_flag = EnableMenuIf(playlist_can_remove_items(g_active_playlist));
 		var can_paste_flag = EnableMenuIf(playlist_can_add_items(g_active_playlist) && fb.CheckClipboardContents());
@@ -1172,6 +1225,25 @@ function oList(object_name) {
 			menu.AppendMenuItem(can_remove_flag, 24, "Cut");
 			menu.AppendMenuItem(MF_STRING, 25, "Copy");
 			menu.AppendMenuItem(can_paste_flag, 26, "Paste");
+
+			if (quicksearch_tags.length) {
+				var quicksearch_enabled = items.Count == 1;
+				var quicksearch_metadb = quicksearch_enabled ? items.GetItem(0) : null;
+				for (var qs = 0; qs < quicksearch_tags.length; qs++) {
+					var quicksearch_value = quicksearch_enabled
+						? jsplaylist_quicksearch_context_value(quicksearch_metadb, quicksearch_tags[qs])
+						: "";
+					quicksearch_values.push(quicksearch_value);
+					quicksearch.AppendMenuItem(
+						quicksearch_enabled && quicksearch_value ? MF_STRING : MF_GRAYED,
+						700 + qs,
+						quicksearch_tags[qs].name
+					);
+				}
+				menu.AppendMenuSeparator();
+				quicksearch.AppendTo(menu, quicksearch_enabled ? MF_STRING : MF_GRAYED, "Search for same");
+			}
+
 			menu.AppendMenuSeparator();
 			context.InitContextPlaylist();
 			context.BuildMenu(menu, 1000);
@@ -1363,10 +1435,16 @@ function oList(object_name) {
 			this.pasteItems(pos);
 			break;
 		default:
-			context.ExecuteByID(idx - 1000);
+			if (idx >= 700 && idx < 700 + quicksearch_tags.length) {
+				var quicksearch_index = idx - 700;
+				jsplaylist_quicksearch_notify(quicksearch_tags[quicksearch_index], quicksearch_values[quicksearch_index]);
+			} else if (idx >= 1000) {
+				context.ExecuteByID(idx - 1000);
+			}
 			break;
 		}
 
+		quicksearch.Dispose();
 		items.Dispose();
 		context.Dispose();
 		return true;

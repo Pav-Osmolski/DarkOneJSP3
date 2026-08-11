@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v1.0.4
+  <strong>Current stable release:</strong> v1.0.5
 </p>
 
 > [!IMPORTANT]
@@ -57,6 +57,8 @@ workflow of the original theme.
   with custom refresh interval overrides.
 * Scripted Queue Viewer with direct JSplitter queue enumeration, multi-selection,
   keyboard navigation, source-item commands and writable queue controls.
+* Scripted Quick Search with library/playlist scopes, persistent result modes,
+  history/favourites, responsive sizing and protected Standard results playlists.
 * Optional startup transitions with native-window reveal hardening.
 * Demand-driven playlist rendering with cached selection/playback state, reused
   visible rows, cached column geometry and Direct2D bitmap reuse.
@@ -66,7 +68,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.4** is the current stable release.
+**DarkOneJSP3 v1.0.5** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -211,9 +213,9 @@ The included
 [`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a
 maintainer-exported convenience snapshot. It is not required.
 
-The FCL contains two saved layouts: `DarkOneJSP3` is the default and uses the
-recommended scripted Queue Viewer, while `DarkOneJSP3 Native Queue` uses the
-separate native Queue Viewer component.
+The FCL contains two saved layouts: `DarkOneJSP3` uses the scripted Queue
+Viewer and scripted JScript Panel 3 Quick Search, while `DarkOneJSP3 Native`
+uses the native Queue Viewer and Quick Search Toolbar components.
 
 After importing it, compare the resulting layout with the documented panel
 titles and script assignments. The panel map remains the reference for the

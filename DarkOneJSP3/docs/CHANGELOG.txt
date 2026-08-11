@@ -1,6 +1,84 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.5 - Scripted Quick Search and release hardening
+----------------------------------------------------
+
+Quick Search v0.1.14
+~~~~~~~~~~~~~~~~~~~~
+- Added `DarkOneJSP3 - Quick Search`, a JScript Panel 3 replacement for the
+  Quick Search Toolbar used by the recommended manual layout. Search execution,
+  history, favourites, custom tags, result playlists and inline selection are handled
+  directly by JScript Panel; a small JSplitter bridge is used only where the
+  parent owns the Quick Search panel geometry.
+- Added Media library, Current playlist, Current playlist (inline) and All
+  playlists sources with Match all, Match any, Exact, Prefix and Extended query
+  modes, including the documented modifier-key search combinations, Autosearch,
+  history autocomplete and configurable Search for same entries in JS Playlist.
+- Added persistent Standard results playlist, New playlist and New autoplaylist
+  result modes. The Standard results playlist supports configurable native
+  playlist locks; the recommended default disables adding, removing, reordering,
+  replacing and renaming while still allowing the playlist itself to be deleted.
+- Added responsive Automatic, 1-line and 2-line height modes with 2 lines as the
+  default, configurable width, responsive or fixed font sizing, an automatic
+  font base scale, a toggleable Search... placeholder and resize-safe parent
+  layout that cannot overlap the controls above it.
+- Added a corrected scalable vector search icon plus optional transparent
+  `DarkOneJSP3\images\quicksearch.png` artwork. Custom PNG is enabled only when
+  that fixed file exists; no file picker, external process or helper dependency
+  is required.
+- Added configurable frame, normal/error foreground and background colours,
+  optional source/result status indicator and the established remembered-Custom
+  colour / Set custom colour interaction model.
+- Corrected caret and selection geometry to use the measured font band rather
+  than the full variable-height input control, eliminated focus-loss ghost
+  carets and prevented cleared search text from being restored on blur.
+- Hardened auto-Extended state, inline-result invalidation, malformed persisted
+  settings, custom-image disposal/reload and Standard-results lock handling.
+- Corrected Extended-query and autoplaylist validation paths to use the JSP3
+  3.x `IMetadbHandleList.GetQueryItems()` API instead of the removed legacy
+  `fb.GetQueryItems()` call, with a validator guard against reintroduction.
+- Corrected the `Append search text to new playlist name` preference so it
+  applies only to New playlist/autoplaylist output; the reusable Standard target
+  now always keeps its exact configured name instead of becoming `Quick Search
+  [query]` and defeating reuse/lock ownership.
+- Corrected zero-match Standard searches so the reusable results playlist is
+  cleared and remains locked instead of retaining stale tracks from the previous
+  successful search. New playlist output still avoids creating empty playlists.
+- Hardened Standard-results lock ownership around the exact managed playlist,
+  using its persistent GUID plus expected lock mask so target changes, reset,
+  deletion and allowed renaming cannot strand a lock or claim an unrelated
+  JScript Panel lock.
+- Separated appearance, behaviour and complete Quick Search reset scopes.
+  Scoped factory resets preserve unrelated preferences and user Tag/history/
+  favourite data; the panel's explicit complete reset restores all defaults.
+- Completed the advertised JS Playlist `Search for same` integration: the
+  enhanced playlist now consumes Quick Search context-enabled tags only while
+  the project runtime bridge is present, evaluates the selected track, and
+  notifies Quick Search without adding a standalone dependency.
+- Added permanent runtime/static regression coverage for result-mode persistence,
+  GUID-backed lock refresh/ownership and rename cleanup, scoped reset behaviour,
+  responsive defaults, the fixed-file PNG implementation and the JS Playlist
+  Search-for-same bridge.
+
+Release integration
+~~~~~~~~~~~~~~~~~~~
+- Promoted `DOJSP3.QuickSearch` in the documented panel map and layout manifest
+  to JScript Panel 3 using `DarkOneJSP3 - Quick Search.txt`.
+- Updated layout documentation for the current maintainer-exported FCL presets:
+  `DarkOneJSP3` uses the scripted Queue Viewer and scripted Quick Search, while
+  `DarkOneJSP3 Native` uses the native Queue Viewer and Quick Search Toolbar.
+- Retained Queue Viewer and Quick Search Toolbar in the component Requirements
+  because the bundled native preset uses both native components.
+- Removed JSP3-owned Quick Search font/placeholder/lock properties from the
+  JSplitter reset registry; only the parent-owned layout geometry remains there.
+- Added the Quick Search layout/context runtime files to package hygiene and
+  `.gitignore` enforcement so generated bridge state cannot leak into a release.
+- Advanced JS Playlist - Enhanced to 0.6.2 for conditional Quick Search
+  Search-for-same integration.
+- Advanced the release validator to 0.10.1 and added Quick Search 0.1.14 to
+  build metadata and required-path validation.
+
 v1.0.4 - Remembered Custom colour selection and picker separation
 -----------------------------------------------------------------
 

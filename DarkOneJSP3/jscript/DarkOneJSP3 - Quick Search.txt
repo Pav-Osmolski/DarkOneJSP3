@@ -1,0 +1,69 @@
+// ==PREPROCESSOR==
+// @name "DarkOneJSP3 - Quick Search"
+// @version "0.1.14"
+// @author "DeViLhoOD"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Quick_Search.js"
+// ==/PREPROCESSOR==
+
+var KMask = { none: 0, ctrl: 1, shift: 2 };
+var g_font_12 = JSON.stringify({ Name: 'Segoe UI', Size: 12, Weight: 400, Style: 0, Stretch: 5 });
+
+function GetKeyboardMask() {
+    if (utils.IsKeyPressed(VK_CONTROL)) return KMask.ctrl;
+    if (utils.IsKeyPressed(VK_SHIFT)) return KMask.shift;
+    return KMask.none;
+}
+
+var quickSearch = null;
+
+function quickSearchInputCommit() {
+    // oInputbox also invokes this callback when focus is lost. Search itself
+    // is deliberately handled only by Enter/Tab or Autosearch.
+    if (quickSearch) quickSearch.input.default_text = quickSearch.input.text;
+}
+
+quickSearch = new DarkOneQuickSearch();
+
+function on_char(code) { quickSearch.character(code); }
+function on_colours_changed() { quickSearch.coloursChanged(); window.Repaint(); }
+function on_focus(is_focused) { quickSearch.input.on_focus(is_focused); }
+function on_font_changed() { quickSearch.fontChanged(); window.Repaint(); }
+function on_key_down(vkey) { quickSearch.keyDown(vkey); }
+function on_library_items_added() { quickSearch.libraryChanged(); }
+function on_library_items_changed() { quickSearch.libraryChanged(); }
+function on_library_items_removed() { quickSearch.libraryChanged(); }
+function on_mouse_lbtn_dblclk(x, y) { quickSearch.lbtnDblclk(x, y); }
+function on_mouse_lbtn_down(x, y) { quickSearch.lbtnDown(x, y); }
+function on_mouse_lbtn_up(x, y) { quickSearch.lbtnUp(x, y); }
+function on_mouse_leave() { quickSearch.mouseLeave(); }
+function on_mouse_move(x, y) { quickSearch.mouseMove(x, y); }
+function on_mouse_rbtn_up(x, y) { return quickSearch.rbtnUp(x, y); }
+function on_paint(gr) { quickSearch.paint(gr); }
+function on_playlist_items_added(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
+function on_playlist_items_removed(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
+function on_playlist_items_reordered(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
+function on_playlists_changed() { quickSearch.playlistChanged(-1); }
+function on_playlist_switch() { quickSearch.playlistChanged(plman.ActivePlaylist); }
+function on_script_unload() { quickSearch.dispose(); }
+function on_size() { quickSearch.size(window.Width, window.Height); }
+
+function on_notify_data(name, info) {
+    if (name === 'DarkOneJSP3.QuickSearch.SearchForSame') {
+        try { quickSearch.contextSearch(typeof info === 'string' ? JSON.parse(info) : info); } catch (e) {}
+    }
+    if (name === 'DarkOneJSP3.Reset.Properties' || name === 'JSP3Enhanced.Reset.Properties') {
+        var scope = 'all';
+        try {
+            if (typeof info === 'string' && info) {
+                var payload = JSON.parse(info);
+                if (payload && payload.scope) scope = String(payload.scope).toLowerCase();
+            } else if (info && info.scope) scope = String(info.scope).toLowerCase();
+        } catch (e2) {
+            if (typeof info === 'string') scope = String(info).toLowerCase();
+        }
+        if (scope === 'appearance' || scope === 'behaviour' || scope === 'all') quickSearch.resetConfiguration(scope);
+    }
+}

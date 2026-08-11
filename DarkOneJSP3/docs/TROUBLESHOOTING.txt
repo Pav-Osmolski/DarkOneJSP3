@@ -276,15 +276,23 @@ Reload the supplied wrapper and restart foobar2000 if cached code remains.
 
 5. Quick Search and waveform
 ----------------------------
-Quick Search shows two borders
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Set the native Quick Search Toolbar frame style to None. JSplitter already
-paints the DarkOne border.
+Quick Search is missing or the native toolbar still appears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The documented layout uses a JScript Panel 3 instance titled `DOJSP3.QuickSearch`
+loading `DarkOneJSP3 - Quick Search.txt`. Replace an older native Quick Search
+Toolbar child when migrating a manually maintained layout.
 
-Quick Search background is black
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Set the native toolbar normal background to RGB 30, 30, 30. JSplitter cannot
-replace the edit control's internal native background.
+Quick Search overlaps the controls above when the window is small
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Reload both `DOJSP3.QuickSearch` and `DOJSP3.Controls`, then use the current
+Automatic, 1-line or 2-line height modes. The JSplitter parent owns the available
+lower-left slot and caps fixed modes before they can overlap the upper controls.
+
+Custom PNG is unavailable
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Place a valid transparent PNG at
+`<profile>\DarkOneJSP3\images\quicksearch.png`, then reopen the Quick Search
+context menu. The fixed path is intentional; there is no custom-path dialog.
 
 Waveform background does not match the host
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.4 Validation Report
+DarkOneJSP3 v1.0.5 Validation Report
 ====================================
 
 Scope
@@ -38,6 +38,19 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
+- The scripted Quick Search is runtime-tested for persistent result modes,
+  reusable Standard-results refresh including valid zero-match clearing,
+  persistent-GUID-plus-mask lock ownership, target rename/change/reset cleanup
+  and protection of unrelated JScript Panel locks. Extended-query execution is
+  exercised through the current `IMetadbHandleList.GetQueryItems()` API, while
+  static validation rejects the removed legacy `fb.GetQueryItems()` call.
+  Appearance and behaviour reset scopes are verified independently and preserve
+  tag/history/favourite user data; complete reset restores the documented
+  2-line/44%/automatic-font defaults. Static checks also require the fixed
+  `DarkOneJSP3\images\quicksearch.png` model and reject the removed
+  PowerShell/file-dialog prototype path. JS Playlist bridge tests verify
+  standalone absence, malformed/duplicate tag sanitisation, multi-field context
+  evaluation and Search-for-same notification payloads.
 - The project Queue Viewer consumes a versioned file-backed state produced by
   the always-running root JSplitter through `plman.GetPlaybackQueueContents()`.
   Valid bridge generations are applied without evaluating `%queue_indexes%` or
@@ -108,9 +121,8 @@ Checks
   Direct2D bitmaps.
 - The repository README contains a dedicated Enhanced Sample Library section
   and a direct link to the distributed ENHANCED_SAMPLES.txt guide. Requirements
-  documentation retains Queue Viewer and explains that it is optional for the
-  default manually constructed scripted-queue layout but required before
-  importing the bundled two-layout FCL.
+  and panel-map documentation retain the intended component set and identify the
+  current scripted Queue Viewer and Quick Search implementations.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3
   directory and every distributed top-level sample import resolves.
 - Enhanced sample entries contain no hard DarkOneJSP3 profile-path imports.

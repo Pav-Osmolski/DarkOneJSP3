@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - Enhanced"
-// @version "0.6.1"
+// @version "0.6.2"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%samples\shared\performance_utils.js"
 // @import "%fb2k_component_path%samples\shared\ui_cadence.js"
@@ -37,6 +37,7 @@ Enhanced sample features
 - Direct2D bitmap caching for album covers and immutable artwork.
 - Optional performance diagnostics through panel properties.
 - Inline rating and metadata refreshes preserve the current playlist viewport.
+- Optional DarkOneJSP3 Quick Search "Search for same" context-menu integration.
 
 Right-click the playlist and open "Smooth scrolling" to configure these options.
 Defaults: enabled, 8 ms refresh, divisor 2, wheel and scrollbar snapping enabled, 3 rows per notch.

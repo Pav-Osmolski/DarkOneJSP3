@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -102,8 +102,9 @@
     {
       "number": 11,
       "title": "DOJSP3.QuickSearch",
-      "type": "Quick Search Toolbar",
-      "source": "native component"
+      "type": "JScript Panel 3",
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt",
+      "version": "0.1.14"
     },
     {
       "number": 12,
@@ -972,6 +973,58 @@
       "info_stack_render_model_cached": true,
       "playlist_manager_paint_uses_count_snapshot": true,
       "album_art_blur_generated_on_demand": true
+    },
+    "quick_search": {
+      "implementation": "JScript Panel 3 with JSplitter parent-layout bridge",
+      "version": "0.1.14",
+      "sources": [
+        "Media library",
+        "Current playlist",
+        "Current playlist (inline)",
+        "All playlists"
+      ],
+      "match_modes": [
+        "Match all",
+        "Match any",
+        "Exact",
+        "Prefix",
+        "Extended"
+      ],
+      "result_modes": [
+        "Standard results playlist",
+        "New playlist",
+        "New autoplaylist"
+      ],
+      "height_modes": [
+        "Automatic",
+        "1 line",
+        "2 lines"
+      ],
+      "height_default": "2 lines",
+      "responsive_font": true,
+      "fixed_font_range_px": [
+        8,
+        48
+      ],
+      "automatic_font_scale_percent": [
+        50,
+        200
+      ],
+      "width_percent_range": [
+        20,
+        100
+      ],
+      "width_percent_default": 44,
+      "custom_png": "DarkOneJSP3/images/quicksearch.png",
+      "custom_png_optional": true,
+      "standard_results_lock_default_mask": 31,
+      "standard_results_lock_deletion_allowed": true,
+      "search_for_same_js_playlist_integration": true,
+      "history_and_favourites": true,
+      "autosearch": true,
+      "standard_results_lock_identity": "persistent playlist GUID + expected mask",
+      "native_component_alternative": "Quick Search Toolbar",
+      "native_component_used_by_current_bundled_fcl": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",
@@ -994,11 +1047,16 @@
     "included_in_hotfixes": false,
     "bundled_layouts": [
       "DarkOneJSP3",
-      "DarkOneJSP3 Native Queue"
+      "DarkOneJSP3 Native"
     ],
     "default_layout": "DarkOneJSP3",
-    "native_queue_layout": "DarkOneJSP3 Native Queue",
-    "native_queue_component_required_for_import": true
+    "native_queue_component_required_for_import": true,
+    "native_layout": "DarkOneJSP3 Native",
+    "default_layout_queue": "scripted Queue Viewer",
+    "default_layout_search": "scripted JScript Panel 3 Quick Search",
+    "native_layout_queue": "Queue Viewer",
+    "native_layout_search": "Quick Search Toolbar",
+    "native_quick_search_component_required_for_import": true
   },
   "features": {
     "info_stack_tab_area_menu": {
