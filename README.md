@@ -125,14 +125,6 @@ for standalone installation, compatibility guarantees and integration details.
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
 
-The bundled DarkOneJSP3 scripted Queue Viewer is the recommended queue panel.
-Inside the theme it uses the always-running JSplitter root as a direct,
-bidirectional playback-queue bridge, providing fast queue enumeration together
-with remove, multi-remove, clear and reorder controls. The separate native
-Queue Viewer component remains a supported alternative. When the enhanced Queue
-Viewer sample is used outside DarkOneJSP3, it remains read-only because the
-JSplitter mutation bridge is not present.
-
 Third-party component binaries are not included. Install compatible versions
 from their official project pages or trusted foobar2000 component sources
 before configuring the theme.
@@ -197,21 +189,11 @@ or its `profile` subfolder:
 Use only the structure already used by your active foobar2000 profile. Do not
 install the files into more than one location.
 
-### Recommended setup
-
-Construct the Columns UI hierarchy using the supplied panel map, then assign
-the documented panel titles and scripts.
-
-See:
-
-* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
-* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
-
-### Optional FCL import
+### Quick setup (FCL import)
 
 The included
 [`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a
-maintainer-exported convenience snapshot. It is not required.
+maintainer-exported convenience snapshot.
 
 The FCL contains two saved layouts: `DarkOneJSP3` uses the scripted Queue
 Viewer and scripted JScript Panel 3 Quick Search, while `DarkOneJSP3 Native`
@@ -221,8 +203,15 @@ After importing it, compare the resulting layout with the documented panel
 titles and script assignments. The panel map remains the reference for the
 supported layout.
 
-Project tooling, release hardening and hotfixes intentionally never patch or
-regenerate the FCL.
+### Manual setup
+
+Construct the Columns UI hierarchy using the supplied panel map, then assign
+the documented panel titles and scripts.
+
+See:
+
+* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
+* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
 
 ## Documentation
 
