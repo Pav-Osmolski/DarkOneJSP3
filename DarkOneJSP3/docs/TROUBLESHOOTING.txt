@@ -288,6 +288,13 @@ Reload both `DOJSP3.QuickSearch` and `DOJSP3.Controls`, then use the current
 Automatic, 1-line or 2-line height modes. The JSplitter parent owns the available
 lower-left slot and caps fixed modes before they can overlap the upper controls.
 
+Quick Search inherited background does not follow Bottom area colour
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Set Normal background or Error background to Transparent / inherit parent. The
+panel reads the shared Bottom-area state on initialisation and follows live
+updates without its own poller. Reload DOJSP3.QuickSearch together with the
+current control scripts if files from different builds were mixed.
+
 Custom PNG is unavailable
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 Place a valid transparent PNG at
@@ -410,6 +417,12 @@ Changing request identity did not bypass a provider block
 This is expected. DarkOneJSP3 application and Chrome-style profiles only select
 HTTP headers. They do not supply cookies, JavaScript execution or an interactive
 browser session.
+
+Album Art becomes too small when Spectrum is hidden
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Right-click Album Art > Panel sizing and choose Fill panel height (crop sides)
+when you prefer to keep a full-height 1:1 square at narrow window widths. Fit
+square inside panel remains the non-cropping default.
 
 Upper divider colour does not change
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

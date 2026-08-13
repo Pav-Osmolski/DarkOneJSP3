@@ -128,6 +128,18 @@ Additional commands:
 Optional-button settings are retained when a button is hidden. Labels are
 limited to ten characters so they remain within the intended button area.
 
+DarkOneJSP3 internal view commands:
+- LAYOUT: `DarkOneJSP3/Layout/Toggle`
+  Toggles the upper main area between InfoStack | ArtSpectrum | Playlist and
+  ArtSpectrum | Playlist. The selected mode persists.
+- SPECTRUM: `DarkOneJSP3/Visualiser/Toggle`
+  Toggles DOJSP3.Spectrum. When hidden, Album Art receives the complete
+  ArtSpectrum host. The selected mode persists.
+
+Leave command style at 0 when entering either command manually; the control
+panel detects the internal command and caches style 4 after the first use.
+Behaviour reset restores the standard three-part layout and shows Spectrum.
+
 Button appearance
 ~~~~~~~~~~~~~~~~~
 
@@ -362,6 +374,9 @@ Album Art commands:
 - Crop (focus on centre)
 - Crop (focus on top)
 - Full
+- Panel sizing:
+  - Fit square inside panel (default)
+  - Fill panel height (crop sides)
 - Show hover tooltip
 - Open containing folder
 - Google image search
@@ -384,6 +399,11 @@ Selection mode
 
 Configure...
 
+Panel sizing controls the 1:1 artwork square itself and is independent of the
+Crop/Full source-image fitting mode. Fill panel height keeps the square based on
+the available height and allows the left/right edges to clip when the host is
+narrower than that square.
+
 Album Art/Spectrum side dividers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -400,9 +420,11 @@ Choices:
 - Set custom colour...
 
 Custom colour reapplies the remembered value immediately; Set custom colour...
-opens the native picker. One setting controls both upper dividers. Transparent removes their explicit
-fill while preserving width and alignment. The lower control-panel dividers
-are unaffected.
+opens the native picker. Standard layout uses both upper dividers, including
+when Spectrum is hidden. Alternate LAYOUT mode uses only the right divider
+between ArtSpectrum and Playlist. Transparent removes explicit divider fill
+while preserving the reserved alignment. The lower control-panel dividers are
+unaffected.
 
 Enhanced Spectrum Analyser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -935,7 +957,7 @@ interchangeable DOJSP3.Queue child for users who prefer its native interface.
 Quick Search
 ~~~~~~~~~~~~
 
-The recommended DOJSP3.QuickSearch child is a JScript Panel 3 instance loading:
+The DOJSP3.QuickSearch child is a JScript Panel 3 instance loading:
 
   DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
 
@@ -974,7 +996,11 @@ Appearance
 - Custom PNG, available only when
   <profile>\DarkOneJSP3\images\quicksearch.png exists
 - Optional search/result status indicator
-- Default or Custom normal/error foreground and background colours
+- Normal/Error foreground colours: Default or Custom
+- Normal background: Transparent / inherit parent, Black, DarkOne grey,
+  DarkOne dark grey, Columns UI global background or Custom
+- Error background: existing dark-red Default plus the same shared background
+  palette
 - Frame: None, Grey or Sunken
 
 Automatic height consumes the available lower-left slot. The fixed 1-line and
@@ -986,6 +1012,11 @@ reduced only when required to fit the available height.
 The Custom PNG preserves transparency and aspect ratio while scaling inside the
 icon cell. There is no file picker or custom-path setting: add or replace
 quicksearch.png in the theme images folder, then reopen the context menu.
+
+Transparent / inherit parent for either Quick Search background follows the
+effective shared Bottom area background, including live Black, DarkOne grey,
+DarkOne dark grey, Columns UI and Custom changes. Error background keeps its
+dedicated dark-red Default as a separate option.
 
 History, favourites, custom tags, Autosearch, autocomplete and Search for same
 are configured from the same menu. Search for same entries are published to
@@ -1270,6 +1301,10 @@ Control appearance
   DARKONEJSP3.ICON.SCALE
   DARKONEJSP3.DISPLAY.FONT.SCALE
 
+Main view modes
+  DARKONEJSP3.MAIN.LAYOUT.MODE
+  DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE
+
 Album Art/Spectrum side dividers
   DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE
   DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR
@@ -1323,6 +1358,10 @@ Quick Search
   DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT
   DARKONEJSP3.QUICKSEARCH.FONT.SIZE
   DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE
+  DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE
+  DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM
+  DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE
+  DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.CUSTOM
   DARKONEJSP3.QUICKSEARCH.SHOW.PLACEHOLDER
 
 Waveform host

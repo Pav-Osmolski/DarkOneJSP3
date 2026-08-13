@@ -246,6 +246,21 @@ function _albumart(x, y, w, h) {
 		return false;
 	}
 
+	this.square_rect = function () {
+		if (this.is_review_panel)
+			return { x : this.x, y : this.y, w : this.w, h : this.h };
+
+		var side = this.properties.square_sizing.value == 1
+			? Math.max(1, this.h)
+			: Math.max(1, Math.min(this.w, this.h));
+		return {
+			x : this.x + Math.round((this.w - side) / 2),
+			y : this.y + Math.round((this.h - side) / 2),
+			w : side,
+			h : side,
+		};
+	}
+
 	this.paint = function (gr) {
 		// Legacy saved AllMusic review entries call albumart.paint() but do not
 		// explicitly request the deferred blur introduced in v0.1.1. Keep that
@@ -259,7 +274,8 @@ function _albumart(x, y, w, h) {
 		if (this.is_review_panel) {
 			_drawImage(gr, this.bitmap.normal, this.x, this.y, this.w, this.h, this.properties.aspect.value == image.full ? image.full_top_align : this.properties.aspect.value, 1.0, RGB(150, 150, 150));
 		} else {
-			_drawImage(gr, this.bitmap.normal, this.x, this.y, this.w, this.h, this.properties.aspect.value);
+			var rect = this.square_rect();
+			_drawImage(gr, this.bitmap.normal, rect.x, rect.y, rect.w, rect.h, this.properties.aspect.value);
 		}
 	}
 
@@ -315,6 +331,14 @@ function _albumart(x, y, w, h) {
 		panel.m.AppendMenuItem(MF_STRING, 1043, 'Full');
 		panel.m.CheckMenuRadioItem(1040, 1043, this.properties.aspect.value + 1040);
 		panel.m.AppendMenuSeparator();
+
+		if (!this.is_review_panel) {
+			panel.s11.AppendMenuItem(MF_STRING, 1080, 'Fit square inside panel');
+			panel.s11.AppendMenuItem(MF_STRING, 1081, 'Fill panel height (crop sides)');
+			panel.s11.CheckMenuRadioItem(1080, 1081, this.properties.square_sizing.value + 1080);
+			panel.s11.AppendTo(panel.m, MF_STRING, 'Panel sizing');
+			panel.m.AppendMenuSeparator();
+		}
 		panel.m.AppendMenuItem(CheckMenuIf(this.properties.tooltip.enabled), 1045, 'Show hover tooltip');
 		panel.m.AppendMenuSeparator();
 		panel.m.AppendMenuItem(EnableMenuIf(utils.IsFile(this.path)), 1050, 'Open containing folder');
@@ -367,6 +391,11 @@ function _albumart(x, y, w, h) {
 		case 1042:
 		case 1043:
 			this.properties.aspect.value = idx - 1040;
+			window.Repaint();
+			break;
+		case 1080:
+		case 1081:
+			this.properties.square_sizing.value = idx - 1080;
 			window.Repaint();
 			break;
 		case 1045:
@@ -426,6 +455,7 @@ function _albumart(x, y, w, h) {
 		mode : new _p('2K3.ARTREADER.MODE', 0), // 0 default, 1 custom
 		edit : new _p('2K3.ARTREADER.EDIT', 'front_default\r\ndisc_default\r\nartist_default\r\nfront_stub\r\n'),
 		tooltip : new _p('2K3.ARTREADER.TOOLTIP', true),
+		square_sizing : new _p('2K3.ARTREADER.SQUARE.SIZING', 0), // 0 fit square, 1 fill height/crop sides
 	};
 
 	if (this.is_review_panel) {

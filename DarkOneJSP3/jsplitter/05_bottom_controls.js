@@ -20,6 +20,7 @@ var runtimeBridgePollTick = 0;
 var bottomAreaStateFileSnapshot = '';
 var lastResetCommandId = '';
 var lastQuickSearchLayoutCommandId = '';
+var lastViewCommandId = '';
 
 var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
@@ -27,6 +28,7 @@ var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.t
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
 var QUICKSEARCH_LAYOUT_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.quicksearch-layout-command.txt';
+var VIEW_COMMAND_FILE = DarkOneViewBridge.commandFile;
 var RUNTIME_BRIDGE_POLL_INTERVAL = 100;
 var RESET_COMMAND_POLL_INTERVAL = 500;
 var RESET_COMMAND_POLL_DIVISOR = Math.max(1, Math.round(
@@ -269,16 +271,63 @@ function syncQuickSearchLayoutCommand() {
     return changed;
 }
 
+function readViewCommandFile() {
+    try {
+        var raw = String(utils.ReadTextFile(VIEW_COMMAND_FILE, 65001) || '');
+        return {
+            raw: raw,
+            command: DarkOneViewBridge.parse(raw, new Date().getTime())
+        };
+    } catch (e) {}
+    return null;
+}
+
+function acknowledgeViewCommandFile() {
+    try {
+        var result = utils.RemovePath(VIEW_COMMAND_FILE);
+        if (result === false) throw new Error('utils.RemovePath returned false');
+        return true;
+    } catch (e) {
+        return tryWriteRuntimeFile(VIEW_COMMAND_FILE, '', 'view-command acknowledgement');
+    }
+}
+
+function syncViewCommandFile() {
+    var state = readViewCommandFile();
+    if (!state) return false;
+    var command = state.command;
+    if (!command) {
+        // A crash/restart can leave an expired or malformed command behind.
+        // Remove non-empty invalid payloads once so the 100 ms bridge does not
+        // reread the same stale command for the remainder of the session.
+        if (state.raw) acknowledgeViewCommandFile();
+        return false;
+    }
+    if (command.id === lastViewCommandId) {
+        acknowledgeViewCommandFile();
+        return false;
+    }
+    lastViewCommandId = command.id;
+    var payload = DarkOneViewBridge.serialiseNotification(command.command);
+    if (payload) {
+        try { window.NotifyOthers(DarkOneViewBridge.notification, payload); } catch (e) {}
+    }
+    acknowledgeViewCommandFile();
+    return !!payload;
+}
+
 function ensureRuntimeBridge() {
     if (runtimeBridgePollTimer) return;
     lastResetCommandId = String(window.GetProperty(LAST_RESET_COMMAND_PROPERTY, '') || '');
     syncBottomAreaStateFile(true);
     syncResetCommandFile();
     syncQuickSearchLayoutCommand();
+    syncViewCommandFile();
     runtimeBridgePollTick = 0;
     runtimeBridgePollTimer = setInterval(function () {
         syncBottomAreaStateFile(false);
         syncQuickSearchLayoutCommand();
+        syncViewCommandFile();
         runtimeBridgePollTick++;
         if (runtimeBridgePollTick >= RESET_COMMAND_POLL_DIVISOR) {
             runtimeBridgePollTick = 0;

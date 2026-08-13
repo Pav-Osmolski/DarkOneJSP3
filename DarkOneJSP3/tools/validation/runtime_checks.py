@@ -1930,9 +1930,9 @@ def run(ctx: ValidationContext) -> None:
     }};
     const hostFactory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'console',
-        'darkOneJsp3ResetScope',
+        'darkOneJsp3ResetScope', 'DarkOneViewBridge',
         colourSource + '\\n' + protocolSource + '\\n' + resetSource + '\\n' + hostSource +
-        '\\nreturn {{paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncReset:syncResetCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){{ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}}}};'
+        '\\nreturn {{paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncReset:syncResetCommandFile,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){{ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}}}};'
     );
     const host = hostFactory(
         hostWindow,
@@ -1946,6 +1946,16 @@ def run(ctx: ValidationContext) -> None:
         function(data) {{
             try {{ data = typeof data === 'string' ? JSON.parse(data) : data; }} catch (e) {{ return null; }}
             return data && (data.scope === 'appearance' || data.scope === 'behaviour' || data.scope === 'all') ? data.scope : null;
+        }},
+        {{
+            commandFile: 'P:\\js_data\\darkonejsp3.view-command.txt',
+            notification: 'DarkOneJSP3.View.Command',
+            parse(data) {{
+                data = String(data || '');
+                if (data === 'valid-view') return {{id:'view-1', command:'layout-toggle'}};
+                return null;
+            }},
+            serialiseNotification(command) {{ return command ? 'v1|' + command : null; }}
         }}
     );
     host.setSize(1920, 300);
@@ -1962,6 +1972,19 @@ def run(ctx: ValidationContext) -> None:
     hostIntervalCallback();
     if ((readCounts[RESET_COMMAND] || 0) !== resetReadsAfterEnsure + 1)
         throw new Error('Factory-reset command file was not checked at 500 ms');
+
+    const VIEW_COMMAND = 'P:\\js_data\\darkonejsp3.view-command.txt';
+    files[VIEW_COMMAND] = 'expired-view';
+    if (host.syncView()) throw new Error('An invalid/expired view command was processed');
+    if (Object.prototype.hasOwnProperty.call(files, VIEW_COMMAND))
+        throw new Error('Invalid/expired view command file was not acknowledged and removed');
+    files[VIEW_COMMAND] = 'valid-view';
+    if (!host.syncView()) throw new Error('A valid view command was not relayed');
+    if (Object.prototype.hasOwnProperty.call(files, VIEW_COMMAND))
+        throw new Error('Processed view command file was not acknowledged and removed');
+    const viewEvent = hostNotifications.filter(item => item[0] === 'DarkOneJSP3.View.Command').pop();
+    if (!viewEvent || viewEvent[1] !== 'v1|layout-toggle')
+        throw new Error('Valid view command was not rebroadcast correctly');
 
     const fills = [];
     const gr = {{ FillSolidRect(x,y,w,h,colour) {{ fills.push([x,y,w,h,colour>>>0]); }} }};
@@ -2156,24 +2179,46 @@ def run(ctx: ValidationContext) -> None:
     const properties = new Map();
     const notifications = [];
     const fills = [];
+    const operations = [];
+    let repaints = 0;
+    const panels = {{
+        Info: {{ name: 'Info', Width: 638, visible: true }},
+        Art: {{ name: 'Art', Width: 638, visible: true }},
+        Playlist: {{ name: 'Playlist', Width: 638, visible: true }}
+    }};
     const windowMock = {{
         GetProperty(name, fallback) {{
             return properties.has(name) ? properties.get(name) : fallback;
         }},
         SetProperty(name, value) {{ properties.set(name, value); }},
         GetColourCUI(index) {{ return index === 3 ? 0xff445566 : 0xffffffff; }},
-        NotifyOthers(name, data) {{ notifications.push([name, data]); }},
-        Repaint() {{}},
+        NotifyOthers(name, data) {{
+            notifications.push([name, data]);
+            if (name === 'DarkOneJSP3.ArtSpectrum.PrepareLayout')
+                operations.push(['prepare', String(data)]);
+        }},
+        Repaint() {{ repaints++; }},
         CreatePopupMenu() {{ throw new Error('Menu should not be opened by paint smoke test'); }}
     }};
     const DOJSP3Mock = {{
         colours: {{ bar: 0xff202020, separator: 0xff181818 }},
+        titles: {{ infoStack: 'Info', artSpectrum: 'Art', playlist: 'Playlist' }},
         clamp(value, minimum, maximum) {{ return Math.max(minimum, Math.min(maximum, value)); }},
-        idiv(value, divisor) {{ return Math.floor(value / divisor); }}
+        idiv(value, divisor) {{ return Math.floor(value / divisor); }},
+        panel(name) {{ return panels[name] || null; }},
+        move(panel, x, y, width, height) {{
+            panel.Width = width;
+            operations.push(['move', panel.name, x, y, width, height]);
+        }},
+        show(panel, visible) {{
+            if (!panel) return;
+            panel.visible = Boolean(visible);
+            operations.push(['show', panel.name, Boolean(visible)]);
+        }}
     }};
     const factory = new Function(
-        'window', 'fb', 'include', 'utils', 'DOJSP3', 'darkOneJsp3HandleReset',
-        colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, parseDividerState: DarkOneProtocol.divider.parseState, isDividerPoint, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
+        'window', 'fb', 'include', 'utils', 'DOJSP3', 'darkOneJsp3HandleReset', 'DarkOneViewBridge',
+        colourSource + '\\n' + protocolSource + '\\n' + source + '\\nreturn {{ on_paint, on_notify_data, dividerMode, dividerColour, dividerState, parseDividerState: DarkOneProtocol.divider.parseState, isDividerPoint, dividerMetrics, setMainLayoutMode, setSize: function(w, h) {{ ww = w; wh = h; }} }};'
     );
     const controller = factory(
         windowMock,
@@ -2181,7 +2226,12 @@ def run(ctx: ValidationContext) -> None:
         function() {{}},
         {{}},
         DOJSP3Mock,
-        function() {{ return false; }}
+        function() {{ return false; }},
+        {{
+            notification: 'DarkOneJSP3.View.Command',
+            commands: {{ layoutToggle: 'layout-toggle' }},
+            parseNotification() {{ return null; }}
+        }}
     );
     const gr = {{ FillSolidRect(x, y, w, h, colour) {{ fills.push([x, y, w, h, colour >>> 0]); }} }};
     controller.setSize(1920, 900);
@@ -2223,6 +2273,40 @@ def run(ctx: ValidationContext) -> None:
         throw new Error('Divider state query did not return the stored state');
     if (!controller.isDividerPoint(635) || controller.isDividerPoint(630))
         throw new Error('Divider context hit target was not expanded to ten pixels');
+
+    // Visualiser state must never control standard divider visibility. Art-only
+    // repaints the parent so both host-owned divider strips are restored.
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 0);
+    fills.length = 0;
+    const repaintsBeforeArtOnly = repaints;
+    controller.on_notify_data('DarkOneJSP3.ArtSpectrum.Mode.State', 'art-only');
+    if (repaints <= repaintsBeforeArtOnly)
+        throw new Error('Art-only mode did not repaint the standard host dividers');
+    controller.on_paint(gr);
+    if (fills.length !== 3)
+        throw new Error('Standard layout lost a side divider when Spectrum was hidden');
+
+    // Alternate layout owns only the right divider between ArtSpectrum and
+    // Playlist. There is no left divider because ArtSpectrum starts at x=0.
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 1);
+    fills.length = 0;
+    controller.on_paint(gr);
+    if (fills.length !== 2 || fills[1][0] !== 900)
+        throw new Error('Alternate layout did not paint exactly its right divider');
+
+    // Layout transitions must hide ArtSpectrum, prepare final child geometry,
+    // move the host/siblings, then reveal ArtSpectrum in the same callback.
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 0);
+    operations.length = 0;
+    controller.setMainLayoutMode(1);
+    const hideArt = operations.findIndex(item => item[0] === 'show' && item[1] === 'Art' && item[2] === false);
+    const prepare = operations.findIndex(item => item[0] === 'prepare');
+    const moveArt = operations.findIndex(item => item[0] === 'move' && item[1] === 'Art');
+    const movePlaylist = operations.findIndex(item => item[0] === 'move' && item[1] === 'Playlist');
+    const showArt = operations.findIndex(item => item[0] === 'show' && item[1] === 'Art' && item[2] === true);
+    if (!(hideArt >= 0 && prepare > hideArt && moveArt > prepare &&
+            movePlaylist > moveArt && showArt > movePlaylist))
+        throw new Error('Alternate layout transition exposes intermediate ArtSpectrum geometry');
     """
         result = subprocess.run([node, '-e', divider_smoke], capture_output=True, text=True)
         if result.returncode:
@@ -3853,9 +3937,11 @@ assert(queueIndexEvaluations === 0, 'Writable command path triggered fallback qu
     # the release validator aware of the regressions found during the v0.1.14
     # prototype cycle instead of leaving them in a one-off test overlay.
     if node:
-        quick_search_source = text(project / 'jscript' / 'js' / 'Quick_Search.js')
         quick_search_smoke = f"""
-const source = {json.dumps(quick_search_source)};
+const fs = require('fs');
+const source = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Quick_Search.js'))}, 'utf8');
+const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
 function assert(condition, message) {{ if (!condition) throw new Error(message); }}
 String.prototype.calc_width2 = function() {{ return this.length * 8; }};
 const properties = new Map();
@@ -3872,6 +3958,7 @@ const windowMock = {{
 }};
 const utilsMock = {{
     IsFile() {{ return false; }}, CreateFolder() {{ return true; }},
+    ReadTextFile() {{ throw new Error('no runtime state file'); }},
     WriteTextFile(path, content) {{ writes.push([path, content]); return true; }},
     CreateTextLayout() {{ return {{CalcTextHeight() {{ return 18; }}, Dispose() {{}}}}; }},
     IsKeyPressed() {{ return false; }}
@@ -3905,7 +3992,6 @@ const plmanMock = {{
     IsAutoPlaylist() {{ return false; }}
 }};
 const fbMock = {{ProfilePath:'P:/', CreateHandleList() {{ return new HandleList(); }}, GetLibraryItems() {{ return new HandleList(); }}}};
-const colour = {{opaque(value) {{ return Number(value); }}, toHex() {{ return '#000000'; }}, pickJscript() {{ return null; }}}};
 function RGB(r,g,b) {{ return (0xff000000 | (r<<16) | (g<<8) | b); }}
 function setAlpha(value) {{ return value; }}
 function blendColours(value) {{ return value; }}
@@ -3917,10 +4003,12 @@ function oInputbox(w,h,text,empty,func) {{
     this.resetCursorTimer=function(){{}}; this.GetCx=function(pos){{return pos*8;}}; this.CalcText=function(){{}};
 }}
 const factory = new Function(
-    'window','plman','fb','utils','DarkOneColour','RGB','setAlpha','blendColours','oInputbox','cInputbox','console',
-    'var g_font_12 = JSON.stringify({{Name:"Segoe UI",Size:12,Weight:400,Style:0,Stretch:5}});' + source + '\\nreturn DarkOneQuickSearch;'
+    'window','plman','fb','utils','RGB','setAlpha','blendColours','oInputbox','cInputbox','console',
+    colourSource + '\\n' + protocolSource + '\\n' +
+    'var g_font_12 = JSON.stringify({{Name:"Segoe UI",Size:12,Weight:400,Style:0,Stretch:5}});' + source + '\\nreturn {{ QuickSearch: DarkOneQuickSearch, Protocol: DarkOneProtocol }};'
 );
-const QuickSearch = factory(windowMock,plmanMock,fbMock,utilsMock,colour,RGB,setAlpha,blendColours,oInputbox,cInputbox,console);
+const quickApi = factory(windowMock,plmanMock,fbMock,utilsMock,RGB,setAlpha,blendColours,oInputbox,cInputbox,console);
+const QuickSearch = quickApi.QuickSearch;
 const qs = new QuickSearch();
 assert(qs.queryFilter(new HandleList(['extended']), '%artist% IS x').Count === 1,
     'Extended query path did not use IMetadbHandleList.GetQueryItems');
@@ -4032,6 +4120,22 @@ assert(qs.properties.targetPlaylist === 'Quick Search' && quickIndex >= 0 && pla
 assert(source.indexOf('quicksearch.png') !== -1 && source.indexOf('RunCmdAsync') === -1 && source.indexOf('powershell') === -1,
     'Quick Search custom PNG path regressed to external file-picker machinery');
 assert(qs.properties.lines === 2 && qs.properties.showPlaceholder === true, 'Quick Search reset/default appearance values regressed');
+// Shared background palette: Transparent must follow the live Bottom-area
+// backing while Error retains its separate semantic default.
+qs.setBackgroundColourMode('normalBackgroundMode', quickApi.Protocol.bottomArea.modes.transparent, false);
+qs.parentBackgroundChanged(quickApi.Protocol.bottomArea.serialiseState(
+    quickApi.Protocol.bottomArea.state(3, 0xff123456, 4, 0xff000000)
+));
+assert((qs.colours.background >>> 0) === 0xff123456,
+    'Quick Search Transparent normal background did not inherit the live Bottom-area custom colour');
+qs.setBackgroundColourMode('errorBackgroundMode', quickApi.Protocol.bottomArea.modes.transparent, true);
+qs.lastSuccess = false;
+qs.applyInputColours();
+assert((qs.colours.errorBackground >>> 0) === 0xff123456,
+    'Quick Search Transparent error background did not inherit the live Bottom-area custom colour');
+qs.setBackgroundColourMode('errorBackgroundMode', 6, true);
+assert((qs.colours.errorBackground >>> 0) === 0xff581f1f,
+    'Quick Search semantic Error background default changed');
 """
         result = subprocess.run([node, '-e', quick_search_smoke], capture_output=True, text=True)
         if result.returncode:

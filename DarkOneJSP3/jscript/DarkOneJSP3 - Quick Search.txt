@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Quick Search"
-// @version "0.1.14"
+// @version "0.1.15"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\jsplitter_protocols.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Quick_Search.js"
 // ==/PREPROCESSOR==
 
@@ -51,6 +52,10 @@ function on_script_unload() { quickSearch.dispose(); }
 function on_size() { quickSearch.size(window.Width, window.Height); }
 
 function on_notify_data(name, info) {
+    if (name === DarkOneProtocol.bottomArea.notifications.state) {
+        quickSearch.parentBackgroundChanged(info);
+        return;
+    }
     if (name === 'DarkOneJSP3.QuickSearch.SearchForSame') {
         try { quickSearch.contextSearch(typeof info === 'string' ? JSON.parse(info) : info); } catch (e) {}
     }

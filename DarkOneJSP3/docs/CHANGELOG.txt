@@ -1,6 +1,47 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.6 - Layout/Spectrum view controls and shared Quick Search backgrounds
+--------------------------------------------------------------------------
+
+- Added persistent DarkOneJSP3 internal optional-button commands
+  `DarkOneJSP3/Layout/Toggle` and `DarkOneJSP3/Visualiser/Toggle`. The supplied
+  configuration can label these buttons LAYOUT and SPECTRUM while command style
+  4 is detected/cached automatically.
+- Added a standard/alternate main layout toggle. Standard keeps
+  InfoStack | ArtSpectrum | Playlist; alternate hides InfoStack, moves
+  ArtSpectrum to the left and gives Playlist all remaining width.
+- When Spectrum is hidden in alternate layout, ArtSpectrum uses a square-leading
+  width derived from the available main-area height so Album Art can remain a
+  full 1:1 square instead of being constrained to the legacy third-column grid.
+- Added a persistent Spectrum toggle. Art-only mode hides DOJSP3.Spectrum and
+  gives DOJSP3.AlbumArt the complete ArtSpectrum host rectangle.
+- Hardened main-layout transitions by hiding ArtSpectrum while its target child
+  geometry and sibling bounds are applied synchronously, eliminating the
+  intermediate right-edge flash seen during early test builds.
+- Corrected upper-divider behaviour: standard layout always retains both side
+  dividers even when Spectrum is hidden; alternate layout paints only the right
+  divider between ArtSpectrum and Playlist.
+- Added Album Art > Panel sizing with Fit square inside panel (default) and Fill
+  panel height (crop sides). The latter keeps a 1:1 square based on panel height
+  and clips its horizontal edges when the host becomes too narrow.
+- Advanced Album Art - Enhanced to 0.1.2.
+- Advanced Quick Search to 0.1.15 and standardised Normal background on the
+  shared DarkOneJSP3 six-mode palette: Transparent / inherit parent, Black, both
+  DarkOne greys, Columns UI global background and remembered Custom colour.
+- Added the same shared palette to Error background while retaining its existing
+  semantic dark-red Default. Transparent modes follow the live shared Bottom
+  area backing state without adding another runtime poller.
+- Added one-time migration from the v0.1.14 Default/Custom background properties
+  and retained the separate Custom colour / Set custom colour interaction.
+- Hardened the view-command bridge so malformed or expired non-empty command
+  files are acknowledged instead of being reread indefinitely, and added the
+  generated view-command file to package hygiene and `.gitignore` enforcement.
+- Expanded runtime/static regression coverage for both view modes, divider
+  visibility, transition ordering, Album Art square sizing, shared Quick Search
+  background inheritance and stale view-command cleanup.
+- Advanced Main Columns to 0.7.38 and the release validator to 0.10.2.
+
 v1.0.5 - Scripted Quick Search and release hardening
 ----------------------------------------------------
 

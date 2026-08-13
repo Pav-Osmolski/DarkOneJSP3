@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.5
+DarkOneJSP3 v1.0.6
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -93,9 +93,12 @@ Current highlights
 - Dot Matrix values render directly from cached sprite bitmaps; control-panel
   resize callbacks reuse button/knob objects, and InfoStack reuses its resolved
   render model and unchanged fonts.
-- The recommended manual layout now uses the scripted JScript Panel 3 Quick
-  Search implementation with responsive sizing, history/favourites, multiple
-  search/result modes and protected reusable Standard results playlists.
+- The scripted JScript Panel 3 Quick Search provides responsive sizing,
+  history/favourites, multiple search/result modes, protected reusable Standard
+  results playlists and shared Normal/Error background palette options.
+- Optional LAYOUT and SPECTRUM buttons can switch between the standard and
+  ArtSpectrum/Playlist views and toggle the Spectrum panel without rebuilding
+  the Columns UI hierarchy.
 - The recommended DarkOneJSP3 Queue Viewer uses a direct, writable JSplitter
   playback-queue bridge, avoiding playlist-wide discovery scans and restoring
   remove, multi-remove, clear and reorder controls. The standalone sample stays

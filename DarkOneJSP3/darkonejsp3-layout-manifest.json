@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -104,7 +104,7 @@
       "title": "DOJSP3.QuickSearch",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt",
-      "version": "0.1.14"
+      "version": "0.1.15"
     },
     {
       "number": 12,
@@ -400,7 +400,12 @@
       "javascript_commands_marked_advanced": true,
       "message_box_information_icon": "MB_ICONASTERISK (JScript Panel 3 helper constant)",
       "unsupported_mb_iconinformation_removed": true,
-      "label_character_limit": 10
+      "label_character_limit": 10,
+      "darkone_internal_view_commands": true,
+      "internal_view_commands": [
+        "DarkOneJSP3/Layout/Toggle",
+        "DarkOneJSP3/Visualiser/Toggle"
+      ]
     },
     "request_identity": {
       "separate_api_and_html_profiles": true,
@@ -590,7 +595,8 @@
       "cross_component_command_file": "js_data/darkonejsp3.reset-command.txt",
       "jsplitter_rebroadcast_bridge": true,
       "isolated_component_hosts_tested": true,
-      "expired_commands_rejected": true
+      "expired_commands_rejected": true,
+      "view_modes_covered": true
     },
     "info_stack": {
       "automatic_tab_font_sizing": true,
@@ -878,7 +884,7 @@
       "legacy_property_keys_preserved": true
     },
     "album_art_navigation": {
-      "version": "0.1.0",
+      "version": "0.1.1",
       "wheel_debounce_ms": 80,
       "trailing_wheel_coalescing": true,
       "keyboard_selection_immediate": true,
@@ -886,7 +892,12 @@
       "script_unload_cancels_pending": true,
       "intermediate_property_writes_avoided": true,
       "intermediate_image_decodes_avoided": true,
-      "script_unload_disposes_bitmaps": true
+      "script_unload_disposes_bitmaps": true,
+      "square_panel_sizing_modes": [
+        "Fit square inside panel",
+        "Fill panel height (crop sides)"
+      ],
+      "square_panel_sizing_default": "Fit square inside panel"
     },
     "bottom_area_appearance": {
       "menu_location": "DarkOne Tools > Appearance",
@@ -976,7 +987,7 @@
     },
     "quick_search": {
       "implementation": "JScript Panel 3 with JSplitter parent-layout bridge",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "sources": [
         "Media library",
         "Current playlist",
@@ -1024,7 +1035,43 @@
       "autosearch": true,
       "standard_results_lock_identity": "persistent playlist GUID + expected mask",
       "native_component_alternative": "Quick Search Toolbar",
-      "native_component_used_by_current_bundled_fcl": true
+      "native_component_used_by_current_bundled_fcl": true,
+      "background_palette": "shared DarkOneJSP3 six-mode palette",
+      "normal_background_default": "Columns UI global background",
+      "error_background_default": "semantic dark red",
+      "transparent_background_inherits_bottom_area": true,
+      "bottom_area_live_state_updates": true,
+      "remembered_custom_colour_separate_picker": true
+    },
+    "view_modes": {
+      "version": "0.1.0",
+      "layout_command": "DarkOneJSP3/Layout/Toggle",
+      "spectrum_command": "DarkOneJSP3/Visualiser/Toggle",
+      "suggested_button_labels": [
+        "LAYOUT",
+        "SPECTRUM"
+      ],
+      "standard_layout": [
+        "DOJSP3.InfoStack",
+        "DOJSP3.ArtSpectrum",
+        "DOJSP3.Playlist"
+      ],
+      "alternate_layout": [
+        "DOJSP3.ArtSpectrum",
+        "DOJSP3.Playlist"
+      ],
+      "alternate_info_stack_hidden": true,
+      "spectrum_toggle_persistent": true,
+      "layout_toggle_persistent": true,
+      "art_only_uses_full_art_spectrum_host": true,
+      "alternate_art_only_square_leading_column": true,
+      "standard_side_dividers_when_spectrum_hidden": 2,
+      "alternate_side_dividers": 1,
+      "alternate_side_divider_position": "right edge of DOJSP3.ArtSpectrum",
+      "transition_strategy": "synchronous ArtSpectrum hide/prepare/move/show",
+      "runtime_command_file": "js_data/darkonejsp3.view-command.txt",
+      "stale_command_acknowledgement": true,
+      "factory_reset_restores_standard_layout_and_spectrum": true
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

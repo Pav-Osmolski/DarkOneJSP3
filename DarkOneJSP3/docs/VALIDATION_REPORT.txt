@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.5 Validation Report
+DarkOneJSP3 v1.0.6 Validation Report
 ====================================
 
 Scope
@@ -38,6 +38,10 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
+- Quick Search 0.1.15 background tests verify the shared six-mode DarkOne
+  palette, one-time migration from the previous Default/Custom background model and live
+  Transparent / inherit parent resolution against Bottom-area state for both
+  Normal and Error backgrounds. The dedicated dark-red Error Default is retained.
 - The scripted Quick Search is runtime-tested for persistent result modes,
   reusable Standard-results refresh including valid zero-match clearing,
   persistent-GUID-plus-mask lock ownership, target rename/change/reset cleanup
@@ -231,6 +235,14 @@ Checks
   background colour.
 - Upper-divider colour controls retain established geometry and remain
   independent from the lower control-divider settings.
+- LAYOUT/SPECTRUM view-mode tests cover standard and alternate upper geometry,
+  persistent Spectrum visibility, square-leading art-only allocation, standard
+  two-divider and alternate right-divider-only painting, and synchronous
+  hide/prepare/move/show ordering that prevents intermediate native-child frames.
+- View-command bridge tests reject and acknowledge stale/malformed command files
+  so the 100 ms runtime bridge cannot reread one invalid payload indefinitely.
+- Album Art 0.1.2 tests require both Panel sizing modes and the full-height square
+  crop geometry while preserving the existing image-aspect controls.
 - Bottom-area runtime tests isolate the JScript Panel and JSplitter notification
   domains, verify file-backed synchronisation for all three child panels and the
   host, cover every palette mode, transparent painting, full-host geometry,

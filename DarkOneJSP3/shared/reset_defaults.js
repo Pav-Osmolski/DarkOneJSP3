@@ -61,7 +61,15 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE": 1,
             "DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR": 0xff000000
         },
-        behaviour: {}
+        behaviour: {
+            "DARKONEJSP3.MAIN.LAYOUT.MODE": 0
+        }
+    },
+    "art-spectrum": {
+        appearance: {},
+        behaviour: {
+            "DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE": 0
+        }
     },
     "bottom-controls": {
         appearance: {

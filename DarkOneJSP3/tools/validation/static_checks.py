@@ -28,7 +28,10 @@ def run(ctx: ValidationContext) -> None:
         require(root / relative_path)
 
     # Package hygiene for a public release.
-    for prototype_note in [root / 'QUICK_SEARCH_TESTING.txt']:
+    for prototype_note in [
+            root / 'QUICK_SEARCH_TESTING.txt',
+            root / 'QUICK_SEARCH_BACKGROUND_TESTING.txt',
+            root / 'LAYOUT_VISUALISER_TESTING.txt']:
         if prototype_note.exists():
             errors.append('Prototype testing note must not be distributed: ' + rel(prototype_note))
     all_files = [
@@ -53,7 +56,8 @@ def run(ctx: ValidationContext) -> None:
                 'darkonejsp3.queue-command.json',
                 'darkonejsp3.queue-command-result.json',
                 'darkonejsp3.quicksearch-layout-command.txt',
-                'darkonejsp3.quicksearch-context-tags.json'}:
+                'darkonejsp3.quicksearch-context-tags.json',
+                'darkonejsp3.view-command.txt'}:
             errors.append('Runtime-generated state must not be distributed: ' + relative)
     for paths in casefold_paths.values():
         if len(paths) > 1:
@@ -70,6 +74,7 @@ def run(ctx: ValidationContext) -> None:
                 'js_data/darkonejsp3.queue-command-result.json',
                 'js_data/darkonejsp3.quicksearch-layout-command.txt',
                 'js_data/darkonejsp3.quicksearch-context-tags.json',
+                'js_data/darkonejsp3.view-command.txt',
                 'DarkOneJSP3/shared/bottom-area-state.txt']:
             if runtime_path not in ignored:
                 errors.append('.gitignore does not exclude runtime state: ' + runtime_path)
@@ -297,7 +302,7 @@ def run(ctx: ValidationContext) -> None:
         album_art_navigation = manifest.get('enhancements', {}).get(
             'album_art_navigation', {})
         expected_album_art_navigation = {
-            'version': '0.1.0',
+            'version': '0.1.1',
             'wheel_debounce_ms': 80,
             'trailing_wheel_coalescing': True,
             'keyboard_selection_immediate': True,
@@ -517,6 +522,15 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest omits serialised reset notification payloads')
         if factory_reset.get('legacy_object_payload_accepted') is not True:
             errors.append('Manifest omits legacy reset payload compatibility')
+        view_modes = manifest.get('enhancements', {}).get('view_modes', {})
+        if view_modes.get('layout_command') != 'DarkOneJSP3/Layout/Toggle' or \
+                view_modes.get('spectrum_command') != 'DarkOneJSP3/Visualiser/Toggle':
+            errors.append('Manifest view-mode commands have drifted')
+        if view_modes.get('standard_side_dividers_when_spectrum_hidden') != 2 or \
+                view_modes.get('alternate_side_dividers') != 1 or \
+                view_modes.get('stale_command_acknowledgement') is not True:
+            errors.append('Manifest view-mode hardening has drifted')
+
         playlist_manager = manifest.get('enhancements', {}).get('playlist_manager', {})
         if playlist_manager.get('alternating_row_shading') is not True or \
                 playlist_manager.get('alternating_row_shading_default') is not True:
@@ -551,8 +565,8 @@ def run(ctx: ValidationContext) -> None:
         if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
             errors.append('Manifest does not describe the writable scripted Queue Viewer')
         quick_search_manifest = manifest.get('enhancements', {}).get('quick_search', {})
-        if quick_search_manifest.get('version') != '0.1.14':
-            errors.append('Manifest Quick Search version is not 0.1.14')
+        if quick_search_manifest.get('version') != '0.1.15':
+            errors.append('Manifest Quick Search version is not 0.1.15')
         if quick_search_manifest.get('implementation') != 'JScript Panel 3 with JSplitter parent-layout bridge':
             errors.append('Manifest does not identify the scripted Quick Search architecture')
         if quick_search_manifest.get('height_default') != '2 lines' or quick_search_manifest.get('responsive_font') is not True:
@@ -874,7 +888,6 @@ def run(ctx: ValidationContext) -> None:
             'options.darkonejsp3_page_background === true',
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3)",
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR', RGB(24, 24, 24))",
-            "'Transparent / inherit parent'",
             "'DarkOne grey'",
             "'DarkOne dark grey'",
             "'Columns UI global background'",
@@ -1092,7 +1105,7 @@ def run(ctx: ValidationContext) -> None:
         album_art_body = text(album_art_entry)
         for token in [
             '// @name "Album Art - Enhanced"',
-            '// @version "0.1.1"',
+            '// @version "0.1.2"',
             '// @author "marc2003 / DeViLhoOD"',
             'albumart.dispose();',
         ]:
@@ -1115,6 +1128,10 @@ def run(ctx: ValidationContext) -> None:
             'this.wheel_timer = window.SetTimeout(function () {',
             'return this.cycle_artwork(s, true);',
             'this.cancel_wheel_selection();',
+            "square_sizing : new _p('2K3.ARTREADER.SQUARE.SIZING', 0)",
+            "'Panel sizing'",
+            "'Fill panel height (crop sides)'",
+            'this.square_rect = function ()',
         ]:
             if token not in album_art_impl_body:
                 errors.append('Album Art wheel hardening is missing: ' + token)
@@ -1540,9 +1557,13 @@ def run(ctx: ValidationContext) -> None:
             if token not in sample_registry:
                 errors.append('Playlist Manager reset default is missing: ' + token)
 
-    for path in [project / 'jsplitter' / '04_art_spectrum.js']:
-        if path.exists() and 'DARKONEJSP3_RESET_ROLE' in text(path):
-            errors.append(rel(path) + ' declares a no-op reset role')
+    art_spectrum_reset = project / 'jsplitter' / '04_art_spectrum.js'
+    if art_spectrum_reset.exists():
+        art_spectrum_reset_body = text(art_spectrum_reset)
+        if 'var DARKONEJSP3_RESET_ROLE = "art-spectrum";' not in art_spectrum_reset_body:
+            errors.append('Album Art/Spectrum controller does not declare its reset role')
+        if 'darkOneJsp3HandleReset(name, data)' not in art_spectrum_reset_body:
+            errors.append('Album Art/Spectrum controller does not handle factory reset')
 
     shared = project / 'jsplitter' / 'shared.js'
     if shared.exists() and 'if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;' not in text(shared):
@@ -2016,9 +2037,17 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'var px = Math.max(1, DOJSP3.idiv(ww, 640));',
             'var dividerCentre = DOJSP3.idiv(ww, 3);',
-            'var artLeft = DOJSP3.clamp(leftWidth + px * 2, leftWidth, playlistLeft);',
-            'var rightDivider = Math.max(artLeft, playlistLeft - px * 2);',
-            'var artWidth = Math.max(1, rightDivider - artLeft);',
+            'var dividerWidth = px * 2;',
+            'function alternateArtWidth(baseWidth, dividerWidth)',
+            'var preferred = artSpectrumVisualiserVisible ? baseWidth : wh;',
+            'function mainLayoutGeometry(modeOverride)',
+            'function prepareArtSpectrum(width, height)',
+            'function layoutMainColumns(modeOverride, transition)',
+            'if (hideArtDuringTransition) DOJSP3.show(art, false);',
+            'if (hideArtDuringTransition) prepareArtSpectrum(geometry.artWidth, wh);',
+            'DOJSP3.show(art, true);',
+            'layoutMainColumns(MAIN_LAYOUT_ART_PLAYLIST, true);',
+            'ART_SPECTRUM_PREPARE_NOTIFICATION',
             "var DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE';",
             "'DARKONEJSP3.ART.SPECTRUM.DIVIDER.CUSTOM.COLOUR';",
             'function dividerColour()',
@@ -2028,8 +2057,12 @@ def run(ctx: ValidationContext) -> None:
             'if (mode === DIVIDER_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);',
             'if (mode === DIVIDER_CUSTOM) return dividerCustomColour();',
             'if (dividerMode() === DIVIDER_TRANSPARENT) return;',
-            'gr.FillSolidRect(metrics.left, 0, metrics.width, wh, colour);',
-            'gr.FillSolidRect(metrics.right, 0, metrics.width, wh, colour);',
+            "var MAIN_LAYOUT_MODE_PROPERTY = 'DARKONEJSP3.MAIN.LAYOUT.MODE';",
+            'MAIN_LAYOUT_ART_PLAYLIST',
+            'dividerPositions: [artWidth]',
+            'positions: geometry.dividerPositions',
+            'gr.FillSolidRect(metrics.positions[i], 0, metrics.width, wh, colour);',
+            'DarkOneViewBridge.commands.layoutToggle',
             'DIVIDER_PROTOCOL.notifications.query',
             'DIVIDER_PROTOCOL.notifications.set',
             "'Side divider colour'",
@@ -2047,6 +2080,11 @@ def run(ctx: ValidationContext) -> None:
         for obsolete in [
             'gr.FillSolidRect(leftDivider, 0, px * 2, wh, 0xff000000);',
             'gr.FillSolidRect(rightDivider, 0, px * 2, wh, 0xff000000);',
+            'DOJSP3.move(playlist, geometry.playlistX, 0, geometry.playlistWidth, wh);\n        DOJSP3.move(art, geometry.artX, 0, geometry.artWidth, wh);\n        DOJSP3.show(art, true);',
+            'MAIN_LAYOUT_EXPANSION_SETTLE_MS',
+            'stageMainLayoutExpansion',
+            'mainLayoutTransitionTimer',
+            'pendingMainLayoutMode',
         ]:
             if obsolete in body:
                 errors.append('Upper divider remains hard-coded black: ' + obsolete)
@@ -2064,7 +2102,6 @@ def run(ctx: ValidationContext) -> None:
             "'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR'",
             "'Bottom area background'",
             "'Bottom area side divider colour'",
-            "'Transparent / inherit parent'",
             "'Transparent / inherit background'",
             "'Columns UI global background'",
             'if (mode === DARKONE_BOTTOM_MODE_DARKONE) return 0xff202020;',
@@ -2128,6 +2165,8 @@ def run(ctx: ValidationContext) -> None:
             'gr.FillSolidRect(leftDivider, 0, px * 2, wh, dividerColour);',
             'gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);',
             'function on_colours_changed()',
+            'function readViewCommandFile()',
+            'if (state.raw) acknowledgeViewCommandFile();',
         ]:
             if token not in body:
                 errors.append('Shared bottom-area appearance is missing: ' + token)
@@ -2202,14 +2241,50 @@ def run(ctx: ValidationContext) -> None:
     }'''
         if expected_waveform_reset not in reset_body:
             errors.append('Waveform reset defaults do not separate appearance and behaviour correctly')
+        for token in [
+            '"DARKONEJSP3.MAIN.LAYOUT.MODE": 0',
+            '"DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE": 0',
+        ]:
+            if token not in reset_body:
+                errors.append('View-layout reset default is missing: ' + token)
 
     art_spectrum = project / 'jsplitter' / '04_art_spectrum.js'
     if art_spectrum.exists():
         body = text(art_spectrum)
-        if not re.search(r'var\s+inset\s*=\s*0\s*;', body):
-            errors.append('Album Art/Spectrum controller does not use zero inset')
-        if 'var width = Math.max(1, ww);' not in body:
+        for token in [
+            "var ART_SPECTRUM_MODE_PROPERTY = 'DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE';",
+            'ART_SPECTRUM_ART_ONLY',
+            'function layoutArtSpectrumForSize(width, height)',
+            'DOJSP3.move(art, 0, 0, width, height);',
+            'ART_SPECTRUM_PREPARE_NOTIFICATION',
+            'broadcastArtSpectrumMode();',
+            'DOJSP3.show(spectrum, false);',
+            'DarkOneViewBridge.commands.visualiserToggle',
+        ]:
+            if token not in body:
+                errors.append('Album Art/Spectrum responsive view mode is missing: ' + token)
+        if 'layoutArtSpectrumForSize(ww, wh);' not in body:
             errors.append('Album Art/Spectrum controller does not fill its host')
+
+    view_bridge = project / 'shared' / 'view_bridge.js'
+    if view_bridge.exists():
+        body = text(view_bridge)
+        for token in [
+            "DarkOneJSP3.View.Command",
+            "DarkOneJSP3/Layout/Toggle".lower(),
+        ]:
+            pass
+        for token in [
+            "var NOTIFICATION = 'DarkOneJSP3.View.Command';",
+            "layoutToggle: 'layout-toggle'",
+            "visualiserToggle: 'visualiser-toggle'",
+            "darkonejsp3.view-command.txt",
+            'function writeCommand(command)',
+        ]:
+            if token not in body:
+                errors.append('View-command bridge is missing: ' + token)
+    else:
+        errors.append('View-command bridge file is missing')
 
     colour_helper = project / 'shared' / 'colour_utils.js'
     if colour_helper.exists():
@@ -2711,7 +2786,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.14"',
+            '// @version "0.1.15"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',
@@ -2737,6 +2812,10 @@ def run(ctx: ValidationContext) -> None:
             'var QS_LOCK_RECOMMENDED = QS_LOCK_ADD | QS_LOCK_REMOVE | QS_LOCK_REORDER | QS_LOCK_REPLACE | QS_LOCK_RENAME;',
             "scope !== 'appearance' && scope !== 'behaviour' && scope !== 'all'",
             'Tag definitions, history and favourites are user data',
+            'var QS_BACKGROUND_PROTOCOL = DarkOneProtocol.bottomArea;',
+            'this.parentBackgroundChanged = function (data)',
+            'this.resolveSharedBackground = function (mode, customColour, columnsUiBackground, inheritedBackground, allowErrorDefault)',
+            'QS_ERROR_BACKGROUND_DEFAULT',
         ]:
             if token not in body:
                 errors.append('Scripted Quick Search hardening is missing: ' + token)

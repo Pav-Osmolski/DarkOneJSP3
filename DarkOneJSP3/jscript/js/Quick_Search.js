@@ -40,6 +40,19 @@ var QS_FRAME_SUNKEN = 2;
 var QS_COLOUR_DEFAULT = 0;
 var QS_COLOUR_CUSTOM = 1;
 
+// Background colours use the same shared six-mode DarkOne palette as the
+// other configurable panels. Error background retains its semantic Default
+// dark red as an additional contextual mode so existing appearance is not
+// changed merely by enabling the shared palette.
+var QS_BACKGROUND_PROTOCOL = DarkOneProtocol.bottomArea;
+var QS_BACKGROUND_MODES = QS_BACKGROUND_PROTOCOL.modes;
+var QS_BACKGROUND_MODE_VALUES = QS_BACKGROUND_PROTOCOL.modeValues;
+var QS_ERROR_BACKGROUND_DEFAULT = 6;
+var QS_BACKGROUND_PALETTE_VERSION = 1;
+var DARKONE_QUICKSEARCH_BACKGROUND_PALETTE_VERSION_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.COLOUR.BACKGROUND.PALETTE.VERSION';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
+
 var QS_DEFAULT_TAGS = [
     { name: 'All', value: '%artist%|%album artist%|%album%|%title%|%genre%|%date%|%composer%', context: false },
     { name: 'Artist', value: '%artist%', context: true },
@@ -133,8 +146,67 @@ function quickSearchPublishContextTags(tags) {
     try { utils.WriteTextFile(DARKONE_QUICKSEARCH_CONTEXT_FILE, JSON.stringify(output)); } catch (e2) {}
 }
 
+function quickSearchNormaliseBackgroundMode(value, fallback, allowErrorDefault) {
+    value = Math.round(Number(value));
+    if (allowErrorDefault && value === QS_ERROR_BACKGROUND_DEFAULT) return value;
+    return DarkOneColour.normaliseMode(value, QS_BACKGROUND_MODE_VALUES, fallback);
+}
+
+function quickSearchMigrateBackgroundPalette() {
+    var version = Math.round(Number(window.GetProperty(
+        DARKONE_QUICKSEARCH_BACKGROUND_PALETTE_VERSION_PROPERTY,
+        0
+    )) || 0);
+    if (version >= QS_BACKGROUND_PALETTE_VERSION) return;
+
+    // v0.1.14 stored only 0=Default and 1=Custom. Preserve the visible state:
+    // Normal Default was Columns UI background; Error Default was the dedicated
+    // dark red. Remembered custom colours remain untouched.
+    var legacyNormal = Math.round(Number(window.GetProperty(
+        'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE',
+        QS_COLOUR_DEFAULT
+    )) || 0);
+    var legacyError = Math.round(Number(window.GetProperty(
+        'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE',
+        QS_COLOUR_DEFAULT
+    )) || 0);
+
+    window.SetProperty(
+        'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE',
+        legacyNormal === QS_COLOUR_CUSTOM ? QS_BACKGROUND_MODES.custom : QS_BACKGROUND_MODES.columnsUi
+    );
+    window.SetProperty(
+        'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE',
+        legacyError === QS_COLOUR_CUSTOM ? QS_BACKGROUND_MODES.custom : QS_ERROR_BACKGROUND_DEFAULT
+    );
+    window.SetProperty(
+        DARKONE_QUICKSEARCH_BACKGROUND_PALETTE_VERSION_PROPERTY,
+        QS_BACKGROUND_PALETTE_VERSION
+    );
+}
+
+function quickSearchReadBottomAreaStatePath(path) {
+    try {
+        return QS_BACKGROUND_PROTOCOL.parseState(utils.ReadTextFile(path, 65001));
+    } catch (e) {}
+    return null;
+}
+
+function quickSearchReadBottomAreaState() {
+    return quickSearchReadBottomAreaStatePath(DARKONE_QUICKSEARCH_BOTTOM_AREA_STATE_FILE) ||
+        quickSearchReadBottomAreaStatePath(DARKONE_QUICKSEARCH_BOTTOM_AREA_LEGACY_STATE_FILE) ||
+        QS_BACKGROUND_PROTOCOL.state(
+            QS_BACKGROUND_PROTOCOL.defaults.backgroundMode,
+            QS_BACKGROUND_PROTOCOL.defaults.backgroundCustomColour,
+            QS_BACKGROUND_PROTOCOL.defaults.dividerMode,
+            QS_BACKGROUND_PROTOCOL.defaults.dividerCustomColour
+        );
+}
+
 function DarkOneQuickSearch() {
     var self = this;
+
+    quickSearchMigrateBackgroundPalette();
 
     this.properties = {
         source: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.SOURCE', QS_SOURCE_LIBRARY), QS_SOURCE_LIBRARY, QS_SOURCE_ALL_PLAYLISTS)),
@@ -163,11 +235,11 @@ function DarkOneQuickSearch() {
         showPlaceholder: Boolean(window.GetProperty('DARKONEJSP3.QUICKSEARCH.SHOW.PLACEHOLDER', true)),
         normalTextMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
         normalTextCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM', 0xffdcdcdc)),
-        normalBackgroundMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
+        normalBackgroundMode: quickSearchNormaliseBackgroundMode(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE', QS_BACKGROUND_MODES.columnsUi), QS_BACKGROUND_MODES.columnsUi, false),
         normalBackgroundCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM', 0xff1e1e1e)),
         errorTextMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
         errorTextCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.CUSTOM', 0xffffe1e1)),
-        errorBackgroundMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
+        errorBackgroundMode: quickSearchNormaliseBackgroundMode(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE', QS_ERROR_BACKGROUND_DEFAULT), QS_ERROR_BACKGROUND_DEFAULT, true),
         errorBackgroundCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.CUSTOM', 0xff581f1f)),
         lines: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES', 2), 0, 2)),
         widthPercent: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT', 44), 20, 100)),
@@ -177,6 +249,8 @@ function DarkOneQuickSearch() {
         history: quickSearchArray(quickSearchParseJson(window.GetProperty('DARKONEJSP3.QUICKSEARCH.HISTORY', '[]'), [])),
         favorites: quickSearchArray(quickSearchParseJson(window.GetProperty('DARKONEJSP3.QUICKSEARCH.FAVORITES', '[]'), []))
     };
+
+    this.parentBackgroundState = quickSearchReadBottomAreaState();
 
     this.previousMatchBeforeExtended = this.properties.match === QS_MATCH_EXTENDED ? QS_MATCH_ALL : this.properties.match;
     this.autoExtendedActive = false;
@@ -366,6 +440,50 @@ function DarkOneQuickSearch() {
         return true;
     };
 
+    this.resolveSharedBackground = function (mode, customColour, columnsUiBackground, inheritedBackground, allowErrorDefault) {
+        mode = quickSearchNormaliseBackgroundMode(
+            mode,
+            allowErrorDefault ? QS_ERROR_BACKGROUND_DEFAULT : QS_BACKGROUND_MODES.columnsUi,
+            allowErrorDefault
+        );
+        if (allowErrorDefault && mode === QS_ERROR_BACKGROUND_DEFAULT) return RGB(88, 31, 31);
+        if (mode === QS_BACKGROUND_MODES.black) return RGB(0, 0, 0);
+        if (mode === QS_BACKGROUND_MODES.darkOne) return RGB(32, 32, 32);
+        if (mode === QS_BACKGROUND_MODES.darkOneDark) return RGB(24, 24, 24);
+        if (mode === QS_BACKGROUND_MODES.columnsUi) return DarkOneColour.opaque(columnsUiBackground);
+        if (mode === QS_BACKGROUND_MODES.custom) return DarkOneColour.opaque(customColour);
+        return DarkOneColour.opaque(inheritedBackground);
+    };
+
+    this.parentBackgroundColour = function (columnsUiBackground) {
+        var state = this.parentBackgroundState || quickSearchReadBottomAreaState();
+        var inheritedRoot = RGB(24, 24, 24);
+        return this.resolveSharedBackground(
+            state.backgroundMode,
+            state.backgroundCustomColour,
+            columnsUiBackground,
+            inheritedRoot,
+            false
+        );
+    };
+
+    this.parentBackgroundChanged = function (data) {
+        var state = QS_BACKGROUND_PROTOCOL.parseState(data);
+        if (!state) return false;
+        var current = this.parentBackgroundState;
+        var changed = !current ||
+            current.backgroundMode !== state.backgroundMode ||
+            (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0);
+        this.parentBackgroundState = state;
+        if (changed && (
+                this.properties.normalBackgroundMode === QS_BACKGROUND_MODES.transparent ||
+                this.properties.errorBackgroundMode === QS_BACKGROUND_MODES.transparent)) {
+            this.coloursChanged();
+            window.Repaint();
+        }
+        return changed;
+    };
+
     this.coloursChanged = function () {
         var defaultText = RGB(220, 220, 220);
         var defaultBackground = RGB(30, 30, 30);
@@ -375,12 +493,26 @@ function DarkOneQuickSearch() {
             defaultBackground = window.IsDefaultUI ? window.GetColourDUI(1) : window.GetColourCUI(3);
             defaultAccent = window.IsDefaultUI ? window.GetColourDUI(2) : window.GetColourCUI(0);
         } catch (e) {}
+        var parentBackground = this.parentBackgroundColour(defaultBackground);
         this.colours = {
             text: this.properties.normalTextMode === QS_COLOUR_CUSTOM ? this.properties.normalTextCustom : defaultText,
-            background: this.properties.normalBackgroundMode === QS_COLOUR_CUSTOM ? this.properties.normalBackgroundCustom : defaultBackground,
+            background: this.resolveSharedBackground(
+                this.properties.normalBackgroundMode,
+                this.properties.normalBackgroundCustom,
+                defaultBackground,
+                parentBackground,
+                false
+            ),
             accent: defaultAccent,
             errorText: this.properties.errorTextMode === QS_COLOUR_CUSTOM ? this.properties.errorTextCustom : RGB(255, 225, 225),
-            errorBackground: this.properties.errorBackgroundMode === QS_COLOUR_CUSTOM ? this.properties.errorBackgroundCustom : RGB(88, 31, 31)
+            errorBackground: this.resolveSharedBackground(
+                this.properties.errorBackgroundMode,
+                this.properties.errorBackgroundCustom,
+                defaultBackground,
+                parentBackground,
+                true
+            ),
+            parentBackground: parentBackground
         };
         this.applyInputColours();
     };
@@ -1602,13 +1734,24 @@ function DarkOneQuickSearch() {
         window.Repaint();
     };
 
-    this.editCustomColour = function (modeProperty, customProperty, title) {
+    this.setBackgroundColourMode = function (modeProperty, mode, allowErrorDefault) {
+        mode = quickSearchNormaliseBackgroundMode(
+            mode,
+            allowErrorDefault ? QS_ERROR_BACKGROUND_DEFAULT : QS_BACKGROUND_MODES.columnsUi,
+            allowErrorDefault
+        );
+        this.save(modeProperty, mode);
+        this.coloursChanged();
+        window.Repaint();
+    };
+
+    this.editCustomColour = function (modeProperty, customProperty, title, customMode) {
         var current = this.properties[customProperty];
         var chosen = DarkOneColour.pickJscript(current, title, 'Enter a colour as #RRGGBB:');
         if (chosen === null) return false;
         chosen = DarkOneColour.opaque(chosen);
         this.save(customProperty, chosen);
-        this.save(modeProperty, QS_COLOUR_CUSTOM);
+        this.save(modeProperty, typeof customMode === 'number' ? customMode : QS_COLOUR_CUSTOM);
         this.coloursChanged();
         window.Repaint();
         return true;
@@ -1621,6 +1764,19 @@ function DarkOneQuickSearch() {
         child.AppendMenuSeparator();
         child.AppendMenuItem(MF_STRING, idBase + 2, 'Set custom colour...');
         quickSearchMenuRadio(child, idBase, idBase + 1, idBase + (mode === QS_COLOUR_CUSTOM ? 1 : 0));
+        child.AppendTo(menu, MF_STRING, label);
+        return child;
+    };
+
+    this.appendBackgroundColourMenu = function (menu, idBase, label, mode, customColour, includeErrorDefault) {
+        var child = window.CreatePopupMenu();
+        var options = QS_BACKGROUND_PROTOCOL.menuOptions(idBase + (includeErrorDefault ? 1 : 0));
+        if (includeErrorDefault) {
+            options.unshift({ id: idBase, mode: QS_ERROR_BACKGROUND_DEFAULT, label: 'Default' });
+        }
+        DarkOneColour.appendRadioOptions(child, options, mode, customColour, MF_STRING);
+        child.AppendMenuSeparator();
+        child.AppendMenuItem(MF_STRING, idBase + (includeErrorDefault ? 7 : 6), 'Set custom colour...');
         child.AppendTo(menu, MF_STRING, label);
         return child;
     };
@@ -1716,11 +1872,11 @@ function DarkOneQuickSearch() {
                 showPlaceholder: true,
                 normalTextMode: QS_COLOUR_DEFAULT,
                 normalTextCustom: 0xffdcdcdc,
-                normalBackgroundMode: QS_COLOUR_DEFAULT,
+                normalBackgroundMode: QS_BACKGROUND_MODES.columnsUi,
                 normalBackgroundCustom: 0xff1e1e1e,
                 errorTextMode: QS_COLOUR_DEFAULT,
                 errorTextCustom: 0xffffe1e1,
-                errorBackgroundMode: QS_COLOUR_DEFAULT,
+                errorBackgroundMode: QS_ERROR_BACKGROUND_DEFAULT,
                 errorBackgroundCustom: 0xff581f1f,
                 lines: 2,
                 widthPercent: 44,
@@ -1892,9 +2048,9 @@ function DarkOneQuickSearch() {
         visualMenu.AppendMenuItem(MF_STRING, 843, this.properties.statusBadge ? 'Show search-mode indicator ✓' : 'Show search-mode indicator');
         visualMenu.AppendMenuSeparator();
         colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 860, 'Normal text', this.properties.normalTextMode, this.properties.normalTextCustom));
-        colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 863, 'Normal background', this.properties.normalBackgroundMode, this.properties.normalBackgroundCustom));
+        colourSubmenus.push(this.appendBackgroundColourMenu(colourMenu, 880, 'Normal background', this.properties.normalBackgroundMode, this.properties.normalBackgroundCustom, false));
         colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 866, 'Error text', this.properties.errorTextMode, this.properties.errorTextCustom));
-        colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 869, 'Error background', this.properties.errorBackgroundMode, this.properties.errorBackgroundCustom));
+        colourSubmenus.push(this.appendBackgroundColourMenu(colourMenu, 890, 'Error background', this.properties.errorBackgroundMode, this.properties.errorBackgroundCustom, true));
         colourMenu.AppendTo(visualMenu, MF_STRING, 'Colours');
         visualMenu.AppendMenuSeparator();
         visualMenu.AppendMenuItem(MF_STRING, 850, this.properties.frame === QS_FRAME_NONE ? 'Frame: None ✓' : 'Frame: None');
@@ -1999,15 +2155,20 @@ function DarkOneQuickSearch() {
         else if (idx === 860) this.setColourMode('normalTextMode', QS_COLOUR_DEFAULT);
         else if (idx === 861) this.setColourMode('normalTextMode', QS_COLOUR_CUSTOM);
         else if (idx === 862) this.editCustomColour('normalTextMode', 'normalTextCustom', 'Quick Search - Normal text colour');
-        else if (idx === 863) this.setColourMode('normalBackgroundMode', QS_COLOUR_DEFAULT);
-        else if (idx === 864) this.setColourMode('normalBackgroundMode', QS_COLOUR_CUSTOM);
-        else if (idx === 865) this.editCustomColour('normalBackgroundMode', 'normalBackgroundCustom', 'Quick Search - Normal background colour');
+        else if (idx >= 880 && idx <= 885) {
+            var normalBackgroundOption = DarkOneColour.optionForId(QS_BACKGROUND_PROTOCOL.menuOptions(880), idx);
+            if (normalBackgroundOption) this.setBackgroundColourMode('normalBackgroundMode', normalBackgroundOption.mode, false);
+        }
+        else if (idx === 886) this.editCustomColour('normalBackgroundMode', 'normalBackgroundCustom', 'Quick Search - Normal background colour', QS_BACKGROUND_MODES.custom);
         else if (idx === 866) this.setColourMode('errorTextMode', QS_COLOUR_DEFAULT);
         else if (idx === 867) this.setColourMode('errorTextMode', QS_COLOUR_CUSTOM);
         else if (idx === 868) this.editCustomColour('errorTextMode', 'errorTextCustom', 'Quick Search - Error text colour');
-        else if (idx === 869) this.setColourMode('errorBackgroundMode', QS_COLOUR_DEFAULT);
-        else if (idx === 870) this.setColourMode('errorBackgroundMode', QS_COLOUR_CUSTOM);
-        else if (idx === 871) this.editCustomColour('errorBackgroundMode', 'errorBackgroundCustom', 'Quick Search - Error background colour');
+        else if (idx === 890) this.setBackgroundColourMode('errorBackgroundMode', QS_ERROR_BACKGROUND_DEFAULT, true);
+        else if (idx >= 891 && idx <= 896) {
+            var errorBackgroundOption = DarkOneColour.optionForId(QS_BACKGROUND_PROTOCOL.menuOptions(891), idx);
+            if (errorBackgroundOption) this.setBackgroundColourMode('errorBackgroundMode', errorBackgroundOption.mode, true);
+        }
+        else if (idx === 897) this.editCustomColour('errorBackgroundMode', 'errorBackgroundCustom', 'Quick Search - Error background colour', QS_BACKGROUND_MODES.custom);
         else if (idx >= 850 && idx <= 852) this.save('frame', idx - 850);
         else if (idx === 900) this.recallLast(QS_RESULT_NEW_PLAYLIST);
         else if (idx === 901) this.recallLast(QS_RESULT_NEW_AUTOPLAYLIST);

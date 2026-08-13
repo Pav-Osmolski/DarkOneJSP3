@@ -31,14 +31,27 @@ function resetOptionalButtonCommandStyles(buttonNames) {
 
 function showOptionalButtonCommandGuide() {
     utils.MessageBox(
-        'Optional buttons accept one of three trusted local command types:\n\n' +
-        '1. Main-menu path, for example: View/Console\n' +
-        '2. Context-menu command for the current selection\n' +
-        '3. JavaScript code executed locally by this panel\n\n' +
+        'Optional buttons accept one of four trusted local command types:\n\n' +
+        '1. DarkOneJSP3 internal command, for example: DarkOneJSP3/Layout/Toggle or DarkOneJSP3/Visualiser/Toggle\n' +
+        '2. Main-menu path, for example: View/Console\n' +
+        '3. Context-menu command for the current selection\n' +
+        '4. JavaScript code executed locally by this panel\n\n' +
         'JavaScript commands are advanced functionality and should only contain code you trust. ' +
         'Use Re-detect command types after components or menu names change.',
         'DarkOneJSP3 optional buttons', MB_OK | MB_ICONASTERISK
     );
+}
+
+function darkOneRunInternalButtonCommand(command) {
+    if (typeof DarkOneViewBridge != 'object' || !DarkOneViewBridge) return false;
+    var internal = DarkOneViewBridge.commandForButtonPath(command);
+    if (!internal) return false;
+    if (DarkOneViewBridge.writeCommand(internal)) return true;
+    utils.MessageBox(
+        'DarkOneJSP3 could not publish the internal view command. Please try again.',
+        'DarkOneJSP3 optional button', MB_OK | MB_ICONEXCLAMATION
+    );
+    return true;
 }
 
 function optionalButtonFailure(button, styleName) {
@@ -66,6 +79,10 @@ function OptBtnCmd() {
     }
 
     if (tmp_style == 0) {
+        if (darkOneRunInternalButtonCommand(tmp_string)) {
+            window.SetProperty(propName, 4);
+            return;
+        }
         if (fb.RunMainMenuCommand(tmp_string)) {
             window.SetProperty(propName, 1);
             return;
@@ -81,7 +98,7 @@ function OptBtnCmd() {
             return;
         } catch (e) {
             var message = utils.MessageBox(
-                'The command could not be resolved as a main-menu command, a context-menu command or JavaScript.\n\n' +
+                'The command could not be resolved as a DarkOneJSP3 internal command, main-menu command, context-menu command or JavaScript.\n\n' +
                 tmp_string + '\n\nJavaScript diagnostic:\n' + e +
                 '\n\nChoose OK to edit the command, or Cancel if this is a context command that only needs a valid playlist selection.',
                 'Optional ' + button.BtnName + ' error', MB_OKCANCEL | MB_ICONEXCLAMATION
@@ -110,6 +127,12 @@ function OptBtnCmd() {
                 'Optional ' + button.BtnName + ' error', MB_OKCANCEL | MB_ICONEXCLAMATION
             );
             if (result == 1) window.ShowProperties();
+        }
+        break;
+    case 4:
+        if (!darkOneRunInternalButtonCommand(tmp_string)) {
+            window.SetProperty(propName, 0);
+            OptBtnCmd.call(this);
         }
         break;
     default:
