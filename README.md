@@ -78,6 +78,8 @@ starting layout.
 
 ![Main view](assets/darkonejsp3-screenshot-main.webp)
 
+![Wide view](assets/darkonejsp3-screenshot-wide.webp)
+
 ![InfoStack Album Notes functionality](assets/darkonejsp3-screenshot-albumnotes.webp)
 
 ## Enhanced Sample Library
@@ -233,7 +235,8 @@ assets/
 ├── darkonejsp3-logo.png                    Repository artwork used by this README
 ├── darkonejsp3-social.jpg                  Promotional artwork used by the Wiki
 ├── darkonejsp3-screenshot-albumnotes.webp  Album Notes and InfoStack screenshot
-└── darkonejsp3-screenshot-main.webp        Main DarkOneJSP3 interface screenshot
+├── darkonejsp3-screenshot-main.webp        Main DarkOneJSP3 interface screenshot
+└── darkonejsp3-screenshot-wide.webp        Wide DarkOneJSP3 interface screenshot
 
 DarkOneJSP3/
 ├── docs/                  Documentation, changelog, credits and user guides

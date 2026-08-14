@@ -1813,6 +1813,7 @@ def run(ctx: ValidationContext) -> None:
             'assets/darkonejsp3-logo.png',
             'assets/darkonejsp3-screenshot-main.webp',
             'assets/darkonejsp3-screenshot-albumnotes.webp',
+            'assets/darkonejsp3-screenshot-wide.webp',
         }
         readme_targets = re.findall(r'\[[^\]]+\]\(([^)]+)\)', readme_body)
         readme_targets += re.findall(r'<img\s+[^>]*src=["\']([^"\']+)', readme_body, re.I)
