@@ -376,6 +376,11 @@ function oCheckBox(id, x, y, label, linkedVariable, parentPageId) {
 		var gb;
 		var button_zoomSize = g_z16;
 
+		DarkOnePerformance.disposeUnique([
+			this.checkbox_normal_off, this.checkbox_hover_off,
+			this.checkbox_normal_on, this.checkbox_hover_on
+		]);
+
 		this.checkbox_normal_off = utils.CreateImage(48, 48);
 		gb = this.checkbox_normal_off.GetGraphics();
 		gb.WriteTextSimple(chars.check_off, g_font_fluent_40, p.settings.color1, 0, 0, 48, 48, 2, 2);
@@ -460,6 +465,11 @@ function oRadioButton(id, x, y, label, status, parentPageId) {
 	this.setButtons = function () {
 		var gb
 		var button_zoomSize = g_z16;
+
+		DarkOnePerformance.disposeUnique([
+			this.radiobt_normal_off, this.radiobt_hover_off,
+			this.radiobt_normal_on, this.radiobt_hover_on
+		]);
 
 		this.radiobt_normal_off = utils.CreateImage(48, 48);
 		gb = this.radiobt_normal_off.GetGraphics();
@@ -1372,6 +1382,15 @@ function oSettings() {
 	this.currentPageId = 0;
 
 	this.setButtons = function () {
+		var previousButtonImages = [];
+		var previousButtons = [this.newbutton, this.delbutton, this.newbuttonPattern, this.delbuttonPattern, this.closebutton];
+		for (var b = 0; b < previousButtons.length; b++) {
+			if (previousButtons[b] && previousButtons[b].img) previousButtonImages = previousButtonImages.concat(previousButtons[b].img);
+		}
+		DarkOnePerformance.disposeUnique(previousButtonImages);
+		DarkOnePerformance.dispose(this.tab_img);
+		this.tab_img = null;
+
 		this.color1 = setAlpha(g_colour_text, 200);
 		this.color2 = g_colour_text;
 

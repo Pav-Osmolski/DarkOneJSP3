@@ -19,11 +19,20 @@ function oTopBar() {
 			if (item_count == 1) this.line2 = "1 track.";
 			else this.line2 = item_count + " tracks.";
 
-			if (p.list) this.line2 += " " + utils.FormatDuration(plman.GetPlaylistItems(g_active_playlist).CalcTotalDuration()) + ".";
+			if (p.list) {
+				var playlistItems = plman.GetPlaylistItems(g_active_playlist);
+				try {
+					this.line2 += " " + utils.FormatDuration(playlistItems.CalcTotalDuration()) + ".";
+				} finally {
+					DarkOnePerformance.dispose(playlistItems);
+				}
+			}
 		}
 	}
 
 	this.setButtons = function () {
+		if (this.button) DarkOnePerformance.disposeUnique(this.button.img);
+
 		var close_off = utils.CreateImage(12, 12);
 		var gb = close_off.GetGraphics();
 		gb.WriteTextSimple(chars.close, g_font_fluent_12, blendColours(g_colour_background, g_colour_text, 0.75), 0, 0, 12, 12, 2, 2);

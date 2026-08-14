@@ -178,7 +178,10 @@ function darkOneShowControlButtonMenu(x, y, options) {
         rootMenu.Dispose();
         optionalMenu.Dispose();
         roundnessMenu.Dispose();
-        for (var i = 0; i < extraMenus.length; i++)
-            if (extraMenus[i] && typeof extraMenus[i].Dispose == 'function') extraMenus[i].Dispose();
+        for (var i = 0; i < extraMenus.length; i++) {
+            if (!extraMenus[i]) continue;
+            // Native JSP3 wrapper methods can report typeof == 'unknown'.
+            try { extraMenus[i].Dispose(); } catch (e) {}
+        }
     }
 }

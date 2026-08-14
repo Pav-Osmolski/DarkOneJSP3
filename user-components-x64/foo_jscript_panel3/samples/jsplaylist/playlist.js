@@ -344,10 +344,19 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 								}
 							} else if (utils.IsKeyPressed(VK_CONTROL)) {
 								plman.SetPlaylistSelectionSingle(g_active_playlist, this.track_index, false);
-							} else if (plman.GetPlaylistSelectedItems(g_active_playlist).Count == 1) {
-								plman.SetPlaylistFocusItem(g_active_playlist, this.track_index);
-								plman.ClearPlaylistSelection(g_active_playlist);
-								plman.SetPlaylistSelectionSingle(g_active_playlist, this.track_index, true);
+							} else {
+								var selectedItems = plman.GetPlaylistSelectedItems(g_active_playlist);
+								var singleSelected = false;
+								try {
+									singleSelected = selectedItems.Count == 1;
+								} finally {
+									DarkOnePerformance.dispose(selectedItems);
+								}
+								if (singleSelected) {
+									plman.SetPlaylistFocusItem(g_active_playlist, this.track_index);
+									plman.ClearPlaylistSelection(g_active_playlist);
+									plman.SetPlaylistSelectionSingle(g_active_playlist, this.track_index, true);
+								}
 							}
 						} else { // click on a not selected track
 							if (utils.IsKeyPressed(VK_SHIFT)) {
@@ -526,7 +535,12 @@ function oItem(row_index, type, metadb, track_index, group_index, track_index_in
 				}
 			}
 			if (g_drag_drop_internal) {
-				plman.GetPlaylistSelectedItems(g_active_playlist).DoDragDrop(1);
+				var dragItems = plman.GetPlaylistSelectedItems(g_active_playlist);
+				try {
+					dragItems.DoDragDrop(1);
+				} finally {
+					DarkOnePerformance.dispose(dragItems);
+				}
 				g_drag_drop_internal = false;
 			}
 			break;

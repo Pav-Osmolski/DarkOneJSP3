@@ -132,7 +132,9 @@ function quickSearchNormaliseFontSize(value) {
 }
 
 function quickSearchSafeDispose(value) {
-    try { if (value && typeof value.Dispose === 'function') value.Dispose(); } catch (e) {}
+    if (!value) return;
+    // Native JSP3 wrapper methods can report typeof == 'unknown'.
+    try { value.Dispose(); } catch (e) {}
 }
 
 

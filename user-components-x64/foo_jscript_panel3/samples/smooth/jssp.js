@@ -1531,6 +1531,9 @@ get_metrics();
 setWallpaperImg();
 
 function on_script_unload() {
-	if (brw) brw.saveScrollPosition(true);
+	if (brw) {
+		brw.saveScrollPosition(true);
+		if (brw.scrollbar) brw.scrollbar.dispose();
+	}
 	if (g_scroll_save_timer) window.ClearTimeout(g_scroll_save_timer);
 }

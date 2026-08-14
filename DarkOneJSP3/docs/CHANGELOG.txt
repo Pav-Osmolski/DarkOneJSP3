@@ -1,6 +1,38 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.9 - JScript Panel 3 API and resource hardening
+---------------------------------------------------
+
+- Audited the DarkOneJSP3 JScript Panel 3 tree against the supplied JSP3 3.8.5
+  documentation and API reference, then added permanent validator guards for
+  host/API mix-ups and legacy calls.
+- Hardened JS Playlist native-image lifetime management. Recreated top-bar,
+  header, scrollbar, playlist-manager and settings images now dispose the prior
+  `IJSImage` resources before replacement, with current UI images also released
+  explicitly during script unload.
+- Applied the same replacement/disposal discipline to the shared Smooth scrollbar
+  implementation and added explicit scrollbar-image cleanup on sample unload.
+- Fixed five temporary `IMetadbHandleList` lifetime paths in JS Playlist so
+  selected/playlist item lists used for drag/drop, selection checks and duration
+  calculation are explicitly disposed.
+- Removed unreliable native-method `typeof == function` checks from selective
+  JS Playlist render-cache invalidation. `GetItem()`/`Find()` are now called
+  directly under exception handling, preserving selective invalidation on JSP3
+  native wrappers that may report their method type as `unknown`.
+- Updated Quick Search and optional-button menu disposal to follow the same
+  direct native `Dispose()` pattern rather than relying on JavaScript function
+  type reporting.
+- Corrected the bundled DirectWrite Fonts sample callback from the invalid
+  `on_fonts_changed()` name to JSP3's documented `on_font_changed()` callback.
+- Added JSP3 3.x static API guards for legacy `fb.GetQueryItems()`, SMP-only
+  `plman.PlaylistItemCount()`, JSplitter-only `FillSolidRect()`, invalid font
+  callbacks, chained temporary playlist handle lists and native wrapper method
+  type checks.
+- Advanced JS Playlist to 0.6.3, Smooth Playlist Manager to 0.5.7, Quick Search
+  to 0.1.17, performance helpers to 0.1.5, playlist render cache to 0.1.1,
+  optional-button menu integration to 0.1.1 and the release validator to 0.10.5.
+
 v1.0.8 - Waveform Minibar pseudo-transparency integration
 ---------------------------------------------------------
 

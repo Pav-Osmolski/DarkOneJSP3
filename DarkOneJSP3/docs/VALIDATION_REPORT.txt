@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.8 Validation Report
+DarkOneJSP3 v1.0.9 Validation Report
 ====================================
 
 Scope
@@ -11,6 +11,23 @@ validation and the audited-file count.
 
 Checks
 ------
+- JSP3 3.8.5 API validation scans every DarkOneJSP3/JSP3 sample script and
+  rejects known host/API mix-ups including legacy `fb.GetQueryItems()`, the
+  JSplitter/SMP-only `plman.PlaylistItemCount()`, JSP3 `FillSolidRect()` use,
+  invalid `on_fonts_changed()` callbacks and native `Dispose`/`Find`/`GetItem`
+  methods gated by JavaScript `typeof == function` checks. Temporary playlist
+  handle-list calls chained directly into another method are also rejected so
+  callers retain an explicit `Dispose()` opportunity.
+- JS Playlist resource-lifetime checks require generated top-bar/header/scrollbar/
+  playlist-manager/settings image resources to be disposed before replacement,
+  and runtime unload cleanup releases the current UI images. Temporary selected
+  item/playlist handle lists used by drag/drop, selection-count and duration paths
+  are explicitly disposed. The shared Smooth scrollbar applies the same image
+  replacement and unload discipline.
+- Selective JS Playlist render-cache invalidation calls JSP3 native `GetItem()`
+  and `Find()` directly inside exception handling and disposes temporary handles,
+  avoiding false full-cache invalidation when native methods report their type as
+  `unknown`.
 - Display label-state validation verifies that changing volume while playback is
   stopped activates only VOLUME: TIME and TIME REMAINING remain inactive.
   During playback, the normal time label and temporary VOLUME label remain active.
@@ -38,7 +55,7 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
-- Quick Search 0.1.16 background tests verify the shared six-mode DarkOne
+- Quick Search 0.1.17 background tests verify the shared six-mode DarkOne
   palette, one-time migration from the previous Default/Custom background model and live
   Transparent / inherit parent resolution against Bottom-area state for both
   Normal and Error backgrounds. The dedicated dark-red Error Default is retained.

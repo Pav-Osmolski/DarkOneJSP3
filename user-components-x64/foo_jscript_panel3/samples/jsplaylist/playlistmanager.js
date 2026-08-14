@@ -24,6 +24,8 @@ function oPlaylistManager() {
 	}
 
 	this.setButtons = function () {
+		DarkOnePerformance.disposeUnique([this.bt_sortAz_normal, this.bt_sortZa_normal]);
+
 		// Az & zA vars
 		var Az_h = cPlaylistManager.statusBarHeight;
 		var Az_w = Math.floor(Az_h * 1.9);

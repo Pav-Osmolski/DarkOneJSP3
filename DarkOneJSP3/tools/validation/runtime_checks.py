@@ -310,6 +310,10 @@ def run(ctx: ValidationContext) -> None:
     let directDisposeCount = 0;
     api.dispose({{Dispose() {{ directDisposeCount++; }}}});
     assert(directDisposeCount === 1, 'Native resource disposal was not attempted directly');
+    let uniqueDisposeCount = 0;
+    const sharedResource = {{Dispose() {{ uniqueDisposeCount++; }}}};
+    api.disposeUnique([sharedResource, sharedResource, null]);
+    assert(uniqueDisposeCount === 1, 'disposeUnique() did not de-duplicate shared native resources');
     assert(api.loadBitmap('direct') === directBitmap, 'Direct bitmap loading was not preferred');
     assert(api.loadBitmap('fallback') === fallbackBitmap && fallbackDisposed === 1,
         'Image fallback did not create a bitmap and dispose its source');

@@ -72,6 +72,8 @@ function oHeaderBar() {
 	}
 
 	this.setButtons = function () {
+		DarkOnePerformance.disposeUnique([this.slide_close, this.slide_open]);
+
 		// normal playlistManager slide Image
 		this.slide_close = utils.CreateImage(cScrollBar.width, this.h);
 		var gb = this.slide_close.GetGraphics();

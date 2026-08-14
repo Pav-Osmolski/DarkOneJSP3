@@ -30,7 +30,12 @@ function on_drag_drop(action, x, y, mask) {
 			if (p.playlistManager.ishoverHeader) {
 				if (g_drag_drop_internal) {
 					var pl = plman.CreatePlaylist(plman.PlaylistCount, "Dropped Items")
-					plman.InsertPlaylistItems(pl, 0, plman.GetPlaylistSelectedItems(g_active_playlist), true);
+					var selectedItems = plman.GetPlaylistSelectedItems(g_active_playlist);
+					try {
+						plman.InsertPlaylistItems(pl, 0, selectedItems, true);
+					} finally {
+						DarkOnePerformance.dispose(selectedItems);
+					}
 					plman.ActivePlaylist = pl;
 					action.Effect = 0;
 				} else {
@@ -1054,6 +1059,40 @@ function on_script_unload() {
 	clearObjectTimers(typeof cList == "object" ? cList : null, ["interval"]);
 
 	try {
+		var uiResources = [];
+		if (p.topBar && p.topBar.button && p.topBar.button.img) uiResources = uiResources.concat(p.topBar.button.img);
+		if (p.headerBar) uiResources = uiResources.concat([p.headerBar.slide_close, p.headerBar.slide_open]);
+		if (p.scrollbar) uiResources = uiResources.concat([p.scrollbar.cursorImage_normal, p.scrollbar.upImage_normal, p.scrollbar.downImage_normal]);
+		if (p.playlistManager) {
+			uiResources = uiResources.concat([p.playlistManager.bt_sortAz_normal, p.playlistManager.bt_sortZa_normal]);
+			if (p.playlistManager.scrollbar) {
+				uiResources = uiResources.concat([
+					p.playlistManager.scrollbar.cursorImage_normal,
+					p.playlistManager.scrollbar.upImage_normal,
+					p.playlistManager.scrollbar.downImage_normal
+				]);
+			}
+		}
+		if (p.settings) {
+			var settingsButtons = [p.settings.newbutton, p.settings.delbutton, p.settings.newbuttonPattern, p.settings.delbuttonPattern, p.settings.closebutton];
+			for (var sb = 0; sb < settingsButtons.length; sb++) {
+				if (settingsButtons[sb] && settingsButtons[sb].img) uiResources = uiResources.concat(settingsButtons[sb].img);
+			}
+			uiResources.push(p.settings.tab_img);
+			for (var sp = 0; sp < p.settings.pages.length; sp++) {
+				for (var se = 0; se < p.settings.pages[sp].elements.length; se++) {
+					var element = p.settings.pages[sp].elements[se];
+					if (!element) continue;
+					if (element.objType == "CB") {
+						uiResources = uiResources.concat([element.checkbox_normal_off, element.checkbox_hover_off, element.checkbox_normal_on, element.checkbox_hover_on]);
+					} else if (element.objType == "RB") {
+						uiResources = uiResources.concat([element.radiobt_normal_off, element.radiobt_hover_off, element.radiobt_normal_on, element.radiobt_hover_on]);
+					}
+				}
+			}
+		}
+		DarkOnePerformance.disposeUnique(uiResources);
+
 		DarkOnePerformance.dispose(images.wallpaper);
 		images.wallpaper = null;
 		g_image_cache.reset();

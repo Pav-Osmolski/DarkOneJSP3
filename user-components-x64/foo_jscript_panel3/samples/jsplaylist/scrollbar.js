@@ -33,6 +33,7 @@ function PlaylistScrollBar() {
 		if (!this.cursorWidth || !this.cursorHeight)
 			return;
 
+		DarkOnePerformance.dispose(this.cursorImage_normal);
 		this.cursorImage_normal = utils.CreateImage(this.cursorWidth, this.cursorHeight);
 		var gb = this.cursorImage_normal.GetGraphics();
 
@@ -44,6 +45,8 @@ function PlaylistScrollBar() {
 	}
 
 	this.setButtons = function () {
+		DarkOnePerformance.disposeUnique([this.upImage_normal, this.downImage_normal]);
+
 		// normal scroll_up Image
 		this.upImage_normal = utils.CreateImage(this.w, this.w);
 		var gb = this.upImage_normal.GetGraphics();
@@ -290,6 +293,7 @@ function ScrollBar(parent, x, y, w, h, total_items, item_height) {
 
 	this.setCursorButton = function () {
 		// normal cursor Image
+		DarkOnePerformance.dispose(this.cursorImage_normal);
 		this.cursorImage_normal = utils.CreateImage(this.cursorWidth, this.cursorHeight);
 		var gb = this.cursorImage_normal.GetGraphics();
 		gb.FillRectangle(0, 0, this.cursorWidth, this.cursorHeight, g_colour_text & 0x33ffffff);
@@ -300,6 +304,8 @@ function ScrollBar(parent, x, y, w, h, total_items, item_height) {
 	}
 
 	this.setButtons = function () {
+		DarkOnePerformance.disposeUnique([this.upImage_normal, this.downImage_normal]);
+
 		// normal scroll_up Image
 		this.upImage_normal = utils.CreateImage(this.w, this.w);
 		var gb = this.upImage_normal.GetGraphics();

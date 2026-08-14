@@ -1,12 +1,12 @@
 /*
  * Enhanced JScript Panel sample performance helpers
- * Version: 0.1.4
+ * Version: 0.1.5
  *
  * Host-neutral utilities for demand-driven repaint scheduling, animation
  * frames, Direct2D bitmap conversion and lightweight optional profiling.
  */
 
-var DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.4";
+var DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.5";
 
 var DarkOnePerformance = typeof DarkOnePerformance != "undefined"
     ? DarkOnePerformance
@@ -23,6 +23,19 @@ var DarkOnePerformance = typeof DarkOnePerformance != "undefined"
         // Native JScript Panel COM methods can report typeof == "unknown".
         // Call the method directly and let try/catch handle unsupported objects.
         try { resource.Dispose(); } catch (e) {}
+    }
+
+    function disposeUnique(resources) {
+        if (!resources) return;
+        if (!(resources instanceof Array)) resources = [resources];
+
+        var seen = [];
+        for (var i = 0; i < resources.length; i++) {
+            var resource = resources[i];
+            if (!resource || seen.indexOf(resource) >= 0) continue;
+            seen.push(resource);
+            dispose(resource);
+        }
     }
 
     function toBitmap(image, disposeSource) {
@@ -336,6 +349,7 @@ var DarkOnePerformance = typeof DarkOnePerformance != "undefined"
 
     return {
         dispose: dispose,
+        disposeUnique: disposeUnique,
         toBitmap: toBitmap,
         loadBitmap: loadBitmap,
         createRepaintScheduler: createRepaintScheduler,

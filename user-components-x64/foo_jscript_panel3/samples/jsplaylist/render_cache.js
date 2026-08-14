@@ -8,7 +8,7 @@
  * static row rather than forcing the complete combined pattern to run again.
  */
 
-var DARKONE_JSPLAYLIST_RENDER_CACHE_VERSION = "0.1.0";
+var DARKONE_JSPLAYLIST_RENDER_CACHE_VERSION = "0.1.1";
 
 function DarkOnePlaylistRenderCache(options) {
     options = options || {};
@@ -218,8 +218,7 @@ function DarkOnePlaylistRenderCache(options) {
     };
 
     this.invalidateHandles = function (changedHandles, activeHandles) {
-        if (!changedHandles || !activeHandles || typeof changedHandles.Find !== "function" ||
-            typeof activeHandles.GetItem !== "function") {
+        if (!changedHandles || !activeHandles) {
             this.invalidateAll();
             return -1;
         }
@@ -228,13 +227,22 @@ function DarkOnePlaylistRenderCache(options) {
         var invalidated = 0;
         for (var i = 0; i < keys.length; i++) {
             var trackIndex = Number(keys[i]);
+            var activeHandle = null;
             try {
-                if (changedHandles.Find(activeHandles.GetItem(trackIndex)) >= 0 && this.invalidate(trackIndex)) {
+                // JSP3 native wrapper methods can report typeof == "unknown".
+                // Call GetItem()/Find() directly and use the exception path as
+                // the capability guard instead of forcing a full cache flush.
+                activeHandle = activeHandles.GetItem(trackIndex);
+                if (changedHandles.Find(activeHandle) >= 0 && this.invalidate(trackIndex)) {
                     invalidated++;
                 }
             } catch (e) {
                 this.invalidateAll();
                 return -1;
+            } finally {
+                if (activeHandle) {
+                    try { activeHandle.Dispose(); } catch (e2) {}
+                }
             }
         }
         return invalidated;

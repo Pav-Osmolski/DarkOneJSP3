@@ -25,6 +25,11 @@ function oScrollbar() {
 	this.setButtons = function () {
 		var gb;
 
+		DarkOnePerformance.disposeUnique([
+			this.upImage_normal, this.upImage_hover, this.upImage_down,
+			this.downImage_normal, this.downImage_hover, this.downImage_down
+		]);
+
 		this.upImage_normal = utils.CreateImage(this.w, this.w);
 		gb = this.upImage_normal.GetGraphics();
 		gb.WriteTextSimple(chars.up, g_font_fluent_20, g_colour_text & 0x55ffffff, 0, 0, this.w, this.w, 2, 2);
@@ -62,6 +67,10 @@ function oScrollbar() {
 	this.setCursorButton = function () {
 		var gb;
 
+		DarkOnePerformance.disposeUnique([
+			this.cursorImage_normal, this.cursorImage_hover, this.cursorImage_down
+		]);
+
 		var rectangle_outline = setAlpha(g_colour_text, 44);
 
 		this.cursorImage_normal = utils.CreateImage(this.cursorw, this.cursorh);
@@ -85,6 +94,14 @@ function oScrollbar() {
 		this.buttons[cScrollBar.ButtonType.cursor] = new button(this.cursorImage_normal, this.cursorImage_hover, this.cursorImage_down);
 		this.buttons[cScrollBar.ButtonType.cursor].x = this.x;
 		this.buttons[cScrollBar.ButtonType.cursor].y = this.cursory;
+	}
+
+	this.dispose = function () {
+		DarkOnePerformance.disposeUnique([
+			this.upImage_normal, this.upImage_hover, this.upImage_down,
+			this.downImage_normal, this.downImage_hover, this.downImage_down,
+			this.cursorImage_normal, this.cursorImage_hover, this.cursorImage_down
+		]);
 	}
 
 	this.draw = function (gr) {

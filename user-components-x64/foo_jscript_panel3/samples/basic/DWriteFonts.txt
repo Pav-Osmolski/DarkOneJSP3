@@ -42,7 +42,7 @@ function on_colours_changed() {
 	window.Repaint();
 }
 
-function on_fonts_changed() {
+function on_font_changed() {
 	panel.font_changed();
 	window.Repaint();
 }

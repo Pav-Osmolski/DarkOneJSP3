@@ -1,5 +1,5 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -104,7 +104,7 @@
       "title": "DOJSP3.QuickSearch",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt",
-      "version": "0.1.16"
+      "version": "0.1.17"
     },
     {
       "number": 12,
@@ -158,7 +158,10 @@
       "render_cache_playback_generation_reuse": true,
       "render_cache_clock_second_reuse": true,
       "render_cache_cross_column_state_compatibility": true,
-      "inline_metadata_viewport_preserved": true
+      "inline_metadata_viewport_preserved": true,
+      "native_image_replacement_disposal": true,
+      "temporary_handle_list_disposal": true,
+      "render_cache_native_method_guard_fixed": true
     },
     "documentation": "complete supported-layout context-menu map, current-state configuration, topic-based troubleshooting and source-backed menu coverage validation",
     "playlist_manager": {
@@ -731,7 +734,7 @@
     },
     "optional_button_menu_consolidation": {
       "shared_helper": "DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "panels": [
         "Control Left",
         "Control Right"
@@ -832,10 +835,13 @@
       "queue_state_publication_retry_tests": true,
       "queue_acknowledged_generation_wait_tests": true,
       "queue_mixed_source_all_move_variant_tests": true,
-      "queue_viewer_requirement_fcl_policy_checked": true
+      "queue_viewer_requirement_fcl_policy_checked": true,
+      "jsp3_api_guard": true,
+      "jsp3_temporary_handle_list_checks": true,
+      "jsp3_native_wrapper_typeof_checks": true
     },
     "rendering_optimisation": {
-      "version": "0.1.4",
+      "version": "0.1.5",
       "shared_helper": "DarkOneJSP3/shared/performance_utils.js",
       "demand_driven_schedulers": true,
       "direct2d_bitmap_reuse": true,
@@ -857,7 +863,10 @@
       "native_visualiser_message_loop_friendly": true,
       "volume_drag_visual_preview_decoupled": true,
       "volume_write_minimum_interval_ms": 16,
-      "stopped_volume_only_highlights_volume_label": true
+      "stopped_volume_only_highlights_volume_label": true,
+      "native_resource_replacement_disposal": true,
+      "temporary_playlist_handle_lists_disposed": true,
+      "native_wrapper_typeof_function_guards_removed": true
     },
     "adaptive_volume_cadence": {
       "version": "0.1.1",
@@ -1004,7 +1013,7 @@
     },
     "quick_search": {
       "implementation": "JScript Panel 3 with JSplitter parent-layout bridge",
-      "version": "0.1.16",
+      "version": "0.1.17",
       "sources": [
         "Media library",
         "Current playlist",

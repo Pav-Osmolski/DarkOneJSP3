@@ -1317,7 +1317,10 @@ function clearPlaylistManagerTimers() {
 
 function on_script_unload() {
 	if (g_playlist_manager_cadence_reporter) g_playlist_manager_cadence_reporter.dispose();
-	if (brw) brw.saveScrollPosition(true);
+	if (brw) {
+		brw.saveScrollPosition(true);
+		if (brw.scrollbar) brw.scrollbar.dispose();
+	}
 	clearPlaylistManagerTimers();
 	if (g_filterbox) g_filterbox.dispose();
 }

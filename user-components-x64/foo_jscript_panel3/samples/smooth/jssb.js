@@ -1018,3 +1018,8 @@ var g_filter_text = "";
 var brw = new oBrowser();
 
 get_metrics();
+
+
+function on_script_unload() {
+	if (brw && brw.scrollbar) brw.scrollbar.dispose();
+}

@@ -64,6 +64,28 @@ def run(ctx: ValidationContext) -> None:
         if len(paths) > 1:
             errors.append('Case-insensitive path collision: ' + ', '.join(sorted(paths)))
 
+    # JSP3 3.x API guard. Keep this scoped to scripts that run inside JScript
+    # Panel 3; JSplitter intentionally exposes a different SMP-derived API.
+    jsp3_sources = list((project / 'jscript').rglob('*.js')) + list((project / 'jscript').rglob('*.txt')) + \
+        list(samples.rglob('*.js')) + list(samples.rglob('*.txt'))
+    jsp3_forbidden_tokens = {
+        'fb.GetQueryItems(': 'legacy fb.GetQueryItems(); use IMetadbHandleList.GetQueryItems()',
+        'plman.PlaylistItemCount(': 'SMP/JSplitter PlaylistItemCount(); JSP3 uses plman.GetPlaylistItemCount()',
+        'gr.FillSolidRect(': 'JSplitter FillSolidRect(); JSP3 uses FillRectangle()',
+        'on_fonts_changed': 'invalid callback; JSP3 callback is on_font_changed()',
+    }
+    native_typeof = re.compile(r"typeof\s+[^\n;]+\.(?:Dispose|Find|GetItem)\s*(?:===?|!==?)\s*['\"]function['\"]")
+    chained_handle_list = re.compile(r"plman\.GetPlaylist(?:Selected)?Items\([^\n;]*\)\s*\.")
+    for path in jsp3_sources:
+        body = text(path)
+        for token, message in jsp3_forbidden_tokens.items():
+            if token in body:
+                errors.append('JSP3 API guard: ' + rel(path) + ' retains ' + message)
+        if native_typeof.search(body):
+            errors.append('JSP3 API guard: ' + rel(path) + ' gates a native wrapper method with typeof == function')
+        if chained_handle_list.search(body):
+            errors.append('JSP3 API guard: ' + rel(path) + ' chains a temporary playlist handle list without an explicit Dispose() opportunity')
+
     gitignore = root / '.gitignore'
     if gitignore.exists():
         ignored = text(gitignore).replace('\\', '/').splitlines()
@@ -476,7 +498,7 @@ def run(ctx: ValidationContext) -> None:
             'optional_button_menu_consolidation', {})
         expected_optional_menu_consolidation = {
             'shared_helper': 'DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js',
-            'version': '0.1.0',
+            'version': '0.1.1',
             'panels': ['Control Left', 'Control Right'],
             'optional_button_toggle_centralised': True,
             'command_setup_centralised': True,
@@ -584,8 +606,8 @@ def run(ctx: ValidationContext) -> None:
         if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
             errors.append('Manifest does not describe the writable scripted Queue Viewer')
         quick_search_manifest = manifest.get('enhancements', {}).get('quick_search', {})
-        if quick_search_manifest.get('version') != '0.1.16':
-            errors.append('Manifest Quick Search version is not 0.1.16')
+        if quick_search_manifest.get('version') != '0.1.17':
+            errors.append('Manifest Quick Search version is not 0.1.17')
         if quick_search_manifest.get('implementation') != 'JScript Panel 3 with JSplitter parent-layout bridge':
             errors.append('Manifest does not identify the scripted Quick Search architecture')
         if quick_search_manifest.get('height_default') != '2 lines' or quick_search_manifest.get('responsive_font') is not True:
@@ -1000,7 +1022,7 @@ def run(ctx: ValidationContext) -> None:
     if performance_helper.exists():
         body = text(performance_helper)
         for token in [
-            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.4"',
+            'DARKONE_PERFORMANCE_UTILS_VERSION = "0.1.5"',
             'createRepaintScheduler',
             'createFrameLoop',
             'createValueCoalescer',
@@ -1201,8 +1223,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.2"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.2')
+        if '// @version "0.6.3"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.3')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1353,7 +1375,7 @@ def run(ctx: ValidationContext) -> None:
     if js_playlist_cache.exists():
         body = text(js_playlist_cache)
         for token in [
-            'DARKONE_JSPLAYLIST_RENDER_CACHE_VERSION = "0.1.0"',
+            'DARKONE_JSPLAYLIST_RENDER_CACHE_VERSION = "0.1.1"',
             'this.globalClockDynamic',
             'this.dynamicHits',
             'this.primaryCoupledDynamic',
@@ -1366,6 +1388,74 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('JS Playlist render-cache module is incomplete: ' + token)
+
+    # v1.0.9 JSP3 native-resource/API hardening invariants.
+    if js_playlist_main.exists():
+        body = text(js_playlist_main)
+        for token in [
+            'DarkOnePerformance.dispose(selectedItems);',
+            'DarkOnePerformance.disposeUnique(uiResources);',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist native-resource cleanup is missing: ' + token)
+    if js_playlist_topbar.exists():
+        body = text(js_playlist_topbar)
+        for token in ['DarkOnePerformance.disposeUnique(this.button.img);', 'DarkOnePerformance.dispose(playlistItems);']:
+            if token not in body:
+                errors.append('JS Playlist top-bar native cleanup is missing: ' + token)
+    if js_playlist_header.exists() and 'DarkOnePerformance.disposeUnique([this.slide_close, this.slide_open]);' not in text(js_playlist_header):
+        errors.append('JS Playlist header images are not disposed before replacement')
+    if js_playlist_scrollbar.exists():
+        body = text(js_playlist_scrollbar)
+        for token in [
+            'DarkOnePerformance.dispose(this.cursorImage_normal);',
+            'DarkOnePerformance.disposeUnique([this.upImage_normal, this.downImage_normal]);',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist scrollbar image replacement cleanup is missing: ' + token)
+    js_playlist_manager_source = samples / 'jsplaylist' / 'playlistmanager.js'
+    if js_playlist_manager_source.exists() and 'DarkOnePerformance.disposeUnique([this.bt_sortAz_normal, this.bt_sortZa_normal]);' not in text(js_playlist_manager_source):
+        errors.append('JS Playlist playlist-manager button images are not disposed before replacement')
+    js_playlist_settings_resource = samples / 'jsplaylist' / 'settings.js'
+    if js_playlist_settings_resource.exists():
+        body = text(js_playlist_settings_resource)
+        for token in [
+            'this.checkbox_normal_off, this.checkbox_hover_off',
+            'this.radiobt_normal_off, this.radiobt_hover_off',
+            'DarkOnePerformance.disposeUnique(previousButtonImages);',
+            'DarkOnePerformance.dispose(this.tab_img);',
+        ]:
+            if token not in body:
+                errors.append('JS Playlist settings image cleanup is missing: ' + token)
+    smooth_scrollbar_source = samples / 'smooth' / 'scrollbar.js'
+    if smooth_scrollbar_source.exists():
+        body = text(smooth_scrollbar_source)
+        for token in ['this.dispose = function ()', 'DarkOnePerformance.disposeUnique([']:
+            if token not in body:
+                errors.append('Smooth scrollbar native-image cleanup is missing: ' + token)
+    dwrite_fonts = samples / 'basic' / 'DWriteFonts.txt'
+    if dwrite_fonts.exists():
+        body = text(dwrite_fonts)
+        if 'function on_font_changed()' not in body or 'on_fonts_changed' in body:
+            errors.append('DWrite Fonts sample does not use the documented on_font_changed() callback')
+    quick_search_resource_source = project / 'jscript' / 'js' / 'Quick_Search.js'
+    if quick_search_resource_source.exists():
+        body = text(quick_search_resource_source)
+        if "try { value.Dispose(); } catch (e) {}" not in body:
+            errors.append('Quick Search native disposal does not call Dispose() directly under exception handling')
+    optional_button_source = project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js'
+    if optional_button_source.exists():
+        body = text(optional_button_source)
+        if 'try { extraMenus[i].Dispose(); } catch (e) {}' not in body:
+            errors.append('Optional-button extra menu disposal does not call native Dispose() directly')
+    if js_playlist_cache.exists():
+        body = text(js_playlist_cache)
+        for forbidden in ['typeof changedHandles.Find', 'typeof activeHandles.GetItem']:
+            if forbidden in body:
+                errors.append('JS Playlist render-cache selective invalidation still gates a native method with typeof: ' + forbidden)
+        for token in ['activeHandle = activeHandles.GetItem(trackIndex);', 'changedHandles.Find(activeHandle)', 'activeHandle.Dispose();']:
+            if token not in body:
+                errors.append('JS Playlist render-cache native-call hardening is missing: ' + token)
 
     display_performance = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
     if display_performance.exists():
@@ -1433,8 +1523,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.6"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.6')
+        if '// @version "0.5.7"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.7')
         if 'samples\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
         if 'samples\\shared\\ui_cadence.js' not in body:
@@ -2834,7 +2924,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.16"',
+            '// @version "0.1.17"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',
