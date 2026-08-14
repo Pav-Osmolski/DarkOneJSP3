@@ -417,7 +417,10 @@ def run(ctx: ValidationContext) -> None:
         # Exercise the exact live refresh-rate setters and active timer restart paths.
         try:
             playlist_main_source = text(samples / 'jsplaylist' / 'main.js')
+            playlist_view_source = text(samples / 'jsplaylist' / 'playlist.js')
             manager_source = text(samples / 'smooth' / 'jsspm.js')
+            playlist_viewport_function = _extract_js_function(
+                playlist_view_source, 'get_playlist_viewport_row_load_count')
             playlist_rate_functions = '\n\n'.join(
                 _extract_js_function(playlist_main_source, name)
                 for name in [
@@ -508,12 +511,25 @@ def run(ctx: ValidationContext) -> None:
         scrollbar_drag_last_tick: 0
     }};
     var cScrollBar = {{timerID: false}};
+    {playlist_viewport_function}
     var p = {{
         list: {{
             offset: 0,
             totalRows: 200,
             totalRowVisible: 10,
-            setItems() {{ listRebuilds++; }}
+            totalRowToLoad: 11,
+            loadedRowCount: 11,
+            h: 205,
+            getViewportRowsToLoad(pixelShift, offsetOverride) {{
+                const offset = typeof offsetOverride === 'number' ? offsetOverride : this.offset;
+                const remaining = Math.max(0, this.totalRows - Math.max(0, offset || 0));
+                return Math.min(remaining, get_playlist_viewport_row_load_count(
+                    this.h, cRow.playlist_h, this.totalRowToLoad, pixelShift));
+            }},
+            setItems(forceFocus, viewportShift) {{
+                listRebuilds++;
+                this.loadedRowCount = this.getViewportRowsToLoad(viewportShift, this.offset);
+            }}
         }},
         scrollbar: {{setCursor() {{}}}}
     }};
@@ -542,6 +558,28 @@ def run(ctx: ValidationContext) -> None:
     repaint_scroll_frame();
     assert(need_repaint === true && repaintRequestArgs.length === 2,
         'JS Playlist outside-frame repaint was not coalesced through the interval-aware scheduler');
+
+    // A fractional top offset can expose a second partial row at the bottom.
+    // Expand the demand-loaded row set only when that extra row intersects.
+    assert(get_playlist_viewport_row_load_count(205, 20, 11, 0) === 11,
+        'JS Playlist aligned viewport requested an unnecessary second overflow row');
+    assert(get_playlist_viewport_row_load_count(205, 20, 11, 15) === 11,
+        'JS Playlist boundary-aligned fractional viewport over-allocated rows');
+    assert(get_playlist_viewport_row_load_count(205, 20, 11, 16) === 12,
+        'JS Playlist fractional viewport did not request the second intersecting bottom row');
+    assert(get_playlist_viewport_row_load_count(200, 20, 11, 19) === 11,
+        'JS Playlist exact-row-height viewport unnecessarily expanded its row set');
+
+    p.list.offset = 10;
+    p.list.loadedRowCount = 11;
+    cList.free_scroll_position = 200;
+    cList.free_scroll_offset = 0;
+    cList.free_scroll_active = false;
+    const rebuildsBeforeViewportExpansion = listRebuilds;
+    apply_free_wheel_position(216, true, true);
+    assert(p.list.offset === 10 && p.list.loadedRowCount === 12 &&
+        listRebuilds === rebuildsBeforeViewportExpansion + 1,
+        'JS Playlist did not expand the loaded row set when fractional scrolling exposed another bottom row');
 
     need_repaint = false;
     cList.scroll_timer = true;

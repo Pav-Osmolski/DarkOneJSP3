@@ -1,5 +1,5 @@
-DarkOneJSP3 v1.0.9
-==================
+DarkOneJSP3 v1.0.10
+===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
 JScript Panel 2.8.8 build. It preserves the DarkOne layout and visual identity while replacing the

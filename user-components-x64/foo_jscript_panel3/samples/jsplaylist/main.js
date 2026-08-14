@@ -1407,10 +1407,12 @@ function apply_free_wheel_position(position, preserve_scrollbar_cursor, suppress
 		position = base_row * row_h;
 	}
 
-	if (p.list.offset != base_row) {
+	var offset_changed = p.list.offset != base_row;
+	var required_rows = p.list.getViewportRowsToLoad(pixel_offset, base_row);
+	if (offset_changed)
 		p.list.offset = base_row;
-		p.list.setItems(false);
-	}
+	if (offset_changed || (p.list.loadedRowCount || 0) < required_rows)
+		p.list.setItems(false, pixel_offset);
 
 	cList.free_scroll_position = position;
 	cList.free_scroll_offset = pixel_offset;

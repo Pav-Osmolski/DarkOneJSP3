@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - Enhanced"
-// @version "0.6.3"
+// @version "0.6.4"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%samples\shared\performance_utils.js"
 // @import "%fb2k_component_path%samples\shared\ui_cadence.js"

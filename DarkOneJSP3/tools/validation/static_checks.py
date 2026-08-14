@@ -1223,8 +1223,8 @@ def run(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.3"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.3')
+        if '// @version "0.6.4"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.4')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1243,6 +1243,9 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'DARKONE_JSPLAYLIST_QUICKSEARCH_CONTEXT_FILE',
             'jsplaylist_quicksearch_context_tags()',
+            'get_playlist_viewport_row_load_count(',
+            'this.getViewportRowsToLoad = function (pixel_shift, offset_override)',
+            'this.loadedRowCount = rowsToLoad;',
             'jsplaylist_quicksearch_context_value(quicksearch_metadb, quicksearch_tags[qs])',
             'jsplaylist_quicksearch_notify(quicksearch_tags[quicksearch_index], quicksearch_values[quicksearch_index])',
             '"Search for same"',

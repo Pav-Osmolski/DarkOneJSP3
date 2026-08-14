@@ -1,6 +1,21 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.10 - JS Playlist fractional viewport culling fix
+-----------------------------------------------------
+
+- Fixed JS Playlist demand-driven row culling when free/smooth scrolling leaves
+  the viewport at a fractional row offset. At certain panel heights the loader
+  could prepare one row too few, leaving a visible blank strip at the bottom.
+- Kept full-row visibility, scrollbar ranges and paging semantics unchanged. The
+  loader now calculates the additional row only when the fractional top offset
+  actually exposes a second partial row at the bottom.
+- Refreshes the loaded row set when that visibility threshold is crossed even if
+  the integer playlist offset itself has not changed.
+- Added permanent regression coverage across fractional offsets and viewport
+  boundaries, and advanced JS Playlist to 0.6.4 and the release validator to
+  0.10.6.
+
 v1.0.9 - JScript Panel 3 API and resource hardening
 ---------------------------------------------------
 

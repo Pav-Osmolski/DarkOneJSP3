@@ -1,5 +1,5 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.10",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -161,7 +161,8 @@
       "inline_metadata_viewport_preserved": true,
       "native_image_replacement_disposal": true,
       "temporary_handle_list_disposal": true,
-      "render_cache_native_method_guard_fixed": true
+      "render_cache_native_method_guard_fixed": true,
+      "fractional_viewport_culling_safe": true
     },
     "documentation": "complete supported-layout context-menu map, current-state configuration, topic-based troubleshooting and source-backed menu coverage validation",
     "playlist_manager": {

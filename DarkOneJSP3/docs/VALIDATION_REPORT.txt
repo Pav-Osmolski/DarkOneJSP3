@@ -1,5 +1,5 @@
-DarkOneJSP3 v1.0.9 Validation Report
-====================================
+DarkOneJSP3 v1.0.10 Validation Report
+=====================================
 
 Scope
 -----
@@ -52,6 +52,9 @@ Checks
 - JS Playlist visible rows cache selection state and the current playback
   location outside paint/mouse hot paths; sequential viewport changes reuse
   surviving row objects and pre-resolved column geometry.
+- JS Playlist viewport-culling validation verifies that fractional free/smooth
+  scrolling loads every row intersecting the visible panel, including the second
+  partial bottom row when required, without changing full-row scrollbar semantics.
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.

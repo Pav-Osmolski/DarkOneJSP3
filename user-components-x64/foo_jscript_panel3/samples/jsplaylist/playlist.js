@@ -560,6 +560,15 @@ function oGroupBy(ref, label, tf, expandedHeight, showCover, l1, r1, l2, r2) {
 	this.r2 = r2;
 }
 
+function get_playlist_viewport_row_load_count(viewport_h, row_h, baseline_rows, pixel_shift) {
+	row_h = Math.max(1, Number(row_h) || 1);
+	viewport_h = Math.max(0, Number(viewport_h) || 0);
+	baseline_rows = Math.max(0, Math.floor(Number(baseline_rows) || 0));
+	pixel_shift = Math.max(0, Math.min(row_h, Number(pixel_shift) || 0));
+
+	return Math.max(baseline_rows, Math.ceil((viewport_h + pixel_shift) / row_h));
+}
+
 function oList(object_name) {
 	this.saveGroupBy = function () {
 		var data = ["ref", "label", "tf", "expandedHeight", "showCover", "l1", "r1", "l2", "r2"];
@@ -674,6 +683,20 @@ function oList(object_name) {
 		this.h = h;
 		this.totalRowVisible = Math.floor(this.h / cRow.playlist_h);
 		this.totalRowToLoad = this.totalRowVisible + 1;
+	}
+
+	this.getViewportRowsToLoad = function (pixel_shift, offset_override) {
+		if (this.totalRows <= this.totalRowVisible) return this.totalRows;
+
+		var offset = typeof offset_override == 'number' ? offset_override : this.offset;
+		var remaining = Math.max(0, this.totalRows - Math.max(0, offset || 0));
+		var requested = get_playlist_viewport_row_load_count(
+			this.h,
+			cRow.playlist_h,
+			this.totalRowToLoad,
+			pixel_shift
+		);
+		return Math.min(remaining, requested);
 	}
 
 	this.selectAtoB = function (start_id, end_id) {
@@ -888,7 +911,7 @@ function oList(object_name) {
 			full_repaint();
 	}
 
-	this.setItems = function (forceFocus) {
+	this.setItems = function (forceFocus, viewport_shift) {
 		if (forceFocus) {
 			this.getStartOffsetFromFocusId();
 		} else if (typeof this.offset == 'undefined') {
@@ -897,14 +920,12 @@ function oList(object_name) {
 
 		if (this.totalRows <= this.totalRowVisible) this.offset = 0;
 		var startRow = this.totalRows > this.totalRowVisible ? this.offset : 0;
-		var rowsToLoad;
-		if (this.totalRows <= this.totalRowVisible) {
-			rowsToLoad = this.totalRows;
-		} else if (this.totalRows - this.offset <= this.totalRowVisible) {
-			rowsToLoad = Math.min(this.totalRows, this.totalRowVisible);
-		} else {
-			rowsToLoad = Math.min(this.totalRows, this.totalRowToLoad);
+		if (typeof viewport_shift != 'number') {
+			viewport_shift = cList.free_scroll_active
+				? cList.free_scroll_offset
+				: (cList.scroll_timer && cList.scroll_direction > 0 ? cList.scroll_delta : 0);
 		}
+		var rowsToLoad = this.getViewportRowsToLoad(viewport_shift, startRow);
 
 		var reusable = {};
 		if (this.allowItemReuse && !forceFocus) {
@@ -958,6 +979,7 @@ function oList(object_name) {
 		}
 
 		this.items = nextItems;
+		this.loadedRowCount = rowsToLoad;
 		this.allowItemReuse = true;
 		this.refreshSelectionCache();
 	}
