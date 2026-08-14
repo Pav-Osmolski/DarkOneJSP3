@@ -305,9 +305,12 @@ Waveform background does not match the host
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Keep Host background set to Automatic to follow the shared Bottom area
 background, or choose a fixed colour from the narrow JSplitter spacer menu.
-Waveform Minibar paints its own child window, so disable its Transparent
-background, set both custom background swatches to the matching explicit RGB
-value and disable Draw window border. Automatic is the default host mode.
+In Waveform Minibar preferences, enable Transparent background (requires Columns
+UI) and disable Draw window border. DarkOneJSP3 opts the DOJSP3.Waveform child
+into JSplitter `SupportPseudoTransparency` so the host backing should show through
+instead of black. If the component still shows an opaque background, reload
+DOJSP3.DisplayStack or restart foobar2000 and confirm the supplied JSplitter 06
+controller is loaded.
 
 The waveform host menu cannot be found
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,5 +1,6 @@
 # Runtime-generated DarkOneJSP3 bridge files
 js_data/darkonejsp3.bottom-area-state.txt
+js_data/darkonejsp3.bottom-area-command.txt
 js_data/darkonejsp3.reset-command.txt
 js_data/darkonejsp3.queue-state.json
 js_data/darkonejsp3.queue-command.json

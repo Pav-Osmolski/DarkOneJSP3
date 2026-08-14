@@ -1,6 +1,48 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.8 - Waveform Minibar pseudo-transparency integration
+---------------------------------------------------------
+
+- Enabled JSplitter `SupportPseudoTransparency` for the native DOJSP3.Waveform
+  child so Waveform Minibar's own Transparent background option correctly reveals
+  the resolved DOJSP3.DisplayStack backing instead of falling back to black.
+- Preserved the existing Display/Waveform Host background modes and synchronised
+  Bottom-area colour propagation; pseudo-transparency is a child-host opt-in and
+  does not alter Waveform Minibar's played/unplayed waveform colours.
+- Added installation guidance for the Waveform Minibar component preferences that
+  are not carried by the bundled FCL, including the transparent background, border,
+  playback blanking and reference custom-colour settings used by DarkOneJSP3.
+- Replaced the former troubleshooting/configuration guidance that recommended
+  disabling native transparency and manually matching background swatches.
+- Added runtime/static regression coverage for the Waveform child pseudo-
+  transparency opt-in and advanced the release validator to 0.10.4.
+
+v1.0.7 - Synchronised Bottom-area colour commits
+------------------------------------------------
+
+- Reworked Bottom area background and side-divider updates into one coordinated
+  visual commit so the participating JSP3 and JSplitter hosts switch colour in
+  the same visual update instead of exposing a staggered component-by-component
+  transition.
+- Added a shared absolute apply timestamp with a 50 ms coordination window. The
+  colour change remains an immediate switch rather than a fade animation.
+- Added a short-lived `js_data\darkonejsp3.bottom-area-command.txt` commit marker.
+  Bottom Controls uses a lightweight 25 ms existence check for active commits,
+  while the established 100 ms canonical state bridge remains the startup and
+  recovery path.
+- Hardened the canonical state fallback so it cannot expose a newer colour while
+  a coordinated commit is pending, and made rapid successive selections supersede
+  older pending commits rather than briefly painting intermediate choices.
+- Extended the same coordinated apply path to Quick Search when its background
+  inherits the Bottom area and to Display/Waveform when Host background is
+  Automatic - Bottom area background.
+- Added package-hygiene coverage for the generated commit file and expanded runtime
+  regression tests for timing, rapid supersession, inherited consumers and fallback
+  behaviour.
+- Advanced Quick Search to 0.1.16, the shared JSplitter protocol module to 0.2.2,
+  Bottom area appearance to 0.2.14 and the release validator to 0.10.3.
+
 v1.0.6 - Layout/Spectrum view controls and shared Quick Search backgrounds
 --------------------------------------------------------------------------
 

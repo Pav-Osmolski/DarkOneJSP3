@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Quick Search"
-// @version "0.1.15"
+// @version "0.1.16"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
@@ -52,6 +52,10 @@ function on_script_unload() { quickSearch.dispose(); }
 function on_size() { quickSearch.size(window.Width, window.Height); }
 
 function on_notify_data(name, info) {
+    if (name === DarkOneProtocol.bottomArea.notifications.commit) {
+        quickSearch.parentBackgroundCommit(info);
+        return;
+    }
     if (name === DarkOneProtocol.bottomArea.notifications.state) {
         quickSearch.parentBackgroundChanged(info);
         return;

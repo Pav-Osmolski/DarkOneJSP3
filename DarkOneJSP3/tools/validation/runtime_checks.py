@@ -1504,6 +1504,9 @@ def run(ctx: ValidationContext) -> None:
     const initialBottomState = 'v1|1|4278190080|4|4278190080';
     let repaintCount = 0;
     const fills = [];
+    const waveformTimers = [];
+    function waveformSetTimeout(fn, delay) {{ waveformTimers.push({{fn, delay, active:true}}); return waveformTimers.length; }}
+    function waveformClearTimeout(id) {{ if (id > 0 && id <= waveformTimers.length) waveformTimers[id - 1].active = false; }}
     const windowMock = {{
         GetProperty(name, fallback) {{
             return properties.has(name) ? properties.get(name) : fallback;
@@ -1523,9 +1526,9 @@ def run(ctx: ValidationContext) -> None:
         ReadTextFile() {{ return initialBottomState; }}
     }};
     const factory = new Function(
-        'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils',
+        'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils', 'setTimeout', 'clearTimeout',
         colourSource + '\\n' + protocolSource + '\\n' + source +
-        '\\nreturn {{ backgroundMode, backgroundColour, applySharedBottomAreaState, on_notify_data, on_colours_changed, on_paint, setSize:function(w,h){{ww=w;wh=h;}} }};'
+        '\\nreturn {{ Protocol:DarkOneProtocol, backgroundMode, backgroundColour, applySharedBottomAreaState, configureWaveformPseudoTransparency, on_notify_data, on_colours_changed, on_paint, setSize:function(w,h){{ww=w;wh=h;}} }};'
     );
     const controller = factory(
         windowMock,
@@ -1533,9 +1536,15 @@ def run(ctx: ValidationContext) -> None:
         function() {{}},
         DOJSP3Mock,
         function() {{ return false; }},
-        utilsMock
+        utilsMock,
+        waveformSetTimeout,
+        waveformClearTimeout
     );
     controller.setSize(640, 300);
+    const pseudoTransparentWaveform = {{ SupportPseudoTransparency: false }};
+    if (!controller.configureWaveformPseudoTransparency(pseudoTransparentWaveform) ||
+            pseudoTransparentWaveform.SupportPseudoTransparency !== true)
+        throw new Error('Waveform child was not opted into JSplitter pseudo-transparency support');
     if (controller.backgroundMode() !== 6 ||
             (controller.backgroundColour() >>> 0) !== 0xff000000)
         throw new Error('Default waveform host does not automatically follow the bottom background');
@@ -1603,6 +1612,25 @@ def run(ctx: ValidationContext) -> None:
     controller.on_notify_data('DarkOneJSP3.BottomArea.State', 'v1|5|4278190080|4|4278190080');
     if ((controller.backgroundColour() >>> 0) !== 0xff445566)
         throw new Error('Automatic waveform host does not follow the shared Columns UI mode');
+
+    const waveformCommit = controller.Protocol.bottomArea.commit(
+        'waveform-sync', Date.now(), Date.now() + 50,
+        controller.Protocol.bottomArea.state(1, 0xff000000, 4, 0xff000000)
+    );
+    const beforeCommitRepaint = repaintCount;
+    controller.on_notify_data(
+        controller.Protocol.bottomArea.notifications.commit,
+        controller.Protocol.bottomArea.serialiseCommit(waveformCommit)
+    );
+    if ((controller.backgroundColour() >>> 0) !== 0xff445566 || repaintCount !== beforeCommitRepaint)
+        throw new Error('Waveform host exposed a coordinated background before applyAt');
+    const waveformApplyTimer = [...waveformTimers].reverse().find(item => item.active);
+    if (!waveformApplyTimer) throw new Error('Waveform host did not schedule coordinated background apply');
+    waveformApplyTimer.active = false;
+    waveformApplyTimer.fn();
+    if ((controller.backgroundColour() >>> 0) !== 0xff000000 || repaintCount !== beforeCommitRepaint + 1)
+        throw new Error('Waveform host did not apply the coordinated background exactly once');
+
     const beforeColoursChanged = repaintCount;
     controller.on_colours_changed();
     if (repaintCount !== beforeColoursChanged + 1)
@@ -1655,17 +1683,24 @@ def run(ctx: ValidationContext) -> None:
 
     const files = Object.create(null);
     const NEW_STATE = 'P:\\\\js_data\\\\darkonejsp3.bottom-area-state.txt';
+    const COMMIT_COMMAND = 'P:\\\\js_data\\\\darkonejsp3.bottom-area-command.txt';
     const LEGACY_STATE = 'P:\\\\DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';
     const RESET_COMMAND = 'P:\\\\js_data\\\\darkonejsp3.reset-command.txt';
     let failWrites = 0;
+    let failWritePath = '';
     let bottomPickerCalls = 0;
     let bottomPickerResult = (0xff556677 | 0);
     let bottomPickerError = null;
     const logs = [];
     const readCounts = Object.create(null);
+    const isFileCounts = Object.create(null);
     function fileUtils() {{
         return {{
             CreateFolder() {{ return true; }},
+            IsFile(path) {{
+                isFileCounts[path] = (isFileCounts[path] || 0) + 1;
+                return Object.prototype.hasOwnProperty.call(files, path);
+            }},
             ReadTextFile(path) {{
                 readCounts[path] = (readCounts[path] || 0) + 1;
                 if (!Object.prototype.hasOwnProperty.call(files, path)) throw new Error('missing');
@@ -1674,7 +1709,7 @@ def run(ctx: ValidationContext) -> None:
             WriteTextFile(path, content) {{
                 if (arguments.length !== 2)
                     throw new Error('Runtime persistence must use the canonical two-argument WriteTextFile call');
-                if (failWrites > 0) {{ failWrites--; return false; }}
+                if (failWrites > 0 && (!failWritePath || path === failWritePath)) {{ failWrites--; return false; }}
                 files[path] = String(content);
                 return true;
             }},
@@ -1747,7 +1782,7 @@ def run(ctx: ValidationContext) -> None:
             'function darkOneDisplayValueFontWeight(){{return 400;}}\\n' +
             'var DWRITE_FONT_WEIGHT_NORMAL=400,DWRITE_FONT_WEIGHT_MEDIUM=500,DWRITE_FONT_WEIGHT_SEMI_BOLD=600,DWRITE_FONT_WEIGHT_BOLD=700,DWRITE_FONT_WEIGHT_BLACK=900;\\n' +
             weightMenuSource + '\\n' + toolsMenuSource +
-            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,apply:darkOneApplyBottomAreaState,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,toolsMenu:darkOneToolsMenu}};'
+            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,parseCommit:darkOneBottomAreaParseCommit,apply:darkOneApplyBottomAreaState,scheduleCommit:darkOneScheduleBottomAreaCommit,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,toolsMenu:darkOneToolsMenu}};'
         );
         const api = factory(
             windowMock,
@@ -1903,6 +1938,9 @@ def run(ctx: ValidationContext) -> None:
     bottomPickerError = null;
 
     // Restore the migrated baseline before exercising the isolated JSplitter host.
+    // Menu tests above intentionally have no JSplitter peer, so discard their
+    // short-lived coordination command before simulating a fresh host startup.
+    delete files[COMMIT_COMMAND];
     files[NEW_STATE] = 'v1|1|4278190080|4|4278190080';
 
     const hostProperties = new Map();
@@ -1911,6 +1949,9 @@ def run(ctx: ValidationContext) -> None:
     let hostReloads = 0;
     let hostIntervalDelay = 0;
     let hostIntervalCallback = null;
+    const hostTimeouts = [];
+    function hostSetTimeout(fn, delay) {{ hostTimeouts.push({{fn, delay, active:true}}); return hostTimeouts.length; }}
+    function hostClearTimeout(id) {{ if (id > 0 && id <= hostTimeouts.length) hostTimeouts[id - 1].active = false; }}
     const hostWindow = {{
         GetProperty(name, fallback) {{ return hostProperties.has(name) ? hostProperties.get(name) : fallback; }},
         SetProperty(name, value) {{ hostProperties.set(name, value); }},
@@ -1929,10 +1970,10 @@ def run(ctx: ValidationContext) -> None:
         panel() {{ return null; }}, move() {{}}, show() {{}}
     }};
     const hostFactory = new Function(
-        'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'console',
+        'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'console',
         'darkOneJsp3ResetScope', 'DarkOneViewBridge',
         colourSource + '\\n' + protocolSource + '\\n' + resetSource + '\\n' + hostSource +
-        '\\nreturn {{paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncReset:syncResetCommandFile,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){{ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}}}};'
+        '\\nreturn {{paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncCommit:syncBottomAreaCommitFile,syncReset:syncResetCommandFile,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){{ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}}}};'
     );
     const host = hostFactory(
         hostWindow,
@@ -1942,6 +1983,8 @@ def run(ctx: ValidationContext) -> None:
         fileUtils(),
         function(fn, delay) {{ hostIntervalCallback = fn; hostIntervalDelay = delay; return 1; }},
         function() {{ hostIntervalCallback = null; }},
+        hostSetTimeout,
+        hostClearTimeout,
         {{ log(message) {{ logs.push(String(message)); }} }},
         function(data) {{
             try {{ data = typeof data === 'string' ? JSON.parse(data) : data; }} catch (e) {{ return null; }}
@@ -1961,7 +2004,16 @@ def run(ctx: ValidationContext) -> None:
     host.setSize(1920, 300);
     host.ensure();
     if (hostIntervalDelay !== 100 || typeof hostIntervalCallback !== 'function')
-        throw new Error('Bottom Controls is not the sole 100 ms runtime-file poller');
+        throw new Error('Bottom Controls lost its 100 ms canonical-state fallback poller');
+    if (!hostTimeouts.some(item => item.active && item.delay === 25))
+        throw new Error('Bottom Controls did not start the 25 ms lightweight commit existence poll');
+    function runLatestHostApplyTimer() {{
+        const item = [...hostTimeouts].reverse().find(timer => timer.active && timer.delay !== 25);
+        if (!item) return false;
+        item.active = false;
+        item.fn();
+        return true;
+    }}
     const resetReadsAfterEnsure = readCounts[RESET_COMMAND] || 0;
     const stateReadsAfterEnsure = readCounts[NEW_STATE] || 0;
     for (let i = 0; i < 4; i++) hostIntervalCallback();
@@ -2015,7 +2067,10 @@ def run(ctx: ValidationContext) -> None:
         }});
         if ((panelA.api.backgroundColour() >>> 0) !== expected)
             throw new Error('JScript bottom mode ' + mode + ' resolved incorrectly');
-        host.syncFile(false);
+        panelA.runTimers();
+        if (!host.syncCommit())
+            throw new Error('Bottom Controls did not consume mode ' + mode + ' commit');
+        runLatestHostApplyTimer();
         if ((host.backgroundColour() >>> 0) !== expected)
             throw new Error('Bottom Controls mode ' + mode + ' resolved differently from JScript');
         fills.length = 0;
@@ -2063,28 +2118,41 @@ def run(ctx: ValidationContext) -> None:
     panelA.api.send(customState);
     if (!files[NEW_STATE] || panelA.api.parse(files[NEW_STATE]).backgroundMode !== 3)
         throw new Error('JScript panel did not persist the shared bottom-area state');
-    if (panelA.repaints !== panelARepaints + 1)
-        throw new Error('The initiating panel repainted more than once for one state change');
+    if (!files[COMMIT_COMMAND] || !panelA.api.parseCommit(files[COMMIT_COMMAND], Date.now()))
+        throw new Error('JScript panel did not publish a coordinated bottom-area commit');
+    if (panelA.repaints !== panelARepaints)
+        throw new Error('Initiating panel repainted before the coordinated apply time');
 
-    const stateEvent = panelA.notifications.filter(item => item[0] === 'DarkOneJSP3.BottomArea.State').pop();
-    if (!stateEvent) throw new Error('JScript panel did not retain its peer notification fast path');
+    const commitEvent = panelA.notifications.filter(item => item[0] === 'DarkOneJSP3.BottomArea.Commit').pop();
+    if (!commitEvent) throw new Error('JScript panel did not broadcast the coordinated peer commit');
     const panelBRepaints = panelB.repaints;
-    panelB.api.apply(stateEvent[1]);
-    if ((panelB.api.backgroundColour() >>> 0) !== 0xff123456)
-        throw new Error('The second JScript panel did not adopt the peer notification');
-    if (panelB.repaints !== panelBRepaints + 1)
-        throw new Error('A peer panel repainted more than once for one state notification');
+    panelB.api.scheduleCommit(commitEvent[1]);
+    if (panelB.repaints !== panelBRepaints)
+        throw new Error('Peer panel repainted before the coordinated apply time');
+    panelA.runTimers();
+    panelB.runTimers();
+    if ((panelA.api.backgroundColour() >>> 0) !== 0xff123456 ||
+            (panelB.api.backgroundColour() >>> 0) !== 0xff123456)
+        throw new Error('Coordinated JScript panels did not resolve the committed colour');
+    if (panelA.repaints !== panelARepaints + 1 || panelB.repaints !== panelBRepaints + 1)
+        throw new Error('Coordinated JScript panels did not repaint exactly once at commit time');
 
-    const stateRelayCountBefore = hostNotifications.filter(
-        item => item[0] === 'DarkOneJSP3.BottomArea.State').length;
-    host.syncFile(false);
-    const relayedState = hostNotifications.filter(
-        item => item[0] === 'DarkOneJSP3.BottomArea.State').pop();
-    if (!relayedState || hostNotifications.filter(
-            item => item[0] === 'DarkOneJSP3.BottomArea.State').length !==
-            stateRelayCountBefore + 1 ||
-            panelA.api.parse(relayedState[1]).backgroundMode !== 3)
-        throw new Error('Bottom Controls did not relay the changed state inside JSplitter');
+    const commitRelayCountBefore = hostNotifications.filter(
+        item => item[0] === 'DarkOneJSP3.BottomArea.Commit').length;
+    const hostRepaintsBeforeCommit = hostRepaints;
+    if (!host.syncCommit()) throw new Error('Bottom Controls did not consume the coordinated colour commit');
+    const relayedCommit = hostNotifications.filter(
+        item => item[0] === 'DarkOneJSP3.BottomArea.Commit').pop();
+    if (!relayedCommit || hostNotifications.filter(
+            item => item[0] === 'DarkOneJSP3.BottomArea.Commit').length !==
+            commitRelayCountBefore + 1 ||
+            !panelA.api.parseCommit(relayedCommit[1], Date.now()))
+        throw new Error('Bottom Controls did not relay the coordinated commit inside JSplitter');
+    if (hostRepaints !== hostRepaintsBeforeCommit)
+        throw new Error('Bottom Controls repainted before the coordinated apply time');
+    if (!runLatestHostApplyTimer()) throw new Error('Bottom Controls did not schedule the coordinated apply timer');
+    if (hostRepaints !== hostRepaintsBeforeCommit + 1)
+        throw new Error('Bottom Controls did not repaint exactly once at the coordinated apply time');
     fills.length = 0;
     host.paint(gr);
     if (fills.length !== 5 || fills[0][4] !== 0xff123456 ||
@@ -2093,19 +2161,66 @@ def run(ctx: ValidationContext) -> None:
     if (fills[0][0] !== 0 || fills[0][1] !== 0 || fills[0][2] !== 1920 || fills[0][3] !== 300)
         throw new Error('The JSplitter backing does not cover the full bottom area');
 
-    // A false WriteTextFile return must be logged and retried once.
+    // Rapid changes must supersede rather than paint an intermediate colour.
+    const rapidRepaints = panelA.repaints;
+    panelA.api.send({{
+        backgroundMode: 1,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 5,
+        dividerCustomColour: 0xff765432
+    }});
+    panelA.api.send({{
+        backgroundMode: 4,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 5,
+        dividerCustomColour: 0xff765432
+    }});
+    panelA.runTimers();
+    const rapidPaint = [];
+    panelA.api.paint({{ FillRectangle(x,y,w,h,colour) {{ rapidPaint.push(colour>>>0); }} }});
+    if (panelA.repaints !== rapidRepaints + 1 || rapidPaint[0] !== 0xff181818)
+        throw new Error('Rapid JScript colour commits painted an intermediate background');
+    if (!host.syncCommit()) throw new Error('Bottom Controls did not consume the superseding rapid commit');
+    runLatestHostApplyTimer();
+    if ((host.backgroundColour() >>> 0) !== 0xff181818)
+        throw new Error('Bottom Controls applied an obsolete rapid colour commit');
+
+    // A false canonical-state WriteTextFile return must be logged and retried.
+    // The short-lived commit file still succeeds, preserving coordinated visual
+    // delivery while persistence receives its independent retry.
     failWrites = 1;
+    failWritePath = NEW_STATE;
     panelA.api.send({{
         backgroundMode: 1,
         backgroundCustomColour: 0xff123456,
         dividerMode: 4,
         dividerCustomColour: 0xff765432
     }});
+    failWritePath = '';
     if (!logs.some(line => line.indexOf(NEW_STATE) >= 0 && line.indexOf('returned false') >= 0))
-        throw new Error('A false bottom-area write was not diagnosed with its path');
+        throw new Error('A false bottom-area state write was not diagnosed with its path');
     panelA.runTimers();
     if (files[NEW_STATE] !== 'v1|1|4279383126|4|4285944882')
-        throw new Error('The failed bottom-area write was not retried successfully');
+        throw new Error('The failed bottom-area state write was not retried successfully');
+    host.syncCommit();
+    runLatestHostApplyTimer();
+
+    // If the coordination command itself cannot be written, the initiator must
+    // fall back to the legacy immediate repaint path rather than silently doing nothing.
+    failWrites = 1;
+    failWritePath = COMMIT_COMMAND;
+    const fallbackRepaints = panelA.repaints;
+    panelA.api.send({{
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432
+    }});
+    failWritePath = '';
+    if (panelA.repaints !== fallbackRepaints + 1)
+        throw new Error('Failed commit publication did not fall back to immediate repaint');
+    if (!logs.some(line => line.indexOf(COMMIT_COMMAND) >= 0 && line.indexOf('returned false') >= 0))
+        throw new Error('A false bottom-area commit write was not diagnosed with its path');
     host.syncFile(false);
 
     // Cross-host factory reset: JScript writes a short-lived command, Bottom
@@ -2146,12 +2261,14 @@ def run(ctx: ValidationContext) -> None:
     if ((panelA.api.backgroundColour() >>> 0) !== 0xff181818)
         throw new Error('JScript inherited bottom background does not resolve to #181818');
     const panelFills = [];
+    panelA.runTimers();
     panelA.api.paint({{ FillRectangle(x,y,w,h,colour) {{ panelFills.push([x,y,w,h,colour>>>0]); }} }});
     if (panelFills.length !== 1 || panelFills[0][0] !== 0 || panelFills[0][1] !== 0 ||
             panelFills[0][2] !== 320 || panelFills[0][3] !== 120 ||
             panelFills[0][4] !== 0xff181818)
         throw new Error('JScript inherited bottom background does not paint its complete panel surface');
-    host.syncFile(false);
+    host.syncCommit();
+    runLatestHostApplyTimer();
     fills.length = 0;
     host.paint(gr);
     if (fills.length !== 3 || fills[0][4] !== 0xff181818 ||
@@ -3946,6 +4063,9 @@ function assert(condition, message) {{ if (!condition) throw new Error(message);
 String.prototype.calc_width2 = function() {{ return this.length * 8; }};
 const properties = new Map();
 const writes = [];
+const quickTimers = [];
+function quickSetTimeout(fn, delay) {{ quickTimers.push({{fn, delay, active:true}}); return quickTimers.length; }}
+function quickClearTimeout(id) {{ if (id > 0 && id <= quickTimers.length) quickTimers[id - 1].active = false; }}
 const windowMock = {{
     Name: 'Quick Search test', IsDefaultUI: false, Width: 300, Height: 60,
     GetProperty(name, fallback) {{ return properties.has(name) ? properties.get(name) : fallback; }},
@@ -3953,7 +4073,7 @@ const windowMock = {{
     GetColourCUI(index) {{ return index === 3 ? 0xff1e1e1e : 0xffdcdcdc; }},
     GetFontCUI() {{ return JSON.stringify({{Name:'Segoe UI',Size:12,Weight:400,Style:0,Stretch:5}}); }},
     Repaint() {{}}, RepaintRect() {{}}, SetCursor() {{}},
-    SetTimeout(fn) {{ return 1; }}, ClearTimeout() {{}},
+    SetTimeout: quickSetTimeout, ClearTimeout: quickClearTimeout,
     ClearInterval() {{}}, SetInterval() {{ return 1; }}
 }};
 const utilsMock = {{
@@ -4133,6 +4253,19 @@ qs.lastSuccess = false;
 qs.applyInputColours();
 assert((qs.colours.errorBackground >>> 0) === 0xff123456,
     'Quick Search Transparent error background did not inherit the live Bottom-area custom colour');
+const qsCommit = quickApi.Protocol.bottomArea.commit(
+    'quick-sync', Date.now(), Date.now() + 50,
+    quickApi.Protocol.bottomArea.state(1, 0xff000000, 4, 0xff000000)
+);
+qs.parentBackgroundCommit(quickApi.Protocol.bottomArea.serialiseCommit(qsCommit));
+assert((qs.colours.background >>> 0) === 0xff123456,
+    'Quick Search exposed inherited parent colour before coordinated applyAt');
+const quickApplyTimer = [...quickTimers].reverse().find(item => item.active);
+assert(!!quickApplyTimer, 'Quick Search did not schedule coordinated inherited-background apply');
+quickApplyTimer.active = false;
+quickApplyTimer.fn();
+assert((qs.colours.background >>> 0) === 0xff000000,
+    'Quick Search did not adopt inherited parent colour at coordinated apply time');
 qs.setBackgroundColourMode('errorBackgroundMode', 6, true);
 assert((qs.colours.errorBackground >>> 0) === 0xff581f1f,
     'Quick Search semantic Error background default changed');

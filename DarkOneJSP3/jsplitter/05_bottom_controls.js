@@ -17,6 +17,9 @@ var qsW = 1;
 var qsH = 1;
 var runtimeBridgePollTimer = null;
 var runtimeBridgePollTick = 0;
+var bottomAreaCommitPollTimer = null;
+var bottomAreaCommitApplyTimer = null;
+var bottomAreaPendingCommitId = '';
 var bottomAreaStateFileSnapshot = '';
 var lastResetCommandId = '';
 var lastQuickSearchLayoutCommandId = '';
@@ -25,6 +28,8 @@ var lastViewCommandId = '';
 var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
 var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
+var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
+var BOTTOM_AREA_COMMIT_POLL_MS = 25;
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
 var QUICKSEARCH_LAYOUT_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.quicksearch-layout-command.txt';
@@ -94,6 +99,17 @@ function broadcastBottomAreaState(state) {
     } catch (e) {}
 }
 
+
+function broadcastBottomAreaCommit(commit) {
+    var serialised = BOTTOM_AREA_PROTOCOL.serialiseCommit(commit);
+    if (!serialised) return false;
+    try {
+        window.NotifyOthers(BOTTOM_AREA_PROTOCOL.notifications.commit, serialised);
+        return true;
+    } catch (e) {}
+    return false;
+}
+
 function ensureRuntimeDataFolder() {
     try { utils.CreateFolder(RUNTIME_DATA_DIR); } catch (e) {}
 }
@@ -148,6 +164,15 @@ function writeBottomAreaStateFile(state) {
 }
 
 function syncBottomAreaStateFile(createIfMissing) {
+    // A coordinated commit owns the visual transition until applyAt. If the
+    // 100 ms fallback happens to run before the 25 ms commit poll, consume the
+    // command here instead of exposing the canonical state early.
+    if (!bottomAreaPendingCommitId) {
+        try {
+            if (utils.IsFile(BOTTOM_AREA_COMMIT_FILE)) syncBottomAreaCommitFile();
+        } catch (e) {}
+    }
+    if (bottomAreaPendingCommitId) return false;
     var state = readBottomAreaStateFile();
     if (!state) {
         if (createIfMissing) writeBottomAreaStateFile(bottomAreaState());
@@ -159,6 +184,99 @@ function syncBottomAreaStateFile(createIfMissing) {
     var changed = applyBottomAreaState(state, true);
     broadcastBottomAreaState(state);
     return changed;
+}
+
+
+function acknowledgeBottomAreaCommitFile() {
+    try {
+        var result = utils.RemovePath(BOTTOM_AREA_COMMIT_FILE);
+        if (result === false) throw new Error('utils.RemovePath returned false');
+        return true;
+    } catch (e) {
+        return tryWriteRuntimeFile(
+            BOTTOM_AREA_COMMIT_FILE,
+            '',
+            'bottom-area commit acknowledgement'
+        );
+    }
+}
+
+function readBottomAreaCommitFile() {
+    try {
+        return {
+            raw: String(utils.ReadTextFile(BOTTOM_AREA_COMMIT_FILE, 65001) || ''),
+            commit: null
+        };
+    } catch (e) {}
+    return null;
+}
+
+function cancelPendingBottomAreaCommit() {
+    if (bottomAreaCommitApplyTimer) clearTimeout(bottomAreaCommitApplyTimer);
+    bottomAreaCommitApplyTimer = null;
+    bottomAreaPendingCommitId = '';
+}
+
+function applyPendingBottomAreaCommit(commit) {
+    if (!commit || commit.id !== bottomAreaPendingCommitId) return false;
+    bottomAreaCommitApplyTimer = null;
+    bottomAreaPendingCommitId = '';
+    bottomAreaStateFileSnapshot = BOTTOM_AREA_PROTOCOL.serialiseState(commit.state);
+    return applyBottomAreaState(commit.state, true);
+}
+
+function scheduleBottomAreaCommit(commit) {
+    commit = BOTTOM_AREA_PROTOCOL.parseCommit(commit, new Date().getTime());
+    if (!commit) return false;
+    cancelPendingBottomAreaCommit();
+    bottomAreaPendingCommitId = commit.id;
+    // Relay immediately inside the JSplitter host. Display/Waveform receives the
+    // same absolute applyAt value and schedules its repaint for the same frame.
+    broadcastBottomAreaCommit(commit);
+    var delay = Math.max(0, commit.applyAt - new Date().getTime());
+    if (delay <= 0) return applyPendingBottomAreaCommit(commit);
+    bottomAreaCommitApplyTimer = setTimeout(function () {
+        applyPendingBottomAreaCommit(commit);
+    }, delay);
+    return true;
+}
+
+function syncBottomAreaCommitFile() {
+    try {
+        if (!utils.IsFile(BOTTOM_AREA_COMMIT_FILE)) return false;
+    } catch (e) { return false; }
+    var state = readBottomAreaCommitFile();
+    if (!state) return false;
+    state.commit = BOTTOM_AREA_PROTOCOL.parseCommit(state.raw, new Date().getTime());
+    if (!state.commit) {
+        if (state.raw) acknowledgeBottomAreaCommitFile();
+        return false;
+    }
+    if (state.commit.id === bottomAreaPendingCommitId) {
+        acknowledgeBottomAreaCommitFile();
+        return false;
+    }
+    scheduleBottomAreaCommit(state.commit);
+    acknowledgeBottomAreaCommitFile();
+    return true;
+}
+
+function pollBottomAreaCommitFile() {
+    bottomAreaCommitPollTimer = null;
+    syncBottomAreaCommitFile();
+    bottomAreaCommitPollTimer = setTimeout(
+        pollBottomAreaCommitFile,
+        BOTTOM_AREA_COMMIT_POLL_MS
+    );
+}
+
+function initialiseBottomAreaCommitBridge() {
+    if (bottomAreaCommitPollTimer) clearTimeout(bottomAreaCommitPollTimer);
+    syncBottomAreaCommitFile();
+    bottomAreaCommitPollTimer = setTimeout(
+        pollBottomAreaCommitFile,
+        BOTTOM_AREA_COMMIT_POLL_MS
+    );
 }
 
 function readResetCommandFile() {
@@ -319,6 +437,7 @@ function syncViewCommandFile() {
 function ensureRuntimeBridge() {
     if (runtimeBridgePollTimer) return;
     lastResetCommandId = String(window.GetProperty(LAST_RESET_COMMAND_PROPERTY, '') || '');
+    initialiseBottomAreaCommitBridge();
     syncBottomAreaStateFile(true);
     syncResetCommandFile();
     syncQuickSearchLayoutCommand();
@@ -337,10 +456,12 @@ function ensureRuntimeBridge() {
 }
 
 function disposeRuntimeBridge() {
-    if (!runtimeBridgePollTimer) return;
-    clearInterval(runtimeBridgePollTimer);
+    if (runtimeBridgePollTimer) clearInterval(runtimeBridgePollTimer);
     runtimeBridgePollTimer = null;
     runtimeBridgePollTick = 0;
+    if (bottomAreaCommitPollTimer) clearTimeout(bottomAreaCommitPollTimer);
+    bottomAreaCommitPollTimer = null;
+    cancelPendingBottomAreaCommit();
 }
 
 function bottomAreaColour(mode, customColour, transparentFallback) {

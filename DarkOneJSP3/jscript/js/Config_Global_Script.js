@@ -32,16 +32,24 @@ get_colours();
 var DARKONE_RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
 var DARKONE_BOTTOM_AREA_PROTOCOL_VERSION = 'v1';
 var DARKONE_BOTTOM_AREA_STATE_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
+var DARKONE_BOTTOM_AREA_COMMIT_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
+var DARKONE_BOTTOM_AREA_COMMIT_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_COMMIT_DELAY = 50;
+var DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE = 5000;
 var DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var DARKONE_RESET_COMMAND_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
 var DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY = 250;
 var darkOneBottomAreaStateRetryTimer = null;
+var darkOneBottomAreaCommitTimer = null;
+var darkOneBottomAreaPendingCommitId = '';
+var darkOneBottomAreaCommitSequence = 0;
 var darkOneBottomAreaInitialised = false;
 var darkOneResetCommandSequence = 0;
 var DARKONE_BOTTOM_AREA_NOTIFICATIONS = Object.freeze({
     query : 'DarkOneJSP3.BottomArea.Query',
     set : 'DarkOneJSP3.BottomArea.Set',
-    state : 'DarkOneJSP3.BottomArea.State'
+    state : 'DarkOneJSP3.BottomArea.State',
+    commit : 'DarkOneJSP3.BottomArea.Commit'
 });
 var DARKONE_BOTTOM_MODE_TRANSPARENT = 0;
 var DARKONE_BOTTOM_MODE_BLACK = 1;
@@ -162,6 +170,77 @@ function darkOneBottomAreaParseState(data) {
         dividerCustomColour : darkOneBottomOpaque(dividerCustomColour)
     };
 }
+
+function darkOneBottomAreaCommit(id, issuedAt, applyAt, state) {
+    id = String(id || '');
+    issuedAt = Math.round(Number(issuedAt));
+    applyAt = Math.round(Number(applyAt));
+    state = darkOneBottomAreaParseState(state);
+    if (!id || !isFinite(issuedAt) || !isFinite(applyAt) || !state) return null;
+    return { id : id, issuedAt : issuedAt, applyAt : applyAt, state : state };
+}
+function darkOneBottomAreaSerialiseCommit(commit) {
+    commit = commit && darkOneBottomAreaCommit(
+        commit.id,
+        commit.issuedAt,
+        commit.applyAt,
+        commit.state
+    );
+    if (!commit) return '';
+    var state = commit.state;
+    return DARKONE_BOTTOM_AREA_COMMIT_VERSION + '|' + commit.id + '|' +
+        String(commit.issuedAt) + '|' + String(commit.applyAt) + '|' +
+        String(state.backgroundMode) + '|' + String(state.backgroundCustomColour >>> 0) + '|' +
+        String(state.dividerMode) + '|' + String(state.dividerCustomColour >>> 0);
+}
+function darkOneBottomAreaParseCommit(data, now) {
+    if (data && typeof data == 'object') {
+        var objectCommit = darkOneBottomAreaCommit(
+            data.id,
+            data.issuedAt,
+            data.applyAt,
+            data.state || data
+        );
+        if (!objectCommit) return null;
+        now = Math.round(Number(now));
+        if (isFinite(now) &&
+                (objectCommit.issuedAt > now + DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE ||
+                 now - objectCommit.issuedAt > DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE)) return null;
+        return objectCommit;
+    }
+    var parts = String(data || '').split('|');
+    if (parts.length !== 8 || parts[0] !== DARKONE_BOTTOM_AREA_COMMIT_VERSION) return null;
+    var commit = darkOneBottomAreaCommit(
+        parts[1],
+        Number(parts[2]),
+        Number(parts[3]),
+        {
+            backgroundMode : Number(parts[4]),
+            backgroundCustomColour : Number(parts[5]),
+            dividerMode : Number(parts[6]),
+            dividerCustomColour : Number(parts[7])
+        }
+    );
+    if (!commit) return null;
+    now = Math.round(Number(now));
+    if (isFinite(now) &&
+            (commit.issuedAt > now + DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE ||
+             now - commit.issuedAt > DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE)) return null;
+    return commit;
+}
+function darkOneCreateBottomAreaCommit(state) {
+    state = darkOneBottomAreaParseState(state) || darkOneBottomAreaState();
+    var issuedAt = new Date().getTime();
+    darkOneBottomAreaCommitSequence++;
+    return darkOneBottomAreaCommit(
+        String(issuedAt) + '-' + String(darkOneBottomAreaCommitSequence) + '-' +
+            String(Math.floor(Math.random() * 0x1000000)),
+        issuedAt,
+        issuedAt + DARKONE_BOTTOM_AREA_COMMIT_DELAY,
+        state
+    );
+}
+
 function darkOneBottomBackgroundColour() {
     var mode = darkOneBottomBackgroundMode();
     if (mode === DARKONE_BOTTOM_MODE_BLACK) return 0xff000000;
@@ -305,12 +384,74 @@ function darkOneBroadcastBottomAreaState(state) {
         );
     } catch (e) {}
 }
+function darkOneCancelBottomAreaCommit() {
+    if (darkOneBottomAreaCommitTimer) {
+        try { window.ClearTimeout(darkOneBottomAreaCommitTimer); } catch (e) {}
+    }
+    darkOneBottomAreaCommitTimer = null;
+    darkOneBottomAreaPendingCommitId = '';
+}
+function darkOneApplyScheduledBottomAreaCommit(commit) {
+    if (!commit || commit.id !== darkOneBottomAreaPendingCommitId) return false;
+    darkOneBottomAreaCommitTimer = null;
+    darkOneBottomAreaPendingCommitId = '';
+    // State properties were staged when the commit was received. Resolve all
+    // dependent colours and repaint only at the shared target time so the
+    // three JSP3 bottom panels change in the same visual frame as JSplitter.
+    // Comparing against p_backcol also handles rapid superseding commits: the
+    // properties may already match while the previous colour was never painted.
+    var nextBackground = darkOneBottomBackgroundColour();
+    if ((p_backcol >>> 0) !== (nextBackground >>> 0)) darkOneApplyBottomAreaAppearance();
+    return true;
+}
+function darkOneScheduleBottomAreaCommit(commit) {
+    commit = darkOneBottomAreaParseCommit(commit, new Date().getTime());
+    if (!commit) return false;
+    darkOneCancelBottomAreaCommit();
+    darkOneBottomAreaPendingCommitId = commit.id;
+    darkOneApplyBottomAreaState(commit.state, false);
+    var delay = Math.max(0, commit.applyAt - new Date().getTime());
+    if (delay <= 0) return darkOneApplyScheduledBottomAreaCommit(commit);
+    try {
+        darkOneBottomAreaCommitTimer = window.SetTimeout(function () {
+            darkOneApplyScheduledBottomAreaCommit(commit);
+        }, delay);
+        return true;
+    } catch (e) {
+        return darkOneApplyScheduledBottomAreaCommit(commit);
+    }
+}
+function darkOneBroadcastBottomAreaCommit(commit) {
+    var serialised = darkOneBottomAreaSerialiseCommit(commit);
+    if (!serialised) return false;
+    try {
+        window.NotifyOthers(DARKONE_BOTTOM_AREA_NOTIFICATIONS.commit, serialised);
+        return true;
+    } catch (e) {}
+    return false;
+}
 function darkOneSendBottomAreaState(state) {
     state = darkOneBottomAreaParseState(state) || darkOneBottomAreaState();
-    darkOneApplyBottomAreaState(state);
+    var commit = darkOneCreateBottomAreaCommit(state);
+    var serialisedCommit = darkOneBottomAreaSerialiseCommit(commit);
+    // Publish the short-lived command before the canonical state. Bottom
+    // Controls sees the command marker and defers its own repaint to applyAt,
+    // preventing the state-file fallback from exposing an intermediate frame.
+    var commandWritten = serialisedCommit && darkOneTryWriteRuntimeFile(
+        DARKONE_BOTTOM_AREA_COMMIT_FILE,
+        serialisedCommit,
+        'shared bottom-area commit'
+    );
     darkOneWriteBottomAreaStateFile(state);
-    // Notify the other JScript Panel instances directly. JSplitter runs in a
-    // separate component host and follows the same state file instead.
+    if (commandWritten) {
+        darkOneScheduleBottomAreaCommit(commit);
+        darkOneBroadcastBottomAreaCommit(commit);
+        return;
+    }
+    // If the short-lived coordination command cannot be written, retain the
+    // older immediate path rather than making the colour menu appear broken.
+    darkOneCancelBottomAreaCommit();
+    darkOneApplyBottomAreaState(state);
     darkOneBroadcastBottomAreaState(state);
 }
 function darkOneInitialiseBottomAreaState(queryPeers) {
@@ -342,6 +483,7 @@ function darkOneRequestBottomAreaState() {
 }
 function darkOneDisposeBottomAreaBridge() {
     darkOneCancelBottomAreaStateRetry();
+    darkOneCancelBottomAreaCommit();
 }
 function darkOneResetBottomAreaDefaults() {
     darkOneSendBottomAreaState({
@@ -753,9 +895,16 @@ function darkOneSetSharedProperty(name, value) {
     darkOneSetSharedProperties(values);
 }
 function darkOneHandleNotify(name, info) {
+    if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.commit) {
+        var peerCommit = darkOneBottomAreaParseCommit(info, new Date().getTime());
+        if (!peerCommit) return false;
+        darkOneScheduleBottomAreaCommit(peerCommit);
+        return false;
+    }
     if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.state) {
         var peerState = darkOneBottomAreaParseState(info);
         if (!peerState) return false;
+        darkOneCancelBottomAreaCommit();
         return darkOneApplyBottomAreaState(peerState);
     }
     // v0.9.21 sent Set notifications while assuming JScript Panel and

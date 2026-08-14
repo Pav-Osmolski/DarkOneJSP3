@@ -272,14 +272,17 @@ Existing state from DarkOneJSP3\shared\bottom-area-state.txt is migrated
 automatically.
 
 Each JScript panel reads and applies the shared state once during
-initialisation, before its first paint, and then uses same-component
-notifications for live panel-to-panel updates. Later resize callbacks do not
-reread the file. Divider-only changes update the shared properties without
-rebuilding JScript button or Display rendering resources.
+initialisation, before its first paint. Live colour changes use a coordinated
+visual commit so the participating JScript Panel and JSplitter surfaces switch
+together instead of repainting in a visible sequence. Divider-only changes still
+avoid rebuilding JScript button or Display rendering resources.
 
-Only the Bottom Controls JSplitter polls the state file, at 100 ms, to bridge
-the separate component hosts. Failed writes are logged with the target path and
-retried once.
+A short-lived commit marker is written to
+js_data\darkonejsp3.bottom-area-command.txt with one shared apply timestamp.
+Bottom Controls checks for active commits every 25 ms and relays the same target
+time inside the JSplitter domain. The established 100 ms state-file bridge remains
+as the startup/recovery fallback and defers to any pending coordinated commit.
+Failed canonical-state writes are logged with the target path and retried once.
 
 Factory reset uses a second short-lived runtime command file at
 js_data\darkonejsp3.reset-command.txt. The same Bottom Controls timer checks
@@ -1064,10 +1067,12 @@ Waveform Minibar is hidden. The default reveal delay is 200 ms and suppresses a
 previous track's cached waveform while the new waveform becomes available. Try
 300-500 ms on slower storage or with uncached tracks.
 
-For a continuous background, configure Waveform Minibar itself to use matching
-played and unplayed background RGB values, disable Transparent background and
-disable Draw window border. Native child-window transparency does not reliably
-composite with the JSplitter Direct2D host.
+For a continuous background, enable Waveform Minibar's Transparent background
+(requires Columns UI) option and disable Draw window border. DarkOneJSP3 enables
+JSplitter pseudo-transparency for DOJSP3.Waveform, allowing the native child to
+reveal the resolved DisplayStack backing, including Automatic Bottom-area colours.
+The component's played/unplayed waveform colours remain component-owned settings;
+see INSTALLATION.txt for the reference DarkOneJSP3 values.
 
 10. Album Notes and online sources
 ----------------------------------

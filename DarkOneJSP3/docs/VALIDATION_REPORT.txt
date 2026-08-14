@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.6 Validation Report
+DarkOneJSP3 v1.0.8 Validation Report
 ====================================
 
 Scope
@@ -38,7 +38,7 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
-- Quick Search 0.1.15 background tests verify the shared six-mode DarkOne
+- Quick Search 0.1.16 background tests verify the shared six-mode DarkOne
   palette, one-time migration from the previous Default/Custom background model and live
   Transparent / inherit parent resolution against Bottom-area state for both
   Normal and Error backgrounds. The dedicated dark-red Error Default is retained.
@@ -90,22 +90,32 @@ Checks
   `utils.WriteTextFile(path, content)` form. False returns and exceptions are
   logged with the target path, and failed bottom-area writes are retried once.
 - Each JScript panel reads and applies the state once during initialisation,
-  before its first paint, and uses same-component notifications for live peer
-  updates. Repeated resize callbacks do not reread the file or query peers.
+  before its first paint. Live updates stage the same pending state and apply it
+  at one shared timestamp across participating component hosts.
 - Divider-only changes persist and update shared menus without rebuilding
   JScript control or Display visual resources.
 - Shared bottom-area appearance refreshes call only methods exported by the real
   DisplaySystem implementation; validation rejects mocks or compatibility helpers
   that invent removed Display cache APIs.
-- Only the Bottom Controls JSplitter polls continuously. Visible bottom-area
-  state is checked at 100 ms, while the factory-reset command is checked at
-  500 ms through the same timer and acknowledged after successful processing.
+- Bottom Controls remains the sole cross-host polling owner. Active colour
+  commits use a lightweight 25 ms existence check and a shared 50 ms apply
+  target; canonical state remains a 100 ms startup/recovery path, while reset
+  commands are checked at 500 ms and acknowledged after processing.
+- Coordinated-commit tests verify that JSP3 panels, Bottom Controls, inherited
+  Quick Search backgrounds and Automatic Display/Waveform backing do not expose
+  the new colour before the shared apply time; rapid commits supersede older
+  pending commits without flashing intermediate states.
 - Display/Waveform reads the shared bottom-area state once, defaults to
-  Automatic Host background and receives state-only notifications relayed by
-  Bottom Controls inside the JSplitter domain. Automatic custom and Columns UI
+  Automatic Host background and receives coordinated commit/state notifications
+  relayed by Bottom Controls inside the JSplitter domain. Automatic custom and
+  Columns UI
   modes are exercised without adding another poller; Transparent / inherit
   parent must resolve to the shared #181818 parent
   tone and paint the full host surface.
+- Waveform Minibar host integration opts DOJSP3.Waveform into JSplitter
+  `SupportPseudoTransparency`, allowing the component's native Transparent
+  background mode to reveal the resolved DisplayStack backing instead of an
+  opaque black child-window fallback.
 - A fresh JScript Panel instance is created after persisted colour changes and
   factory reset to verify restart persistence.
 - Cross-host factory reset is exercised through

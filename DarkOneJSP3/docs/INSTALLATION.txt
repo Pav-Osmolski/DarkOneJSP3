@@ -160,6 +160,29 @@ Optional native Queue Viewer alternative
 The separate native Queue Viewer component remains supported as an
 interchangeable DOJSP3.Queue child for users who prefer its native interface.
 
+Waveform Minibar component preferences
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Waveform Minibar stores its own component preferences and they are not restored by
+the bundled Columns UI FCL. Configure Preferences > Tools > Waveform Minibar (mod)
+locally after installing or importing the layout.
+
+For the DarkOneJSP3 reference appearance, use:
+
+- Use custom colors: enabled
+- Played Fill: RGB 191, 198, 255 (#BFC6FF)
+- Played RMS: RGB 128, 140, 255 (#808CFF)
+- Unplayed Fill: RGB 223, 223, 223 (#DFDFDF)
+- Unplayed RMS: RGB 191, 191, 191 (#BFBFBF)
+- Background (played/unplayed): RGB 32, 32, 32 (#202020) as the opaque fallback
+- Cursor: RGB 0, 122, 217 (#007AD9)
+- Track to prefer when showing waveform: Playing, blank when stopped
+- Draw window border: disabled
+- Transparent background (requires Columns UI): enabled
+
+With Transparent background enabled, DarkOneJSP3 opts DOJSP3.Waveform into
+JSplitter pseudo-transparency so the resolved DisplayStack/Bottom-area backing
+shows through instead of the component's opaque fallback colour.
+
 Required Album Notes title
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 The fourth child of DOJSP3.InfoStack must:
@@ -183,7 +206,7 @@ as the consolidated InfoStack child.
 6. Confirm that the display and waveform occupy the lower centre area.
 7. Confirm `DOJSP3.QuickSearch` is a JScript Panel 3 instance loading the
    DarkOneJSP3 Quick Search wrapper.
-8. Configure Waveform Minibar as described in CONFIGURATION_GUIDE.txt.
+8. Confirm Waveform Minibar uses the component preferences documented above.
 9. Open the foobar2000 console and check for [DarkOneJSP3] errors.
 10. Export a working FCL for your own backup.
 

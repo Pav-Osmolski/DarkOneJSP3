@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.6
+DarkOneJSP3 v1.0.8
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -113,10 +113,13 @@ Current highlights
 - Automatic waveform-host background follows the shared Bottom area background
   by default, with transparent, black, both DarkOne greys, Columns UI global
   and custom fixed choices still available.
-- One shared bottom-area background setting controls the left controls, right
-  controls, centre display and Bottom Controls backing; Transparent / inherit
-  parent resolves uniformly to DarkOne dark grey (#181818), while a second
-  shared setting controls both lower side-divider strips.
+- Waveform Minibar native transparency is bridged through JSplitter pseudo-
+  transparency so the resolved DisplayStack backing shows through instead of
+  the component falling back to black.
+- One synchronised bottom-area background setting controls the left controls,
+  right controls, centre display and Bottom Controls backing; Transparent /
+  inherit parent resolves uniformly to DarkOne dark grey (#181818), while a
+  second shared setting controls both lower side-divider strips.
 - Default, Columns UI selected-item or custom display accent shared by Plain
   Font and Dot Matrix modes.
 - Root-owned startup transition defaults to Off, with optional Black reveal

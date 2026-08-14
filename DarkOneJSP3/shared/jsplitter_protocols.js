@@ -265,7 +265,8 @@ var DarkOneProtocol = (function () {
     var bottomAreaNotifications = Object.freeze({
         query: 'DarkOneJSP3.BottomArea.Query',
         set: 'DarkOneJSP3.BottomArea.Set',
-        state: 'DarkOneJSP3.BottomArea.State'
+        state: 'DarkOneJSP3.BottomArea.State',
+        commit: 'DarkOneJSP3.BottomArea.Commit'
     });
 
     var bottomAreaDefaults = Object.freeze({
@@ -333,6 +334,75 @@ var DarkOneProtocol = (function () {
         );
     }
 
+
+
+    var bottomAreaCommitVersion = 'v1';
+    var bottomAreaCommitMaxAgeMs = 5000;
+
+    function bottomAreaCommit(id, issuedAt, applyAt, state) {
+        id = String(id || '');
+        issuedAt = Math.round(Number(issuedAt));
+        applyAt = Math.round(Number(applyAt));
+        state = parseBottomAreaState(state);
+        if (!id || !isFinite(issuedAt) || !isFinite(applyAt) || !state) return null;
+        return {
+            id: id,
+            issuedAt: issuedAt,
+            applyAt: applyAt,
+            state: state
+        };
+    }
+
+    function serialiseBottomAreaCommit(commit) {
+        commit = commit && bottomAreaCommit(
+            commit.id,
+            commit.issuedAt,
+            commit.applyAt,
+            commit.state
+        );
+        if (!commit) return '';
+        var state = commit.state;
+        return bottomAreaCommitVersion + '|' +
+            commit.id + '|' +
+            String(commit.issuedAt) + '|' +
+            String(commit.applyAt) + '|' +
+            String(state.backgroundMode) + '|' +
+            String(state.backgroundCustomColour >>> 0) + '|' +
+            String(state.dividerMode) + '|' +
+            String(state.dividerCustomColour >>> 0);
+    }
+
+    function parseBottomAreaCommit(data, now) {
+        if (data && typeof data === 'object') {
+            var objectCommit = bottomAreaCommit(
+                data.id,
+                data.issuedAt,
+                data.applyAt,
+                data.state || data
+            );
+            if (!objectCommit) return null;
+            now = Math.round(Number(now));
+            if (isFinite(now) &&
+                    (objectCommit.issuedAt > now + bottomAreaCommitMaxAgeMs ||
+                     now - objectCommit.issuedAt > bottomAreaCommitMaxAgeMs)) return null;
+            return objectCommit;
+        }
+        var parts = String(data || '').split('|');
+        if (parts.length !== 8 || parts[0] !== bottomAreaCommitVersion) return null;
+        var commit = bottomAreaCommit(
+            parts[1],
+            Number(parts[2]),
+            Number(parts[3]),
+            bottomAreaState(Number(parts[4]), Number(parts[5]), Number(parts[6]), Number(parts[7]))
+        );
+        if (!commit) return null;
+        now = Math.round(Number(now));
+        if (isFinite(now) &&
+                (commit.issuedAt > now + bottomAreaCommitMaxAgeMs ||
+                 now - commit.issuedAt > bottomAreaCommitMaxAgeMs)) return null;
+        return commit;
+    }
+
     function bottomAreaMenuOptions(baseId, transparentLabel) {
         var options = dividerMenuOptions(baseId);
         options[0].label = String(transparentLabel || 'Transparent / inherit parent');
@@ -348,6 +418,11 @@ var DarkOneProtocol = (function () {
         state: bottomAreaState,
         serialiseState: serialiseBottomAreaState,
         parseState: parseBottomAreaState,
+        commitVersion: bottomAreaCommitVersion,
+        commitMaxAgeMs: bottomAreaCommitMaxAgeMs,
+        commit: bottomAreaCommit,
+        serialiseCommit: serialiseBottomAreaCommit,
+        parseCommit: parseBottomAreaCommit,
         menuOptions: bottomAreaMenuOptions
     });
 

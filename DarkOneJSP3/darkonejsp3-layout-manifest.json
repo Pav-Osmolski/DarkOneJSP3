@@ -1,5 +1,5 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.8",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -104,7 +104,7 @@
       "title": "DOJSP3.QuickSearch",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt",
-      "version": "0.1.15"
+      "version": "0.1.16"
     },
     {
       "number": 12,
@@ -699,11 +699,12 @@
     },
     "jsplitter_protocol_consolidation": {
       "shared_helper": "DarkOneJSP3/shared/jsplitter_protocols.js",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "protocol_versions": {
         "startup_controls": "v1",
         "divider_state": "v1",
-        "bottom_area_state": "v1"
+        "bottom_area_state": "v1",
+        "bottom_area_commit": "v1"
       },
       "startup_notifications_centralised": true,
       "startup_state_serialisation_centralised": true,
@@ -722,7 +723,11 @@
       "bottom_area_component_hosts_isolated": true,
       "bottom_area_poll_interval_ms": 100,
       "bottom_area_jsplitter_state_relay": true,
-      "reset_command_poll_interval_ms": 500
+      "reset_command_poll_interval_ms": 500,
+      "bottom_area_commit_notifications_centralised": true,
+      "bottom_area_commit_serialisation_centralised": true,
+      "bottom_area_commit_poll_interval_ms": 25,
+      "bottom_area_commit_apply_delay_ms": 50
     },
     "optional_button_menu_consolidation": {
       "shared_helper": "DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js",
@@ -933,7 +938,7 @@
         "DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR"
       ],
       "runtime_tests": true,
-      "version": "0.2.13",
+      "version": "0.2.14",
       "state_transport": "runtime-generated UTF-8 state file",
       "state_file": "js_data/darkonejsp3.bottom-area-state.txt",
       "state_file_packaged": false,
@@ -969,7 +974,19 @@
       "single_bottom_menu_dispatch": true,
       "end_to_end_menu_tests": true,
       "custom_colour_mode_and_picker_edit_separated": true,
-      "saved_custom_colour_reapplies_without_picker": true
+      "saved_custom_colour_reapplies_without_picker": true,
+      "coordinated_visual_commits": true,
+      "visual_commit_delay_ms": 50,
+      "visual_commit_file": "js_data/darkonejsp3.bottom-area-command.txt",
+      "visual_commit_file_packaged": false,
+      "visual_commit_poll_interval_ms": 25,
+      "visual_commit_expiry_ms": 5000,
+      "shared_absolute_apply_time": true,
+      "rapid_commit_supersession": true,
+      "canonical_state_fallback_retained": true,
+      "canonical_state_defers_to_pending_commit": true,
+      "quick_search_inherited_consumer": true,
+      "display_waveform_coordinated_consumer": true
     },
     "rendering_efficiency_v0930": {
       "js_playlist_selection_and_playback_state_cached": true,
@@ -987,7 +1004,7 @@
     },
     "quick_search": {
       "implementation": "JScript Panel 3 with JSplitter parent-layout bridge",
-      "version": "0.1.15",
+      "version": "0.1.16",
       "sources": [
         "Media library",
         "Current playlist",
@@ -1041,7 +1058,8 @@
       "error_background_default": "semantic dark red",
       "transparent_background_inherits_bottom_area": true,
       "bottom_area_live_state_updates": true,
-      "remembered_custom_colour_separate_picker": true
+      "remembered_custom_colour_separate_picker": true,
+      "bottom_area_coordinated_commit_consumer": true
     },
     "view_modes": {
       "version": "0.1.0",
@@ -1115,8 +1133,9 @@
   "release_hardening": {
     "display_waveform_background": {
       "menu": "Host background",
-      "default": "DarkOne grey RGB 32,32,32",
+      "default": "Automatic - Bottom area background",
       "modes": [
+        "Automatic - Bottom area background",
         "Transparent / inherit parent",
         "Black",
         "DarkOne grey",
@@ -1133,7 +1152,8 @@
         "area exposed while Waveform Minibar is hidden"
       ],
       "factory_reset_covered": true,
-      "shared_colour_helper": true
+      "shared_colour_helper": true,
+      "waveform_child_pseudo_transparency": true
     }
   },
   "performance": {

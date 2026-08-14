@@ -51,6 +51,7 @@ def run(ctx: ValidationContext) -> None:
         if path.name.casefold() in {
                 'bottom-area-state.txt',
                 'darkonejsp3.bottom-area-state.txt',
+                'darkonejsp3.bottom-area-command.txt',
                 'darkonejsp3.reset-command.txt',
                 'darkonejsp3.queue-state.json',
                 'darkonejsp3.queue-command.json',
@@ -68,6 +69,7 @@ def run(ctx: ValidationContext) -> None:
         ignored = text(gitignore).replace('\\', '/').splitlines()
         for runtime_path in [
                 'js_data/darkonejsp3.bottom-area-state.txt',
+                'js_data/darkonejsp3.bottom-area-command.txt',
                 'js_data/darkonejsp3.reset-command.txt',
                 'js_data/darkonejsp3.queue-state.json',
                 'js_data/darkonejsp3.queue-command.json',
@@ -365,7 +367,7 @@ def run(ctx: ValidationContext) -> None:
             'jsplitter_protocol_consolidation', {})
         expected_protocol_consolidation = {
             'shared_helper': 'DarkOneJSP3/shared/jsplitter_protocols.js',
-            'version': '0.2.1',
+            'version': '0.2.2',
             'startup_notifications_centralised': True,
             'startup_state_serialisation_centralised': True,
             'startup_command_serialisation_centralised': True,
@@ -381,6 +383,10 @@ def run(ctx: ValidationContext) -> None:
             'bottom_area_poll_interval_ms': 100,
             'reset_command_poll_interval_ms': 500,
             'bottom_area_jsplitter_state_relay': True,
+            'bottom_area_commit_notifications_centralised': True,
+            'bottom_area_commit_serialisation_centralised': True,
+            'bottom_area_commit_poll_interval_ms': 25,
+            'bottom_area_commit_apply_delay_ms': 50,
             'property_ownership_unchanged': True,
             'saved_values_unchanged': True,
             'runtime_bridge_tests': True,
@@ -391,7 +397,8 @@ def run(ctx: ValidationContext) -> None:
         if protocol_consolidation.get('protocol_versions') != {
                 'startup_controls': 'v1',
                 'divider_state': 'v1',
-                'bottom_area_state': 'v1'}:
+                'bottom_area_state': 'v1',
+                'bottom_area_commit': 'v1'}:
             errors.append('Manifest JSplitter protocol versions are incorrect')
         bottom_area = manifest.get('enhancements', {}).get(
             'bottom_area_appearance', {})
@@ -400,7 +407,7 @@ def run(ctx: ValidationContext) -> None:
             'background_default': 'DarkOne grey',
             'divider_default': 'DarkOne dark grey',
             'quick_search_frame_unchanged': True,
-            'version': '0.2.13',
+            'version': '0.2.14',
             'transparent_resolved_colour': 'DarkOne dark grey RGB 24,24,24',
             'transparent_cross_host_uniformity': True,
             'full_background_mode_matrix_validated': True,
@@ -436,6 +443,18 @@ def run(ctx: ValidationContext) -> None:
             'columns_ui_live_update': True,
             'transparent_layers_supported': True,
             'runtime_tests': True,
+            'coordinated_visual_commits': True,
+            'visual_commit_delay_ms': 50,
+            'visual_commit_file': 'js_data/darkonejsp3.bottom-area-command.txt',
+            'visual_commit_file_packaged': False,
+            'visual_commit_poll_interval_ms': 25,
+            'visual_commit_expiry_ms': 5000,
+            'shared_absolute_apply_time': True,
+            'rapid_commit_supersession': True,
+            'canonical_state_fallback_retained': True,
+            'canonical_state_defers_to_pending_commit': True,
+            'quick_search_inherited_consumer': True,
+            'display_waveform_coordinated_consumer': True,
         }
         for key, expected in expected_bottom_area.items():
             if bottom_area.get(key) != expected:
@@ -565,8 +584,8 @@ def run(ctx: ValidationContext) -> None:
         if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
             errors.append('Manifest does not describe the writable scripted Queue Viewer')
         quick_search_manifest = manifest.get('enhancements', {}).get('quick_search', {})
-        if quick_search_manifest.get('version') != '0.1.15':
-            errors.append('Manifest Quick Search version is not 0.1.15')
+        if quick_search_manifest.get('version') != '0.1.16':
+            errors.append('Manifest Quick Search version is not 0.1.16')
         if quick_search_manifest.get('implementation') != 'JScript Panel 3 with JSplitter parent-layout bridge':
             errors.append('Manifest does not identify the scripted Quick Search architecture')
         if quick_search_manifest.get('height_default') != '2 lines' or quick_search_manifest.get('responsive_font') is not True:
@@ -1686,6 +1705,14 @@ def run(ctx: ValidationContext) -> None:
             for token in ['Quick Search Toolbar', 'DarkOneJSP3 Native', 'JScript Panel 3 Quick Search']:
                 if token not in body:
                     errors.append(label + ' does not preserve the current default/native FCL layout description: ' + token)
+        for token in [
+            'Waveform Minibar component preferences',
+            'Transparent background (requires Columns UI): enabled',
+            'Draw window border: disabled',
+            'Waveform Minibar stores its own component preferences',
+        ]:
+            if token not in installation_body:
+                errors.append('INSTALLATION.txt Waveform Minibar setup guidance is missing: ' + token)
         # Promotional artwork is maintained in the GitHub repository and may be
         # omitted from runtime release archives. When an assets folder is present,
         # however, every referenced repository image must also be present.
@@ -1832,7 +1859,10 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Troubleshooting sections are not in the expected order')
         if re.search(r'\bv\d+\.\d+\.\d+\b', body) or 'Install v' in body:
             errors.append('Troubleshooting contains development-version upgrade advice')
+        if 'disable its Transparent' in body or 'disable Transparent background' in body:
+            errors.append('Troubleshooting retains obsolete Waveform Minibar transparency advice')
         for phrase in [
+            'SupportPseudoTransparency',
             'The DarkOneJSP3 Queue Viewer wrapper must import the component-local',
             'DarkOneJSP3-managed properties',
             'DarkOneJSP3 wrapper rather than the generic sample entry',
@@ -2112,6 +2142,9 @@ def run(ctx: ValidationContext) -> None:
             'var darkOneBottomAreaInitialised = false;',
             "var DARKONE_RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\\\';",
             "var DARKONE_BOTTOM_AREA_STATE_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';",
+            "var DARKONE_BOTTOM_AREA_COMMIT_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';",
+            "commit : 'DarkOneJSP3.BottomArea.Commit'",
+            'function darkOneScheduleBottomAreaCommit(commit)',
             "var DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';",
             "var DARKONE_RESET_COMMAND_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';",
             'function darkOneWriteResetCommand(scope)',
@@ -2144,6 +2177,10 @@ def run(ctx: ValidationContext) -> None:
             'function bottomDividerColour()',
             "var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\\\';",
             "var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';",
+            "var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';",
+            'var BOTTOM_AREA_COMMIT_POLL_MS = 25;',
+            'function syncBottomAreaCommitFile()',
+            'function scheduleBottomAreaCommit(commit)',
             "var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';",
             "var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';",
             'var RUNTIME_BRIDGE_POLL_INTERVAL = 100;',
@@ -2184,6 +2221,9 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             '{ id: baseId + 4, mode: dividerModes.columnsUi,',
             '{ id: baseId + 5, mode: dividerModes.custom, custom: true }',
+            "commit: 'DarkOneJSP3.BottomArea.Commit'",
+            'function serialiseBottomAreaCommit(commit)',
+            'function parseBottomAreaCommit(data, now)',
         ]:
             if token not in protocol_body:
                 errors.append('Shared colour-menu ID mapping has drifted: ' + token)
@@ -2206,6 +2246,8 @@ def run(ctx: ValidationContext) -> None:
             "var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\\\darkonejsp3.bottom-area-state.txt';",
             'var sharedBottomAreaState = readBottomAreaStateFile();',
             'function applySharedBottomAreaState(data, repaint)',
+            'function scheduleSharedBottomAreaCommit(data)',
+            'BOTTOM_AREA_PROTOCOL.notifications.commit',
             'if (mode === BACKGROUND_AUTOMATIC) return sharedBottomAreaBackgroundColour();',
             'return DOJSP3.colours.separator;',
             'gr.FillSolidRect(0, 0, ww, wh, backgroundColour());',
@@ -2214,11 +2256,17 @@ def run(ctx: ValidationContext) -> None:
             'DarkOneColour.appendRadioOptions(',
             'DarkOneColour.pickJsplitter(',
             'function on_colours_changed()',
+            'function configureWaveformPseudoTransparency(waveform)',
+            'waveform.SupportPseudoTransparency = true;',
+            'var waveform = waveformPanel();',
         ]:
             if token not in body:
                 errors.append('Waveform background palette is missing: ' + token)
         if 'window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_AUTOMATIC)' not in body:
             errors.append('Waveform Automatic background is not the default for new properties')
+        manifest_body = text(project / 'darkonejsp3-layout-manifest.json')
+        if '"waveform_child_pseudo_transparency": true' not in manifest_body:
+            errors.append('Waveform pseudo-transparency host support is missing from the layout manifest')
 
     reset_defaults = project / 'shared' / 'reset_defaults.js'
     if reset_defaults.exists() and (
@@ -2786,7 +2834,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.15"',
+            '// @version "0.1.16"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',

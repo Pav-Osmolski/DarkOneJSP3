@@ -251,6 +251,8 @@ function DarkOneQuickSearch() {
     };
 
     this.parentBackgroundState = quickSearchReadBottomAreaState();
+    this.parentBackgroundCommitTimer = 0;
+    this.parentBackgroundCommitId = '';
 
     this.previousMatchBeforeExtended = this.properties.match === QS_MATCH_EXTENDED ? QS_MATCH_ALL : this.properties.match;
     this.autoExtendedActive = false;
@@ -470,6 +472,9 @@ function DarkOneQuickSearch() {
     this.parentBackgroundChanged = function (data) {
         var state = QS_BACKGROUND_PROTOCOL.parseState(data);
         if (!state) return false;
+        if (this.parentBackgroundCommitTimer) window.ClearTimeout(this.parentBackgroundCommitTimer);
+        this.parentBackgroundCommitTimer = 0;
+        this.parentBackgroundCommitId = '';
         var current = this.parentBackgroundState;
         var changed = !current ||
             current.backgroundMode !== state.backgroundMode ||
@@ -482,6 +487,26 @@ function DarkOneQuickSearch() {
             window.Repaint();
         }
         return changed;
+    };
+
+
+    this.parentBackgroundCommit = function (data) {
+        var commit = QS_BACKGROUND_PROTOCOL.parseCommit(data, new Date().getTime());
+        if (!commit) return false;
+        if (this.parentBackgroundCommitTimer) window.ClearTimeout(this.parentBackgroundCommitTimer);
+        this.parentBackgroundCommitTimer = 0;
+        this.parentBackgroundCommitId = commit.id;
+        var self = this;
+        var apply = function () {
+            if (self.parentBackgroundCommitId !== commit.id) return;
+            self.parentBackgroundCommitTimer = 0;
+            self.parentBackgroundCommitId = '';
+            self.parentBackgroundChanged(commit.state);
+        };
+        var delay = Math.max(0, commit.applyAt - new Date().getTime());
+        if (delay <= 0) apply();
+        else this.parentBackgroundCommitTimer = window.SetTimeout(apply, delay);
+        return true;
     };
 
     this.coloursChanged = function () {
@@ -2214,7 +2239,10 @@ function DarkOneQuickSearch() {
 
     this.dispose = function () {
         if (this.autoTimer) window.ClearTimeout(this.autoTimer);
+        if (this.parentBackgroundCommitTimer) window.ClearTimeout(this.parentBackgroundCommitTimer);
         this.autoTimer = 0;
+        this.parentBackgroundCommitTimer = 0;
+        this.parentBackgroundCommitId = '';
         quickSearchSafeDispose(this.icon);
         this.icon = null;
         try { utils.RemovePath(DARKONE_QUICKSEARCH_CONTEXT_FILE); } catch (e) {}

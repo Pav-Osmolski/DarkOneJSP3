@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v1.0.6
+  <strong>Current stable release:</strong> v1.0.8
 </p>
 
 > [!IMPORTANT]
@@ -64,11 +64,11 @@ workflow of the original theme.
   visible rows, cached column geometry and Direct2D bitmap reuse.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
-* Consistent, configurable bottom-area colours across JSP3 and JSplitter.
+* Synchronised, configurable bottom-area colours across JSP3 and JSplitter.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.6** is the current stable release.
+**DarkOneJSP3 v1.0.8** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a

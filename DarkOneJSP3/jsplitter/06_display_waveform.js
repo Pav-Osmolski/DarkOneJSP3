@@ -18,6 +18,13 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // v0.3.10 separates selecting the remembered Custom host colour from editing
 // that stored colour through the native picker.
 //
+// v0.3.11 coordinates Automatic Bottom-area background changes with the
+// shared JSP3/JSplitter apply timestamp so composite colour updates land together.
+//
+// v0.3.12 opts the native Waveform Minibar child into JSplitter's
+// pseudo-transparency support so the component's Transparent background mode
+// can reveal this host's resolved backing instead of the native black fallback.
+//
 // v0.3.9 adds Automatic as the default host-background mode. Automatic follows
 // the shared Bottom area background without adding another runtime-file poller;
 // Bottom Controls relays changed state inside the JSplitter notification domain.
@@ -42,6 +49,8 @@ var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 
 var revealTimer = 0;
+var bottomAreaCommitTimer = 0;
+var bottomAreaCommitId = '';
 var waveformVisible = null;
 var hiddenAfterStop = hideWhenStopped() && !fb.IsPlaying;
 
@@ -116,6 +125,25 @@ function applySharedBottomAreaState(data, repaint) {
         window.Repaint();
     }
     return changed;
+}
+
+
+function scheduleSharedBottomAreaCommit(data) {
+    var commit = BOTTOM_AREA_PROTOCOL.parseCommit(data, new Date().getTime());
+    if (!commit) return false;
+    if (bottomAreaCommitTimer) clearTimeout(bottomAreaCommitTimer);
+    bottomAreaCommitTimer = 0;
+    bottomAreaCommitId = commit.id;
+    var apply = function () {
+        if (bottomAreaCommitId !== commit.id) return;
+        bottomAreaCommitTimer = 0;
+        bottomAreaCommitId = '';
+        applySharedBottomAreaState(commit.state, true);
+    };
+    var delay = Math.max(0, commit.applyAt - new Date().getTime());
+    if (delay <= 0) apply();
+    else bottomAreaCommitTimer = setTimeout(apply, delay);
+    return true;
 }
 
 function backgroundMode() {
@@ -204,6 +232,23 @@ function setCustomBackgroundColour() {
     setBackgroundMode(BACKGROUND_CUSTOM);
 }
 
+function configureWaveformPseudoTransparency(waveform) {
+    if (!waveform) return false;
+    try {
+        if (waveform.SupportPseudoTransparency !== true) {
+            waveform.SupportPseudoTransparency = true;
+        }
+        return waveform.SupportPseudoTransparency === true;
+    } catch (e) {}
+    return false;
+}
+
+function waveformPanel() {
+    var waveform = DOJSP3.panel(DOJSP3.titles.waveform);
+    configureWaveformPseudoTransparency(waveform);
+    return waveform;
+}
+
 function waveformShouldBeVisible(playbackActive) {
     if (!hideWhenStopped()) return true;
     return Boolean(playbackActive) && !hiddenAfterStop;
@@ -213,7 +258,7 @@ function setWaveformVisible(visible) {
     visible = Boolean(visible);
     if (waveformVisible === visible) return false;
 
-    var waveform = DOJSP3.panel(DOJSP3.titles.waveform);
+    var waveform = waveformPanel();
     if (!waveform) return false;
 
     DOJSP3.show(waveform, visible);
@@ -249,7 +294,7 @@ function layoutDisplayWaveform() {
     if (ww <= 0 || wh <= 0) return;
 
     var display = DOJSP3.panel(DOJSP3.titles.display);
-    var waveform = DOJSP3.panel(DOJSP3.titles.waveform);
+    var waveform = waveformPanel();
     var half = DOJSP3.clamp(DOJSP3.idiv(wh, 2), 1, wh);
     var maximumWaveformTop = Math.max(0, wh - 1);
 
@@ -333,7 +378,14 @@ function on_playback_stop(reason) {
 }
 
 function on_notify_data(name, data) {
+    if (name === BOTTOM_AREA_PROTOCOL.notifications.commit) {
+        scheduleSharedBottomAreaCommit(data);
+        return;
+    }
     if (name === BOTTOM_AREA_PROTOCOL.notifications.state) {
+        if (bottomAreaCommitTimer) clearTimeout(bottomAreaCommitTimer);
+        bottomAreaCommitTimer = 0;
+        bottomAreaCommitId = '';
         applySharedBottomAreaState(data, true);
         return;
     }
@@ -343,6 +395,9 @@ function on_notify_data(name, data) {
 
 function on_script_unload() {
     cancelWaveformReveal();
+    if (bottomAreaCommitTimer) clearTimeout(bottomAreaCommitTimer);
+    bottomAreaCommitTimer = 0;
+    bottomAreaCommitId = '';
 }
 
 function on_mouse_rbtn_up(x, y) {
