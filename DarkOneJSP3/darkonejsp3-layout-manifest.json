@@ -1,5 +1,5 @@
 {
-  "version": "1.0.10",
+  "version": "1.0.11",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -408,8 +408,12 @@
       "darkone_internal_view_commands": true,
       "internal_view_commands": [
         "DarkOneJSP3/Layout/Toggle",
-        "DarkOneJSP3/Visualiser/Toggle"
-      ]
+        "DarkOneJSP3/Visualiser/Toggle",
+        "DarkOneJSP3/InfoStack/Menu"
+      ],
+      "infostack_menu_button_supported": true,
+      "infostack_menu_suggested_label": "INFOSTACK",
+      "infostack_menu_anchor_follows_button": true
     },
     "request_identity": {
       "separate_api_and_html_profiles": true,
@@ -600,7 +604,8 @@
       "jsplitter_rebroadcast_bridge": true,
       "isolated_component_hosts_tested": true,
       "expired_commands_rejected": true,
-      "view_modes_covered": true
+      "view_modes_covered": true,
+      "infostack_tab_strip_visibility_covered": true
     },
     "info_stack": {
       "automatic_tab_font_sizing": true,
@@ -612,7 +617,19 @@
       "fixed_font_size_supported": true,
       "automatic_tab_area_follows_font_scale": true,
       "automatic_tab_area_scale_applies_in_automatic_font_mode": true,
-      "backing_default": "DarkOne dark grey RGB 24,24,24"
+      "backing_default": "DarkOne dark grey RGB 24,24,24",
+      "tab_strip_visible_default": true,
+      "tab_strip_visibility_persistent": true,
+      "tab_strip_can_be_hidden": true,
+      "hidden_tab_strip_expands_active_page": true,
+      "direct_page_selection_menu": true,
+      "menu_groups": [
+        "Tab settings",
+        "Appearance",
+        "Startup"
+      ],
+      "optional_button_command": "DarkOneJSP3/InfoStack/Menu",
+      "appearance_reset_restores_tab_strip": true
     },
     "art_spectrum_dividers": {
       "customisable_colour": true,
@@ -1099,7 +1116,13 @@
       "transition_strategy": "synchronous ArtSpectrum hide/prepare/move/show",
       "runtime_command_file": "js_data/darkonejsp3.view-command.txt",
       "stale_command_acknowledgement": true,
-      "factory_reset_restores_standard_layout_and_spectrum": true
+      "factory_reset_restores_standard_layout_and_spectrum": true,
+      "view_bridge_module_version": "0.1.1",
+      "view_bridge_optional_horizontal_anchor": true,
+      "view_bridge_anchor_range": [
+        0,
+        1000
+      ]
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

@@ -135,10 +135,14 @@ DarkOneJSP3 internal view commands:
 - SPECTRUM: `DarkOneJSP3/Visualiser/Toggle`
   Toggles DOJSP3.Spectrum. When hidden, Album Art receives the complete
   ArtSpectrum host. The selected mode persists.
+- INFOSTACK: `DarkOneJSP3/InfoStack/Menu`
+  Opens the InfoStack navigation/configuration menu aligned with the clicked
+  optional button. This remains available when the visual tab strip is hidden.
 
-Leave command style at 0 when entering either command manually; the control
+Leave command style at 0 when entering these commands manually; the control
 panel detects the internal command and caches style 4 after the first use.
 Behaviour reset restores the standard three-part layout and shows Spectrum.
+Appearance reset restores the InfoStack tab strip.
 
 Button appearance
 ~~~~~~~~~~~~~~~~~
@@ -440,13 +444,11 @@ range, colours and rendering through the native component menu.
 4. InfoStack tab strip
 ----------------------
 
-Right-click empty space on the tab row beneath the left information area.
-The complete menu is described below.
+Right-click empty space on the tab row beneath the left information area, or
+open the same menu from an optional button configured with
+DarkOneJSP3/InfoStack/Menu.
 
-Select tab
-~~~~~~~~~~
-
-Select any currently visible page:
+The visible pages appear directly at the top of the menu for quick selection:
 - Playlists
 - Biography
 - Last.fm
@@ -454,13 +456,26 @@ Select any currently visible page:
 - Queue
 - Properties
 
-Visible tabs
+Show tab strip
+~~~~~~~~~~~~~~
+
+Show or hide the InfoStack tab row itself. When hidden, the active information
+page expands to use the full InfoStack height; the optional INFOSTACK button
+remains available for page selection and configuration.
+
+Tab settings
 ~~~~~~~~~~~~
+
+Groups the tab-specific configuration commands below so the top-level menu
+remains focused on page selection.
+
+Visible tabs
+^^^^^^^^^^^^
 
 Show or hide pages independently. The final visible tab cannot be hidden.
 
 Tab titles
-~~~~~~~~~~
+^^^^^^^^^^
 
 - Rename each page label
 - Use Title Case defaults
@@ -473,7 +488,7 @@ Default labels are Playlists, Biography, Last.fm, Album Notes, Queue and
 Properties.
 
 Tab font size
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 - Automatic tab font size
 - Set fixed tab font size...
@@ -485,7 +500,7 @@ size bypasses responsive calculation. Enter 0 in the fixed-size dialog to
 return to automatic sizing.
 
 Tab font colour
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 - Default - DarkOne blue: #298FCC
 - Columns UI selected-item background
@@ -497,15 +512,20 @@ opens the native picker. This affects normal inactive labels. The active label r
 hovered label remains grey.
 
 Tab area
-~~~~~~~~
+^^^^^^^^
 
 - Automatic height (follows tab font sizing)
 - Set fixed tab area height...
 
 Enter 0 in the fixed-height dialog to restore automatic height.
 
+Appearance
+~~~~~~~~~~
+
+Groups the InfoStack backing and side-divider colour controls.
+
 InfoStack backing colour
-~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Controls the JSplitter backing behind the information pages and tab strip:
 - Transparent / inherit parent
@@ -520,7 +540,7 @@ Custom colour reapplies the remembered value immediately; Set custom colour...
 opens the native picker.
 
 Side divider colour
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 
 Uses the shared upper-divider menu described in section 3.
 
@@ -1321,6 +1341,7 @@ InfoStack
   DarkOneJSP3.InfoStack.BackgroundMode
   DarkOneJSP3.InfoStack.BackgroundColour
   DarkOneJSP3.InfoStack.TabAreaHeight
+  DarkOneJSP3.InfoStack.TabStripVisible
   DarkOneJSP3.InfoStack.TabColourMode
   DarkOneJSP3.InfoStack.TabCustomColour
 

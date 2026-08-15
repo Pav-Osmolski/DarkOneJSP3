@@ -90,6 +90,7 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "DarkOneJSP3.InfoStack.FontSize": 0,
             "DarkOneJSP3.InfoStack.AutoFontScale": 100,
             "DarkOneJSP3.InfoStack.TabAreaHeight": 0,
+            "DarkOneJSP3.InfoStack.TabStripVisible": true,
             "DarkOneJSP3.InfoStack.TabColourMode": 0,
             "DarkOneJSP3.InfoStack.TabCustomColour": 0xff298fcc,
             "DarkOneJSP3.InfoStack.Tab.Playlists.Visible": true,

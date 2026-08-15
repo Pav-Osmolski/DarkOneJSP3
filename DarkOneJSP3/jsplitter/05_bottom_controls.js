@@ -426,7 +426,7 @@ function syncViewCommandFile() {
         return false;
     }
     lastViewCommandId = command.id;
-    var payload = DarkOneViewBridge.serialiseNotification(command.command);
+    var payload = DarkOneViewBridge.serialiseNotification(command.command, command.anchorX);
     if (payload) {
         try { window.NotifyOthers(DarkOneViewBridge.notification, payload); } catch (e) {}
     }

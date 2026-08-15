@@ -535,6 +535,37 @@ def run(ctx: ValidationContext) -> None:
         if manifest.get('enhancements', {}).get('control_buttons', {}).get(
                 'shared_optional_menu') is not True:
             errors.append('Manifest control-button settings omit the shared optional menu')
+        optional_buttons = manifest.get('enhancements', {}).get('optional_buttons', {})
+        for key, expected in {
+            'infostack_menu_button_supported': True,
+            'infostack_menu_suggested_label': 'INFOSTACK',
+            'infostack_menu_anchor_follows_button': True,
+        }.items():
+            if optional_buttons.get(key) != expected:
+                errors.append('Manifest optional-button InfoStack field is incorrect: ' + key)
+        if 'DarkOneJSP3/InfoStack/Menu' not in optional_buttons.get('internal_view_commands', []):
+            errors.append('Manifest optional-button commands omit DarkOneJSP3/InfoStack/Menu')
+        info_stack_manifest = manifest.get('enhancements', {}).get('info_stack', {})
+        for key, expected in {
+            'tab_strip_visible_default': True,
+            'tab_strip_visibility_persistent': True,
+            'tab_strip_can_be_hidden': True,
+            'hidden_tab_strip_expands_active_page': True,
+            'direct_page_selection_menu': True,
+            'optional_button_command': 'DarkOneJSP3/InfoStack/Menu',
+            'appearance_reset_restores_tab_strip': True,
+        }.items():
+            if info_stack_manifest.get(key) != expected:
+                errors.append('Manifest InfoStack navigation field is incorrect: ' + key)
+        if info_stack_manifest.get('menu_groups') != ['Tab settings', 'Appearance', 'Startup']:
+            errors.append('Manifest InfoStack menu groups are incorrect')
+        view_modes_manifest = manifest.get('enhancements', {}).get('view_modes', {})
+        if view_modes_manifest.get('view_bridge_module_version') != '0.1.1':
+            errors.append('Manifest view bridge module version is incorrect')
+        if view_modes_manifest.get('view_bridge_optional_horizontal_anchor') is not True:
+            errors.append('Manifest view bridge omits optional horizontal anchor support')
+        if view_modes_manifest.get('view_bridge_anchor_range') != [0, 1000]:
+            errors.append('Manifest view bridge anchor range is incorrect')
         for feature_name in [
                 'display_accent', 'info_stack_tab_colour',
                 'art_spectrum_dividers', 'info_stack_page_background']:
@@ -2408,6 +2439,51 @@ def run(ctx: ValidationContext) -> None:
         if 'layoutArtSpectrumForSize(ww, wh);' not in body:
             errors.append('Album Art/Spectrum controller does not fill its host')
 
+    info_stack_tabs = project / 'jsplitter' / '03_info_stack_tabs.js'
+    if info_stack_tabs.exists():
+        info_body = text(info_stack_tabs)
+        for token in [
+            "var TAB_STRIP_VISIBLE_PROPERTY = 'DarkOneJSP3.InfoStack.TabStripVisible';",
+            'function isTabStripVisible()',
+            'function setTabStripVisible(visible)',
+            "menu.AppendMenuItem(MENU_STRING, 250, 'Show tab strip');",
+            'menu.CheckMenuItem(250, isTabStripVisible());',
+            'function showInfoStackMenu(x, y, targetIndex)',
+            'DarkOneViewBridge.commands.infoStackMenu',
+            'DarkOneViewBridge.parseNotificationData(data)',
+            'contentHeight = wh;',
+            'tabAreaHeight = 0;',
+        ]:
+            if token not in info_body:
+                errors.append('InfoStack button/tab-strip integration is missing: ' + token)
+        if "selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');" in info_body:
+            errors.append('InfoStack menu still nests tab selection under the obsolete Select tab submenu')
+        for token in [
+            "visibilityMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Visible tabs');",
+            "titlesMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab titles');",
+            "fontMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab font size');",
+            "tabColourMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab font colour');",
+            "areaMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab area');",
+            "backgroundMenu.AppendTo(appearanceMenu, MENU_POPUP, 'InfoStack backing colour');",
+            "dividerMenu.AppendTo(appearanceMenu, MENU_POPUP, 'Side divider colour');",
+            "tabSettingsMenu.AppendTo(menu, MENU_POPUP, 'Tab settings');",
+            "appearanceMenu.AppendTo(menu, MENU_POPUP, 'Appearance');",
+            "startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');",
+        ]:
+            if token not in info_body:
+                errors.append('InfoStack menu consolidation is missing: ' + token)
+        for obsolete in [
+            "visibilityMenu.AppendTo(menu, MENU_POPUP, 'Visible tabs');",
+            "titlesMenu.AppendTo(menu, MENU_POPUP, 'Tab titles');",
+            "fontMenu.AppendTo(menu, MENU_POPUP, 'Tab font size');",
+            "tabColourMenu.AppendTo(menu, MENU_POPUP, 'Tab font colour');",
+            "areaMenu.AppendTo(menu, MENU_POPUP, 'Tab area');",
+            "backgroundMenu.AppendTo(menu, MENU_POPUP, 'InfoStack backing colour');",
+            "dividerMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');",
+        ]:
+            if obsolete in info_body:
+                errors.append('InfoStack menu still exposes a configuration item at top level: ' + obsolete)
+
     view_bridge = project / 'shared' / 'view_bridge.js'
     if view_bridge.exists():
         body = text(view_bridge)
@@ -2420,8 +2496,11 @@ def run(ctx: ValidationContext) -> None:
             "var NOTIFICATION = 'DarkOneJSP3.View.Command';",
             "layoutToggle: 'layout-toggle'",
             "visualiserToggle: 'visualiser-toggle'",
+            "infoStackMenu: 'infostack-menu'",
+            "darkonejsp3/infostack/menu",
             "darkonejsp3.view-command.txt",
-            'function writeCommand(command)',
+            'function writeCommand(command, anchorX)',
+            'function parseNotificationData(data)',
         ]:
             if token not in body:
                 errors.append('View-command bridge is missing: ' + token)

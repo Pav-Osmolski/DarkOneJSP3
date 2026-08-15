@@ -1,6 +1,12 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
+// v0.6.29 consolidates InfoStack configuration into Tab settings and Appearance
+// submenus so direct page selection remains the focus of the top-level menu.
+//
+// v0.6.28 adds a persistent tab-strip visibility toggle and a streamlined
+// InfoStack menu that can also be opened from a DarkOneJSP3 optional button.
+//
 // v0.6.27 separates remembered Custom colour selection from native picker editing
 // for InfoStack tab, backing and shared side-divider colours.
 //
@@ -109,6 +115,7 @@ var AUTO_FONT_SCALE_PROPERTY = 'DarkOneJSP3.InfoStack.AutoFontScale';
 var BACKGROUND_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.BackgroundMode';
 var BACKGROUND_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.BackgroundColour';
 var TAB_AREA_HEIGHT_PROPERTY = 'DarkOneJSP3.InfoStack.TabAreaHeight';
+var TAB_STRIP_VISIBLE_PROPERTY = 'DarkOneJSP3.InfoStack.TabStripVisible';
 var LABEL_DEFAULTS_VERSION_PROPERTY = 'DarkOneJSP3.InfoStack.LabelDefaultsVersion';
 var TAB_COLOUR_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.TabColourMode';
 var TAB_CUSTOM_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.TabCustomColour';
@@ -306,17 +313,23 @@ function layoutInfoStack() {
 
     ensureActiveTab();
     rebuildFont();
-    var requestedAreaHeight = configuredTabAreaHeight();
-    var desiredAreaHeight = requestedAreaHeight > 0 ? requestedAreaHeight : automaticTabAreaHeight();
-    var maximumAreaHeight = Math.max(1, wh - 1);
-    var minimumAreaHeight = Math.min(Math.max(18, tabHeight), maximumAreaHeight);
+    if (isTabStripVisible()) {
+        var requestedAreaHeight = configuredTabAreaHeight();
+        var desiredAreaHeight = requestedAreaHeight > 0 ? requestedAreaHeight : automaticTabAreaHeight();
+        var maximumAreaHeight = Math.max(1, wh - 1);
+        var minimumAreaHeight = Math.min(Math.max(18, tabHeight), maximumAreaHeight);
 
-    tabAreaHeight = Math.max(minimumAreaHeight, Math.min(desiredAreaHeight, maximumAreaHeight));
-    contentHeight = Math.max(1, wh - tabAreaHeight);
-    tabY = contentHeight;
-    // Recalculate from the final boundary so the child area and tab area
-    // always consume the splitter exactly, even at very small dimensions.
-    tabAreaHeight = Math.max(1, wh - tabY);
+        tabAreaHeight = Math.max(minimumAreaHeight, Math.min(desiredAreaHeight, maximumAreaHeight));
+        contentHeight = Math.max(1, wh - tabAreaHeight);
+        tabY = contentHeight;
+        // Recalculate from the final boundary so the child area and tab area
+        // always consume the splitter exactly, even at very small dimensions.
+        tabAreaHeight = Math.max(1, wh - tabY);
+    } else {
+        tabAreaHeight = 0;
+        contentHeight = wh;
+        tabY = wh;
+    }
 
     var allChildrenAvailable = true;
     for (var i = 0; i < INFO_PANELS.length; i++) {
@@ -428,8 +441,21 @@ function resetAllLabels() {
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
 }
 
+function isTabStripVisible() {
+    return Boolean(window.GetProperty(TAB_STRIP_VISIBLE_PROPERTY, true));
+}
+
+function setTabStripVisible(visible) {
+    visible = Boolean(visible);
+    if (isTabStripVisible() === visible) return;
+    window.SetProperty(TAB_STRIP_VISIBLE_PROPERTY, visible);
+    hoverIndex = -1;
+    layoutInfoStack();
+    window.Repaint();
+}
+
 function tabFromPoint(x, y) {
-    if (y < tabY || y >= tabY + tabAreaHeight || x < 0 || x >= ww) return -1;
+    if (!isTabStripVisible() || y < tabY || y >= tabY + tabAreaHeight || x < 0 || x >= ww) return -1;
 
     var visible = infoStackRenderModel.visible;
     if (!visible.length) return -1;
@@ -454,6 +480,8 @@ function on_paint(gr) {
     if (infoStackRenderModel.backgroundMode !== BACKGROUND_TRANSPARENT) {
         gr.FillSolidRect(0, 0, ww, wh, infoStackRenderModel.backgroundColour);
     }
+
+    if (!isTabStripVisible()) return;
 
     var rects = infoStackRenderModel.rects;
     for (var slot = 0; slot < rects.length; slot++) {
@@ -487,14 +515,12 @@ function on_mouse_lbtn_up(x, y) {
     if (index >= 0) selectPanel(index, true);
 }
 
-function on_mouse_rbtn_up(x, y) {
-    if (y < tabY) return false;
-
-    var targetIndex = tabFromPoint(x, y);
-    if (targetIndex < 0) targetIndex = activeIndex;
+function showInfoStackMenu(x, y, targetIndex) {
+    targetIndex = DOJSP3.clamp(Math.round(Number(targetIndex) || 0), 0, INFO_PANELS.length - 1);
 
     var menu = window.CreatePopupMenu();
-    var selectMenu = window.CreatePopupMenu();
+    var tabSettingsMenu = window.CreatePopupMenu();
+    var appearanceMenu = window.CreatePopupMenu();
     var visibilityMenu = window.CreatePopupMenu();
     var titlesMenu = window.CreatePopupMenu();
     var fontMenu = window.CreatePopupMenu();
@@ -509,12 +535,16 @@ function on_mouse_rbtn_up(x, y) {
 
     var i;
     for (i = 0; i < INFO_PANELS.length; i++) {
-        selectMenu.AppendMenuItem(isTabVisible(i) ? MENU_STRING : MENU_GRAYED, 100 + i, menuLabel(tabLabel(i)));
+        menu.AppendMenuItem(isTabVisible(i) ? MENU_STRING : MENU_GRAYED, 100 + i, menuLabel(tabLabel(i)));
         visibilityMenu.AppendMenuItem(MENU_STRING, 300 + i, menuLabel(tabLabel(i)));
         visibilityMenu.CheckMenuItem(300 + i, isTabVisible(i));
         titlesMenu.AppendMenuItem(MENU_STRING, 400 + i, 'Rename ' + menuLabel(tabLabel(i)) + '...');
     }
-    selectMenu.CheckMenuRadioItem(100, 100 + INFO_PANELS.length - 1, 100 + activeIndex);
+    menu.CheckMenuRadioItem(100, 100 + INFO_PANELS.length - 1, 100 + activeIndex);
+    menu.AppendMenuSeparator();
+    menu.AppendMenuItem(MENU_STRING, 250, 'Show tab strip');
+    menu.CheckMenuItem(250, isTabStripVisible());
+    menu.AppendMenuSeparator();
 
     titlesMenu.AppendMenuSeparator();
     titlesMenu.AppendMenuItem(MENU_STRING, 450, 'Use Title Case defaults');
@@ -545,19 +575,20 @@ function on_mouse_rbtn_up(x, y) {
     areaMenu.AppendMenuItem(MENU_STRING, 601, 'Set fixed tab area height...');
 
     appendInfoStackBackgroundMenu(backgroundMenu);
-
     appendInfoStackDividerMenu(dividerMenu);
-
     appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);
 
-    selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');
-    visibilityMenu.AppendTo(menu, MENU_POPUP, 'Visible tabs');
-    titlesMenu.AppendTo(menu, MENU_POPUP, 'Tab titles');
-    fontMenu.AppendTo(menu, MENU_POPUP, 'Tab font size');
-    tabColourMenu.AppendTo(menu, MENU_POPUP, 'Tab font colour');
-    areaMenu.AppendTo(menu, MENU_POPUP, 'Tab area');
-    backgroundMenu.AppendTo(menu, MENU_POPUP, 'InfoStack backing colour');
-    dividerMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');
+    visibilityMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Visible tabs');
+    titlesMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab titles');
+    fontMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab font size');
+    tabColourMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab font colour');
+    areaMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab area');
+
+    backgroundMenu.AppendTo(appearanceMenu, MENU_POPUP, 'InfoStack backing colour');
+    dividerMenu.AppendTo(appearanceMenu, MENU_POPUP, 'Side divider colour');
+
+    tabSettingsMenu.AppendTo(menu, MENU_POPUP, 'Tab settings');
+    appearanceMenu.AppendTo(menu, MENU_POPUP, 'Appearance');
     startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');
 
     // JSplitter's MenuObject is released by the host and does not expose
@@ -566,6 +597,8 @@ function on_mouse_rbtn_up(x, y) {
 
     if (id >= 100 && id < 100 + INFO_PANELS.length) {
         selectPanel(id - 100, true);
+    } else if (id === 250) {
+        setTabStripVisible(!isTabStripVisible());
     } else if (id === 200) {
         window.SetProperty(FONT_PROPERTY, 0);
         layoutInfoStack();
@@ -634,13 +667,30 @@ function on_mouse_rbtn_up(x, y) {
                 currentHeight
             ));
             if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
-        } catch (e) {}
+        } catch (e3) {}
     } else if (handleInfoStackBridgeMenu(id)) {
     }
     return true;
 }
 
+function on_mouse_rbtn_up(x, y) {
+    if (!isTabStripVisible() || y < tabY) return false;
+    var targetIndex = tabFromPoint(x, y);
+    if (targetIndex < 0) targetIndex = activeIndex;
+    return showInfoStackMenu(x, y, targetIndex);
+}
+
 function on_notify_data(name, data) {
+    if (name === DarkOneViewBridge.notification) {
+        var viewCommand = DarkOneViewBridge.parseNotificationData(data);
+        if (viewCommand && viewCommand.command === DarkOneViewBridge.commands.infoStackMenu) {
+            var popupX = viewCommand.anchorX === null
+                ? 0
+                : DOJSP3.clamp(Math.round(ww * viewCommand.anchorX / 1000), 0, Math.max(0, ww - 1));
+            showInfoStackMenu(popupX, Math.max(0, wh - 1), activeIndex);
+        }
+        return;
+    }
     if (handleInfoStackBridgeNotification(name, data)) return;
     if (darkOneJsp3HandleReset(name, data)) return;
     if (name === 'DarkOneJSP3.InfoStack.Select') {

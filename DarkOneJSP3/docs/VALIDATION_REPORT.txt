@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.10 Validation Report
+DarkOneJSP3 v1.0.11 Validation Report
 =====================================
 
 Scope
@@ -49,6 +49,12 @@ Checks
   picker, selected-state persistence, cancellation, failure handling and
   exactly-once disposal of every popup menu. The production menu uses one
   bottom-area dispatch path protected by `try/finally` cleanup.
+- InfoStack navigation validation exercises the direct six-page top-level menu,
+  Tab settings/Appearance/Startup grouping, persistent Show tab strip state,
+  full-height active-page layout while hidden, appearance-reset restoration and
+  the optional `DarkOneJSP3/InfoStack/Menu` command. The v1 view-command bridge
+  is tested with and without its optional 0-1000 horizontal anchor so existing
+  LAYOUT/SPECTRUM consumers remain backward-compatible.
 - JS Playlist visible rows cache selection state and the current playback
   location outside paint/mouse hot paths; sequential viewport changes reuse
   surviving row objects and pre-resolved column geometry.

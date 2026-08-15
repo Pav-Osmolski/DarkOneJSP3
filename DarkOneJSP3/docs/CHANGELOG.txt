@@ -1,6 +1,29 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.11 - InfoStack navigation button and optional tab strip
+------------------------------------------------------------
+
+- Added the internal optional-button command `DarkOneJSP3/InfoStack/Menu`. A
+  left-control button can be labelled INFOSTACK and left at command style 0;
+  the first successful use detects and caches internal style 4 automatically.
+- Streamlined the InfoStack menu so the six page choices are directly available
+  at the top, with configuration grouped under Tab settings, Appearance and
+  Startup. The visible tab-strip right-click menu and INFOSTACK button share the
+  same structure.
+- Added persistent Show tab strip control. Hiding the strip expands the active
+  InfoStack page to the full host height while preserving the configured tab-area
+  height for later restoration; the INFOSTACK button remains usable for page
+  navigation and configuration. Appearance reset restores the strip.
+- Extended the existing v1 view-command bridge with an optional normalised
+  horizontal anchor so the InfoStack popup can follow the clicked button without
+  changing LAYOUT or SPECTRUM command semantics. Older four-field file payloads
+  and two-field notification payloads remain valid.
+- Added static and Node runtime regression coverage for direct page selection,
+  menu grouping, tab-strip persistence/layout, reset defaults, command-path
+  detection and anchor propagation. Advanced InfoStack to 0.6.29, the view
+  bridge to 0.1.1 and the release validator to 0.10.7.
+
 v1.0.10 - JS Playlist fractional viewport culling fix
 -----------------------------------------------------
 

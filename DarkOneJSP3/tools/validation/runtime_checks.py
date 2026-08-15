@@ -1233,6 +1233,55 @@ def run(ctx: ValidationContext) -> None:
             errors.append('InfoStack tab-colour runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
+        # Exercise the streamlined InfoStack menu, tab-strip toggle and
+        # optional-button view-command bridge anchor propagation.
+        infostack_button_smoke = f"""
+    const fs = require('fs');
+    const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+    const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
+    const viewBridgeSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'view_bridge.js'))}, 'utf8');
+    const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
+    const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
+    const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
+    const properties = new Map();
+    const panels = Array.from({{length: 6}}, () => ({{visible:false, bounds:null, Show(v){{this.visible=!!v;}}, Move(x,y,w,h){{this.bounds=[x,y,w,h];}}}}));
+    const popup = {{ items:[], separators:0, checks:[], radio:null, children:[],
+        AppendMenuItem(flags,id,label){{this.items.push([flags,id,label]);}}, AppendMenuSeparator(){{this.separators++;}},
+        CheckMenuItem(id,v){{this.checks.push([id,!!v]);}}, CheckMenuRadioItem(a,b,c){{this.radio=[a,b,c];}},
+        AppendTo(parent,flags,label){{parent.children.push(label);}}, TrackPopupMenu(x,y){{this.xy=[x,y]; return global.popupId || 0;}} }};
+    const windowMock = {{ Name:'DOJSP3.InfoStack', Width:600, Height:300,
+        GetProperty(name,fallback){{return properties.has(name)?properties.get(name):fallback;}},
+        SetProperty(name,value){{properties.set(name,value);}}, GetPanel(title){{const i=['a','b','c','d','e','f'].indexOf(title); return i>=0?panels[i]:null;}},
+        NotifyOthers(){{}}, Repaint(){{}}, RepaintRect(){{}}, SetCursor(){{}}, GetColourCUI(){{return 0xff202020;}},
+        CreatePopupMenu(){{const m=Object.create(popup); m.items=[];m.checks=[];m.children=[];m.separators=0;return m;}} }};
+    const DOJSP3Mock = {{titles:{{playlistManager:'a',lastfmBio:'b',lastfmInfo:'c',albumNotes:'d',queue:'e',properties:'f'}},
+        colours:{{bar:0xff202020,separator:0xff181818,buttonNormal:0xff298fcc,buttonActive:0xffffffff,buttonHover:0xff888888}},
+        clamp(v,a,b){{return Math.max(a,Math.min(b,v));}}, idiv(v,d){{return Math.floor(v/d);}},
+        panel(title){{return windowMock.GetPanel(title);}}, move(p,x,y,w,h){{if(p)p.Move(x,y,w,h);}}, show(p,v){{if(p)p.Show(v);}} }};
+    const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
+        colourSource+'\\n'+protocolSource+'\\n'+viewBridgeSource+'\\n'+infoColourSource+'\\n'+infoBridgeSource+'\\n'+source+
+        '\\nreturn {{on_size,on_notify_data,showInfoStackMenu,isTabStripVisible,setTabStripVisible,bridge:DarkOneViewBridge,getLayout:function(){{return [tabY,tabAreaHeight,contentHeight];}}}};');
+    const c = factory(windowMock,{{ProfilePath:'',ShowPopupMessage(){{}}}},function(){{}},{{Font(){{return {{Height:16}};}}}},DOJSP3Mock,{{InputBox(){{return '0';}}}},function(){{return false;}});
+    c.on_size(600,300);
+    if (!c.isTabStripVisible() || c.getLayout()[1] <= 0 || c.getLayout()[2] >= 300) throw new Error('InfoStack tab strip default/layout is invalid');
+    c.setTabStripVisible(false);
+    if (c.isTabStripVisible() || c.getLayout().join(',') !== '300,0,300') throw new Error('Hidden InfoStack tab strip did not give content the full host height');
+    global.popupId=250; c.showInfoStackMenu(100,299,0);
+    if (!c.isTabStripVisible()) throw new Error('Show tab strip menu command did not restore the strip');
+    global.popupId=0;
+    c.on_notify_data('DarkOneJSP3.View.Command','v1|infostack-menu|500');
+    const serialised = c.bridge.serialise('infostack-menu','id',1000,750);
+    const parsed = c.bridge.parse(serialised,1000);
+    if (!parsed || parsed.anchorX !== 750) throw new Error('InfoStack button anchor was lost in the view-command file payload');
+    const notification = c.bridge.parseNotificationData(c.bridge.serialiseNotification('infostack-menu',625));
+    if (!notification || notification.command !== 'infostack-menu' || notification.anchorX !== 625) throw new Error('InfoStack menu notification anchor was not preserved');
+    if (c.bridge.commandForButtonPath('DarkOneJSP3/InfoStack/Menu') !== 'infostack-menu') throw new Error('InfoStack optional-button command path does not resolve');
+    """
+        result = subprocess.run([node, '-e', infostack_button_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('InfoStack optional-button/tab-strip smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
         # Exercise display-accent compatibility, direct Dot Matrix sprite painting,
         # font-key reuse and style changes without composite bitmap rebuilding.
         display_direct_smoke = f"""
@@ -2478,6 +2527,7 @@ def run(ctx: ValidationContext) -> None:
     const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
     const protocolSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'jsplitter_protocols.js'))}, 'utf8');
     const queueBridgeSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'queue_bridge.js'))}, 'utf8');
+    const viewBridgeSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'view_bridge.js'))}, 'utf8');
     const rootSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '01_root.js'))}, 'utf8');
     const infoColourSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_colours.js'))}, 'utf8');
     const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
@@ -2542,7 +2592,7 @@ def run(ctx: ValidationContext) -> None:
     );
     const infoFactory = new Function(
         'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
-        colourSource + '\\n' + protocolSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
+        colourSource + '\\n' + protocolSource + '\\n' + viewBridgeSource + '\\n' + infoColourSource + '\\n' + infoBridgeSource + '\\n' + infoSource + '\\nreturn {{on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){{return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}}}};'
     );
     const bridgeWrites = new Map();
     const queueStatePath = 'js_data\\\\darkonejsp3.queue-state.json';

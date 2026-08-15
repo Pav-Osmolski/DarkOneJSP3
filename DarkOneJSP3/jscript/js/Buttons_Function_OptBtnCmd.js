@@ -32,7 +32,7 @@ function resetOptionalButtonCommandStyles(buttonNames) {
 function showOptionalButtonCommandGuide() {
     utils.MessageBox(
         'Optional buttons accept one of four trusted local command types:\n\n' +
-        '1. DarkOneJSP3 internal command, for example: DarkOneJSP3/Layout/Toggle or DarkOneJSP3/Visualiser/Toggle\n' +
+        '1. DarkOneJSP3 internal command, for example: DarkOneJSP3/Layout/Toggle, DarkOneJSP3/Visualiser/Toggle or DarkOneJSP3/InfoStack/Menu\n' +
         '2. Main-menu path, for example: View/Console\n' +
         '3. Context-menu command for the current selection\n' +
         '4. JavaScript code executed locally by this panel\n\n' +
@@ -42,11 +42,15 @@ function showOptionalButtonCommandGuide() {
     );
 }
 
-function darkOneRunInternalButtonCommand(command) {
+function darkOneRunInternalButtonCommand(command, button) {
     if (typeof DarkOneViewBridge != 'object' || !DarkOneViewBridge) return false;
     var internal = DarkOneViewBridge.commandForButtonPath(command);
     if (!internal) return false;
-    if (DarkOneViewBridge.writeCommand(internal)) return true;
+    var anchorX = null;
+    if (internal === DarkOneViewBridge.commands.infoStackMenu && button && window.Width > 0) {
+        anchorX = Math.round((Number(button.x) + Number(button.w) / 2) * 1000 / window.Width);
+    }
+    if (DarkOneViewBridge.writeCommand(internal, anchorX)) return true;
     utils.MessageBox(
         'DarkOneJSP3 could not publish the internal view command. Please try again.',
         'DarkOneJSP3 optional button', MB_OK | MB_ICONEXCLAMATION
@@ -79,7 +83,7 @@ function OptBtnCmd() {
     }
 
     if (tmp_style == 0) {
-        if (darkOneRunInternalButtonCommand(tmp_string)) {
+        if (darkOneRunInternalButtonCommand(tmp_string, this)) {
             window.SetProperty(propName, 4);
             return;
         }
@@ -130,7 +134,7 @@ function OptBtnCmd() {
         }
         break;
     case 4:
-        if (!darkOneRunInternalButtonCommand(tmp_string)) {
+        if (!darkOneRunInternalButtonCommand(tmp_string, this)) {
             window.SetProperty(propName, 0);
             OptBtnCmd.call(this);
         }
