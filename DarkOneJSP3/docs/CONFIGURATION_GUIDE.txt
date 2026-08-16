@@ -137,7 +137,10 @@ DarkOneJSP3 internal view commands:
   ArtSpectrum host. The selected mode persists.
 - INFOSTACK: `DarkOneJSP3/InfoStack/Menu`
   Opens the InfoStack navigation/configuration menu aligned with the clicked
-  optional button. This remains available when the visual tab strip is hidden.
+  optional button. The popup is owned by the invoking control panel and only
+  the selected action is forwarded to InfoStack after it closes, avoiding
+  disturbance to neighbouring native visualiser/waveform panels. This remains
+  available when the visual tab strip is hidden.
 
 Leave command style at 0 when entering these commands manually; the control
 panel detects the internal command and caches style 4 after the first use.

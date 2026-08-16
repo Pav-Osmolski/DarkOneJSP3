@@ -1,5 +1,5 @@
 {
-  "version": "1.0.11",
+  "version": "1.0.12",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -413,7 +413,11 @@
       ],
       "infostack_menu_button_supported": true,
       "infostack_menu_suggested_label": "INFOSTACK",
-      "infostack_menu_anchor_follows_button": true
+      "infostack_menu_anchor_follows_button": true,
+      "infostack_menu_popup_owner": "invoking JScript Panel control panel",
+      "infostack_menu_state_file": "js_data/darkonejsp3.infostack-menu-state.json",
+      "infostack_menu_selected_action_bridge": true,
+      "infostack_menu_cross_panel_popup_removed": true
     },
     "request_identity": {
       "separate_api_and_html_profiles": true,
@@ -629,7 +633,10 @@
         "Startup"
       ],
       "optional_button_command": "DarkOneJSP3/InfoStack/Menu",
-      "appearance_reset_restores_tab_strip": true
+      "appearance_reset_restores_tab_strip": true,
+      "optional_button_popup_owner": "invoking JScript Panel control panel",
+      "optional_button_state_snapshot": true,
+      "optional_button_selected_action_bridge": true
     },
     "art_spectrum_dividers": {
       "customisable_colour": true,
@@ -1117,12 +1124,14 @@
       "runtime_command_file": "js_data/darkonejsp3.view-command.txt",
       "stale_command_acknowledgement": true,
       "factory_reset_restores_standard_layout_and_spectrum": true,
-      "view_bridge_module_version": "0.1.1",
+      "view_bridge_module_version": "0.1.2",
       "view_bridge_optional_horizontal_anchor": true,
       "view_bridge_anchor_range": [
         0,
         1000
-      ]
+      ],
+      "infostack_action_commands": true,
+      "infostack_state_snapshot_file": "js_data/darkonejsp3.infostack-menu-state.json"
     }
   },
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

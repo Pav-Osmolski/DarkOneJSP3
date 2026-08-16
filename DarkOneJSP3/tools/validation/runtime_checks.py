@@ -1276,10 +1276,56 @@ def run(ctx: ValidationContext) -> None:
     const notification = c.bridge.parseNotificationData(c.bridge.serialiseNotification('infostack-menu',625));
     if (!notification || notification.command !== 'infostack-menu' || notification.anchorX !== 625) throw new Error('InfoStack menu notification anchor was not preserved');
     if (c.bridge.commandForButtonPath('DarkOneJSP3/InfoStack/Menu') !== 'infostack-menu') throw new Error('InfoStack optional-button command path does not resolve');
+    const actionCommand = c.bridge.infoStackActionCommand(250);
+    if (actionCommand !== 'infostack-action:250' || c.bridge.infoStackActionFromCommand(actionCommand) !== 250)
+        throw new Error('InfoStack selected-action command did not round-trip');
+    const actionNotification = c.bridge.parseNotificationData(c.bridge.serialiseNotification(actionCommand, null));
+    if (!actionNotification || actionNotification.command !== actionCommand) throw new Error('InfoStack selected action was lost in notification transport');
+    const statePayload = c.bridge.serialiseInfoStackState({{activeIndex:3,labels:['a','b','c','d','e','f']}}, 1000);
+    const stateParsed = c.bridge.parseInfoStackState(statePayload);
+    if (!stateParsed || stateParsed.activeIndex !== 3 || stateParsed.labels[3] !== 'd') throw new Error('InfoStack menu state snapshot did not round-trip');
     """
         result = subprocess.run([node, '-e', infostack_button_smoke], capture_output=True, text=True)
         if result.returncode:
             errors.append('InfoStack optional-button/tab-strip smoke test failed: ' +
+                          (result.stdout + result.stderr).strip())
+
+        # The stock INFOSTACK button must own its popup locally in the JScript
+        # Panel and bridge only the selected action after TrackPopupMenu returns.
+        infostack_local_owner_smoke = f"""
+    const fs = require('fs');
+    const colourSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'colour_utils.js'))}, 'utf8');
+    const bridgeSource = fs.readFileSync({json.dumps(str(project / 'shared' / 'view_bridge.js'))}, 'utf8');
+    const buttonSource = fs.readFileSync({json.dumps(str(project / 'jscript' / 'js' / 'Buttons_Function_OptBtnCmd.js'))}, 'utf8');
+    let written = '';
+    const state = {{activeIndex:2,visible:[true,true,true,true,true,true],labels:['A','B','Custom Last.fm','D','E','F'],
+        tabStripVisible:false,fixedFontSize:0,automaticFontScale:125,tabAreaHeight:0,tabColourMode:2,tabCustomColour:0xff123456,
+        backgroundMode:4,backgroundCustomColour:0xff181818,dividerMode:1,dividerCustomColour:0xff000000,
+        startupTransition:1,startupMinimumDelay:300,startupReadinessTimeout:2500}};
+    const stateRaw = JSON.stringify({{version:'v1',issuedAt:Date.now(),state}});
+    const menus = [];
+    function popup() {{ return {{items:[],checks:[],children:[],disposed:false,
+        AppendMenuItem(flags,id,label){{this.items.push([flags,id,label]);}}, AppendMenuSeparator(){{}},
+        CheckMenuItem(id,v){{this.checks.push([id,!!v]);}}, CheckMenuRadioItem(a,b,c){{this.radio=[a,b,c];}},
+        AppendTo(parent,flags,label){{parent.children.push(label);}}, TrackPopupMenu(){{this.tracked=true;return 104;}},
+        Dispose(){{this.disposed=true;}} }}; }}
+    const windowMock = {{Width:500,CreatePopupMenu(){{const m=popup();menus.push(m);return m;}},GetColourCUI(){{return 0xff202020;}},
+        GetProperty(n,f){{return f;}},SetProperty(){{}}}};
+    const fbMock = {{ProfilePath:'P:/'}};
+    const utilsMock = {{CreateFolder(){{}},ReadTextFile(path){{return path.indexOf('infostack-menu-state')>=0?stateRaw:'';}},
+        WriteTextFile(path,data){{written=data;return true;}},MessageBox(){{throw new Error('Unexpected error dialog');}}}};
+    const factory = new Function('window','fb','utils','MB_OK','MB_ICONEXCLAMATION', colourSource+'\\n'+bridgeSource+'\\n'+buttonSource+
+        '\\nreturn {{show:darkOneShowInfoStackLocalMenu,bridge:DarkOneViewBridge}};');
+    const api = factory(windowMock,fbMock,utilsMock,0,0);
+    api.show({{x:100,y:10,w:80,h:20}});
+    if (!menus.length || !menus[0].tracked || !menus.every(m=>m.disposed)) throw new Error('INFOSTACK local popup was not tracked/disposed by the button panel');
+    if (!menus[0].items.some(item=>item[1]===102 && item[2]==='Custom Last.fm')) throw new Error('INFOSTACK local popup did not use the live state snapshot labels');
+    const parsed = api.bridge.parse(written,Date.now());
+    if (!parsed || parsed.command !== 'infostack-action:104' || parsed.anchorX !== null) throw new Error('INFOSTACK local popup did not bridge only its selected action');
+    """
+        result = subprocess.run([node, '-e', infostack_local_owner_smoke], capture_output=True, text=True)
+        if result.returncode:
+            errors.append('InfoStack local-popup ownership runtime smoke test failed: ' +
                           (result.stdout + result.stderr).strip())
 
         # Exercise display-accent compatibility, direct Dot Matrix sprite painting,

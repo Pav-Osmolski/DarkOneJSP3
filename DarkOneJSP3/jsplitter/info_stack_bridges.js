@@ -50,6 +50,7 @@ function setDividerState(mode, customColour) {
             dividerMenuCustomColour
         )
     );
+    if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
 }
 
 function chooseCustomDividerColour() {
@@ -90,6 +91,7 @@ function setStartupTransition(mode) {
     );
     startupMenuStateKnown = true;
     sendStartupControlCommand('set', 'transition', startupMenuTransition);
+    if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
 }
 
 function setStartupTiming(key, title, current, minimum, maximum) {
@@ -114,6 +116,7 @@ function setStartupTiming(key, title, current, minimum, maximum) {
         else startupMenuReadinessTimeout = entered;
         startupMenuStateKnown = true;
         sendStartupControlCommand('set', key, entered);
+        if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
     } catch (e2) {}
 }
 
@@ -123,6 +126,7 @@ function restoreStartupControlDefaults() {
     startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;
     startupMenuStateKnown = true;
     sendStartupControlCommand('restore');
+    if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
 }
 
 function requestInfoStackBridgeStates() {
@@ -214,7 +218,10 @@ function handleInfoStackBridgeMenu(id) {
 function handleInfoStackBridgeNotification(name, data) {
     if (name === STARTUP_PROTOCOL.notifications.stateControls) {
         var startupState = STARTUP_PROTOCOL.parseState(data);
-        if (startupState) applyStartupMenuState(startupState);
+        if (startupState) {
+            applyStartupMenuState(startupState);
+            if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
+        }
         return true;
     }
 
@@ -224,6 +231,7 @@ function handleInfoStackBridgeNotification(name, data) {
             dividerMenuMode = receivedState.mode;
             dividerMenuCustomColour = receivedState.customColour;
             dividerMenuStateKnown = true;
+            if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
         }
         return true;
     }

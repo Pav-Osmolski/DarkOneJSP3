@@ -8,6 +8,7 @@ js_data/darkonejsp3.queue-command-result.json
 js_data/darkonejsp3.quicksearch-layout-command.txt
 js_data/darkonejsp3.quicksearch-context-tags.json
 js_data/darkonejsp3.view-command.txt
+js_data/darkonejsp3.infostack-menu-state.json
 
 # Legacy v0.9.22-v0.9.23 runtime location
 DarkOneJSP3/shared/bottom-area-state.txt

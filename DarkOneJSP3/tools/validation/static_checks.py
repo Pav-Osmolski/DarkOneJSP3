@@ -58,7 +58,8 @@ def run(ctx: ValidationContext) -> None:
                 'darkonejsp3.queue-command-result.json',
                 'darkonejsp3.quicksearch-layout-command.txt',
                 'darkonejsp3.quicksearch-context-tags.json',
-                'darkonejsp3.view-command.txt'}:
+                'darkonejsp3.view-command.txt',
+                'darkonejsp3.infostack-menu-state.json'}:
             errors.append('Runtime-generated state must not be distributed: ' + relative)
     for paths in casefold_paths.values():
         if len(paths) > 1:
@@ -99,6 +100,7 @@ def run(ctx: ValidationContext) -> None:
                 'js_data/darkonejsp3.quicksearch-layout-command.txt',
                 'js_data/darkonejsp3.quicksearch-context-tags.json',
                 'js_data/darkonejsp3.view-command.txt',
+                'js_data/darkonejsp3.infostack-menu-state.json',
                 'DarkOneJSP3/shared/bottom-area-state.txt']:
             if runtime_path not in ignored:
                 errors.append('.gitignore does not exclude runtime state: ' + runtime_path)
@@ -545,6 +547,14 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Manifest optional-button InfoStack field is incorrect: ' + key)
         if 'DarkOneJSP3/InfoStack/Menu' not in optional_buttons.get('internal_view_commands', []):
             errors.append('Manifest optional-button commands omit DarkOneJSP3/InfoStack/Menu')
+        for key, expected in {
+            'infostack_menu_popup_owner': 'invoking JScript Panel control panel',
+            'infostack_menu_state_file': 'js_data/darkonejsp3.infostack-menu-state.json',
+            'infostack_menu_selected_action_bridge': True,
+            'infostack_menu_cross_panel_popup_removed': True,
+        }.items():
+            if optional_buttons.get(key) != expected:
+                errors.append('Manifest optional-button popup-ownership field is incorrect: ' + key)
         info_stack_manifest = manifest.get('enhancements', {}).get('info_stack', {})
         for key, expected in {
             'tab_strip_visible_default': True,
@@ -560,7 +570,7 @@ def run(ctx: ValidationContext) -> None:
         if info_stack_manifest.get('menu_groups') != ['Tab settings', 'Appearance', 'Startup']:
             errors.append('Manifest InfoStack menu groups are incorrect')
         view_modes_manifest = manifest.get('enhancements', {}).get('view_modes', {})
-        if view_modes_manifest.get('view_bridge_module_version') != '0.1.1':
+        if view_modes_manifest.get('view_bridge_module_version') != '0.1.2':
             errors.append('Manifest view bridge module version is incorrect')
         if view_modes_manifest.get('view_bridge_optional_horizontal_anchor') is not True:
             errors.append('Manifest view bridge omits optional horizontal anchor support')
@@ -2019,6 +2029,14 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('InfoStack helper integration is missing: ' + token)
+        for token in [
+            'function infoStackMenuStateSnapshot()',
+            'function publishInfoStackMenuState()',
+            'function handleInfoStackMenuAction(id, targetIndex)',
+            'DarkOneViewBridge.infoStackActionFromCommand(viewCommand.command)',
+        ]:
+            if token not in body:
+                errors.append('InfoStack local-menu bridge integration is missing: ' + token)
         for obsolete in [
             'function backgroundMode()',
             'function requestDividerState()',
@@ -2499,6 +2517,11 @@ def run(ctx: ValidationContext) -> None:
             "infoStackMenu: 'infostack-menu'",
             "darkonejsp3/infostack/menu",
             "darkonejsp3.view-command.txt",
+            "darkonejsp3.infostack-menu-state.json",
+            'function infoStackActionCommand(value)',
+            'function infoStackActionFromCommand(value)',
+            'function writeInfoStackState(state)',
+            'function readInfoStackState()',
             'function writeCommand(command, anchorX)',
             'function parseNotificationData(data)',
         ]:
@@ -2506,6 +2529,24 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('View-command bridge is missing: ' + token)
     else:
         errors.append('View-command bridge file is missing')
+
+    opt_button_command = project / 'jscript' / 'js' / 'Buttons_Function_OptBtnCmd.js'
+    if opt_button_command.exists():
+        body = text(opt_button_command)
+        for token in [
+            'function darkOneShowInfoStackLocalMenu(button)',
+            'DarkOneViewBridge.readInfoStackState()',
+            'selectedId = menu.TrackPopupMenu(x, y);',
+            'DarkOneViewBridge.infoStackActionCommand(selectedId)',
+            'if (internal === DarkOneViewBridge.commands.infoStackMenu)',
+            'return darkOneShowInfoStackLocalMenu(button);',
+        ]:
+            if token not in body:
+                errors.append('INFOSTACK optional-button local popup is missing: ' + token)
+        if 'DarkOneViewBridge.writeCommand(internal, anchorX)' in body:
+            errors.append('INFOSTACK optional button still routes the menu itself across the view bridge')
+    else:
+        errors.append('Optional-button command script is missing')
 
     colour_helper = project / 'shared' / 'colour_utils.js'
     if colour_helper.exists():

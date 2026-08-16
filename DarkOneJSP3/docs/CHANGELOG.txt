@@ -1,6 +1,26 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.12 - InfoStack optional-button popup ownership fix
+-------------------------------------------------------
+
+- Fixed the INFOSTACK optional button causing brief Waveform Minibar flicker
+  and Enhanced Spectrum Analyser pauses when its popup/submenus were dismissed.
+- Moved the button-opened InfoStack popup into the invoking JScript Panel control
+  panel, matching the ownership model already used by the hamburger, OPEN and
+  PB. ORDER menus. InfoStack now receives only the selected menu action after
+  the local popup closes.
+- Added a lightweight runtime InfoStack menu-state snapshot so the locally owned
+  popup retains live page labels, visibility/check states, colour modes and
+  Startup values without opening a cross-panel modal menu. The state file is
+  runtime-only and excluded from packages/source control.
+- Kept the ordinary InfoStack tab-strip right-click menu unchanged and retained
+  compatibility with the existing LAYOUT/SPECTRUM view commands and legacy
+  InfoStack menu bridge payloads.
+- Added regression coverage for local popup ownership, action transport and menu
+  state serialisation. Advanced InfoStack to 0.6.30, the view bridge to 0.1.2
+  and the release validator to 0.10.8.
+
 v1.0.11 - InfoStack navigation button and optional tab strip
 ------------------------------------------------------------
 

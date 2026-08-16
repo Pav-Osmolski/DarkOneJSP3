@@ -109,6 +109,7 @@ function setTabColourMode(mode) {
         DarkOneColour.normaliseMode(mode, TAB_COLOUR_MODES, TAB_COLOUR_DEFAULT)
     );
     repaintTabArea();
+    if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
 }
 
 function setCustomTabColour() {
@@ -134,6 +135,7 @@ function setBackgroundMode(mode) {
     );
     if (typeof rebuildInfoStackRenderModel === 'function') rebuildInfoStackRenderModel();
     window.Repaint();
+    if (typeof publishInfoStackMenuState === 'function') publishInfoStackMenuState();
 }
 
 function setCustomBackgroundColour() {

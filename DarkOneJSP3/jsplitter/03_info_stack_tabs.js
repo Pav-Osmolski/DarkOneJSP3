@@ -1,6 +1,9 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
+// v0.6.30 keeps the optional-button popup local to its JScript Panel owner;
+// selected menu actions are forwarded back to InfoStack after the popup closes.
+//
 // v0.6.29 consolidates InfoStack configuration into Tab settings and Appearance
 // submenus so direct page selection remains the focus of the top-level menu.
 //
@@ -200,6 +203,37 @@ function menuLabel(value) {
     return String(value).replace(/&/g, '&&');
 }
 
+function infoStackMenuStateSnapshot() {
+    var visible = [];
+    var labels = [];
+    for (var i = 0; i < INFO_PANELS.length; i++) {
+        visible.push(isTabVisible(i));
+        labels.push(tabLabel(i));
+    }
+    return {
+        activeIndex: activeIndex,
+        visible: visible,
+        labels: labels,
+        tabStripVisible: isTabStripVisible(),
+        fixedFontSize: Math.max(0, Math.round(Number(window.GetProperty(FONT_PROPERTY, 0)) || 0)),
+        automaticFontScale: automaticFontScale(),
+        tabAreaHeight: configuredTabAreaHeight(),
+        tabColourMode: tabColourMode(),
+        tabCustomColour: storedCustomTabColour(),
+        backgroundMode: backgroundMode(),
+        backgroundCustomColour: storedCustomBackgroundColour(),
+        dividerMode: dividerMenuMode,
+        dividerCustomColour: dividerMenuCustomColour,
+        startupTransition: startupMenuTransition,
+        startupMinimumDelay: startupMenuMinimumDelay,
+        startupReadinessTimeout: startupMenuReadinessTimeout
+    };
+}
+
+function publishInfoStackMenuState() {
+    try { DarkOneViewBridge.writeInfoStackState(infoStackMenuStateSnapshot()); } catch (e) {}
+}
+
 function visibleIndexes() {
     var result = [];
     for (var i = 0; i < INFO_PANELS.length; i++) {
@@ -294,6 +328,7 @@ function setTabAreaHeight(value) {
     window.SetProperty(TAB_AREA_HEIGHT_PROPERTY, value <= 0 ? 0 : DOJSP3.clamp(value, 18, 240));
     layoutInfoStack();
     window.Repaint();
+    publishInfoStackMenuState();
 }
 
 function panelAt(index) {
@@ -356,6 +391,7 @@ function selectPanel(index, notify) {
     if (notify !== false) {
         window.NotifyOthers('DarkOneJSP3.InfoStack.SelectionChanged', activeIndex);
     }
+    publishInfoStackMenuState();
 }
 
 function nearestVisibleIndex(fromIndex) {
@@ -394,6 +430,7 @@ function setTabVisible(index, visible) {
     hoverIndex = -1;
     layoutInfoStack();
     window.Repaint();
+    publishInfoStackMenuState();
 }
 
 function setTabLabel(index, value) {
@@ -407,6 +444,7 @@ function setTabLabel(index, value) {
     }
     rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
+    publishInfoStackMenuState();
 }
 
 function renameTab(index) {
@@ -431,6 +469,7 @@ function applyLabelPreset(useTitleCase) {
     }
     rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
+    publishInfoStackMenuState();
 }
 
 function resetAllLabels() {
@@ -439,6 +478,7 @@ function resetAllLabels() {
     }
     rebuildInfoStackRenderModel();
     window.RepaintRect(0, tabY, ww, tabAreaHeight);
+    publishInfoStackMenuState();
 }
 
 function isTabStripVisible() {
@@ -452,6 +492,7 @@ function setTabStripVisible(visible) {
     hoverIndex = -1;
     layoutInfoStack();
     window.Repaint();
+    publishInfoStackMenuState();
 }
 
 function tabFromPoint(x, y) {
@@ -474,6 +515,7 @@ function on_size(width, height) {
     wh = height;
     layoutInfoStack();
     requestInfoStackBridgeStates();
+    publishInfoStackMenuState();
 }
 
 function on_paint(gr) {
@@ -513,6 +555,87 @@ function on_mouse_leave() {
 function on_mouse_lbtn_up(x, y) {
     var index = tabFromPoint(x, y);
     if (index >= 0) selectPanel(index, true);
+}
+
+function handleInfoStackMenuAction(id, targetIndex) {
+    targetIndex = DOJSP3.clamp(Math.round(Number(targetIndex) || 0), 0, INFO_PANELS.length - 1);
+    if (id >= 100 && id < 100 + INFO_PANELS.length) {
+        selectPanel(id - 100, true);
+    } else if (id === 250) {
+        setTabStripVisible(!isTabStripVisible());
+    } else if (id === 200) {
+        window.SetProperty(FONT_PROPERTY, 0);
+        layoutInfoStack();
+        window.Repaint();
+    } else if (id === 201) {
+        try {
+            var current = Number(window.GetProperty(FONT_PROPERTY, 0)) || automaticFontSize();
+            var entered = Number(utils.InputBox(
+                'Enter the fixed tab font size in pixels. Enter 0 to return to automatic scaling.',
+                window.Name,
+                current
+            ));
+            if (!isNaN(entered)) {
+                window.SetProperty(
+                    FONT_PROPERTY,
+                    entered <= 0 ? 0 : DOJSP3.clamp(Math.round(entered), 8, 48)
+                );
+                layoutInfoStack();
+                window.Repaint();
+            }
+        } catch (e) {}
+    } else if (id === 202) {
+        try {
+            var enteredScale = Number(utils.InputBox(
+                'Adjust the responsive automatic font calculation as a percentage.\n\n' +
+                '100% preserves the normal DarkOne scaling. Suggested range: 75% to 150%.',
+                window.Name,
+                automaticFontScale()
+            ));
+            if (!isNaN(enteredScale)) {
+                window.SetProperty(
+                    AUTO_FONT_SCALE_PROPERTY,
+                    DOJSP3.clamp(Math.round(enteredScale), 50, 200)
+                );
+                layoutInfoStack();
+                window.Repaint();
+            }
+        } catch (e2) {}
+    } else if (id === 203) {
+        window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
+        layoutInfoStack();
+        window.Repaint();
+    } else if (handleInfoStackColourMenu(id)) {
+    } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
+        var visibilityIndex = id - 300;
+        setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));
+    } else if (id >= 400 && id < 400 + INFO_PANELS.length) {
+        renameTab(id - 400);
+    } else if (id === 450) {
+        applyLabelPreset(true);
+    } else if (id === 451) {
+        applyLabelPreset(false);
+    } else if (id === 452) {
+        setTabLabel(targetIndex, '');
+    } else if (id === 453) {
+        resetAllLabels();
+    } else if (id === 600) {
+        setTabAreaHeight(0);
+    } else if (id === 601) {
+        try {
+            var currentHeight = configuredTabAreaHeight() || Math.round(tabAreaHeight || automaticTabAreaHeight());
+            var enteredHeight = Number(utils.InputBox(
+                'Enter a fixed tab-area height in pixels. Enter 0 to restore automatic height.\n\n' +
+                'The minimum height automatically expands when required to fit the selected tab font.',
+                window.Name,
+                currentHeight
+            ));
+            if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
+        } catch (e3) {}
+    } else if (handleInfoStackBridgeMenu(id)) {
+    }
+    publishInfoStackMenuState();
+    return id !== 0;
 }
 
 function showInfoStackMenu(x, y, targetIndex) {
@@ -595,81 +718,7 @@ function showInfoStackMenu(x, y, targetIndex) {
     // the JSP3/SMP Dispose() method. Calling it aborts command handling.
     var id = menu.TrackPopupMenu(x, y);
 
-    if (id >= 100 && id < 100 + INFO_PANELS.length) {
-        selectPanel(id - 100, true);
-    } else if (id === 250) {
-        setTabStripVisible(!isTabStripVisible());
-    } else if (id === 200) {
-        window.SetProperty(FONT_PROPERTY, 0);
-        layoutInfoStack();
-        window.Repaint();
-    } else if (id === 201) {
-        try {
-            var current = Number(window.GetProperty(FONT_PROPERTY, 0)) || automaticFontSize();
-            var entered = Number(utils.InputBox(
-                'Enter the fixed tab font size in pixels. Enter 0 to return to automatic scaling.',
-                window.Name,
-                current
-            ));
-            if (!isNaN(entered)) {
-                window.SetProperty(
-                    FONT_PROPERTY,
-                    entered <= 0 ? 0 : DOJSP3.clamp(Math.round(entered), 8, 48)
-                );
-                layoutInfoStack();
-                window.Repaint();
-            }
-        } catch (e) {}
-    } else if (id === 202) {
-        try {
-            var enteredScale = Number(utils.InputBox(
-                'Adjust the responsive automatic font calculation as a percentage.\n\n' +
-                '100% preserves the normal DarkOne scaling. Suggested range: 75% to 150%.',
-                window.Name,
-                automaticFontScale()
-            ));
-            if (!isNaN(enteredScale)) {
-                window.SetProperty(
-                    AUTO_FONT_SCALE_PROPERTY,
-                    DOJSP3.clamp(Math.round(enteredScale), 50, 200)
-                );
-                layoutInfoStack();
-                window.Repaint();
-            }
-        } catch (e2) {}
-    } else if (id === 203) {
-        window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
-        layoutInfoStack();
-        window.Repaint();
-    } else if (handleInfoStackColourMenu(id)) {
-    } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
-        var visibilityIndex = id - 300;
-        setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));
-    } else if (id >= 400 && id < 400 + INFO_PANELS.length) {
-        renameTab(id - 400);
-    } else if (id === 450) {
-        applyLabelPreset(true);
-    } else if (id === 451) {
-        applyLabelPreset(false);
-    } else if (id === 452) {
-        setTabLabel(targetIndex, '');
-    } else if (id === 453) {
-        resetAllLabels();
-    } else if (id === 600) {
-        setTabAreaHeight(0);
-    } else if (id === 601) {
-        try {
-            var currentHeight = configuredTabAreaHeight() || Math.round(tabAreaHeight || automaticTabAreaHeight());
-            var enteredHeight = Number(utils.InputBox(
-                'Enter a fixed tab-area height in pixels. Enter 0 to restore automatic height.\n\n' +
-                'The minimum height automatically expands when required to fit the selected tab font.',
-                window.Name,
-                currentHeight
-            ));
-            if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
-        } catch (e3) {}
-    } else if (handleInfoStackBridgeMenu(id)) {
-    }
+    handleInfoStackMenuAction(id, targetIndex);
     return true;
 }
 
@@ -683,7 +732,15 @@ function on_mouse_rbtn_up(x, y) {
 function on_notify_data(name, data) {
     if (name === DarkOneViewBridge.notification) {
         var viewCommand = DarkOneViewBridge.parseNotificationData(data);
-        if (viewCommand && viewCommand.command === DarkOneViewBridge.commands.infoStackMenu) {
+        if (!viewCommand) return;
+        var actionId = DarkOneViewBridge.infoStackActionFromCommand(viewCommand.command);
+        if (actionId !== null) {
+            handleInfoStackMenuAction(actionId, activeIndex);
+            return;
+        }
+        // Legacy/manual bridge payloads remain supported, but the stock optional
+        // button now owns its popup locally and sends only the selected action.
+        if (viewCommand.command === DarkOneViewBridge.commands.infoStackMenu) {
             var popupX = viewCommand.anchorX === null
                 ? 0
                 : DOJSP3.clamp(Math.round(ww * viewCommand.anchorX / 1000), 0, Math.max(0, ww - 1));
