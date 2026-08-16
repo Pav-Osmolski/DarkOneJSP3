@@ -4,6 +4,28 @@
 // automatically after a cached main/context command stops resolving.
 // =========================================================================================================
 
+var DARKONE_INFOSTACK_TAB_COLOUR_OPTIONS = [
+    { id: 800, mode: 0, label: 'Default - DarkOne blue' },
+    { id: 802, mode: 2, label: 'Columns UI selected-item background' },
+    { id: 801, mode: 1, custom: true }
+];
+var DARKONE_INFOSTACK_BACKGROUND_OPTIONS = [
+    { id: 700, mode: 0, label: 'Transparent / inherit parent' },
+    { id: 701, mode: 1, label: 'Black' },
+    { id: 702, mode: 2, label: 'DarkOne grey' },
+    { id: 703, mode: 4, label: 'DarkOne dark grey' },
+    { id: 705, mode: 5, label: 'Columns UI global background' },
+    { id: 704, mode: 3, custom: true }
+];
+var DARKONE_INFOSTACK_DIVIDER_OPTIONS = [
+    { id: 900, mode: 0, label: 'Transparent / inherit parent' },
+    { id: 901, mode: 1, label: 'Black' },
+    { id: 902, mode: 2, label: 'DarkOne grey' },
+    { id: 903, mode: 4, label: 'DarkOne dark grey' },
+    { id: 904, mode: 5, label: 'Columns UI global background' },
+    { id: 905, mode: 3, custom: true }
+];
+
 function getButtonProperties(keyIsButton) {
     this.OptButton = function () {
         this.BtnName = '';
@@ -64,9 +86,9 @@ function darkOneInfoStackMenuFallbackState() {
 }
 
 function darkOneInfoStackMenuState() {
-    var fallback = darkOneInfoStackMenuFallbackState();
+    var result = darkOneInfoStackMenuFallbackState();
     var state = DarkOneViewBridge.readInfoStackState();
-    if (!state) return fallback;
+    if (!state) return result;
 
     function number(value, fallbackValue, minimum, maximum) {
         value = Math.round(Number(value));
@@ -74,7 +96,6 @@ function darkOneInfoStackMenuState() {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
-    var result = darkOneInfoStackMenuFallbackState();
     result.activeIndex = number(state.activeIndex, 0, 0, 5);
     if (state.visible instanceof Array && state.visible.length === 6) {
         for (var i = 0; i < 6; i++) result.visible[i] = Boolean(state.visible[i]);
@@ -123,28 +144,6 @@ function darkOneShowInfoStackLocalMenu(button) {
         tabColourMenu, areaMenu, backgroundMenu, dividerMenu, startupMenu, startupTransitionMenu];
     var selectedId = 0;
 
-    var tabColourOptions = [
-        { id: 800, mode: 0, label: 'Default - DarkOne blue' },
-        { id: 802, mode: 2, label: 'Columns UI selected-item background' },
-        { id: 801, mode: 1, custom: true }
-    ];
-    var backgroundOptions = [
-        { id: 700, mode: 0, label: 'Transparent / inherit parent' },
-        { id: 701, mode: 1, label: 'Black' },
-        { id: 702, mode: 2, label: 'DarkOne grey' },
-        { id: 703, mode: 4, label: 'DarkOne dark grey' },
-        { id: 705, mode: 5, label: 'Columns UI global background' },
-        { id: 704, mode: 3, custom: true }
-    ];
-    var dividerOptions = [
-        { id: 900, mode: 0, label: 'Transparent / inherit parent' },
-        { id: 901, mode: 1, label: 'Black' },
-        { id: 902, mode: 2, label: 'DarkOne grey' },
-        { id: 903, mode: 4, label: 'DarkOne dark grey' },
-        { id: 904, mode: 5, label: 'Columns UI global background' },
-        { id: 905, mode: 3, custom: true }
-    ];
-
     try {
         for (var i = 0; i < 6; i++) {
             menu.AppendMenuItem(state.visible[i] ? 0 : 1, 100 + i, darkOneInfoStackMenuLabel(state.labels[i]));
@@ -171,7 +170,7 @@ function darkOneShowInfoStackLocalMenu(button) {
         fontMenu.AppendMenuItem(0, 202, 'Set automatic base scale... (' + state.automaticFontScale + '%)');
         fontMenu.AppendMenuItem(state.automaticFontScale === 100 ? 1 : 0, 203, 'Reset automatic base scale');
 
-        DarkOneColour.appendRadioOptions(tabColourMenu, tabColourOptions, state.tabColourMode, state.tabCustomColour, 0);
+        DarkOneColour.appendRadioOptions(tabColourMenu, DARKONE_INFOSTACK_TAB_COLOUR_OPTIONS, state.tabColourMode, state.tabCustomColour, 0);
         tabColourMenu.AppendMenuSeparator();
         tabColourMenu.AppendMenuItem(0, 803, 'Set custom colour...');
 
@@ -179,11 +178,11 @@ function darkOneShowInfoStackLocalMenu(button) {
         areaMenu.CheckMenuItem(600, state.tabAreaHeight === 0);
         areaMenu.AppendMenuItem(0, 601, 'Set fixed tab area height...');
 
-        DarkOneColour.appendRadioOptions(backgroundMenu, backgroundOptions, state.backgroundMode, state.backgroundCustomColour, 0);
+        DarkOneColour.appendRadioOptions(backgroundMenu, DARKONE_INFOSTACK_BACKGROUND_OPTIONS, state.backgroundMode, state.backgroundCustomColour, 0);
         backgroundMenu.AppendMenuSeparator();
         backgroundMenu.AppendMenuItem(0, 706, 'Set custom colour...');
 
-        DarkOneColour.appendRadioOptions(dividerMenu, dividerOptions, state.dividerMode, state.dividerCustomColour, 0);
+        DarkOneColour.appendRadioOptions(dividerMenu, DARKONE_INFOSTACK_DIVIDER_OPTIONS, state.dividerMode, state.dividerCustomColour, 0);
         dividerMenu.AppendMenuSeparator();
         dividerMenu.AppendMenuItem(0, 106, 'Set custom colour...');
 

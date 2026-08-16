@@ -3,6 +3,10 @@
 // InfoStack-only adapters for the shared startup and side-divider protocols.
 // Property ownership remains with Root and Main Columns respectively; this
 // helper owns only the InfoStack menu state and notification plumbing.
+//
+// Version history (newest first):
+// v0.1.2 removes obsolete protocol aliases left behind after the local-owner
+// INFOSTACK popup integration; notification and property semantics are unchanged.
 
 var STARTUP_PROTOCOL = DarkOneProtocol.startup;
 var startupReadiness = STARTUP_PROTOCOL.createReadinessBridge(
@@ -11,20 +15,14 @@ var startupReadiness = STARTUP_PROTOCOL.createReadinessBridge(
 );
 
 var DIVIDER_PROTOCOL = DarkOneProtocol.divider;
-var DIVIDER_TRANSPARENT = DIVIDER_PROTOCOL.modes.transparent;
 var DIVIDER_BLACK = DIVIDER_PROTOCOL.modes.black;
-var DIVIDER_DARKONE = DIVIDER_PROTOCOL.modes.darkOne;
 var DIVIDER_CUSTOM = DIVIDER_PROTOCOL.modes.custom;
-var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;
-var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;
 var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);
 var dividerMenuMode = DIVIDER_BLACK;
 var dividerMenuCustomColour = 0xff000000;
 var dividerMenuStateKnown = false;
 
 var STARTUP_OFF = STARTUP_PROTOCOL.transitions.off;
-var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;
-var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;
 var startupMenuTransition = STARTUP_PROTOCOL.defaults.transition;
 var startupMenuMinimumDelay = STARTUP_PROTOCOL.defaults.minimumDelay;
 var startupMenuReadinessTimeout = STARTUP_PROTOCOL.defaults.readinessTimeout;

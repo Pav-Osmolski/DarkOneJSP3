@@ -1,5 +1,5 @@
 {
-  "version": "1.0.12",
+  "version": "1.0.13",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -417,7 +417,8 @@
       "infostack_menu_popup_owner": "invoking JScript Panel control panel",
       "infostack_menu_state_file": "js_data/darkonejsp3.infostack-menu-state.json",
       "infostack_menu_selected_action_bridge": true,
-      "infostack_menu_cross_panel_popup_removed": true
+      "infostack_menu_cross_panel_popup_removed": true,
+      "infostack_legacy_popup_command_ignored": true
     },
     "request_identity": {
       "separate_api_and_html_profiles": true,
@@ -779,7 +780,7 @@
     "info_stack_controller_split": {
       "colour_helper": "DarkOneJSP3/jsplitter/info_stack_colours.js",
       "bridge_helper": "DarkOneJSP3/jsplitter/info_stack_bridges.js",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "layout_and_painting_remain_in_controller": true,
       "menu_ids_unchanged": true,
       "saved_properties_unchanged": true,

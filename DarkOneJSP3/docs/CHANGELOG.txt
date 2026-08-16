@@ -1,6 +1,28 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.13 - Second-pass hardening and source-history cleanup
+----------------------------------------------------------
+
+- Removed the obsolete notification-triggered `infostack-menu` popup fallback.
+  Button-opened InfoStack popups remain locally owned by the invoking JScript
+  Panel and only selected `infostack-action:<id>` commands cross the bridge, so
+  the known cross-panel popup-dismissal path can no longer be recreated by a
+  legacy/manual view-command payload.
+- Made the runtime InfoStack menu-state snapshot change-driven. Unchanged
+  resizes, cancelled menu interactions and setter-plus-dispatcher paths no
+  longer rewrite `darkonejsp3.infostack-menu-state.json` redundantly.
+- Hoisted immutable INFOSTACK colour-menu descriptors out of popup construction
+  and removed unused InfoStack/root protocol aliases without changing saved
+  properties, menu IDs or supported LAYOUT/SPECTRUM behaviour.
+- Normalised DarkOne-owned JSplitter version-history headers to an explicit
+  newest-first order and added validator enforcement, while leaving upstream
+  enhanced-sample provenance/build comments untouched.
+- Expanded regression coverage for local popup ownership, legacy-popup rejection,
+  change-driven snapshot publication and source-history ordering. Advanced
+  InfoStack to 0.6.31, the InfoStack bridge helper to 0.1.2 and the release
+  validator to 0.10.9.
+
 v1.0.12 - InfoStack optional-button popup ownership fix
 -------------------------------------------------------
 

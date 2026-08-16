@@ -1,6 +1,12 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+
+var DARKONEJSP3_RESET_ROLE = "main-columns";
+
+// Replaces Panel Stack Splitter 02: left information stack, centre artwork /
+// spectrum column, and right playlist column.
 //
+// Version history (newest first):
 // v0.7.38 adds persistent standard/alternate main view modes, synchronised
 // Spectrum visibility and atomic ArtSpectrum geometry/divider transitions.
 //
@@ -9,11 +15,6 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 //
 // v0.7.36 centralises divider state serialisation, notifications, mode values
 // and menu mapping in the shared JSplitter protocol helper.
-
-var DARKONEJSP3_RESET_ROLE = "main-columns";
-
-// Replaces Panel Stack Splitter 02: left information stack, centre artwork /
-// spectrum column, and right playlist column.
 //
 // v0.7.35 consolidates divider mode validation, menu mapping and custom
 // colour picking through the shared DarkOneJSP3 colour helper.

@@ -1,5 +1,17 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
+
+var DARKONEJSP3_RESET_ROLE = "info-stack";
+
+// Replaces Panel Stack Splitter 03.
+// The source PSS contains stale placement/show code for a seventh child but
+// only six actual panels and six buttons. This port deliberately implements
+// the six real panels.
+//
+// Version history (newest first):
+// v0.6.31 makes optional-button menu-state publication change-driven and removes
+// the obsolete notification-triggered popup fallback, keeping popup ownership
+// local while avoiding redundant runtime-file writes.
 //
 // v0.6.30 keeps the optional-button popup local to its JScript Panel owner;
 // selected menu actions are forwarded back to InfoStack after the popup closes.
@@ -18,75 +30,67 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 // v0.6.25 separates InfoStack-only colour state and controller bridges into
 // focused include helpers while preserving the established script context,
 // menu IDs, saved properties and notification behaviour.
-
-var DARKONEJSP3_RESET_ROLE = "info-stack";
-
-// Replaces Panel Stack Splitter 03.
-// The source PSS contains stale placement/show code for a seventh child but
-// only six actual panels and six buttons. This port deliberately implements
-// the six real panels.
 //
-// v0.3.0 adds persistent background, tab visibility and display-label
-// customisation. Child custom titles are stable API identifiers; only the
-// labels drawn in this tab strip are renamed.
-//
-// v0.3.1 centres tab labels across the entire reserved tab strip (the original
-// PSS layout reserved both a spacing gap and the text row at the bottom).
-//
-// v0.3.2 makes Title Case the default label style and adds a persistent,
-// user-configurable tab-area height while retaining the original DarkOne
-// width-scaled geometry as the automatic setting.
-//
-// v0.6.11 adds a Default/Custom font-colour mode for inactive tab labels.
-// The active label remains white and the hovered label remains grey so the
-// existing selection and hover feedback are preserved.
-//
-// v0.6.12 fixes the JSplitter-specific native colour-picker call. JSplitter
-// requires utils.ColourPicker(window_id, default_colour), while JScript Panel
-// takes the default colour first and supports an error-on-cancel flag. Cancelling
-// the native picker now exits cleanly instead of
-// falling through to the manual text-entry fallback.
-
-//
-// v0.6.13 adds a percentage-based automatic-font scale. The normal 100% value
-// preserves the existing responsive calculation, while users can enlarge or
-// reduce it without switching to a fixed pixel size.
-//
-// v0.6.14 makes the automatic tab-area padding follow that same scale while
-// automatic font sizing is active. Fixed font sizing keeps the established
-// 100% padding, and a manually configured tab-area height remains independent.
-
-// v0.6.15 clarifies the tab-area override command as a fixed-height action.
-// The automatic-height check item remains the only automatic mode control.
-//
-// v0.6.16 hosts the Album Art/Spectrum divider-colour menu inside JSplitter.
-// State is exchanged with Main Columns through a serialised JSplitter-to-
-// JSplitter notification, avoiding unsupported JScript Panel bridging.
-//
-// v0.6.17 hosts startup controls in this JSplitter menu. The root remains the
-// sole property owner; versioned serialised messages query state, change the
-// mode/timings, preview the curtain and restore defaults reliably.
-
-// v0.6.18 distinguishes the InfoStack backing/tab-strip background from the
-// five JScript Panel page backgrounds, adds DarkOne dark grey (RGB 24,24,24),
-// and makes it the default so transparent pages inherit the intended tone.
-//
-// v0.6.19 fixes the background-mode range so the new DarkOne dark grey mode
-// (value 4) is not clamped to the legacy custom-colour mode (value 3).
-//
-// v0.6.20 adds the same DarkOne dark grey choice to the two upper side
-// dividers while preserving their legacy custom-colour mode at value 3.
-//
-// v0.6.21 adds an explicit Columns UI global background choice to the
-// InfoStack backing and upper-divider menus. Existing mode values are retained;
-// the new live Columns UI mode uses value 5.
+// v0.6.23 consolidates colour conversion, menu mapping and picker behaviour
+// through the shared DarkOneJSP3 colour helper without changing saved modes.
 //
 // v0.6.22 adds Columns UI selected-item background as a live inactive-tab
 // font-colour source. Existing Default and Custom modes remain values 0 and 1;
 // the new Columns UI mode uses value 2.
 //
-// v0.6.23 consolidates colour conversion, menu mapping and picker behaviour
-// through the shared DarkOneJSP3 colour helper without changing saved modes.
+// v0.6.21 adds an explicit Columns UI global background choice to the
+// InfoStack backing and upper-divider menus. Existing mode values are retained;
+// the new live Columns UI mode uses value 5.
+//
+// v0.6.20 adds the same DarkOne dark grey choice to the two upper side
+// dividers while preserving their legacy custom-colour mode at value 3.
+//
+// v0.6.19 fixes the background-mode range so the new DarkOne dark grey mode
+// (value 4) is not clamped to the legacy custom-colour mode (value 3).
+//
+// v0.6.18 distinguishes the InfoStack backing/tab-strip background from the
+// five JScript Panel page backgrounds, adds DarkOne dark grey (RGB 24,24,24),
+// and makes it the default so transparent pages inherit the intended tone.
+//
+// v0.6.17 hosts startup controls in this JSplitter menu. The root remains the
+// sole property owner; versioned serialised messages query state, change the
+// mode/timings, preview the curtain and restore defaults reliably.
+//
+// v0.6.16 hosts the Album Art/Spectrum divider-colour menu inside JSplitter.
+// State is exchanged with Main Columns through a serialised JSplitter-to-
+// JSplitter notification, avoiding unsupported JScript Panel bridging.
+//
+// v0.6.15 clarifies the tab-area override command as a fixed-height action.
+// The automatic-height check item remains the only automatic mode control.
+//
+// v0.6.14 makes the automatic tab-area padding follow that same scale while
+// automatic font sizing is active. Fixed font sizing keeps the established
+// 100% padding, and a manually configured tab-area height remains independent.
+//
+// v0.6.13 adds a percentage-based automatic-font scale. The normal 100% value
+// preserves the existing responsive calculation, while users can enlarge or
+// reduce it without switching to a fixed pixel size.
+//
+// v0.6.12 fixes the JSplitter-specific native colour-picker call. JSplitter
+// requires utils.ColourPicker(window_id, default_colour), while JScript Panel
+// takes the default colour first and supports an error-on-cancel flag. Cancelling
+// the native picker now exits cleanly instead of falling through to the manual
+// text-entry fallback.
+//
+// v0.6.11 adds a Default/Custom font-colour mode for inactive tab labels.
+// The active label remains white and the hovered label remains grey so the
+// existing selection and hover feedback are preserved.
+//
+// v0.3.2 makes Title Case the default label style and adds a persistent,
+// user-configurable tab-area height while retaining the original DarkOne
+// width-scaled geometry as the automatic setting.
+//
+// v0.3.1 centres tab labels across the entire reserved tab strip (the original
+// PSS layout reserved both a spacing gap and the text row at the bottom).
+//
+// v0.3.0 adds persistent background, tab visibility and display-label
+// customisation. Child custom titles are stable API identifiers; only the
+// labels drawn in this tab strip are renamed.
 
 var INFO_PANELS = [
     { key: 'Playlists',  title: DOJSP3.titles.playlistManager, defaultLabel: 'Playlists',  uppercaseLabel: 'PLAYLISTS' },
@@ -145,6 +149,7 @@ var infoStackRenderModel = {
     backgroundColour: 0,
     tabAccentColour: 0
 };
+var infoStackMenuStateKey = null;
 
 // JSplitter exposes these values in docs/Flags.js, but does not inject that
 // documentation file into each panel script automatically. Keep the small
@@ -231,7 +236,17 @@ function infoStackMenuStateSnapshot() {
 }
 
 function publishInfoStackMenuState() {
-    try { DarkOneViewBridge.writeInfoStackState(infoStackMenuStateSnapshot()); } catch (e) {}
+    var snapshot = infoStackMenuStateSnapshot();
+    var key;
+    try { key = JSON.stringify(snapshot); } catch (e) { return false; }
+    if (key === infoStackMenuStateKey) return false;
+    try {
+        if (DarkOneViewBridge.writeInfoStackState(snapshot)) {
+            infoStackMenuStateKey = key;
+            return true;
+        }
+    } catch (e2) {}
+    return false;
 }
 
 function visibleIndexes() {
@@ -558,6 +573,8 @@ function on_mouse_lbtn_up(x, y) {
 }
 
 function handleInfoStackMenuAction(id, targetIndex) {
+    id = Math.round(Number(id) || 0);
+    if (!id) return false;
     targetIndex = DOJSP3.clamp(Math.round(Number(targetIndex) || 0), 0, INFO_PANELS.length - 1);
     if (id >= 100 && id < 100 + INFO_PANELS.length) {
         selectPanel(id - 100, true);
@@ -632,10 +649,11 @@ function handleInfoStackMenuAction(id, targetIndex) {
             ));
             if (!isNaN(enteredHeight)) setTabAreaHeight(enteredHeight);
         } catch (e3) {}
-    } else if (handleInfoStackBridgeMenu(id)) {
+    } else if (!handleInfoStackBridgeMenu(id)) {
+        return false;
     }
     publishInfoStackMenuState();
-    return id !== 0;
+    return true;
 }
 
 function showInfoStackMenu(x, y, targetIndex) {
@@ -738,14 +756,9 @@ function on_notify_data(name, data) {
             handleInfoStackMenuAction(actionId, activeIndex);
             return;
         }
-        // Legacy/manual bridge payloads remain supported, but the stock optional
-        // button now owns its popup locally and sends only the selected action.
-        if (viewCommand.command === DarkOneViewBridge.commands.infoStackMenu) {
-            var popupX = viewCommand.anchorX === null
-                ? 0
-                : DOJSP3.clamp(Math.round(ww * viewCommand.anchorX / 1000), 0, Math.max(0, ww - 1));
-            showInfoStackMenu(popupX, Math.max(0, wh - 1), activeIndex);
-        }
+        // Menu ownership must remain local to the panel that invoked it. The
+        // legacy infostack-menu transport is deliberately ignored here; stock
+        // buttons send only a selected infostack-action:<id> command.
         return;
     }
     if (handleInfoStackBridgeNotification(name, data)) return;

@@ -65,6 +65,20 @@ def run(ctx: ValidationContext) -> None:
         if len(paths) > 1:
             errors.append('Case-insensitive path collision: ' + ', '.join(sorted(paths)))
 
+    # Keep project-owned JSplitter source histories readable and deterministic.
+    # Legacy enhanced-sample build identifiers are intentionally left untouched.
+    for path in (project / 'jsplitter').glob('*.js'):
+        body = text(path)
+        if 'Version history (newest first):' not in body:
+            continue
+        versions = []
+        for line in body.splitlines()[:160]:
+            match = re.match(r'\s*//\s*v(\d+)\.(\d+)\.(\d+)\b', line)
+            if match:
+                versions.append(tuple(int(part) for part in match.groups()))
+        if len(versions) > 1 and versions != sorted(versions, reverse=True):
+            errors.append('JS version history is not newest-first: ' + rel(path))
+
     # JSP3 3.x API guard. Keep this scoped to scripts that run inside JScript
     # Panel 3; JSplitter intentionally exposes a different SMP-derived API.
     jsp3_sources = list((project / 'jscript').rglob('*.js')) + list((project / 'jscript').rglob('*.txt')) + \
@@ -522,7 +536,7 @@ def run(ctx: ValidationContext) -> None:
         expected_info_stack_split = {
             'colour_helper': 'DarkOneJSP3/jsplitter/info_stack_colours.js',
             'bridge_helper': 'DarkOneJSP3/jsplitter/info_stack_bridges.js',
-            'version': '0.1.1',
+            'version': '0.1.2',
             'layout_and_painting_remain_in_controller': True,
             'menu_ids_unchanged': True,
             'saved_properties_unchanged': True,
@@ -552,6 +566,7 @@ def run(ctx: ValidationContext) -> None:
             'infostack_menu_state_file': 'js_data/darkonejsp3.infostack-menu-state.json',
             'infostack_menu_selected_action_bridge': True,
             'infostack_menu_cross_panel_popup_removed': True,
+            'infostack_legacy_popup_command_ignored': True,
         }.items():
             if optional_buttons.get(key) != expected:
                 errors.append('Manifest optional-button popup-ownership field is incorrect: ' + key)
@@ -2071,8 +2086,6 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
             'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
-            'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
-            'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
             'var DIVIDER_MENU_OPTIONS = DIVIDER_PROTOCOL.menuOptions(900);',
             'DIVIDER_PROTOCOL.notifications.query',
             'DIVIDER_PROTOCOL.notifications.set',
@@ -2090,6 +2103,15 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('InfoStack bridge helper is missing: ' + token)
+        for obsolete in [
+            'var DIVIDER_DARKONE = DIVIDER_PROTOCOL.modes.darkOne;',
+            'var DIVIDER_DARKONE_DARK = DIVIDER_PROTOCOL.modes.darkOneDark;',
+            'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
+            'var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;',
+            'var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;',
+        ]:
+            if obsolete in body:
+                errors.append('InfoStack bridge helper retains unused protocol alias: ' + obsolete)
 
     display_system_path = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
     if display_system_path.exists():
@@ -2467,7 +2489,6 @@ def run(ctx: ValidationContext) -> None:
             "menu.AppendMenuItem(MENU_STRING, 250, 'Show tab strip');",
             'menu.CheckMenuItem(250, isTabStripVisible());',
             'function showInfoStackMenu(x, y, targetIndex)',
-            'DarkOneViewBridge.commands.infoStackMenu',
             'DarkOneViewBridge.parseNotificationData(data)',
             'contentHeight = wh;',
             'tabAreaHeight = 0;',
@@ -3087,6 +3108,22 @@ def run(ctx: ValidationContext) -> None:
             if forbidden.lower() in body.lower():
                 errors.append('Scripted Quick Search retains obsolete prototype code: ' + forbidden)
 
+    optional_button_source = project / 'jscript' / 'js' / 'Buttons_Function_OptBtnCmd.js'
+    if optional_button_source.exists():
+        body = text(optional_button_source)
+        for token in [
+                'var DARKONE_INFOSTACK_TAB_COLOUR_OPTIONS = [',
+                'var DARKONE_INFOSTACK_BACKGROUND_OPTIONS = [',
+                'var DARKONE_INFOSTACK_DIVIDER_OPTIONS = [']:
+            if token not in body:
+                errors.append('INFOSTACK local-menu static option descriptor is missing: ' + token)
+        local_menu_start = body.find('function darkOneShowInfoStackLocalMenu(button)')
+        local_menu_end = body.find('\nfunction ', local_menu_start + 20)
+        local_menu_body = body[local_menu_start:local_menu_end] if local_menu_start >= 0 and local_menu_end > local_menu_start else ''
+        for forbidden in ['var tabColourOptions = [', 'var backgroundOptions = [', 'var dividerOptions = [']:
+            if forbidden in local_menu_body:
+                errors.append('INFOSTACK local menu rebuilds static option descriptors per popup: ' + forbidden)
+
     manager_source = samples / 'smooth' / 'jsspm.js'
     if manager_source.exists():
         body = text(manager_source)
@@ -3108,6 +3145,10 @@ def run(ctx: ValidationContext) -> None:
             'var rects = infoStackRenderModel.rects;',
             'var infoStackFontKey =',
             'if (!force && key === infoStackFontKey) return false;',
+            'var infoStackMenuStateKey = null;',
+            'if (key === infoStackMenuStateKey) return false;',
+            'infoStackMenuStateKey = key;',
+            'legacy infostack-menu transport is deliberately ignored here',
         ]:
             if token not in body:
                 errors.append('InfoStack render-model/font cache is missing: ' + token)
@@ -3117,6 +3158,11 @@ def run(ctx: ValidationContext) -> None:
         for forbidden in ['visibleIndexes()', 'tabLabel(', 'backgroundColour()', 'tabAccentColour()']:
             if forbidden in paint_body:
                 errors.append('InfoStack paint path retains uncached property/layout work: ' + forbidden)
+
+        notify_start = body.find('function on_notify_data(name, data)')
+        notify_body = body[notify_start:] if notify_start >= 0 else ''
+        if 'showInfoStackMenu(' in notify_body:
+            errors.append('InfoStack notification path can still open a cross-panel popup menu')
 
     albumart_source = samples / 'js' / 'albumart.js'
     if albumart_source.exists():

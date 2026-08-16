@@ -1,8 +1,6 @@
 "use strict";
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\queue_bridge.js');
-// v0.7.36 centralises startup-control serialisation, notification names and
-// readiness handshakes in the shared JSplitter protocol helper.
 
 var DARKONEJSP3_RESET_ROLE = "root";
 
@@ -11,16 +9,23 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // both major children are positioned explicitly so there is no full-window
 // invisible overlay intercepting mouse input.
 //
-// v0.6.9 refines the v0.6.6 startup curtain. Optional reveal modes now repaint
-// the hidden root to the final DarkOne grey and allow that backing frame to
-// settle before the native child windows are shown. This prevents the
-// DisplayStack host from exposing a black first frame during startup. Off is
-// the default; Black reveal and Staged reveal remain available explicitly.
+// Version history (newest first):
+// v0.7.37 adds the direct playback-queue state/command bridge used by the
+// scripted Queue Viewer while preserving its JScript Panel fallback path.
+//
+// v0.7.36 centralises startup-control serialisation, notification names and
+// readiness handshakes in the shared JSplitter protocol helper.
 //
 // v0.7.25 makes this root the sole owner of startup configuration. The
 // InfoStack JSplitter menu queries and updates it through versioned serialised
 // JSplitter-to-JSplitter messages, replacing the ineffective JScript Panel
 // property/notification bridge.
+//
+// v0.6.9 refines the v0.6.6 startup curtain. Optional reveal modes now repaint
+// the hidden root to the final DarkOne grey and allow that backing frame to
+// settle before the native child windows are shown. This prevents the
+// DisplayStack host from exposing a black first frame during startup. Off is
+// the default; Black reveal and Staged reveal remain available explicitly.
 
 var STARTUP_TRANSITION_PROPERTY = 'DARKONEJSP3.STARTUP.TRANSITION';
 var STARTUP_MINIMUM_DELAY_PROPERTY = 'DARKONEJSP3.STARTUP.MINIMUM.DELAY';
@@ -28,7 +33,6 @@ var STARTUP_SAFETY_TIMEOUT_PROPERTY = 'DARKONEJSP3.STARTUP.SAFETY.TIMEOUT';
 
 var STARTUP_PROTOCOL = DarkOneProtocol.startup;
 var STARTUP_OFF = STARTUP_PROTOCOL.transitions.off;
-var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;
 var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;
 var STARTUP_STAGE_GAP_MS = 125;
 var STARTUP_PREPAINT_DELAY_MS = 150;

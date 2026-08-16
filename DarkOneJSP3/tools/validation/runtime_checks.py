@@ -1244,11 +1244,13 @@ def run(ctx: ValidationContext) -> None:
     const infoBridgeSource = fs.readFileSync({json.dumps(str(project / 'jsplitter' / 'info_stack_bridges.js'))}, 'utf8');
     const source = fs.readFileSync({json.dumps(str(project / 'jsplitter' / '03_info_stack_tabs.js'))}, 'utf8');
     const properties = new Map();
+    let stateWrites = 0;
+    let popupTracks = 0;
     const panels = Array.from({{length: 6}}, () => ({{visible:false, bounds:null, Show(v){{this.visible=!!v;}}, Move(x,y,w,h){{this.bounds=[x,y,w,h];}}}}));
     const popup = {{ items:[], separators:0, checks:[], radio:null, children:[],
         AppendMenuItem(flags,id,label){{this.items.push([flags,id,label]);}}, AppendMenuSeparator(){{this.separators++;}},
         CheckMenuItem(id,v){{this.checks.push([id,!!v]);}}, CheckMenuRadioItem(a,b,c){{this.radio=[a,b,c];}},
-        AppendTo(parent,flags,label){{parent.children.push(label);}}, TrackPopupMenu(x,y){{this.xy=[x,y]; return global.popupId || 0;}} }};
+        AppendTo(parent,flags,label){{parent.children.push(label);}}, TrackPopupMenu(x,y){{popupTracks++;this.xy=[x,y]; return global.popupId || 0;}} }};
     const windowMock = {{ Name:'DOJSP3.InfoStack', Width:600, Height:300,
         GetProperty(name,fallback){{return properties.has(name)?properties.get(name):fallback;}},
         SetProperty(name,value){{properties.set(name,value);}}, GetPanel(title){{const i=['a','b','c','d','e','f'].indexOf(title); return i>=0?panels[i]:null;}},
@@ -1261,15 +1263,25 @@ def run(ctx: ValidationContext) -> None:
     const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
         colourSource+'\\n'+protocolSource+'\\n'+viewBridgeSource+'\\n'+infoColourSource+'\\n'+infoBridgeSource+'\\n'+source+
         '\\nreturn {{on_size,on_notify_data,showInfoStackMenu,isTabStripVisible,setTabStripVisible,bridge:DarkOneViewBridge,getLayout:function(){{return [tabY,tabAreaHeight,contentHeight];}}}};');
-    const c = factory(windowMock,{{ProfilePath:'',ShowPopupMessage(){{}}}},function(){{}},{{Font(){{return {{Height:16}};}}}},DOJSP3Mock,{{InputBox(){{return '0';}}}},function(){{return false;}});
+    const utilsMock = {{InputBox(){{return '0';}},CreateFolder(){{}},WriteTextFile(path,data){{if(path.indexOf('infostack-menu-state')>=0)stateWrites++;return true;}}}};
+    const c = factory(windowMock,{{ProfilePath:'',ShowPopupMessage(){{}}}},function(){{}},{{Font(){{return {{Height:16}};}}}},DOJSP3Mock,utilsMock,function(){{return false;}});
     c.on_size(600,300);
+    if (stateWrites !== 1) throw new Error('Initial InfoStack menu-state snapshot was not published exactly once');
+    c.on_size(600,300);
+    if (stateWrites !== 1) throw new Error('Unchanged InfoStack resize republished menu state');
     if (!c.isTabStripVisible() || c.getLayout()[1] <= 0 || c.getLayout()[2] >= 300) throw new Error('InfoStack tab strip default/layout is invalid');
     c.setTabStripVisible(false);
+    if (stateWrites !== 2) throw new Error('InfoStack state change did not publish exactly once');
     if (c.isTabStripVisible() || c.getLayout().join(',') !== '300,0,300') throw new Error('Hidden InfoStack tab strip did not give content the full host height');
     global.popupId=250; c.showInfoStackMenu(100,299,0);
+    if (stateWrites !== 3) throw new Error('InfoStack menu action did not publish exactly one changed snapshot');
     if (!c.isTabStripVisible()) throw new Error('Show tab strip menu command did not restore the strip');
-    global.popupId=0;
+    global.popupId=0; c.showInfoStackMenu(100,299,0);
+    if (stateWrites !== 3) throw new Error('Cancelled InfoStack menu rewrote an unchanged snapshot');
+    const tracksBeforeLegacyCommand = popupTracks;
     c.on_notify_data('DarkOneJSP3.View.Command','v1|infostack-menu|500');
+    if (popupTracks !== tracksBeforeLegacyCommand) throw new Error('Legacy cross-panel InfoStack command still opens a popup');
+    if (stateWrites !== 3) throw new Error('Ignored legacy InfoStack popup command republished menu state');
     const serialised = c.bridge.serialise('infostack-menu','id',1000,750);
     const parsed = c.bridge.parse(serialised,1000);
     if (!parsed || parsed.anchorX !== 750) throw new Error('InfoStack button anchor was lost in the view-command file payload');

@@ -4,30 +4,31 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 
 // Replaces Panel Stack Splitter 06.
 //
-// v0.3.4 fixes the unpainted 20 px strip above Waveform Minibar, removes
-// the accidental one-pixel frame line, adds a persistent host-background
-// selector and can force the native waveform child blank when playback stops.
+// Version history (newest first):
+// v0.3.12 opts the native Waveform Minibar child into JSplitter's
+// pseudo-transparency support so the component's Transparent background mode
+// can reveal this host's resolved backing instead of the native black fallback.
+//
+// v0.3.11 coordinates Automatic Bottom-area background changes with the
+// shared JSP3/JSplitter apply timestamp so composite colour updates land together.
+//
+// v0.3.10 separates selecting the remembered Custom host colour from editing
+// that stored colour through the native picker.
+//
+// v0.3.9 adds Automatic as the default host-background mode. Automatic follows
+// the shared Bottom area background without adding another runtime-file poller;
+// Bottom Controls relays changed state inside the JSplitter notification domain.
+//
+// v0.3.8 consolidates background-mode validation, menu mapping and custom
+// colour picking through the shared DarkOneJSP3 colour helper.
 //
 // v0.3.7 keeps the child hidden briefly when playback starts from a stopped
 // state, preventing Waveform Minibar's previous cached waveform flashing before
 // the newly selected track has been processed.
 //
-// v0.3.8 consolidates background-mode validation, menu mapping and custom
-// colour picking through the shared DarkOneJSP3 colour helper.
-//
-// v0.3.10 separates selecting the remembered Custom host colour from editing
-// that stored colour through the native picker.
-//
-// v0.3.11 coordinates Automatic Bottom-area background changes with the
-// shared JSP3/JSplitter apply timestamp so composite colour updates land together.
-//
-// v0.3.12 opts the native Waveform Minibar child into JSplitter's
-// pseudo-transparency support so the component's Transparent background mode
-// can reveal this host's resolved backing instead of the native black fallback.
-//
-// v0.3.9 adds Automatic as the default host-background mode. Automatic follows
-// the shared Bottom area background without adding another runtime-file poller;
-// Bottom Controls relays changed state inside the JSplitter notification domain.
+// v0.3.4 fixes the unpainted 20 px strip above Waveform Minibar, removes
+// the accidental one-pixel frame line, adds a persistent host-background
+// selector and can force the native waveform child blank when playback stops.
 
 var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
     window,
