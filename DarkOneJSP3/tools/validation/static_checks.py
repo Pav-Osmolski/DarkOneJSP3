@@ -514,23 +514,45 @@ def run(ctx: ValidationContext) -> None:
             'optional_button_menu_consolidation', {})
         expected_optional_menu_consolidation = {
             'shared_helper': 'DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js',
-            'version': '0.1.1',
+            'version': '0.1.2',
             'panels': ['Control Left', 'Control Right'],
             'optional_button_toggle_centralised': True,
             'command_setup_centralised': True,
             'command_redetection_centralised': True,
             'command_guide_centralised': True,
-            'darkone_tools_entry_centralised': True,
-            'roundness_menu_centralised': True,
-            'panel_specific_layouts_unchanged': True,
-            'left_style_and_depth_menus_remain_local': True,
+            'panel_context_menu_optional_only': True,
+            'darkone_tools_context_entries_removed': True,
+            'shared_appearance_entries_removed': True,
             'saved_properties_unchanged': True,
-            'menu_ids_unchanged': True,
             'runtime_tests': True,
         }
         for key, expected in expected_optional_menu_consolidation.items():
             if optional_menu_consolidation.get(key) != expected:
                 errors.append('Manifest optional-button-menu field is incorrect: ' + key)
+        tools_menu = manifest.get('enhancements', {}).get('tools_menu', {})
+        expected_tools_menu = {
+            'version': '0.1.0',
+            'command': 'DarkOneJSP3/Tools/Menu',
+            'suggested_label': 'TOOLS',
+            'popup_owner': 'invoking JScript Panel control panel',
+            'sole_launcher': True,
+            'top_level_order': [
+                'Appearance', 'Buttons', 'Fonts', 'High-DPI / scaling',
+                'Reset DarkOneJSP3'],
+            'buttons_menu': [
+                'Button style', 'Button depth', 'Button roundness'],
+            'style_labels': [
+                'Standard', 'Thick', 'Round', 'Round (Alt)',
+                'Round (Alt + Narrow)'],
+            'style_and_depth_shared_between_control_panels': True,
+            'saved_properties_unchanged': True,
+            'display_context_entry_removed': True,
+            'native_menu_cleanup_guarded': True,
+            'runtime_tests': True,
+        }
+        for key, expected in expected_tools_menu.items():
+            if tools_menu.get(key) != expected:
+                errors.append('Manifest DarkOne Tools field is incorrect: ' + key)
         info_stack_split = manifest.get('enhancements', {}).get(
             'info_stack_controller_split', {})
         expected_info_stack_split = {
@@ -561,6 +583,16 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Manifest optional-button InfoStack field is incorrect: ' + key)
         if 'DarkOneJSP3/InfoStack/Menu' not in optional_buttons.get('internal_view_commands', []):
             errors.append('Manifest optional-button commands omit DarkOneJSP3/InfoStack/Menu')
+        if 'DarkOneJSP3/Tools/Menu' not in optional_buttons.get('internal_view_commands', []):
+            errors.append('Manifest optional-button commands omit DarkOneJSP3/Tools/Menu')
+        for key, expected in {
+            'tools_menu_button_supported': True,
+            'tools_menu_suggested_label': 'TOOLS',
+            'tools_menu_popup_owner': 'invoking JScript Panel control panel',
+            'tools_menu_sole_launcher': True,
+        }.items():
+            if optional_buttons.get(key) != expected:
+                errors.append('Manifest optional-button TOOLS field is incorrect: ' + key)
         for key, expected in {
             'infostack_menu_popup_owner': 'invoking JScript Panel control panel',
             'infostack_menu_state_file': 'js_data/darkonejsp3.infostack-menu-state.json',
@@ -1505,8 +1537,17 @@ def run(ctx: ValidationContext) -> None:
     optional_button_source = project / 'jscript' / 'js' / 'Buttons_OptionalMenu.js'
     if optional_button_source.exists():
         body = text(optional_button_source)
-        if 'try { extraMenus[i].Dispose(); } catch (e) {}' not in body:
-            errors.append('Optional-button extra menu disposal does not call native Dispose() directly')
+        for token in [
+            'var menus = [];',
+            'var rootMenu = window.CreatePopupMenu();',
+            'menus.push(rootMenu);',
+            'var optionalMenu = window.CreatePopupMenu();',
+            'menus.push(optionalMenu);',
+            'for (var i = menus.length - 1; i >= 0; i--)',
+            'try { menus[i].Dispose(); } catch (e) {}',
+        ]:
+            if token not in body:
+                errors.append('Optional-button menu disposal is missing: ' + token)
     if js_playlist_cache.exists():
         body = text(js_playlist_cache)
         for forbidden in ['typeof changedHandles.Find', 'typeof activeHandles.GetItem']:
@@ -2647,8 +2688,11 @@ def run(ctx: ValidationContext) -> None:
             "state.dividerCustomColour = chosen;",
             "background.AppendMenuItem(MF_STRING, 9806, 'Set custom colour...');",
             "divider.AppendMenuItem(MF_STRING, 9826, 'Set custom colour...');",
+            "var menu = window.CreatePopupMenu();\n    // Register ownership immediately",
+            "disposableMenus.push(menu);\n    var weights = [",
             "bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);",
-            "try {\n        idx = m.TrackPopupMenu(x, y);",
+            "try {\n    var m = window.CreatePopupMenu(); menus.push(m);",
+            "idx = m.TrackPopupMenu(x, y);",
             "} finally {\n        for (var i = menus.length - 1; i >= 0; i--)",
         ]:
             if token not in body:
@@ -2749,17 +2793,12 @@ def run(ctx: ValidationContext) -> None:
             'var DARKONE_CONTROL_BUTTON_MENU = {',
             'function darkOneOptionalButtonEditId(buttonNames)',
             'function darkOneAppendOptionalButtonMenu(menu, buttonNames, buttonProperties)',
-            'function darkOneAppendButtonRoundnessMenu(menu)',
             'function darkOneConfigureOptionalButton(buttonIndex, buttonNames, buttonProperties)',
             'function darkOneHandleControlButtonMenuSelection(index, options)',
             'function darkOneShowControlButtonMenu(x, y, options)',
             "optionalFirstId: 101",
             "redetectId: 120",
             "guideId: 121",
-            "roundnessFirstId: 401",
-            "roundnessCustomId: 407",
-            "toolsId: 900",
-            "roundnessValues: [-1, 0, 20, 33, 60, 100]",
         ]:
             if token not in body:
                 errors.append('Shared optional-button menu helper is missing: ' + token)
@@ -2805,10 +2844,22 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('Display volume-cadence follower is missing: ' + token)
+    display_panel_path = project / 'jscript' / 'js' / 'Panel_Display.js'
+    if display_panel_path.exists():
+        body = text(display_panel_path)
+        for token in [
+            'var menus = [];',
+            'menus.push(a[i]);',
+            '} finally {',
+            'for (var j = menus.length - 1; j >= 0; j--)',
+            'try { menus[j].Dispose(); } catch (e) {}',
+        ]:
+            if token not in body:
+                errors.append('Display context-menu cleanup is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.28-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.33-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.29-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.34-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():
@@ -2842,6 +2893,19 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if duplicate in body:
                 errors.append(rel(path) + ' retains duplicated optional-button menu logic: ' + duplicate)
+    optional_commands = project / 'jscript' / 'js' / 'Buttons_Function_OptBtnCmd.js'
+    if optional_commands.exists():
+        body = text(optional_commands)
+        for token in [
+            "'darkonejsp3/tools/menu'",
+            'function darkOneShowToolsLocalMenu(button)',
+            'darkOneToolsMenu(x, y);',
+        ]:
+            if token not in body:
+                errors.append('TOOLS optional-button command support is missing: ' + token)
+    for path in [optional_button_helper, project / 'jscript' / 'js' / 'Panel_Display.js']:
+        if path.exists() and 'DarkOne Tools...' in text(path):
+            errors.append(rel(path) + ' still exposes DarkOne Tools from a right-click menu')
     left_control_panel = project / 'jscript' / 'js' / 'Panel_Control_Left.js'
     if left_control_panel.exists():
         body = text(left_control_panel)
@@ -2851,8 +2915,23 @@ def run(ctx: ValidationContext) -> None:
             'depthMenu.AppendTo(rootMenu, 0 | 16, "Button depth")',
             'handleExtraSelection: function (index)',
         ]:
+            if token in body:
+                errors.append('Control Left still exposes shared button appearance: ' + token)
+    config_global = project / 'jscript' / 'js' / 'Config_Global_Script.js'
+    if config_global.exists():
+        body = text(config_global)
+        for token in [
+            'function darkOneAppendButtonsAppearanceMenu(parent, style, depth, roundness)',
+            'function darkOneHandleButtonsAppearanceMenuSelection(id)',
+            "buttons.AppendTo(m, MF_STRING, 'Buttons')",
+            "style.AppendTo(parent, MF_STRING, 'Button style')",
+            "depth.AppendTo(parent, MF_STRING, 'Button depth')",
+            "roundness.AppendTo(parent, MF_STRING, 'Button roundness')",
+            "darkOneSetSharedProperty('Buttons appearance preset', id - 9830)",
+            "darkOneSetSharedProperty('Buttons depth preset', id - 9840)",
+        ]:
             if token not in body:
-                errors.append('Control Left lost its panel-specific menu behaviour: ' + token)
+                errors.append('DarkOne Tools shared Buttons appearance support is missing: ' + token)
 
     volume_knob = project / 'jscript' / 'js' / 'Object_Volumeknob.js'
     if volume_knob.exists():
@@ -2975,9 +3054,16 @@ def run(ctx: ValidationContext) -> None:
     text_button = project / 'jscript' / 'js' / 'Object_Textbutton.js'
     if button_common.exists():
         body = text(button_common)
-        for token in ['btn_font_key', 'if (font_key != btn_font_key || !btn_font)']:
+        for token in [
+            'btn_font_key',
+            'if (font_key != btn_font_key || !btn_font)',
+            'appPreset = typeof darkOneButtonStylePreset == "function"',
+            '? darkOneButtonStylePreset()',
+            'depthPreset = typeof darkOneButtonDepthPreset == "function"',
+            '? darkOneButtonDepthPreset()',
+        ]:
             if token not in body:
-                errors.append('Control-button font reuse is missing: ' + token)
+                errors.append('Control-button rebuild safeguard is missing: ' + token)
     if text_button.exists() and 'this.updateLayout = function(x, y, w, h, size_options)' not in text(text_button):
         errors.append('TextButton geometry reuse is missing')
     for path in control_panels:

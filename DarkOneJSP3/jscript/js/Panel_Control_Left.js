@@ -3,7 +3,7 @@
 // =========================================================================================================
 
 var g_btns = safeBitmapImage(imgPath + "buttons.png");
-var presetCount = 5, b_btns = [], i_size, t_r = false;
+var b_btns = [], i_size, t_r = false;
 btn_panel = 1;
 
 var a_name = ";;CONSOLE;;;TIME".split(";");
@@ -40,48 +40,7 @@ function buttonsLayout() {
 function getButtonMenu(x, y) {
 	darkOneShowControlButtonMenu(x, y, {
 		buttonNames: b_name,
-		buttonProperties: b_btns,
-		appendExtraMenus: function (rootMenu) {
-			var styleMenu = window.CreatePopupMenu();
-			var depthMenu = window.CreatePopupMenu();
-
-			for (var i = 1; i <= presetCount; i++)
-				styleMenu.AppendMenuItem(0, i + 200, "Preset " + i);
-			styleMenu.CheckMenuRadioItem(201, 200 + presetCount, appPreset + 200);
-
-			var depthLabels = ["Flat", "Soft", "Medium", "Strong"];
-			for (var j = 0; j < depthLabels.length; j++)
-				depthMenu.AppendMenuItem(0, j + 301, depthLabels[j]);
-			depthMenu.CheckMenuRadioItem(301, 304, depthPreset + 301);
-
-			styleMenu.AppendTo(rootMenu, 0 | 16, "Button style");
-			depthMenu.AppendTo(rootMenu, 0 | 16, "Button depth");
-			return [styleMenu, depthMenu];
-		},
-		handleExtraSelection: function (index) {
-			if (index >= 201 && index <= 200 + presetCount) {
-				window.SetProperty("Buttons appearance preset", index - 200);
-				appPreset = window.GetProperty("Buttons appearance preset");
-				window.NotifyOthers("ButtonPreset", appPreset);
-				buttonsOptions();
-				buttonsSizes();
-				buttonsRefresh();
-				window.Repaint();
-				return true;
-			}
-
-			if (index >= 301 && index <= 304) {
-				window.SetProperty("Buttons depth preset", index - 301);
-				depthPreset = window.GetProperty("Buttons depth preset");
-				window.NotifyOthers("DepthPreset", depthPreset);
-				buttonsOptions();
-				buttonsRefresh();
-				window.Repaint();
-				return true;
-			}
-
-			return false;
-		}
+		buttonProperties: b_btns
 	});
 }
 

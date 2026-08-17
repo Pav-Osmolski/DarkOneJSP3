@@ -1,6 +1,31 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.14 - TOOLS launcher and shared button appearance consolidation
+-------------------------------------------------------------------
+
+- Added the optional `DarkOneJSP3/Tools/Menu` command, normally labelled TOOLS.
+  Its popup is owned locally by the invoking left or right JScript control panel
+  and opens beneath the clicked button.
+- Made TOOLS the sole DarkOne Tools launcher. Removed the duplicate entries from
+  both control-panel context menus and the centre Display context menu; control-
+  panel right-click menus now retain only their panel-specific Optional buttons.
+- Moved the universal Button style, Button depth and Button roundness controls
+  into a top-level Buttons submenu immediately after Appearance. Changes keep
+  the existing saved property values and synchronise both control panels.
+- Renamed the five style choices without changing their stored values: Standard,
+  Thick, Round, Round (Alt) and Round (Alt + Narrow).
+- Centralised style/depth normalisation, refreshed saved appearance values during
+  every button-system rebuild and narrowed shared-setting invalidation to the
+  control-panel category.
+- Hardened optional, Display and DarkOne Tools native popup lifecycles so partial
+  construction failures release every previously created native wrapper.
+- Expanded static and Node runtime coverage for the TOOLS command, sole-launcher
+  contract, hierarchy/order, unique IDs, descriptive labels, shared settings,
+  malformed saved values and popup cleanup. Advanced the left control panel to
+  3.0.29, the right control panel and Display to 3.0.34, optional-button menu
+  integration to 0.1.2 and the release validator to 0.10.10.
+
 v1.0.13 - Second-pass hardening and source-history cleanup
 ----------------------------------------------------------
 

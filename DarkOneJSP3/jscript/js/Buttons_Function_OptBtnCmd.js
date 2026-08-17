@@ -54,7 +54,7 @@ function resetOptionalButtonCommandStyles(buttonNames) {
 function showOptionalButtonCommandGuide() {
     utils.MessageBox(
         'Optional buttons accept one of four trusted local command types:\n\n' +
-        '1. DarkOneJSP3 internal command, for example: DarkOneJSP3/Layout/Toggle, DarkOneJSP3/Visualiser/Toggle or DarkOneJSP3/InfoStack/Menu\n' +
+        '1. DarkOneJSP3 internal command, for example: DarkOneJSP3/Layout/Toggle, DarkOneJSP3/Visualiser/Toggle, DarkOneJSP3/InfoStack/Menu or DarkOneJSP3/Tools/Menu\n' +
         '2. Main-menu path, for example: View/Console\n' +
         '3. Context-menu command for the current selection\n' +
         '4. JavaScript code executed locally by this panel\n\n' +
@@ -228,7 +228,22 @@ function darkOneShowInfoStackLocalMenu(button) {
     return true;
 }
 
+function darkOneIsToolsMenuCommand(command) {
+    return String(command || '').replace(/\\/g, '/').replace(/^\s+|\s+$/g, '').toLowerCase() ===
+        'darkonejsp3/tools/menu';
+}
+
+function darkOneShowToolsLocalMenu(button) {
+    var x = button ? Math.max(0, Math.round(Number(button.x) || 0)) : 0;
+    var y = button ? Math.max(0, Math.round((Number(button.y) || 0) + (Number(button.h) || 0))) : 0;
+    darkOneToolsMenu(x, y);
+    return true;
+}
+
 function darkOneRunInternalButtonCommand(command, button) {
+    if (darkOneIsToolsMenuCommand(command)) {
+        return darkOneShowToolsLocalMenu(button);
+    }
     if (typeof DarkOneViewBridge != 'object' || !DarkOneViewBridge) return false;
     var internal = DarkOneViewBridge.commandForButtonPath(command);
     if (!internal) return false;

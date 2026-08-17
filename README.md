@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current stable release:</strong> v1.0.13
+  <strong>Current stable release:</strong> v1.0.14
 </p>
 
 > [!IMPORTANT]
@@ -68,7 +68,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.13** is the current stable release.
+**DarkOneJSP3 v1.0.14** is the current stable release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -231,12 +231,7 @@ See:
 ## Repository layout
 
 ```text
-assets/
-├── darkonejsp3-logo.png                    Repository artwork used by this README
-├── darkonejsp3-social.jpg                  Promotional artwork used by the Wiki
-├── darkonejsp3-screenshot-albumnotes.webp  Album Notes and InfoStack screenshot
-├── darkonejsp3-screenshot-main.webp        Main DarkOneJSP3 interface screenshot
-└── darkonejsp3-screenshot-wide.webp        Wide DarkOneJSP3 interface screenshot
+assets/                    Repository artwork and screenshots
 
 DarkOneJSP3/
 ├── docs/                  Documentation, changelog, credits and user guides

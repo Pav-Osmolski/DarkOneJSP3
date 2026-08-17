@@ -72,6 +72,18 @@ JSplitter loader and controller assignments
 06  loaders\JSplitter 06 - Display and Waveform.txt
     controller: jsplitter\06_display_waveform.js
 
+Optional control-panel commands
+-------------------------------
+- DarkOneJSP3/Layout/Toggle, normally labelled LAYOUT, switches between the
+  standard and alternate main-area layouts.
+- DarkOneJSP3/Visualiser/Toggle, normally labelled SPECTRUM, toggles the
+  spectrum panel.
+- DarkOneJSP3/InfoStack/Menu, normally labelled INFOSTACK, opens the locally
+  owned InfoStack navigation and configuration popup.
+- DarkOneJSP3/Tools/Menu, normally labelled TOOLS, opens the locally owned
+  DarkOne Tools popup. It is the sole launcher for shared theme tools and the
+  button appearance settings used by both control panels.
+
 Title rules
 -----------
 - Visible InfoStack tab text can be renamed without changing the DOJSP3.* title.

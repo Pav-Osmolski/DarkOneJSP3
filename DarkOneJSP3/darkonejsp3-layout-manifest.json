@@ -1,5 +1,5 @@
 {
-  "version": "1.0.13",
+  "version": "1.0.14",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -97,7 +97,8 @@
       "number": 10,
       "title": "DOJSP3.ControlsLeft",
       "type": "JScript Panel 3",
-      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Left.txt"
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Left.txt",
+      "version": "3.0.29-jsp3-3.8.5"
     },
     {
       "number": 11,
@@ -111,7 +112,7 @@
       "title": "DOJSP3.Display",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt",
-      "version": "3.0.33-jsp3-3.8.5"
+      "version": "3.0.34-jsp3-3.8.5"
     },
     {
       "number": 13,
@@ -123,7 +124,8 @@
       "number": 14,
       "title": "DOJSP3.ControlsRight",
       "type": "JScript Panel 3",
-      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt"
+      "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt",
+      "version": "3.0.34-jsp3-3.8.5"
     }
   ],
   "enhancements": {
@@ -409,8 +411,13 @@
       "internal_view_commands": [
         "DarkOneJSP3/Layout/Toggle",
         "DarkOneJSP3/Visualiser/Toggle",
-        "DarkOneJSP3/InfoStack/Menu"
+        "DarkOneJSP3/InfoStack/Menu",
+        "DarkOneJSP3/Tools/Menu"
       ],
+      "tools_menu_button_supported": true,
+      "tools_menu_suggested_label": "TOOLS",
+      "tools_menu_popup_owner": "invoking JScript Panel control panel",
+      "tools_menu_sole_launcher": true,
       "infostack_menu_button_supported": true,
       "infostack_menu_suggested_label": "INFOSTACK",
       "infostack_menu_anchor_follows_button": true,
@@ -760,7 +767,7 @@
     },
     "optional_button_menu_consolidation": {
       "shared_helper": "DarkOneJSP3/jscript/js/Buttons_OptionalMenu.js",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "panels": [
         "Control Left",
         "Control Right"
@@ -769,12 +776,41 @@
       "command_setup_centralised": true,
       "command_redetection_centralised": true,
       "command_guide_centralised": true,
-      "darkone_tools_entry_centralised": true,
-      "roundness_menu_centralised": true,
-      "panel_specific_layouts_unchanged": true,
-      "left_style_and_depth_menus_remain_local": true,
+      "panel_context_menu_optional_only": true,
+      "darkone_tools_context_entries_removed": true,
+      "shared_appearance_entries_removed": true,
       "saved_properties_unchanged": true,
-      "menu_ids_unchanged": true,
+      "runtime_tests": true
+    },
+    "tools_menu": {
+      "version": "0.1.0",
+      "command": "DarkOneJSP3/Tools/Menu",
+      "suggested_label": "TOOLS",
+      "popup_owner": "invoking JScript Panel control panel",
+      "sole_launcher": true,
+      "top_level_order": [
+        "Appearance",
+        "Buttons",
+        "Fonts",
+        "High-DPI / scaling",
+        "Reset DarkOneJSP3"
+      ],
+      "buttons_menu": [
+        "Button style",
+        "Button depth",
+        "Button roundness"
+      ],
+      "style_labels": [
+        "Standard",
+        "Thick",
+        "Round",
+        "Round (Alt)",
+        "Round (Alt + Narrow)"
+      ],
+      "style_and_depth_shared_between_control_panels": true,
+      "saved_properties_unchanged": true,
+      "display_context_entry_removed": true,
+      "native_menu_cleanup_guarded": true,
       "runtime_tests": true
     },
     "info_stack_controller_split": {

@@ -8,6 +8,14 @@ var btn1Opt = {}, btn2Opt = {}, btnsCol = {}, btn1Siz = {}, btn2Siz = {}, vknbOp
 var area, bxf, bbw, bbh, by1, by2, padX, padY, rbx = 0, btn_panel;
 
 function buttonsOptions() {
+	// Shared appearance changes can originate from either control panel.
+	// Refresh the cached legacy values before rebuilding button resources.
+	appPreset = typeof darkOneButtonStylePreset == "function"
+		? darkOneButtonStylePreset()
+		: Math.max(1, Math.min(5, Math.round(Number(window.GetProperty("Buttons appearance preset", 1))) || 1));
+	depthPreset = typeof darkOneButtonDepthPreset == "function"
+		? darkOneButtonDepthPreset()
+		: Math.max(0, Math.min(3, Math.round(Number(window.GetProperty("Buttons depth preset", 0))) || 0));
 	btn1Opt.btn_depth = Math.max(Math.round(sysWidth / 1280), 1) * depthPreset;
 	btn1Opt.btn_style = appPreset > 2 ? 3 : appPreset;
 	btn1Opt.font_name = typeof darkOneControlFontName == "function" ? darkOneControlFontName() : "Arial Black";

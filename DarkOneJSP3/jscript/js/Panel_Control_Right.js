@@ -141,7 +141,7 @@ function on_notify_data(name, info) {
 	if (typeof darkOneHandleNotify == 'function') {
 		var change = darkOneHandleNotify(name, info);
 		if (change) {
-					if (darkOneNotifyAffects(change, 'controls')) {
+			if (darkOneNotifyAffects(change, 'controls')) {
 				buttonsOptions();
 				buttonsSizes();
 				buttonsRefresh();
@@ -149,23 +149,6 @@ function on_notify_data(name, info) {
 			}
 			return;
 		}
-	}
-
-	if (name == "ButtonPreset") {
-		window.SetProperty("Buttons appearance preset", info);
-		appPreset = info;
-		buttonsOptions();
-		buttonsSizes();
-		buttonsRefresh();
-		window.Repaint();
-	}
-
-	if (name == "DepthPreset") {
-		window.SetProperty("Buttons depth preset", info);
-		depthPreset = info;
-		buttonsOptions();
-		buttonsRefresh();
-		window.Repaint();
 	}
 }
 

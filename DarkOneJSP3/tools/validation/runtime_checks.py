@@ -1024,15 +1024,15 @@ def run(ctx: ValidationContext) -> None:
     let shownProperties = 0;
     let resetNames = null;
     let guideCalls = 0;
-    let toolsCalls = [];
-    let roundness = 33;
-    let roundnessSet = null;
-    let customRoundness = false;
-    let refreshCalls = [];
     let inputValues = [];
     let popupMenus = [];
     let trackedIndex = 0;
+    let popupCreateCalls = 0;
+    let failPopupCreateAt = 0;
     function createPopupMenu() {{
+        popupCreateCalls++;
+        if (failPopupCreateAt && popupCreateCalls === failPopupCreateAt)
+            throw new Error('simulated popup construction failure');
         const value = {{
             items: [], checked: [], separators: 0, children: [], disposed: false,
             AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
@@ -1066,24 +1066,15 @@ def run(ctx: ValidationContext) -> None:
     const factory = new Function(
         'window', 'utils', 'MB_OK', 'MB_ICONASTERISK',
         'resetOptionalButtonCommandStyles', 'showOptionalButtonCommandGuide',
-        'darkOneToolsMenu', 'darkOneButtonRoundness', 'darkOneSetButtonRoundness',
-        'darkOneInputButtonRoundness', 'buttonsOptions', 'buttonsSizes',
-        'buttonsRefresh', source + '\\nreturn {{ DARKONE_CONTROL_BUTTON_MENU,' +
+        source + '\\nreturn {{ DARKONE_CONTROL_BUTTON_MENU,' +
         'darkOneOptionalButtonEditId, darkOneAppendOptionalButtonMenu,' +
-        'darkOneAppendButtonRoundnessMenu, darkOneConfigureOptionalButton,' +
+        'darkOneConfigureOptionalButton,' +
         'darkOneHandleControlButtonMenuSelection, darkOneShowControlButtonMenu }};'
     );
     const api = factory(
         windowMock, utilsMock, 0, 64,
         names => {{ resetNames = names.slice(); }},
-        () => {{ guideCalls++; }},
-        (x, y) => {{ toolsCalls.push([x, y]); }},
-        () => roundness,
-        value => {{ roundnessSet = value; roundness = value; return true; }},
-        () => customRoundness,
-        () => refreshCalls.push('options'),
-        () => refreshCalls.push('sizes'),
-        () => refreshCalls.push('refresh')
+        () => {{ guideCalls++; }}
     );
     function assert(condition, message) {{ if (!condition) throw new Error(message); }}
     function menu() {{
@@ -1107,12 +1098,6 @@ def run(ctx: ValidationContext) -> None:
         'Optional-button checked/edit mapping changed');
     assert(optionalMenu.items[9][1] === 120 && optionalMenu.items[10][1] === 121,
         'Optional-button utility ids changed');
-    let roundMenu = menu();
-    api.darkOneAppendButtonRoundnessMenu(roundMenu);
-    assert(roundMenu.items.map(item => item[1]).join(',') === '401,402,403,404,405,406,407',
-        'Roundness menu ids changed');
-    assert(roundMenu.checked.join(',') === '404', 'Current roundness check changed');
-
     inputValues = ['View/Console', 'ABCDEFGHIJKL'];
     api.darkOneConfigureOptionalButton(0, leftNames, leftButtons);
     assert(properties.get('Button 01') === true, 'Optional button was not enabled');
@@ -1141,17 +1126,10 @@ def run(ctx: ValidationContext) -> None:
     assert(resetNames.length === 8, 'Re-detect did not receive every left button');
     assert(api.darkOneHandleControlButtonMenuSelection(121, options) && guideCalls === 1,
         'Command guide menu id changed');
-    assert(api.darkOneHandleControlButtonMenuSelection(900, options) &&
-        toolsCalls[0].join(',') === '12,34', 'DarkOne Tools menu id changed');
-    refreshCalls = [];
-    assert(api.darkOneHandleControlButtonMenuSelection(405, options) && roundnessSet === 60,
-        'Roundness preset mapping changed');
-    assert(refreshCalls.join(',') === 'options,sizes,refresh' && repaints === 1,
-        'Roundness refresh sequence changed');
-    refreshCalls = [];
-    customRoundness = false;
-    assert(api.darkOneHandleControlButtonMenuSelection(407, options) && refreshCalls.length === 0,
-        'Cancelled custom roundness refreshed the panel');
+    assert(api.darkOneHandleControlButtonMenuSelection(900, options) === false,
+        'Control-panel context menu still handles DarkOne Tools');
+    assert(api.darkOneHandleControlButtonMenuSelection(405, options) === false,
+        'Control-panel context menu still handles shared button roundness');
     assert(api.darkOneHandleControlButtonMenuSelection(999, options) === false,
         'Unknown control-menu id was consumed');
 
@@ -1161,32 +1139,28 @@ def run(ctx: ValidationContext) -> None:
         buttonNames: rightNames,
         buttonProperties: rightNames.map(() => ({{Exists: false, Text: ''}}))
     }});
-    assert(popupMenus.length === 3 && popupMenus.every(item => item.disposed),
+    assert(popupMenus.length === 2 && popupMenus.every(item => item.disposed),
         'Shared right control menu did not dispose every popup');
     assert(popupMenus[0].children.map(item => item[1]).join(',') ===
-        'Optional buttons,Button roundness', 'Shared right control menu order changed');
-    assert(popupMenus[0].items.some(item => item[1] === 900),
-        'Shared right control menu lost DarkOne Tools');
+        'Optional buttons', 'Shared right control menu order changed');
+    assert(!popupMenus[0].items.some(item => item[1] === 900),
+        'Shared right control menu still exposes DarkOne Tools');
 
+    // A native failure during submenu construction must still release every
+    // wrapper that was created successfully before the exception.
     popupMenus = [];
-    trackedIndex = 999;
-    let extraHandled = 0;
-    api.darkOneShowControlButtonMenu(7, 8, {{
-        buttonNames: leftNames,
-        buttonProperties: leftButtons,
-        appendExtraMenus(root) {{
-            const extra = createPopupMenu();
-            extra.AppendTo(root, 16, 'Button style');
-            return [extra];
-        }},
-        handleExtraSelection(index) {{ if (index === 999) extraHandled++; }}
-    }});
-    assert(extraHandled === 1 && popupMenus.length === 4 &&
-        popupMenus.every(item => item.disposed),
-        'Shared left control menu did not delegate or dispose extra menus');
-    assert(popupMenus[0].children.map(item => item[1]).join(',') ===
-        'Optional buttons,Button style,Button roundness',
-        'Shared left control menu extension order changed');
+    popupCreateCalls = 0;
+    failPopupCreateAt = 2;
+    let partialFailureThrown = false;
+    try {{
+        api.darkOneShowControlButtonMenu(5, 6, {{
+            buttonNames: leftNames,
+            buttonProperties: leftButtons
+        }});
+    }} catch (e) {{ partialFailureThrown = true; }}
+    assert(partialFailureThrown && popupMenus.length === 1 && popupMenus[0].disposed,
+        'Partial control-menu construction leaked an earlier popup');
+
     """
         result = subprocess.run([node, '-e', optional_button_menu_smoke],
                                 capture_output=True, text=True)
@@ -1813,14 +1787,27 @@ def run(ctx: ValidationContext) -> None:
         let depth = 0;
         let quote = null;
         let escaped = false;
+        let lineComment = false;
+        let blockComment = false;
         for (let i = brace; i < source.length; i++) {{
             const ch = source[i];
+            const next = source[i + 1];
             if (quote) {{
                 if (escaped) escaped = false;
                 else if (ch === '\\\\') escaped = true;
                 else if (ch === quote) quote = null;
                 continue;
             }}
+            if (lineComment) {{
+                if (ch === '\\n') lineComment = false;
+                continue;
+            }}
+            if (blockComment) {{
+                if (ch === '*' && next === '/') {{ blockComment = false; i++; }}
+                continue;
+            }}
+            if (ch === '/' && next === '/') {{ lineComment = true; i++; continue; }}
+            if (ch === '/' && next === '*') {{ blockComment = true; i++; continue; }}
             if (ch === '"' || ch === "'") {{ quote = ch; continue; }}
             if (ch === '{{') depth++;
             else if (ch === '}}' && --depth === 0) return source.slice(start, i + 1);
@@ -1829,6 +1816,10 @@ def run(ctx: ValidationContext) -> None:
     }}
     const toolsMenuSource = extractFunction(configSource, 'darkOneToolsMenu');
     const weightMenuSource = extractFunction(configSource, 'darkOneAppendWeightMenu');
+    const settingCategorySource = extractFunction(configSource, 'darkOneSettingCategory');
+    const settingsResultSource = extractFunction(configSource, 'darkOneSettingsResult');
+    const applySharedValuesSource = extractFunction(configSource, 'darkOneApplySharedValues');
+    const handleNotifySource = extractFunction(configSource, 'darkOneHandleNotify');
 
     const files = Object.create(null);
     const NEW_STATE = 'P:\\\\js_data\\\\darkonejsp3.bottom-area-state.txt';
@@ -1885,15 +1876,26 @@ def run(ctx: ValidationContext) -> None:
         let appearanceApplications = 0;
         let popupCommand = 0;
         let popupMenus = [];
+        let popupCreateCalls = 0;
+        let failPopupCreateAt = 0;
+        let failPopupAppendAt = 0;
         function createPopupMenu() {{
+            popupCreateCalls++;
+            if (failPopupCreateAt && popupCreateCalls === failPopupCreateAt)
+                throw new Error('simulated DarkOne Tools construction failure');
+            const popupNumber = popupCreateCalls;
             const menu = {{
                 disposed: 0,
                 items: [],
                 children: [],
-                AppendMenuItem(flags, id, label) {{ this.items.push([flags, id, label]); }},
+                AppendMenuItem(flags, id, label) {{
+                    if (failPopupAppendAt === popupNumber)
+                        throw new Error('simulated native popup append failure');
+                    this.items.push([flags, id, label]);
+                }},
                 AppendMenuSeparator() {{}},
-                CheckMenuRadioItem() {{}},
-                CheckMenuItem() {{}},
+                CheckMenuRadioItem(minimum, maximum, selected) {{ this.radio = [minimum, maximum, selected]; }},
+                CheckMenuItem(id, checked) {{ if (checked) this.checked = id; }},
                 AppendTo(parent, flags, label) {{ parent.children.push([this, label]); }},
                 TrackPopupMenu() {{ return popupCommand; }},
                 Dispose() {{ this.disposed++; }}
@@ -1923,6 +1925,11 @@ def run(ctx: ValidationContext) -> None:
             'ui_backcol', 'p_backcol', 'ww', 'wh', 'console', 'darkOneApplySharedValues',
             'buttonsColours', 'display_system',
             resetSource + '\\n' + bottomSource + '\\n' +
+            'function darkOneButtonRoundness(){{return Number(window.GetProperty("DARKONEJSP3.BUTTON.ROUNDNESS",-1));}}\\n' +
+            'function darkOneSetSharedProperty(name,value){{window.SetProperty(name,value);window.NotifyOthers("DarkOneJSP3.Settings.Batch",JSON.stringify({{values:{{[name]:value}}}}));}}\\n' +
+            'function darkOneSetButtonRoundness(value){{darkOneSetSharedProperty("DARKONEJSP3.BUTTON.ROUNDNESS",value);return true;}}\\n' +
+            'function darkOneInputButtonRoundness(){{return false;}}\\n' +
+            'function buttonsOptions(){{}} function buttonsSizes(){{}} function buttonsRefresh(){{}}\\n' +
             'function darkOneControlFontName(){{return "Segoe UI";}}\\n' +
             'function darkOneControlFontWeight(){{return 400;}}\\n' +
             'function darkOneDisplayLabelFontName(){{return "Segoe UI";}}\\n' +
@@ -1930,8 +1937,10 @@ def run(ctx: ValidationContext) -> None:
             'function darkOneDisplayValueFontName(){{return "Segoe UI";}}\\n' +
             'function darkOneDisplayValueFontWeight(){{return 400;}}\\n' +
             'var DWRITE_FONT_WEIGHT_NORMAL=400,DWRITE_FONT_WEIGHT_MEDIUM=500,DWRITE_FONT_WEIGHT_SEMI_BOLD=600,DWRITE_FONT_WEIGHT_BOLD=700,DWRITE_FONT_WEIGHT_BLACK=900;\\n' +
+            settingCategorySource + '\\n' + settingsResultSource + '\\n' +
+            applySharedValuesSource + '\\n' + handleNotifySource + '\\n' +
             weightMenuSource + '\\n' + toolsMenuSource +
-            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,parseCommit:darkOneBottomAreaParseCommit,apply:darkOneApplyBottomAreaState,scheduleCommit:darkOneScheduleBottomAreaCommit,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,toolsMenu:darkOneToolsMenu}};'
+            '\\nreturn {{state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,parseCommit:darkOneBottomAreaParseCommit,apply:darkOneApplyBottomAreaState,scheduleCommit:darkOneScheduleBottomAreaCommit,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,handleNotify:darkOneHandleNotify,toolsMenu:darkOneToolsMenu}};'
         );
         const api = factory(
             windowMock,
@@ -1960,7 +1969,24 @@ def run(ctx: ValidationContext) -> None:
             }},
             get repaints() {{ return repaints; }},
             get intervalCalls() {{ return intervalCalls; }},
-            setPopupCommand(value) {{ popupCommand = value; popupMenus = []; }},
+            setPopupCommand(value) {{
+                popupCommand = value;
+                popupMenus = [];
+                popupCreateCalls = 0;
+                failPopupCreateAt = 0;
+                failPopupAppendAt = 0;
+            }},
+            failPopupConstructionAt(value) {{
+                popupMenus = [];
+                popupCreateCalls = 0;
+                failPopupCreateAt = value;
+            }},
+            failPopupAppendAt(value) {{
+                popupMenus = [];
+                popupCreateCalls = 0;
+                failPopupCreateAt = 0;
+                failPopupAppendAt = value;
+            }},
             get popupMenus() {{ return popupMenus; }},
             get appearanceApplications() {{ return appearanceApplications; }}
         }};
@@ -2016,7 +2042,7 @@ def run(ctx: ValidationContext) -> None:
     // native popup must be disposed exactly once for selection, cancellation
     // and picker failure, while state changes only for a valid new colour.
     function assertMenusDisposedOnce(panel, label) {{
-        if (panel.popupMenus.length !== 13 || panel.popupMenus.some(menu => menu.disposed !== 1))
+        if (panel.popupMenus.length !== 17 || panel.popupMenus.some(menu => menu.disposed !== 1))
             throw new Error(label + ' did not dispose every DarkOne Tools popup exactly once');
     }}
 
@@ -2025,6 +2051,86 @@ def run(ctx: ValidationContext) -> None:
     bottomPickerResult = (0xff556677 | 0);
     const pickerPanel = makePanel();
     pickerPanel.api.request();
+    pickerPanel.setPopupCommand(9834);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.properties.get('Buttons appearance preset') !== 4)
+        throw new Error('DarkOne Tools did not apply shared Button style');
+    if (pickerPanel.popupMenus[0].children.slice(0, 2).map(item => item[1]).join(',') !==
+            'Appearance,Buttons' ||
+            pickerPanel.popupMenus[1].children.map(item => item[1]).join(',') !==
+            'Bottom area background,Bottom area side divider colour' ||
+            pickerPanel.popupMenus[2].children.map(item => item[1]).join(',') !==
+            'Button style,Button depth,Button roundness')
+        throw new Error('DarkOne Tools top-level Buttons hierarchy changed');
+    const styleLabels = pickerPanel.popupMenus[3].items.map(item => item[2]).join(',');
+    if (styleLabels !== 'Standard,Thick,Round,Round (Alt),Round (Alt + Narrow)')
+        throw new Error('DarkOne Tools descriptive Button style labels changed');
+    const commandIds = pickerPanel.popupMenus.flatMap(menu =>
+        menu.items.map(item => item[1]).filter(id => id > 0));
+    if (new Set(commandIds).size !== commandIds.length)
+        throw new Error('DarkOne Tools contains a duplicate command id');
+    const styleBatch = pickerPanel.notifications.filter(
+        item => item[0] === 'DarkOneJSP3.Settings.Batch').pop();
+    if (!styleBatch || JSON.parse(styleBatch[1]).values['Buttons appearance preset'] !== 4)
+        throw new Error('Button style did not publish the shared settings batch');
+    const stylePeer = makePanel();
+    const stylePeerChange = stylePeer.api.handleNotify(styleBatch[0], styleBatch[1]);
+    if (stylePeer.properties.get('Buttons appearance preset') !== 4 ||
+            !stylePeerChange || !stylePeerChange.categories.controls)
+        throw new Error('Peer control panel did not apply/classify shared Button style');
+    assertMenusDisposedOnce(pickerPanel, 'Button style selection');
+
+    pickerPanel.setPopupCommand(9842);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.properties.get('Buttons depth preset') !== 2)
+        throw new Error('DarkOne Tools did not apply shared Button depth');
+    const depthBatch = pickerPanel.notifications.filter(
+        item => item[0] === 'DarkOneJSP3.Settings.Batch').pop();
+    if (!depthBatch || JSON.parse(depthBatch[1]).values['Buttons depth preset'] !== 2)
+        throw new Error('Button depth did not publish the shared settings batch');
+    const depthPeer = makePanel();
+    const depthPeerChange = depthPeer.api.handleNotify(depthBatch[0], depthBatch[1]);
+    if (depthPeer.properties.get('Buttons depth preset') !== 2 ||
+            !depthPeerChange || !depthPeerChange.categories.controls)
+        throw new Error('Peer control panel did not apply/classify shared Button depth');
+    assertMenusDisposedOnce(pickerPanel, 'Button depth selection');
+
+    pickerPanel.setPopupCommand(9854);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.properties.get('DARKONEJSP3.BUTTON.ROUNDNESS') !== 60)
+        throw new Error('DarkOne Tools did not apply shared Button roundness');
+    assertMenusDisposedOnce(pickerPanel, 'Button roundness selection');
+
+    const malformedPanel = makePanel({{
+        'Buttons appearance preset': 'not-a-number',
+        'Buttons depth preset': 'not-a-number'
+    }});
+    malformedPanel.setPopupCommand(0);
+    if (malformedPanel.api.toolsMenu(10, 20))
+        throw new Error('Cancelling DarkOne Tools unexpectedly reported a handled command');
+    if (malformedPanel.popupMenus[3].radio.join(',') !== '9831,9835,9831' ||
+            malformedPanel.popupMenus[4].radio.join(',') !== '9840,9843,9840')
+        throw new Error('Malformed Button style/depth properties were not normalised to defaults');
+    assertMenusDisposedOnce(malformedPanel, 'Malformed preset cancellation');
+
+    const partialMenuPanel = makePanel();
+    partialMenuPanel.failPopupConstructionAt(4);
+    let toolsConstructionFailed = false;
+    try {{ partialMenuPanel.api.toolsMenu(10, 20); }}
+    catch (e) {{ toolsConstructionFailed = true; }}
+    if (!toolsConstructionFailed || partialMenuPanel.popupMenus.length !== 3 ||
+            partialMenuPanel.popupMenus.some(menu => menu.disposed !== 1))
+        throw new Error('Partial DarkOne Tools construction leaked an earlier popup');
+
+    const partialWeightPanel = makePanel();
+    partialWeightPanel.failPopupAppendAt(15);
+    let weightConstructionFailed = false;
+    try {{ partialWeightPanel.api.toolsMenu(10, 20); }}
+    catch (e) {{ weightConstructionFailed = true; }}
+    if (!weightConstructionFailed || partialWeightPanel.popupMenus.length !== 15 ||
+            partialWeightPanel.popupMenus.some(menu => menu.disposed !== 1))
+        throw new Error('Partially populated font-weight menu leaked its native popup');
+
     pickerPanel.setPopupCommand(9806);
     if (!pickerPanel.api.toolsMenu(10, 20))
         throw new Error('Bottom background Set custom colour command was not handled through DarkOne Tools');

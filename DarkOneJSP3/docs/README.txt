@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.13
+DarkOneJSP3 v1.0.14
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -56,7 +56,9 @@ Quick start
 2. Follow INSTALLATION.txt.
 3. Verify every custom title against LAYOUT_AND_PANEL_MAP.txt.
 4. Open CONFIGURATION_GUIDE.txt for theme and panel options.
-5. Check the foobar2000 console and TROUBLESHOOTING.txt if anything is missing.
+5. Configure an optional TOOLS button with the internal command
+   DarkOneJSP3/Tools/Menu for the shared DarkOne Tools popup.
+6. Check the foobar2000 console and TROUBLESHOOTING.txt if anything is missing.
 
 Important project policies
 --------------------------
@@ -99,6 +101,9 @@ Current highlights
 - Optional LAYOUT and SPECTRUM buttons can switch between the standard and
   ArtSpectrum/Playlist views and toggle the Spectrum panel without rebuilding
   the Columns UI hierarchy.
+- An optional TOOLS button is the sole DarkOne Tools launcher. It owns the
+  popup locally in the invoking control panel and exposes the shared Button
+  style, depth and roundness controls for both left and right panels.
 - The recommended DarkOneJSP3 Queue Viewer uses a direct, writable JSplitter
   playback-queue bridge, avoiding playlist-wide discovery scans and restoring
   remove, multi-remove, clear and reorder controls. The standalone sample stays

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.13 Validation Report
+DarkOneJSP3 v1.0.14 Validation Report
 =====================================
 
 Scope
@@ -43,8 +43,12 @@ Checks
   selection is therefore separate from picker editing: selecting Custom
   immediately reapplies the remembered value, while Set custom colour... opens
   the native picker.
-- The real DarkOne Tools menu hierarchy is executed end to end for both saved
-  Custom mode selection and Set custom colour... edit commands. Tests verify
+- The real DarkOne Tools menu hierarchy is executed end to end through the
+  optional `DarkOneJSP3/Tools/Menu` button command. Tests verify the top-level
+  Appearance/Buttons order, descriptive style labels, unique command IDs,
+  shared style/depth/roundness propagation and malformed-property defaults,
+  together with saved Custom mode selection and Set custom colour... edit
+  commands. Tests also verify
   signed picker arguments, remembered-colour reapplication without invoking the
   picker, selected-state persistence, cancellation, failure handling and
   exactly-once disposal of every popup menu. The production menu uses one
@@ -262,8 +266,10 @@ Checks
 - Shared JSplitter startup/divider protocols preserve notification names,
   message versions, saved values, property ownership and readiness behaviour.
 - Shared left/right control-panel menu logic preserves optional-button IDs,
-  command setup, command re-detection, DarkOne Tools access and button
-  roundness behaviour while leaving panel-specific layouts local.
+  command setup and command re-detection while leaving panel-specific layouts
+  local. Context menus expose only Optional buttons; DarkOne Tools and shared
+  button appearance are available exclusively from the locally owned TOOLS
+  popup.
 - InfoStack colour state and startup/divider bridge plumbing remain isolated in
   focused include helpers while layout, painting, menu IDs, saved properties and
   notification behaviour remain unchanged.

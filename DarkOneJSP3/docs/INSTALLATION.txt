@@ -207,8 +207,11 @@ as the consolidated InfoStack child.
 7. Confirm `DOJSP3.QuickSearch` is a JScript Panel 3 instance loading the
    DarkOneJSP3 Quick Search wrapper.
 8. Confirm Waveform Minibar uses the component preferences documented above.
-9. Open the foobar2000 console and check for [DarkOneJSP3] errors.
-10. Export a working FCL for your own backup.
+9. Configure an optional TOOLS control-panel button with the internal command
+   DarkOneJSP3/Tools/Menu and confirm that the DarkOne Tools popup opens below
+   the clicked button.
+10. Open the foobar2000 console and check for [DarkOneJSP3] errors.
+11. Export a working FCL for your own backup.
 
 6. Upgrading and hotfixes
 -------------------------

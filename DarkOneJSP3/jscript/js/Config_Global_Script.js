@@ -602,6 +602,91 @@ function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) 
     divider.AppendMenuItem(MF_STRING, 9826, 'Set custom colour...');
     divider.AppendTo(appearance, MF_STRING, 'Bottom area side divider colour');
 }
+
+var DARKONE_BUTTON_STYLE_LABELS = [
+    'Standard',
+    'Thick',
+    'Round',
+    'Round (Alt)',
+    'Round (Alt + Narrow)'
+];
+var DARKONE_BUTTON_DEPTH_LABELS = ['Flat', 'Soft', 'Medium', 'Strong'];
+var DARKONE_BUTTON_ROUNDNESS_VALUES = [-1, 0, 20, 33, 60, 100];
+var DARKONE_BUTTON_ROUNDNESS_LABELS = [
+    'Automatic / follow button style',
+    'Square (0%)',
+    'Subtle (20%)',
+    'Classic DarkOne (33%)',
+    'Rounded (60%)',
+    'Maximum / pill (100%)'
+];
+
+function darkOneButtonStylePreset() {
+    var value = Math.round(Number(window.GetProperty('Buttons appearance preset', 1)));
+    return isFinite(value) ? Math.max(1, Math.min(5, value)) : 1;
+}
+
+function darkOneButtonDepthPreset() {
+    var value = Math.round(Number(window.GetProperty('Buttons depth preset', 0)));
+    return isFinite(value) ? Math.max(0, Math.min(3, value)) : 0;
+}
+
+function darkOneAppendButtonsAppearanceMenu(parent, style, depth, roundness) {
+    var stylePreset = darkOneButtonStylePreset();
+    var depthPreset = darkOneButtonDepthPreset();
+    var roundnessValue = darkOneButtonRoundness();
+
+    for (var i = 0; i < DARKONE_BUTTON_STYLE_LABELS.length; i++)
+        style.AppendMenuItem(MF_STRING, 9831 + i, DARKONE_BUTTON_STYLE_LABELS[i]);
+    style.CheckMenuRadioItem(9831, 9835, 9830 + stylePreset);
+    style.AppendTo(parent, MF_STRING, 'Button style');
+
+    for (var j = 0; j < DARKONE_BUTTON_DEPTH_LABELS.length; j++)
+        depth.AppendMenuItem(MF_STRING, 9840 + j, DARKONE_BUTTON_DEPTH_LABELS[j]);
+    depth.CheckMenuRadioItem(9840, 9843, 9840 + depthPreset);
+    depth.AppendTo(parent, MF_STRING, 'Button depth');
+
+    for (var k = 0; k < DARKONE_BUTTON_ROUNDNESS_VALUES.length; k++) {
+        roundness.AppendMenuItem(MF_STRING, 9850 + k, DARKONE_BUTTON_ROUNDNESS_LABELS[k]);
+        if (roundnessValue == DARKONE_BUTTON_ROUNDNESS_VALUES[k])
+            roundness.CheckMenuItem(9850 + k, true);
+    }
+    roundness.AppendMenuSeparator();
+    roundness.AppendMenuItem(MF_STRING, 9856, 'Custom roundness...');
+    if (DARKONE_BUTTON_ROUNDNESS_VALUES.indexOf(roundnessValue) == -1)
+        roundness.CheckMenuItem(9856, true);
+    roundness.AppendTo(parent, MF_STRING, 'Button roundness');
+}
+
+function darkOneRefreshControlButtonAppearance() {
+    if (typeof buttonsOptions == 'function') buttonsOptions();
+    if (typeof buttonsSizes == 'function') buttonsSizes();
+    if (typeof buttonsRefresh == 'function') buttonsRefresh();
+    window.Repaint();
+}
+
+function darkOneHandleButtonsAppearanceMenuSelection(id) {
+    if (id >= 9831 && id <= 9835) {
+        darkOneSetSharedProperty('Buttons appearance preset', id - 9830);
+        darkOneRefreshControlButtonAppearance();
+        return true;
+    }
+    if (id >= 9840 && id <= 9843) {
+        darkOneSetSharedProperty('Buttons depth preset', id - 9840);
+        darkOneRefreshControlButtonAppearance();
+        return true;
+    }
+    if (id >= 9850 && id <= 9855) {
+        darkOneSetButtonRoundness(DARKONE_BUTTON_ROUNDNESS_VALUES[id - 9850]);
+        darkOneRefreshControlButtonAppearance();
+        return true;
+    }
+    if (id == 9856) {
+        if (darkOneInputButtonRoundness()) darkOneRefreshControlButtonAppearance();
+        return true;
+    }
+    return false;
+}
 function darkOneBottomOptionForId(options, id) {
     for (var i = 0; i < options.length; i++) if (options[i].id === id) return options[i];
     return null;
@@ -831,7 +916,9 @@ function darkOneSettingCategory(name) {
         name === 'DARKONEJSP3.FONT.SCALE' ||
         name === 'DARKONEJSP3.BUTTON.HITBOX.SCALE' ||
         name === 'DARKONEJSP3.BUTTON.ROUNDNESS' ||
-        name === 'DARKONEJSP3.ICON.SCALE') return 'controls';
+        name === 'DARKONEJSP3.ICON.SCALE' ||
+        name === 'Buttons appearance preset' ||
+        name === 'Buttons depth preset') return 'controls';
     return 'all';
 }
 function darkOneSettingsResult(names, forceAll) {
@@ -997,6 +1084,9 @@ function darkOneSetFontWeightProperty(name, value) {
 }
 function darkOneAppendWeightMenu(parent, title, baseId, currentWeight, disposableMenus) {
     var menu = window.CreatePopupMenu();
+    // Register ownership immediately so a later native append/check failure
+    // cannot leak this wrapper during partial menu construction.
+    disposableMenus.push(menu);
     var weights = [
         [DWRITE_FONT_WEIGHT_NORMAL, 'Regular (400)'],
         [DWRITE_FONT_WEIGHT_MEDIUM, 'Medium (500)'],
@@ -1009,7 +1099,6 @@ function darkOneAppendWeightMenu(parent, title, baseId, currentWeight, disposabl
         if (Number(currentWeight) == weights[i][0]) menu.CheckMenuItem(baseId + i, true);
     }
     menu.AppendTo(parent, MF_STRING, title);
-    disposableMenus.push(menu);
 }
 function darkOneResetControlFont() {
     darkOneSetSharedProperties({
@@ -1117,8 +1206,16 @@ function darkOneConfirmFactoryReset(scope) {
 
 function darkOneToolsMenu(x, y) {
     var menus = [];
+    var idx = 0;
+    var bottomAreaHandled = false;
+
+    try {
     var m = window.CreatePopupMenu(); menus.push(m);
     var appearance = window.CreatePopupMenu(); menus.push(appearance);
+    var buttons = window.CreatePopupMenu(); menus.push(buttons);
+    var buttonStyle = window.CreatePopupMenu(); menus.push(buttonStyle);
+    var buttonDepth = window.CreatePopupMenu(); menus.push(buttonDepth);
+    var buttonRoundness = window.CreatePopupMenu(); menus.push(buttonRoundness);
     var bottomBackground = window.CreatePopupMenu(); menus.push(bottomBackground);
     var bottomDivider = window.CreatePopupMenu(); menus.push(bottomDivider);
     var fonts = window.CreatePopupMenu(); menus.push(fonts);
@@ -1128,8 +1225,10 @@ function darkOneToolsMenu(x, y) {
     var sc = window.CreatePopupMenu(); menus.push(sc);
     var reset = window.CreatePopupMenu(); menus.push(reset);
 
+    darkOneAppendButtonsAppearanceMenu(buttons, buttonStyle, buttonDepth, buttonRoundness);
     darkOneAppendBottomAreaAppearanceMenu(appearance, bottomBackground, bottomDivider);
     appearance.AppendTo(m, MF_STRING, 'Appearance');
+    buttons.AppendTo(m, MF_STRING, 'Buttons');
 
     control.AppendMenuItem(MF_GRAYED, 0, 'Current: ' + darkOneControlFontName());
     control.AppendMenuItem(MF_STRING, 9201, 'Set font family...');
@@ -1187,15 +1286,13 @@ function darkOneToolsMenu(x, y) {
     m.AppendMenuItem(MF_STRING, 9121, 'Configure script...');
     m.AppendMenuItem(MF_STRING, 9122, 'Reload this panel');
 
-    var idx = 0;
-    var bottomAreaHandled = false;
-    try {
-        idx = m.TrackPopupMenu(x, y);
-        // Route every bottom-area command through one path. The native picker
-        // remains inside the popup lifetime used by the confirmed live fix,
-        // while finally guarantees every native menu is disposed on success,
-        // cancellation or any later exception.
-        bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);
+    idx = m.TrackPopupMenu(x, y);
+    // Route every bottom-area command through one path. The native picker
+    // remains inside the popup lifetime used by the confirmed live fix,
+    // while finally guarantees every native menu is disposed on success,
+    // cancellation or any later exception. Menu construction itself is also
+    // covered so a partial native-menu failure cannot leak earlier wrappers.
+    bottomAreaHandled = darkOneHandleBottomAreaMenuSelection(idx);
     } finally {
         for (var i = menus.length - 1; i >= 0; i--) {
             try { menus[i].Dispose(); } catch (disposeError) {}
@@ -1203,6 +1300,7 @@ function darkOneToolsMenu(x, y) {
     }
 
     if (bottomAreaHandled) return true;
+    if (darkOneHandleButtonsAppearanceMenuSelection(idx)) return true;
 
     var weightMap = {
         9210 : DWRITE_FONT_WEIGHT_NORMAL,

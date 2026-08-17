@@ -18,8 +18,13 @@ function on_paint(gr) {
 function on_mouse_rbtn_up(x, y) {
 	if (display_system.traceMouse(x, y)) {
 		var a = {};
+		var menus = [];
 
-		for (var i = 0; i < 3; i++) a[i] = window.CreatePopupMenu();
+		try {
+		for (var i = 0; i < 3; i++) {
+			a[i] = window.CreatePopupMenu();
+			menus.push(a[i]);
+		}
 
 		a[1].AppendMenuItem(MF_STRING, 1, "Plain Font");
 		a[1].AppendMenuItem(MF_STRING, 2, "Dot Matrix");
@@ -37,8 +42,6 @@ function on_mouse_rbtn_up(x, y) {
 		a[2].AppendMenuSeparator();
 		a[2].AppendMenuItem(MF_STRING, 23, "Set custom colour...");
 		a[2].AppendTo(a[0], MF_STRING, "Display accent colour");
-		a[0].AppendMenuSeparator();
-		a[0].AppendMenuItem(MF_STRING, 900, "DarkOne Tools...");
 
 		var idx = a[0].TrackPopupMenu(x, y);
 
@@ -70,12 +73,13 @@ function on_mouse_rbtn_up(x, y) {
 				window.Repaint();
 				break;
 
-			case 900:
-				darkOneToolsMenu(x, y);
-				break;
 		}
 
-		for (var j = 0; j < 3; j++) a[j].Dispose();
+		} finally {
+			for (var j = menus.length - 1; j >= 0; j--) {
+				try { menus[j].Dispose(); } catch (e) {}
+			}
+		}
 
 		return true;
 	}

@@ -103,8 +103,16 @@ generic image panel rather than an InfoStack text page. See section 3.
 Opening the menus
 ~~~~~~~~~~~~~~~~~
 
-Right-click either bottom control panel. Right-click the centre display for
-Display Style, Display accent colour and DarkOne Tools.
+DarkOne Tools opens only from an optional control-panel button configured as:
+
+- Name: `TOOLS`
+- Command: `DarkOneJSP3/Tools/Menu`
+- Command style: `0` initially; the first successful use caches internal style 4
+
+The popup is owned locally by whichever control panel contains the button and
+opens directly beneath it. Right-click either control panel for its own Optional
+buttons configuration. Right-click the centre display for Display Style and
+Display accent colour only.
 
 On the right control panel, right-click directly on the volume knob to open the
 volume menu instead of the general control-panel menu.
@@ -141,6 +149,9 @@ DarkOneJSP3 internal view commands:
   the selected action is forwarded to InfoStack after it closes, avoiding
   disturbance to neighbouring native visualiser/waveform panels. This remains
   available when the visual tab strip is hidden.
+- TOOLS: `DarkOneJSP3/Tools/Menu`
+  Opens the shared DarkOne Tools menu locally beneath the clicked optional
+  button. This is the sole DarkOne Tools launcher.
 
 Leave command style at 0 when entering these commands manually; the control
 panel detects the internal command and caches style 4 after the first use.
@@ -150,7 +161,23 @@ Appearance reset restores the InfoStack tab strip.
 Button appearance
 ~~~~~~~~~~~~~~~~~
 
-Button roundness is available on both control panels:
+Shared button appearance is available from DarkOne Tools > Buttons. These
+settings update both control panels regardless of which panel contains TOOLS.
+
+Button style
+- Standard
+- Thick
+- Round
+- Round (Alt)
+- Round (Alt + Narrow)
+
+Button depth
+- Flat
+- Soft
+- Medium
+- Strong
+
+Button roundness
 - Automatic / follow button style
 - Square (0%)
 - Subtle (20%)
@@ -161,21 +188,6 @@ Button roundness is available on both control panels:
 
 The percentage is relative to the maximum possible corner radius for the
 current button size. Presets that intentionally use ellipses remain elliptical.
-
-The left control panel also provides:
-
-Button style
-- Preset 1
-- Preset 2
-- Preset 3
-- Preset 4
-- Preset 5
-
-Button depth
-- Flat
-- Soft
-- Medium
-- Strong
 
 Volume knob
 ~~~~~~~~~~~
@@ -223,7 +235,9 @@ volume-write frequency above the protected 16 ms maximum cadence.
 DarkOne Tools
 ~~~~~~~~~~~~~
 
-DarkOne Tools is available from either control panel and the centre display.
+DarkOne Tools is available only from the optional TOOLS button described above.
+Its top-level menu places Buttons immediately after Appearance for shorter
+access to shared button appearance.
 
 Appearance
 ~~~~~~~~~~
@@ -368,8 +382,6 @@ opens the native picker. The accent applies to Plain Font values and active indi
 digits and punctuation, and the stop-after-current and playback-order status
 icons. Switching away from Custom preserves the remembered custom value.
 Columns UI colour changes are applied live.
-
-DarkOne Tools... opens the shared menu described in section 2.
 
 Album Art
 ~~~~~~~~~

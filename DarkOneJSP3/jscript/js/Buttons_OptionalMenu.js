@@ -1,25 +1,21 @@
 // =========================================================================================================
 // Shared optional-button menu and command configuration for the left/right control panels.
-// Keeps panel-specific layouts and extra menus local while centralising optional-button,
-// command-guide, DarkOne Tools and button-roundness behaviour.
+// Keeps panel-specific optional-button configuration local while centralising its
+// command guide and edit behaviour. Universal appearance controls live in
+// DarkOne Tools > Buttons.
+// =========================================================================================================
+// Version history (newest first):
+// v0.1.2 keeps context menus panel-specific by limiting them to Optional buttons;
+// shared appearance and DarkOne Tools now use the locally owned TOOLS popup.
+//
+// v0.1.1 centralised the two control-panel configuration menus while preserving
+// their panel-specific optional-button lists and saved properties.
 // =========================================================================================================
 
 var DARKONE_CONTROL_BUTTON_MENU = {
     optionalFirstId: 101,
     redetectId: 120,
-    guideId: 121,
-    roundnessFirstId: 401,
-    roundnessCustomId: 407,
-    toolsId: 900,
-    roundnessValues: [-1, 0, 20, 33, 60, 100],
-    roundnessLabels: [
-        'Automatic / follow button style',
-        'Square (0%)',
-        'Subtle (20%)',
-        'Classic DarkOne (33%)',
-        'Rounded (60%)',
-        'Maximum / pill (100%)'
-    ]
+    guideId: 121
 };
 
 function darkOneOptionalButtonEditId(buttonNames) {
@@ -39,29 +35,6 @@ function darkOneAppendOptionalButtonMenu(menu, buttonNames, buttonProperties) {
     menu.AppendMenuItem(0, darkOneOptionalButtonEditId(buttonNames), 'Edit buttons');
     menu.AppendMenuItem(0, DARKONE_CONTROL_BUTTON_MENU.redetectId, 'Re-detect command types');
     menu.AppendMenuItem(0, DARKONE_CONTROL_BUTTON_MENU.guideId, 'Command guide...');
-}
-
-function darkOneAppendButtonRoundnessMenu(menu) {
-    var roundness = typeof darkOneButtonRoundness == 'function' ? darkOneButtonRoundness() : -1;
-    var values = DARKONE_CONTROL_BUTTON_MENU.roundnessValues;
-    var labels = DARKONE_CONTROL_BUTTON_MENU.roundnessLabels;
-
-    for (var i = 0; i < values.length; i++) {
-        menu.AppendMenuItem(0, DARKONE_CONTROL_BUTTON_MENU.roundnessFirstId + i, labels[i]);
-        if (roundness == values[i])
-            menu.CheckMenuItem(DARKONE_CONTROL_BUTTON_MENU.roundnessFirstId + i, true);
-    }
-    menu.AppendMenuSeparator();
-    menu.AppendMenuItem(0, DARKONE_CONTROL_BUTTON_MENU.roundnessCustomId, 'Custom roundness...');
-    if (values.indexOf(roundness) == -1)
-        menu.CheckMenuItem(DARKONE_CONTROL_BUTTON_MENU.roundnessCustomId, true);
-}
-
-function darkOneRefreshControlButtonAppearance() {
-    buttonsOptions();
-    buttonsSizes();
-    buttonsRefresh();
-    window.Repaint();
 }
 
 function darkOneConfigureOptionalButton(buttonIndex, buttonNames, buttonProperties) {
@@ -124,64 +97,26 @@ function darkOneHandleControlButtonMenuSelection(index, options) {
         return true;
     }
 
-    if (index == DARKONE_CONTROL_BUTTON_MENU.toolsId) {
-        darkOneToolsMenu(options.x, options.y);
-        return true;
-    }
-
-    var roundnessOffset = index - DARKONE_CONTROL_BUTTON_MENU.roundnessFirstId;
-    if (roundnessOffset >= 0 && roundnessOffset < DARKONE_CONTROL_BUTTON_MENU.roundnessValues.length) {
-        darkOneSetButtonRoundness(DARKONE_CONTROL_BUTTON_MENU.roundnessValues[roundnessOffset]);
-        darkOneRefreshControlButtonAppearance();
-        return true;
-    }
-
-    if (index == DARKONE_CONTROL_BUTTON_MENU.roundnessCustomId) {
-        if (darkOneInputButtonRoundness())
-            darkOneRefreshControlButtonAppearance();
-        return true;
-    }
-
     return false;
 }
 
 function darkOneShowControlButtonMenu(x, y, options) {
-    var rootMenu = window.CreatePopupMenu();
-    var optionalMenu = window.CreatePopupMenu();
-    var roundnessMenu = window.CreatePopupMenu();
-    var extraMenus = [];
-
-    options.x = x;
-    options.y = y;
+    var menus = [];
 
     try {
+        var rootMenu = window.CreatePopupMenu();
+        menus.push(rootMenu);
+        var optionalMenu = window.CreatePopupMenu();
+        menus.push(optionalMenu);
         darkOneAppendOptionalButtonMenu(optionalMenu, options.buttonNames, options.buttonProperties);
         optionalMenu.AppendTo(rootMenu, 0 | 16, 'Optional buttons');
-        rootMenu.AppendMenuSeparator();
-        rootMenu.AppendMenuItem(0, DARKONE_CONTROL_BUTTON_MENU.toolsId, 'DarkOne Tools...');
-        rootMenu.AppendMenuSeparator();
-
-        if (typeof options.appendExtraMenus == 'function') {
-            var created = options.appendExtraMenus(rootMenu);
-            if (created) extraMenus = created instanceof Array ? created : [created];
-        }
-
-        darkOneAppendButtonRoundnessMenu(roundnessMenu);
-        roundnessMenu.AppendTo(rootMenu, 0 | 16, 'Button roundness');
 
         var index = rootMenu.TrackPopupMenu(x, y);
-        if (!darkOneHandleControlButtonMenuSelection(index, options) &&
-                typeof options.handleExtraSelection == 'function')
-            options.handleExtraSelection(index);
+        darkOneHandleControlButtonMenuSelection(index, options);
         return index;
     } finally {
-        rootMenu.Dispose();
-        optionalMenu.Dispose();
-        roundnessMenu.Dispose();
-        for (var i = 0; i < extraMenus.length; i++) {
-            if (!extraMenus[i]) continue;
-            // Native JSP3 wrapper methods can report typeof == 'unknown'.
-            try { extraMenus[i].Dispose(); } catch (e) {}
+        for (var i = menus.length - 1; i >= 0; i--) {
+            try { menus[i].Dispose(); } catch (e) {}
         }
     }
 }
