@@ -52,9 +52,20 @@ REQUIRED_PATHS = (
     'DarkOneJSP3/tools/sync_mirrors.py',
     'DarkOneJSP3/tools/validation/__init__.py',
     'DarkOneJSP3/tools/validation/context.py',
+    'DarkOneJSP3/tools/validation/documentation_checks.py',
     'DarkOneJSP3/tools/validation/expectations.py',
+    'DarkOneJSP3/tools/validation/manifest_checks.py',
+    'DarkOneJSP3/tools/validation/package_checks.py',
+    'DarkOneJSP3/tools/validation/performance_checks.py',
+    'DarkOneJSP3/tools/validation/source_contract_checks.py',
     'DarkOneJSP3/tools/validation/static_checks.py',
     'DarkOneJSP3/tools/validation/runtime_checks.py',
+    'DarkOneJSP3/tools/validation/js/harness.js',
+    'DarkOneJSP3/tools/validation/js/popup_tests.js',
+    'DarkOneJSP3/tools/validation/js/queue_tests.js',
+    'DarkOneJSP3/tools/validation/js/quick_search_tests.js',
+    'DarkOneJSP3/tools/validation/js/rendering_tests.js',
+    'DarkOneJSP3/tools/validation/js/reset_tests.js',
     'user-components-x64/foo_jscript_panel3/helpers.txt',
     'user-components-x64/foo_jscript_panel3/samples/README.md',
     'user-components-x64/foo_jscript_panel3/samples/Album Notes.txt',
@@ -111,15 +122,12 @@ EXPECTED_MODULE_VERSIONS = {
     'tools_menu': ('0.1.0', 'DarkOne Tools menu module'),
     'info_stack_colours': ('0.1.1', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.1.2', 'InfoStack bridge helper'),
-    'release_validator': ('0.10.11', 'release-validator module'),
+    'release_validator': ('0.10.13', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
     'bottom_area_appearance': ('0.2.14', 'shared bottom-area appearance'),
 }
-
-SEMVER_MODULES = ()
-
 
 # Principal menu labels whose source and documentation must remain aligned.
 # These are deliberately representative rather than a complete parser of the

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -12,8 +11,7 @@ class ValidationContext:
     root: Path
     errors: list[str] = field(default_factory=list)
     version: str = ""
-    build: dict[str, Any] = field(default_factory=dict)
-    manifest: dict[str, Any] = field(default_factory=dict)
+    _text_cache: dict[Path, str] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.root = self.root.resolve()
@@ -29,9 +27,11 @@ class ValidationContext:
         except ValueError:
             return str(path)
 
-    @staticmethod
-    def text(path: Path) -> str:
-        return path.read_text(encoding="utf-8-sig")
+    def text(self, path: Path) -> str:
+        resolved = path.resolve()
+        if resolved not in self._text_cache:
+            self._text_cache[resolved] = resolved.read_text(encoding="utf-8-sig")
+        return self._text_cache[resolved]
 
     def require(self, path: Path) -> None:
         if not path.exists():

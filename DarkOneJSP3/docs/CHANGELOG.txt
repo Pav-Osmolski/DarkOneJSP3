@@ -1,6 +1,24 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.15 - Release validation and manifest streamlining
+------------------------------------------------------
+
+- Reduced the layout manifest to durable release contracts instead of using it
+  as a second inventory of validator implementation details and test-presence
+  flags.
+- Split static validation into focused package, manifest, documentation,
+  source-contract and performance modules behind a small orchestrator, and
+  cached immutable source reads across them.
+- Extracted all 31 behavioural JavaScript suites into five grouped modules and
+  a shared harness that gives every suite an isolated VM context, named failure
+  output and a bounded execution timeout.
+- Reduced validation to two Node processes by batching syntax and behavioural
+  execution separately. Removed dead code, duplicate import resolution,
+  redundant wrapper-only parsing and nine Python compilation subprocesses while
+  retaining the complete regression suite and existing release safeguards.
+- Advanced the release validator to 0.10.13.
+
 v1.0.14 - TOOLS launcher and shared button appearance consolidation
 -------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.14 Validation Report
+DarkOneJSP3 v1.0.15 Validation Report
 =====================================
 
 Scope
@@ -202,16 +202,23 @@ Checks
 - Build metadata and the layout manifest identify the same release version.
 - Every fixed module version recorded by build metadata matches its maintained
   data-driven expectation.
-- The validator entry point delegates to focused static and runtime check
-  modules through a shared validation context.
+- The validator entry point delegates through a shared validation context to
+  focused package, manifest, documentation, source-contract, performance and
+  runtime modules; the static entry point is only a small orchestrator.
 - Required package paths and fixed module-version expectations are maintained
   as data rather than repeated conditional checks.
 - Active scripts use the current DarkOneJSP3 namespace and supported panel
   titles.
 - Local @import paths resolve inside the distributed package.
-- JavaScript modules and active .txt entry scripts pass Node syntax checks;
-  locally imported preprocessor sources are also combined and checked in their
-  actual execution order.
+- JavaScript modules, JSplitter loaders and locally preprocessed JScript Panel
+  entries are compiled in one isolated Node syntax batch. Imported sources are
+  combined in their actual execution order without a redundant wrapper-only
+  pass.
+- All 31 behavioural JavaScript suites are grouped by subsystem and executed by
+  one shared Node harness. Each suite receives an isolated VM context, a named
+  structured failure and a bounded timeout, preventing global test-state leaks.
+- The layout manifest contains durable target, panel, FCL and user-facing
+  feature contracts rather than duplicating the validator's test inventory.
 - Demand-driven repaint schedulers coalesce requests, stop when idle and retain
   pending repaint work while a panel is hidden.
 - Volume-knob dragging coalesces rapid mouse input, applies the first value
@@ -245,7 +252,8 @@ Checks
 - Native JScript Panel COM methods such as CreateBitmap, LoadBitmap, Dispose,
   CreateProfiler and profiler Reset are called directly rather than gated by
   typeof == "function".
-- Python maintenance tools pass py_compile.
+- Python maintenance tools are compiled in-process without spawning a separate
+  interpreter for every file.
 - Intentional compatibility mirrors remain synchronised; generated adapters
   match their canonical source inputs exactly.
 - Every reset callback imports its registry and bridge dependencies.
