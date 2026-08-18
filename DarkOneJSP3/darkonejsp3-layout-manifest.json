@@ -318,7 +318,7 @@
       "factory_reset_wrapper": "DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt",
       "generic_sample_participates_in_factory_reset": false,
       "recommended_component": "scripted Queue Viewer",
-      "native_component_full_editing": true,
+      "scripted_viewer_required": true,
       "scripted_viewer_optional": false,
       "scripted_mutation_support": true,
       "scripted_multi_selection": true,
@@ -368,7 +368,7 @@
       "standalone_queue_indexes_fallback": true,
       "fallback_queue_total_early_termination": true,
       "targeted_queue_refresh_scope": "standalone/fallback mode",
-      "native_viewer_optional": true,
+      "bundled_fcl_uses_scripted_viewer": true,
       "scripted_mutation_owner": "DOJSP3.Root (JSplitter)",
       "scripted_mutation_transport": "file-backed versioned command bridge",
       "scripted_mutation_commands": [
@@ -397,7 +397,7 @@
       "state_publication_retry_limit": 3,
       "acknowledged_generation_wait": true,
       "mixed_source_all_move_variant_validation": true,
-      "native_viewer_required_for_bundled_fcl_import": true
+      "bundled_fcl_queue_bridge_required": true
     },
     "optional_buttons": {
       "configuration_retained_when_disabled": true,
@@ -841,6 +841,8 @@
       "runtime_assets_checked": true,
       "repository_assets_checked_when_present": true,
       "manual_fcl_excluded": true,
+      "single_layout_fcl_policy_checked": true,
+      "obsolete_queue_search_reference_checks": true,
       "configuration_guide_heading_spacing_checked": true,
       "performance_scheduler_tests": true,
       "playlist_render_cache_tests": true,
@@ -897,7 +899,7 @@
       "queue_state_publication_retry_tests": true,
       "queue_acknowledged_generation_wait_tests": true,
       "queue_mixed_source_all_move_variant_tests": true,
-      "queue_viewer_requirement_fcl_policy_checked": true,
+      "scripted_queue_fcl_policy_checked": true,
       "jsp3_api_guard": true,
       "jsp3_temporary_handle_list_checks": true,
       "jsp3_native_wrapper_typeof_checks": true
@@ -1122,8 +1124,7 @@
       "history_and_favourites": true,
       "autosearch": true,
       "standard_results_lock_identity": "persistent playlist GUID + expected mask",
-      "native_component_alternative": "Quick Search Toolbar",
-      "native_component_used_by_current_bundled_fcl": true,
+      "bundled_fcl_uses_scripted_panel": true,
       "background_palette": "shared DarkOneJSP3 six-mode palette",
       "normal_background_default": "Columns UI global background",
       "error_background_default": "semantic dark red",
@@ -1190,17 +1191,12 @@
     "user_managed": true,
     "included_in_hotfixes": false,
     "bundled_layouts": [
-      "DarkOneJSP3",
-      "DarkOneJSP3 Native"
+      "DarkOneJSP3"
     ],
+    "single_layout": true,
     "default_layout": "DarkOneJSP3",
-    "native_queue_component_required_for_import": true,
-    "native_layout": "DarkOneJSP3 Native",
     "default_layout_queue": "scripted Queue Viewer",
-    "default_layout_search": "scripted JScript Panel 3 Quick Search",
-    "native_layout_queue": "Queue Viewer",
-    "native_layout_search": "Quick Search Toolbar",
-    "native_quick_search_component_required_for_import": true
+    "default_layout_search": "scripted JScript Panel 3 Quick Search"
   },
   "features": {
     "info_stack_tab_area_menu": {

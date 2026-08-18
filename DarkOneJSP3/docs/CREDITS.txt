@@ -54,10 +54,10 @@ dima-lur
 
 Platform and component authors
 ------------------------------
-DarkOneJSP3 also depends on foobar2000, Columns UI and optional third-party
-components such as Quick Search Toolbar, Enhanced Spectrum Analyser and
-Waveform Minibar (mod). These remain the work of their respective authors and
-are governed by their own licences and distribution terms.
+DarkOneJSP3 also depends on foobar2000, Columns UI and third-party components
+such as Enhanced Spectrum Analyser and Waveform Minibar (mod). These remain the
+work of their respective authors and are governed by their own licences and
+distribution terms.
 
 The bundled JScript Panel 3 component tree retains its original licence files
 at:

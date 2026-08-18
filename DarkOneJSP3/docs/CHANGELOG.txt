@@ -20,11 +20,20 @@ v1.0.14 - TOOLS launcher and shared button appearance consolidation
   control-panel category.
 - Hardened optional, Display and DarkOne Tools native popup lifecycles so partial
   construction failures release every previously created native wrapper.
+- Consolidated the bundled FCL to one `DarkOneJSP3` layout using the scripted
+  Queue Viewer and scripted JScript Panel 3 Quick Search panels.
+- Removed the superseded external queue/search requirements and aligned the
+  README, package guides, Wiki, layout manifest and validation policy with the
+  integrated scripted implementations.
+- Added release validation that rejects obsolete dependency, alternate-layout
+  and component-reference drift throughout current distributed text, source and
+  metadata files while excluding immutable CHANGELOG and migration-reference
+  history together with the maintainer-managed FCL.
 - Expanded static and Node runtime coverage for the TOOLS command, sole-launcher
   contract, hierarchy/order, unique IDs, descriptive labels, shared settings,
   malformed saved values and popup cleanup. Advanced the left control panel to
   3.0.29, the right control panel and Display to 3.0.34, optional-button menu
-  integration to 0.1.2 and the release validator to 0.10.10.
+  integration to 0.1.2 and the release validator to 0.10.11.
 
 v1.0.13 - Second-pass hardening and source-history cleanup
 ----------------------------------------------------------

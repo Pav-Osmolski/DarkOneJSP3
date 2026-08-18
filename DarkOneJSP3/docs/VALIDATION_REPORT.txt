@@ -318,7 +318,12 @@ Checks
   Validation covers multi-selection, Delete-key removal, source-item commands,
   writable bridge command serialisation, single/multi removal, clear, reorder,
   stale-generation rejection, duplicate occurrences and standalone read-only
-  fallback behaviour. The optional native Queue Viewer remains supported.
+  fallback behaviour.
+- The bundled FCL policy requires one `DarkOneJSP3` layout using the scripted
+  Queue Viewer and scripted JScript Panel 3 Quick Search. Distributed text,
+  source and metadata files are scanned for obsolete dependency and alternate-
+  layout references, with immutable CHANGELOG and migration-reference history
+  explicitly excluded.
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.

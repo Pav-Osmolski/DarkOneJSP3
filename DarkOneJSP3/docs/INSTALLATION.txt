@@ -18,8 +18,6 @@ Install these components before building or restoring the layout:
 - foobar2000 v2 x64 with Columns UI
 - JScript Panel 3.8.5
 - JSplitter 4.x
-- Queue Viewer
-- Quick Search Toolbar
 - Enhanced Spectrum Analyser
 - Waveform Minibar (mod)
 
@@ -125,9 +123,8 @@ This full package contains a maintainer-exported file at:
   DarkOneJSP3\fcl\DarkOneJSP3.fcl
 
 Importing it is optional and is not the primary setup method. The bundled FCL
-contains two saved layouts: `DarkOneJSP3` uses the scripted Queue Viewer and
-scripted JScript Panel 3 Quick Search, while `DarkOneJSP3 Native` uses the
-native Queue Viewer and Quick Search Toolbar components.
+contains one saved layout, `DarkOneJSP3`, using the scripted Queue Viewer and
+scripted JScript Panel 3 Quick Search.
 
 FCL files contain component-instance metadata that can vary between
 installations. After import, verify the complete hierarchy, custom titles and
@@ -154,11 +151,6 @@ JSplitter to enumerate and modify the playback queue directly, while the
 JScript Panel provides DarkOne styling, multi-selection, keyboard navigation,
 source-item commands and writable queue controls including remove, multi-remove,
 clear, move up/down and move to top/bottom.
-
-Optional native Queue Viewer alternative
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The separate native Queue Viewer component remains supported as an
-interchangeable DOJSP3.Queue child for users who prefer its native interface.
 
 Waveform Minibar component preferences
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -199,8 +191,7 @@ as the consolidated InfoStack child.
 2. Confirm that all six InfoStack tabs can be selected.
 3. Confirm that Album Notes opens without a child-panel error.
 4. Confirm that DOJSP3.Queue is a JScript Panel 3 instance loading the
-   DarkOneJSP3 Queue Viewer wrapper, or deliberately uses the optional native
-   Queue Viewer alternative.
+   DarkOneJSP3 Queue Viewer wrapper.
 5. Confirm that both upper dividers (Black by default) and the lower dividers
    align.
 6. Confirm that the display and waveform occupy the lower centre area.

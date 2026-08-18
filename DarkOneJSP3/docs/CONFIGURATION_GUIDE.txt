@@ -77,8 +77,7 @@ Selecting Custom colour immediately reapplies the remembered custom value. Use
 Set custom colour... to edit that stored value with the native picker.
 
 Transparent / inherit parent reveals the InfoStack backing colour. Columns UI
-global background follows the active Columns UI background colour. The optional native Queue Viewer component does not use this JScript Panel
-menu.
+global background follows the active Columns UI background colour.
 
 Selection mode
 ~~~~~~~~~~~~~~
@@ -983,12 +982,6 @@ allows a non-empty discovery scan to stop as soon as every queue position has
 been found. An empty queue still requires a complete fallback scan because
 JScript Panel 3 exposes no direct queue enumeration API.
 
-Optional native Queue Viewer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The separate native Queue Viewer component remains supported as an
-interchangeable DOJSP3.Queue child for users who prefer its native interface.
-
 9. Quick Search and waveform area
 ---------------------------------
 
@@ -1058,8 +1051,8 @@ dedicated dark-red Default as a separate option.
 
 History, favourites, custom tags, Autosearch, autocomplete and Search for same
 are configured from the same menu. Search for same entries are published to
-JS Playlist - Enhanced. JScript Panel cannot register the native global commands
-provided by the original Quick Search Toolbar component.
+JS Playlist - Enhanced. The scripted implementation keeps search behaviour and
+configuration within the DarkOneJSP3 panel.
 
 Waveform host
 ~~~~~~~~~~~~~

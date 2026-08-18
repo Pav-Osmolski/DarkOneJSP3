@@ -125,8 +125,8 @@ scripted Queue Viewer and open Page background colour. Choose Transparent /
 inherit parent to reveal the InfoStack backing colour, Columns UI global
 background to follow the active Columns UI background colour, or select an
 explicit colour for that page. Each JScript Panel page remembers its own value.
-The optional native Queue Viewer and Playlists page use their own component or
-panel appearance settings.
+The Playlists page and other non-JScript child panels use their own appearance
+settings.
 
 InfoStack labels sit too high or low
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -276,11 +276,11 @@ Reload the supplied wrapper and restart foobar2000 if cached code remains.
 
 5. Quick Search and waveform
 ----------------------------
-Quick Search is missing or the native toolbar still appears
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Quick Search is missing or the wrong panel appears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The documented layout uses a JScript Panel 3 instance titled `DOJSP3.QuickSearch`
-loading `DarkOneJSP3 - Quick Search.txt`. Replace an older native Quick Search
-Toolbar child when migrating a manually maintained layout.
+loading `DarkOneJSP3 - Quick Search.txt`. Replace any older search child with
+the documented scripted panel when migrating a manually maintained layout.
 
 Quick Search overlaps the controls above when the window is small
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -465,8 +465,7 @@ Page background colour is missing from Queue
 The recommended scripted Queue Viewer is a JScript Panel and should expose the
 shared Page background colour menu. If it does not, confirm that DOJSP3.Queue is
 loading `DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt` rather than the
-optional native Queue Viewer component. The native alternative uses its own
-component-owned appearance controls.
+generic standalone sample.
 
 Waveform host settings do not appear
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -532,4 +531,3 @@ Include:
 - Album Notes Current source > Copy diagnostics output, when applicable;
 - whether the issue also occurs after a restart; and
 - any non-default property or component setting related to the affected area.
-

@@ -122,8 +122,6 @@ for standalone installation, compatibility guarantees and integration details.
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
 * [JSplitter 4.x, tested with 4.1.12](https://github.com/dima-lur/jsplitter/releases)
-* [Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)
-* [Quick Search Toolbar](https://www.foobar2000.org/components/view/foo_quicksearch)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
 
@@ -197,9 +195,8 @@ The included
 [`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a
 maintainer-exported convenience snapshot.
 
-The FCL contains two saved layouts: `DarkOneJSP3` uses the scripted Queue
-Viewer and scripted JScript Panel 3 Quick Search, while `DarkOneJSP3 Native`
-uses the native Queue Viewer and Quick Search Toolbar components.
+The FCL contains one saved layout, `DarkOneJSP3`, using the scripted Queue
+Viewer and scripted JScript Panel 3 Quick Search.
 
 After importing it, compare the resulting layout with the documented panel
 titles and script assignments. The panel map remains the reference for the
@@ -282,9 +279,8 @@ DarkOneJSP3 exists because of the work of many people:
 * **dima-lur** — creator and maintainer of JSplitter.
 * **Case** and **T. P. Wang** — additional sample contributions retained in the
   JScript Panel sample tree.
-* The authors and maintainers of foobar2000, Columns UI, Quick Search Toolbar,
-  Enhanced Spectrum Analyser, Waveform Minibar (mod) and every other required
-  component.
+* The authors and maintainers of foobar2000, Columns UI, Enhanced Spectrum
+  Analyser, Waveform Minibar (mod) and every other required component.
 
 Preserve all existing author headers, credits and third-party licence notices.
 

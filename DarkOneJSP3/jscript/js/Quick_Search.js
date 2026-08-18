@@ -1,6 +1,6 @@
 "use strict";
 
-// DarkOneJSP3 scripted replacement for foo_quicksearch.
+// DarkOneJSP3 scripted Quick Search implementation.
 // Search execution stays inside JScript Panel 3, where the library/playlist
 // APIs live. JSplitter is used only to resize the parent-owned panel slot.
 

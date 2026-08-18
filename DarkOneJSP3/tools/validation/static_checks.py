@@ -38,6 +38,47 @@ def run(ctx: ValidationContext) -> None:
         path for path in root.rglob('*')
         if path.is_file() and path.suffix.lower() != '.fcl'
     ]
+    obsolete_references = [
+        'foo' + '_quicksearch',
+        'foo' + '_uie_quicksearch',
+        'foo' + '_queue_viewer',
+        'quick search' + ' toolbar',
+        'darkonejsp3 ' + 'native',
+        'native queue' + ' viewer',
+        'native quick' + ' search',
+        'queue viewer' + ' component',
+        'marc2k3.github.io/component/' + 'queue-viewer',
+        'native_component_' + 'alternative',
+        'native_component_' + 'used_by_current_bundled_fcl',
+        'native_component_' + 'full_editing',
+        'native_viewer_' + 'optional',
+        'native_viewer_' + 'required_for_bundled_fcl_import',
+        'native_queue_component_' + 'required_for_import',
+        'native_quick_search_component_' + 'required_for_import',
+        'native_' + 'layout',
+    ]
+    searchable_suffixes = {'.js', '.json', '.md', '.py', '.txt'}
+    immutable_history_paths = {
+        docs / 'CHANGELOG.txt',
+        docs / 'MIGRATION_REFERENCE.txt',
+        project / 'reference' / 'Original DarkOne2021 PSS and panel map.txt',
+    }
+    for path in all_files:
+        if path.suffix.lower() not in searchable_suffixes and path.name != '.gitignore':
+            continue
+        # Historical records describe what earlier layouts actually shipped and
+        # required. Obsolete-reference checks apply only to current package
+        # material, never to immutable changelog or migration reference files.
+        if path in immutable_history_paths:
+            continue
+        body = text(path).casefold()
+        collapsed_body = re.sub(r'\s+', ' ', body)
+        for token in obsolete_references:
+            if token in body or token in collapsed_body:
+                errors.append(
+                    'Obsolete queue/search dependency or layout reference in ' +
+                    rel(path) + ': ' + token
+                )
     casefold_paths: dict[str, list[str]] = {}
     suspicious_name = re.compile(r'(?:~|\.(?:bak|old|orig|rej|tmp|swp|pyc))$', re.I)
     for path in all_files:
@@ -299,6 +340,8 @@ def run(ctx: ValidationContext) -> None:
             'runtime_assets_checked': True,
             'repository_assets_checked_when_present': True,
             'manual_fcl_excluded': True,
+            'single_layout_fcl_policy_checked': True,
+            'obsolete_queue_search_reference_checks': True,
             'configuration_guide_heading_spacing_checked': True,
             'enhanced_sample_readme_section_checked': True,
             'enhanced_sample_document_link_checked': True,
@@ -689,9 +732,12 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest incorrectly marks the generic Queue sample reset-aware')
         if queue_manifest.get('recommended_component') != 'scripted Queue Viewer':
             errors.append('Manifest does not recommend the scripted Queue Viewer')
-        if queue_manifest.get('native_component_full_editing') is not True or queue_manifest.get('native_viewer_optional') is not True:
-            errors.append('Manifest does not preserve the native Queue Viewer as an optional full editor')
-        if queue_manifest.get('scripted_viewer_optional') is not False or queue_manifest.get('scripted_mutation_support') is not True:
+        if (
+                queue_manifest.get('scripted_viewer_required') is not True or
+                queue_manifest.get('scripted_viewer_optional') is not False or
+                queue_manifest.get('bundled_fcl_uses_scripted_viewer') is not True):
+            errors.append('Manifest does not require the scripted Queue Viewer')
+        if queue_manifest.get('scripted_mutation_support') is not True:
             errors.append('Manifest does not describe the writable scripted Queue Viewer')
         quick_search_manifest = manifest.get('enhancements', {}).get('quick_search', {})
         if quick_search_manifest.get('version') != '0.1.17':
@@ -708,9 +754,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Manifest Quick Search Standard-results lock identity has drifted')
         if quick_search_manifest.get('search_for_same_js_playlist_integration') is not True:
             errors.append('Manifest Quick Search JS Playlist integration flag has drifted')
-        if quick_search_manifest.get('native_component_alternative') != 'Quick Search Toolbar' or \
-                quick_search_manifest.get('native_component_used_by_current_bundled_fcl') is not True:
-            errors.append('Manifest does not preserve Quick Search Toolbar as the native FCL alternative')
+        if quick_search_manifest.get('bundled_fcl_uses_scripted_panel') is not True:
+            errors.append('Manifest does not require the scripted Quick Search panel')
         if queue_manifest.get('direct_bridge_writable') is not True or queue_manifest.get('stale_generation_rejection') is not True:
             errors.append('Manifest omits writable queue-bridge safety')
         for flag in [
@@ -718,7 +763,7 @@ def run(ctx: ValidationContext) -> None:
             'processed_command_file_removed',
             'acknowledged_generation_wait',
             'mixed_source_all_move_variant_validation',
-            'native_viewer_required_for_bundled_fcl_import',
+            'bundled_fcl_queue_bridge_required',
         ]:
             if queue_manifest.get(flag) is not True:
                 errors.append('Manifest Queue Viewer hardening flag is missing: ' + flag)
@@ -726,16 +771,12 @@ def run(ctx: ValidationContext) -> None:
                 queue_manifest.get('state_publication_retry_limit') != 3:
             errors.append('Manifest Queue Viewer state-publication retry policy is incorrect')
         fcl_policy = manifest.get('fcl_policy', {})
-        if fcl_policy.get('bundled_layouts') != ['DarkOneJSP3', 'DarkOneJSP3 Native'] or \
+        if fcl_policy.get('bundled_layouts') != ['DarkOneJSP3'] or \
+                fcl_policy.get('single_layout') is not True or \
                 fcl_policy.get('default_layout') != 'DarkOneJSP3' or \
-                fcl_policy.get('native_layout') != 'DarkOneJSP3 Native' or \
                 fcl_policy.get('default_layout_queue') != 'scripted Queue Viewer' or \
-                fcl_policy.get('default_layout_search') != 'scripted JScript Panel 3 Quick Search' or \
-                fcl_policy.get('native_layout_queue') != 'Queue Viewer' or \
-                fcl_policy.get('native_layout_search') != 'Quick Search Toolbar' or \
-                fcl_policy.get('native_queue_component_required_for_import') is not True or \
-                fcl_policy.get('native_quick_search_component_required_for_import') is not True:
-            errors.append('Manifest bundled-FCL default/native layout policy is incorrect')
+                fcl_policy.get('default_layout_search') != 'scripted JScript Panel 3 Quick Search':
+            errors.append('Manifest bundled-FCL single-layout policy is incorrect')
         expected_mutations = ['remove item', 'remove selected items', 'clear playback queue',
                               'move up', 'move down', 'move to top', 'move to bottom']
         if queue_manifest.get('scripted_mutation_commands') != expected_mutations:
@@ -1869,8 +1910,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append('README.md is missing a link to the enhanced sample guide')
         readme_flat = re.sub(r'\s+', ' ', readme_body)
         for token in [
-            '[Queue Viewer](https://marc2k3.github.io/component/queue-viewer/)',
-            '`DarkOneJSP3 Native`',
+            'one saved layout, `DarkOneJSP3`',
+            'scripted Queue Viewer',
             'JScript Panel 3 Quick Search',
         ]:
             if token not in readme_flat:
@@ -1878,7 +1919,10 @@ def run(ctx: ValidationContext) -> None:
         requirements_match = re.search(r'## Requirements\s+(.*?)(?:\n## |\Z)', readme_body, re.S)
         if requirements_match:
             requirements_body = requirements_match.group(1)
-            for component in ['Queue Viewer', 'Quick Search Toolbar']:
+            for component in [
+                    'foobar2000 v2 x64', 'Columns UI', 'JScript Panel 3.8.5',
+                    'JSplitter 4.x', 'Enhanced Spectrum Analyser',
+                    'Waveform Minibar (mod)']:
                 if component not in requirements_body:
                     errors.append('README.md no longer lists ' + component + ' as a requirement')
         installation_body = text(docs / 'INSTALLATION.txt') if (docs / 'INSTALLATION.txt').exists() else ''
@@ -1888,13 +1932,16 @@ def run(ctx: ValidationContext) -> None:
         environment_match = re.search(r'Supported environment\n-+\n(.*?)\nDocumentation map\n-+', docs_readme_body, re.S)
         docs_environment = environment_match.group(1) if environment_match else ''
         for label, body in [('INSTALLATION.txt requirements', install_requirements), ('docs/README.txt supported environment', docs_environment)]:
-            for component in ['Queue Viewer', 'Quick Search Toolbar']:
+            for component in [
+                    'foobar2000 v2 x64', 'Columns UI', 'JScript Panel 3',
+                    'JSplitter 4.x', 'Enhanced Spectrum Analyser',
+                    'Waveform Minibar (mod)']:
                 if component not in body:
                     errors.append(label + ' no longer lists ' + component)
         for label, body in [('README.md', readme_body), ('INSTALLATION.txt', installation_body)]:
-            for token in ['Quick Search Toolbar', 'DarkOneJSP3 Native', 'JScript Panel 3 Quick Search']:
+            for token in ['one saved layout', '`DarkOneJSP3`', 'JScript Panel 3 Quick Search']:
                 if token not in body:
-                    errors.append(label + ' does not preserve the current default/native FCL layout description: ' + token)
+                    errors.append(label + ' does not preserve the current single-layout FCL description: ' + token)
         for token in [
             'Waveform Minibar component preferences',
             'Transparent background (requires Columns UI): enabled',

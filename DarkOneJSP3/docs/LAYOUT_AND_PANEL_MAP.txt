@@ -46,12 +46,6 @@ JScript Panel 3 script assignments
 11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
 12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
 
-Optional native-component layout
---------------------------------
-The bundled `DarkOneJSP3 Native` preset uses the native Queue Viewer and Quick
-Search Toolbar components. The default `DarkOneJSP3` layout uses the scripted
-JScript Panel 3 Queue Viewer and Quick Search implementations shown above.
-
 JSplitter loader and controller assignments
 -------------------------------------------
 01  loaders\JSplitter 01 - Root.txt
@@ -93,8 +87,6 @@ Title rules
 - The generic enhanced Queue Viewer sample is standalone and read-only; the
   project wrapper is required to activate the JSplitter enumeration/mutation
   bridge.
-- The optional native Queue Viewer may replace DOJSP3.Queue without changing
-  the custom title.
 - Do not duplicate a DOJSP3.* title elsewhere in the same layout hierarchy.
 
 Relationship to the original DarkOne2021 PSS layout
@@ -115,10 +107,8 @@ panels.
 FCL note
 --------
 This panel map is the authoritative setup reference. The full package also
-contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with the default
-`DarkOneJSP3` scripted Queue Viewer + scripted Quick Search layout and the
-alternative `DarkOneJSP3 Native` layout using the native Queue Viewer and Quick
-Search Toolbar components. Importing it is not the recommended first method and
-it remains
+contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with one
+`DarkOneJSP3` layout using the scripted Queue Viewer and scripted Quick Search.
+Importing it is not the recommended first method and it remains
 installation-specific. Project tooling and hotfixes do not patch or generate
 the FCL.
