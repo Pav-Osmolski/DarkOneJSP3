@@ -1,6 +1,17 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.17 - Enhanced Spectrum Analyser reference preferences
+----------------------------------------------------------
+
+- Added the maintainer's complete Enhanced Spectrum Analyser reference setup
+  to both installation guides, including the Peak gradient, RMS and Peak Max
+  behaviour, background, overlay, tilt, refresh, FFT and averaging values.
+- Clarified that colour swatches assigned only to disabled lines and overlays
+  do not affect the reference display.
+- Added permanent validation for the package installation guidance and advanced
+  the release validator to 0.10.15.
+
 v1.0.16 - TOOLS Startup and Utilities consolidation
 ---------------------------------------------------
 

@@ -152,6 +152,33 @@ JScript Panel provides DarkOne styling, multi-selection, keyboard navigation,
 source-item commands and writable queue controls including remove, multi-remove,
 clear, move up/down and move to top/bottom.
 
+Enhanced Spectrum Analyser component preferences
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enhanced Spectrum Analyser maintains its visualisation options in the native
+component. To reproduce the DarkOneJSP3 reference appearance, right-click the
+spectrum panel, open Options and use:
+
+- Peak: Line disabled; Gradient enabled; Vertical disabled
+- Peak colours, top to bottom: RGB 0, 128, 192 (#0080C0);
+  RGB 47, 120, 255 (#2F78FF); RGB 38, 98, 255 (#2662FF);
+  RGB 147, 0, 255 (#9300FF); RGB 223, 0, 255 (#DF00FF); and
+  RGB 255, 0, 172 (#FF00AC)
+- Peak: Color Count 6; Alpha 255; Peak Hold 0 ms; Velocity 20 dB/s
+- RMS: Line, Gradient and Vertical disabled; RGB 0, 0, 0 (#000000);
+  Color Count 1; Alpha 96; Peak Hold 1000 ms; Velocity 3 dB/s
+- Peak Max: Line, Gradient and Vertical disabled; RGB 0, 0, 0 (#000000);
+  Color Count 1; Alpha 128; Peak Hold 3000 ms; Velocity 3 dB/s
+- Background: Grid, Left Labels and Bottom Labels disabled; Color from
+  RGB 0, 0, 0 (#000000); Color to RGB 3, 7, 7 (#030707);
+  Alpha from 255; Alpha to 255
+- Further Adjustment: Peak Detector disabled; Calibration Line disabled;
+  Tilt 4.5 dB/oct
+- Processing: Refresh Time 8 ms; Window Function HANNING; FFT Size 16384;
+  Average Time 400 ms
+
+Colour swatches belonging only to disabled lines and overlays do not affect the
+reference display.
+
 Waveform Minibar component preferences
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Waveform Minibar stores its own component preferences and they are not restored by
@@ -197,12 +224,14 @@ as the consolidated InfoStack child.
 6. Confirm that the display and waveform occupy the lower centre area.
 7. Confirm `DOJSP3.QuickSearch` is a JScript Panel 3 instance loading the
    DarkOneJSP3 Quick Search wrapper.
-8. Confirm Waveform Minibar uses the component preferences documented above.
-9. Configure an optional TOOLS control-panel button with the internal command
+8. Confirm Enhanced Spectrum Analyser uses the component preferences documented
+   above.
+9. Confirm Waveform Minibar uses the component preferences documented above.
+10. Configure an optional TOOLS control-panel button with the internal command
    DarkOneJSP3/Tools/Menu and confirm that the DarkOne Tools popup opens below
    the clicked button.
-10. Open the foobar2000 console and check for [DarkOneJSP3] errors.
-11. Export a working FCL for your own backup.
+11. Open the foobar2000 console and check for [DarkOneJSP3] errors.
+12. Export a working FCL for your own backup.
 
 6. Upgrading and hotfixes
 -------------------------

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.16 Validation Report
+DarkOneJSP3 v1.0.17 Validation Report
 =====================================
 
 Scope
@@ -339,6 +339,9 @@ Checks
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.
+- Installation guidance retains the complete Enhanced Spectrum Analyser and
+  Waveform Minibar reference settings, including their processing, timing,
+  colour and transparency values.
 - The Configuration Guide documents the principal user-facing menu surfaces
   in the supported layout, with selected labels checked against both source and
   guide so renamed or omitted menu entries fail validation.

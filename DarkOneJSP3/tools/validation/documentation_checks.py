@@ -101,6 +101,22 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in installation_body:
                 errors.append('INSTALLATION.txt Waveform Minibar setup guidance is missing: ' + token)
+        for token in [
+            'Enhanced Spectrum Analyser component preferences',
+            'Peak colours, top to bottom: RGB 0, 128, 192 (#0080C0)',
+            'Color Count 6; Alpha 255; Peak Hold 0 ms; Velocity 20 dB/s',
+            'Alpha 96; Peak Hold 1000 ms; Velocity 3 dB/s',
+            'Alpha 128; Peak Hold 3000 ms; Velocity 3 dB/s',
+            'Color to RGB 3, 7, 7 (#030707)',
+            'Tilt 4.5 dB/oct',
+            'Refresh Time 8 ms; Window Function HANNING; FFT Size 16384',
+            'Average Time 400 ms',
+        ]:
+            if token not in installation_body:
+                errors.append(
+                    'INSTALLATION.txt Enhanced Spectrum Analyser setup guidance is missing: ' +
+                    token
+                )
         # Promotional artwork is maintained in the GitHub repository and may be
         # omitted from runtime release archives. When an assets folder is present,
         # however, every referenced repository image must also be present.

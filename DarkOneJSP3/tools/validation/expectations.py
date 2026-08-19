@@ -122,7 +122,7 @@ EXPECTED_MODULE_VERSIONS = {
     'tools_menu': ('0.2.0', 'DarkOne Tools menu module'),
     'info_stack_colours': ('0.1.1', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.2.0', 'InfoStack bridge helper'),
-    'release_validator': ('0.10.14', 'release-validator module'),
+    'release_validator': ('0.10.15', 'release-validator module'),
     'sample_defaults': ('0.1.0', 'standalone sample-default registry'),
     'sample_reset_bridge': ('0.1.1', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
