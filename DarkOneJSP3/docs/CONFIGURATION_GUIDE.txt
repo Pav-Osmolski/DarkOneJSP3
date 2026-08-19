@@ -25,8 +25,8 @@ Contents
 Menu notation
 -------------
 
-A path such as InfoStack tab strip > Startup means right-click the named area,
-then open the listed submenu.
+A path such as TOOLS > Startup means click the named optional button, then open
+the listed submenu.
 
 The exact place clicked matters in several panels:
 - Playlist Manager: right-click a playlist row for playlist operations; right-
@@ -339,6 +339,28 @@ High-DPI / scaling
 - Display master font scale...
 - Reset scaling defaults
 
+Startup
+- Transition: Off (default), Black reveal or Staged reveal
+- Minimum black hold...
+- Layout-readiness timeout...
+- Preview startup transition
+- Restore startup defaults
+
+The root JSplitter remains the sole owner of these settings. TOOLS reads its
+current state through the runtime bridge and forwards only the selected command.
+InfoStack continues to report its layout readiness but no longer presents or
+relays Startup configuration.
+
+Defaults:
+- Transition: Off
+- Minimum black hold: 250 ms
+- Layout-readiness timeout: 2000 ms
+
+Black reveal and Staged reveal wait 150 ms after the final root repaint before
+showing native child windows. Staged reveal shows the bottom controls 125 ms
+after the main area. Network requests and artwork downloads do not hold the
+interface closed.
+
 Reset DarkOneJSP3
 - Reset this panel
 - Reset appearance settings...
@@ -557,32 +579,6 @@ Side divider colour
 ^^^^^^^^^^^^^^^^^^^
 
 Uses the shared upper-divider menu described in section 3.
-
-Startup
-~~~~~~~
-
-The root JSplitter owns these settings; InfoStack provides the control menu.
-
-Transition
-- Off (default)
-- Black reveal
-- Staged reveal
-
-Other commands:
-- Minimum black hold...
-- Layout-readiness timeout...
-- Preview startup transition
-- Restore startup defaults
-
-Defaults:
-- Transition: Off
-- Minimum black hold: 250 ms
-- Layout-readiness timeout: 2000 ms
-
-Black reveal and Staged reveal wait 150 ms after the final root repaint before
-showing native child windows. Staged reveal shows the bottom controls 125 ms
-after the main area. Network requests and artwork downloads do not hold the
-interface closed.
 
 5. Playlist Manager
 -------------------

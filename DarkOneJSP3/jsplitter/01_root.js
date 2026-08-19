@@ -10,6 +10,9 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // invisible overlay intercepting mouse input.
 //
 // Version history (newest first):
+// v0.7.38 publishes root-owned startup state for the TOOLS popup and accepts
+// its selected actions through the established view-command bridge.
+//
 // v0.7.37 adds the direct playback-queue state/command bridge used by the
 // scripted Queue Viewer while preserving its JScript Panel fallback path.
 //
@@ -51,6 +54,7 @@ var safetyTimer = 0;
 var stageTimer = 0;
 var rootMainVisible = false;
 var rootControlsVisible = false;
+var startupStateWriteFailureLogged = false;
 
 
 // Direct playback-queue bridge. JSplitter exposes GetPlaybackQueueContents(),
@@ -672,10 +676,25 @@ function startupControlState() {
     );
 }
 
+function writeStartupControlState(state) {
+    state = state || startupControlState();
+    if (DarkOneViewBridge.writeStartupState(state)) {
+        startupStateWriteFailureLogged = false;
+        return true;
+    }
+    if (!startupStateWriteFailureLogged) {
+        startupStateWriteFailureLogged = true;
+        console.log('[DarkOneJSP3] Could not publish the root-owned Startup state for TOOLS.');
+    }
+    return false;
+}
+
 function broadcastStartupControlState() {
+    var state = startupControlState();
+    writeStartupControlState(state);
     window.NotifyOthers(
         STARTUP_PROTOCOL.notifications.stateControls,
-        STARTUP_PROTOCOL.serialiseState(startupControlState())
+        STARTUP_PROTOCOL.serialiseState(state)
     );
 }
 
@@ -717,6 +736,17 @@ function handleStartupControlCommand(data) {
     return false;
 }
 
+function handleStartupViewCommand(data) {
+    var command = DarkOneViewBridge.parseStartupActionCommand(data);
+    if (!command) return false;
+    var protocolCommand = STARTUP_PROTOCOL.serialiseCommand(
+        command.action,
+        command.key,
+        command.value
+    );
+    return protocolCommand !== null && handleStartupControlCommand(protocolCommand);
+}
+
 function on_size(width, height) {
     ww = width;
     wh = height;
@@ -745,6 +775,10 @@ function on_notify_data(name, data) {
     if (name === STARTUP_PROTOCOL.notifications.commandControls) {
         handleStartupControlCommand(data);
         return;
+    }
+    if (name === DarkOneViewBridge.notification) {
+        var viewCommand = DarkOneViewBridge.parseNotification(data);
+        if (handleStartupViewCommand(viewCommand)) return;
     }
 
     if (darkOneJsp3HandleReset(name, data)) return;
@@ -794,5 +828,6 @@ function on_script_unload() {
 
 // Publish a fresh session immediately. This overwrites any state file left by
 // an earlier foobar2000 run before the Queue Viewer has a chance to use it.
+writeStartupControlState();
 initialiseQueueBridge();
 initialiseQueueCommandBridge();

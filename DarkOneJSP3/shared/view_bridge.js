@@ -1,10 +1,17 @@
 "use strict";
 
+// Version history (newest first):
+// v0.2.0 adds dedicated root-owned Startup state and selected-action transport
+// for the locally owned TOOLS popup.
+//
+// v0.1.2 adds the InfoStack menu-state snapshot and selected-action transport.
+
 var DarkOneViewBridge = (function () {
     var VERSION = 'v1';
     var NOTIFICATION = 'DarkOneJSP3.View.Command';
     var COMMAND_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.view-command.txt';
     var INFO_STACK_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.infostack-menu-state.json';
+    var STARTUP_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.startup-menu-state.json';
     var MAX_AGE = 5000;
     var commands = Object.freeze({
         layoutToggle: 'layout-toggle',
@@ -23,9 +30,7 @@ var DarkOneViewBridge = (function () {
                 value === 600 || value === 601 ||
                 (value >= 700 && value <= 706) ||
                 (value >= 800 && value <= 803) ||
-                value === 106 || (value >= 900 && value <= 905) ||
-                (value >= 1000 && value <= 1002) ||
-                (value >= 1010 && value <= 1013)) return value;
+                value === 106 || (value >= 900 && value <= 905)) return value;
         return null;
     }
 
@@ -39,10 +44,48 @@ var DarkOneViewBridge = (function () {
         return match ? normaliseInfoStackActionId(match[1]) : null;
     }
 
+    function normaliseStartupValue(key, value) {
+        value = Number(value);
+        if (!isFinite(value)) return null;
+        value = Math.round(value);
+        if (key === 'transition') return Math.max(0, Math.min(2, value));
+        if (key === 'minimum-delay') return Math.max(0, Math.min(5000, value));
+        if (key === 'readiness-timeout') return Math.max(500, Math.min(10000, value));
+        return null;
+    }
+
+    function startupActionCommand(action, key, value) {
+        action = String(action || '').toLowerCase();
+        if (action === 'preview' || action === 'restore') return 'startup-' + action;
+        if (action !== 'set') return null;
+        key = String(key || '').toLowerCase();
+        value = normaliseStartupValue(key, value);
+        return value === null ? null : 'startup-set:' + key + ':' + String(value);
+    }
+
+    function parseStartupActionCommand(value) {
+        value = String(value || '').toLowerCase();
+        if (value === 'startup-preview') return { action: 'preview', key: '', value: 0 };
+        if (value === 'startup-restore') return { action: 'restore', key: '', value: 0 };
+        var parts = value.split(':');
+        if (parts.length !== 3 || parts[0] !== 'startup-set') return null;
+        var key = parts[1];
+        var normalised = normaliseStartupValue(key, parts[2]);
+        if (normalised === null) return null;
+        return { action: 'set', key: key, value: normalised };
+    }
+
     function normaliseCommand(value) {
         value = String(value || '').toLowerCase();
         if (value === commands.layoutToggle || value === commands.visualiserToggle || value === commands.infoStackMenu) return value;
-        return infoStackActionCommand(infoStackActionFromCommand(value));
+        var infoStackAction = infoStackActionCommand(infoStackActionFromCommand(value));
+        if (infoStackAction) return infoStackAction;
+        var startupAction = parseStartupActionCommand(value);
+        return startupAction ? startupActionCommand(
+            startupAction.action,
+            startupAction.key,
+            startupAction.value
+        ) : null;
     }
 
     function commandForButtonPath(value) {
@@ -153,14 +196,60 @@ var DarkOneViewBridge = (function () {
         return null;
     }
 
+    function normaliseStartupState(state) {
+        if (!state || typeof state !== 'object') return null;
+        var transition = normaliseStartupValue('transition', state.transition);
+        var minimumDelay = normaliseStartupValue('minimum-delay', state.minimumDelay);
+        var readinessTimeout = normaliseStartupValue('readiness-timeout', state.readinessTimeout);
+        if (transition === null || minimumDelay === null || readinessTimeout === null) return null;
+        return {
+            transition: transition,
+            minimumDelay: minimumDelay,
+            readinessTimeout: readinessTimeout
+        };
+    }
+
+    function serialiseStartupState(state, now) {
+        state = normaliseStartupState(state);
+        if (!state) return null;
+        now = Math.round(Number(now));
+        if (!isFinite(now) || now <= 0) now = new Date().getTime();
+        try { return JSON.stringify({ version: VERSION, issuedAt: now, state: state }); } catch (e) {}
+        return null;
+    }
+
+    function parseStartupState(data) {
+        var payload;
+        try { payload = JSON.parse(String(data || '')); } catch (e) { return null; }
+        if (!payload || payload.version !== VERSION) return null;
+        return normaliseStartupState(payload.state);
+    }
+
+    function writeStartupState(state) {
+        var payload = serialiseStartupState(state, new Date().getTime());
+        if (!payload) return false;
+        try { utils.CreateFolder(fb.ProfilePath + 'js_data\\'); } catch (e) {}
+        try { return utils.WriteTextFile(STARTUP_STATE_FILE, payload) !== false; } catch (e2) {}
+        return false;
+    }
+
+    function readStartupState() {
+        try { return parseStartupState(utils.ReadTextFile(STARTUP_STATE_FILE, 65001)); } catch (e) {}
+        return null;
+    }
+
     return Object.freeze({
-        version: VERSION, notification: NOTIFICATION, commandFile: COMMAND_FILE, infoStackStateFile: INFO_STACK_STATE_FILE, commands: commands,
+        version: VERSION, notification: NOTIFICATION, commandFile: COMMAND_FILE,
+        infoStackStateFile: INFO_STACK_STATE_FILE, startupStateFile: STARTUP_STATE_FILE, commands: commands,
         normaliseCommand: normaliseCommand, normaliseAnchorX: normaliseAnchorX, commandForButtonPath: commandForButtonPath,
         normaliseInfoStackActionId: normaliseInfoStackActionId, infoStackActionCommand: infoStackActionCommand,
         infoStackActionFromCommand: infoStackActionFromCommand,
+        startupActionCommand: startupActionCommand, parseStartupActionCommand: parseStartupActionCommand,
         serialise: serialise, parse: parse, serialiseNotification: serialiseNotification,
         parseNotificationData: parseNotificationData, parseNotification: parseNotification, writeCommand: writeCommand,
         serialiseInfoStackState: serialiseInfoStackState, parseInfoStackState: parseInfoStackState,
-        writeInfoStackState: writeInfoStackState, readInfoStackState: readInfoStackState
+        writeInfoStackState: writeInfoStackState, readInfoStackState: readInfoStackState,
+        serialiseStartupState: serialiseStartupState, parseStartupState: parseStartupState,
+        writeStartupState: writeStartupState, readStartupState: readStartupState
     });
 })();

@@ -9,6 +9,9 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // the six real panels.
 //
 // Version history (newest first):
+// v0.6.32 removes Startup configuration from both InfoStack menu surfaces;
+// TOOLS now owns its presentation through a dedicated root-state bridge.
+//
 // v0.6.31 makes optional-button menu-state publication change-driven and removes
 // the obsolete notification-triggered popup fallback, keeping popup ownership
 // local while avoiding redundant runtime-file writes.
@@ -228,10 +231,7 @@ function infoStackMenuStateSnapshot() {
         backgroundMode: backgroundMode(),
         backgroundCustomColour: storedCustomBackgroundColour(),
         dividerMode: dividerMenuMode,
-        dividerCustomColour: dividerMenuCustomColour,
-        startupTransition: startupMenuTransition,
-        startupMinimumDelay: startupMenuMinimumDelay,
-        startupReadinessTimeout: startupMenuReadinessTimeout
+        dividerCustomColour: dividerMenuCustomColour
     };
 }
 
@@ -529,7 +529,7 @@ function on_size(width, height) {
     ww = width;
     wh = height;
     layoutInfoStack();
-    requestInfoStackBridgeStates();
+    requestInfoStackDividerState();
     publishInfoStackMenuState();
 }
 
@@ -669,10 +669,8 @@ function showInfoStackMenu(x, y, targetIndex) {
     var areaMenu = window.CreatePopupMenu();
     var backgroundMenu = window.CreatePopupMenu();
     var dividerMenu = window.CreatePopupMenu();
-    var startupMenu = window.CreatePopupMenu();
-    var startupTransitionMenu = window.CreatePopupMenu();
 
-    requestInfoStackBridgeStates();
+    requestInfoStackDividerState();
 
     var i;
     for (i = 0; i < INFO_PANELS.length; i++) {
@@ -717,7 +715,6 @@ function showInfoStackMenu(x, y, targetIndex) {
 
     appendInfoStackBackgroundMenu(backgroundMenu);
     appendInfoStackDividerMenu(dividerMenu);
-    appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);
 
     visibilityMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Visible tabs');
     titlesMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab titles');
@@ -730,7 +727,6 @@ function showInfoStackMenu(x, y, targetIndex) {
 
     tabSettingsMenu.AppendTo(menu, MENU_POPUP, 'Tab settings');
     appearanceMenu.AppendTo(menu, MENU_POPUP, 'Appearance');
-    startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');
 
     // JSplitter's MenuObject is released by the host and does not expose
     // the JSP3/SMP Dispose() method. Calling it aborts command handling.

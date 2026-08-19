@@ -783,6 +783,7 @@ suite("bottom-area cross-host state", function () {
     const colourSource = fs.readFileSync(__path("DarkOneJSP3/shared/colour_utils.js"), 'utf8');
     const protocolSource = fs.readFileSync(__path("DarkOneJSP3/shared/jsplitter_protocols.js"), 'utf8');
     const resetSource = fs.readFileSync(__path("DarkOneJSP3/shared/reset_defaults.js"), 'utf8');
+    const viewBridgeSource = fs.readFileSync(__path("DarkOneJSP3/shared/view_bridge.js"), 'utf8');
     const hostSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/05_bottom_controls.js"), 'utf8');
     const configSource = fs.readFileSync(__path("DarkOneJSP3/jscript/js/Config_Global_Script.js"), 'utf8');
     const bottomStart = configSource.indexOf('// Shared bottom-area appearance.');
@@ -825,6 +826,11 @@ suite("bottom-area cross-host state", function () {
         throw new Error('Unterminated function: ' + name);
     }
     const toolsMenuSource = extractFunction(configSource, 'darkOneToolsMenu');
+    const toolsSupportStart = configSource.indexOf('var DARKONE_TOOLS_STARTUP_IDS');
+    const toolsMenuStart = configSource.indexOf('function darkOneToolsMenu(x, y)');
+    if (toolsSupportStart < 0 || toolsMenuStart <= toolsSupportStart)
+        throw new Error('DarkOne Tools Startup support block is missing');
+    const toolsSupportSource = configSource.slice(toolsSupportStart, toolsMenuStart);
     const weightMenuSource = extractFunction(configSource, 'darkOneAppendWeightMenu');
     const settingCategorySource = extractFunction(configSource, 'darkOneSettingCategory');
     const settingsResultSource = extractFunction(configSource, 'darkOneSettingsResult');
@@ -934,7 +940,7 @@ suite("bottom-area cross-host state", function () {
             'window', 'fb', 'utils', 'MF_STRING', 'MF_GRAYED', 'MB_OK', 'MB_ICONEXCLAMATION',
             'ui_backcol', 'p_backcol', 'ww', 'wh', 'console', 'darkOneApplySharedValues',
             'buttonsColours', 'display_system',
-            resetSource + '\n' + bottomSource + '\n' +
+            resetSource + '\n' + viewBridgeSource + '\n' + bottomSource + '\n' +
             'function darkOneButtonRoundness(){return Number(window.GetProperty("DARKONEJSP3.BUTTON.ROUNDNESS",-1));}\n' +
             'function darkOneSetSharedProperty(name,value){window.SetProperty(name,value);window.NotifyOthers("DarkOneJSP3.Settings.Batch",JSON.stringify({values:{[name]:value}}));}\n' +
             'function darkOneSetButtonRoundness(value){darkOneSetSharedProperty("DARKONEJSP3.BUTTON.ROUNDNESS",value);return true;}\n' +
@@ -949,8 +955,8 @@ suite("bottom-area cross-host state", function () {
             'var DWRITE_FONT_WEIGHT_NORMAL=400,DWRITE_FONT_WEIGHT_MEDIUM=500,DWRITE_FONT_WEIGHT_SEMI_BOLD=600,DWRITE_FONT_WEIGHT_BOLD=700,DWRITE_FONT_WEIGHT_BLACK=900;\n' +
             settingCategorySource + '\n' + settingsResultSource + '\n' +
             applySharedValuesSource + '\n' + handleNotifySource + '\n' +
-            weightMenuSource + '\n' + toolsMenuSource +
-            '\nreturn {state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,parseCommit:darkOneBottomAreaParseCommit,apply:darkOneApplyBottomAreaState,scheduleCommit:darkOneScheduleBottomAreaCommit,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,handleNotify:darkOneHandleNotify,toolsMenu:darkOneToolsMenu};'
+            weightMenuSource + '\n' + toolsSupportSource + '\n' + toolsMenuSource +
+            '\nreturn {state:darkOneBottomAreaState,serialise:darkOneBottomAreaSerialiseState,parse:darkOneBottomAreaParseState,parseCommit:darkOneBottomAreaParseCommit,apply:darkOneApplyBottomAreaState,scheduleCommit:darkOneScheduleBottomAreaCommit,backgroundColour:darkOneBottomBackgroundColour,paint:darkOnePaintBottomAreaBackground,send:darkOneSendBottomAreaState,readFile:darkOneReadBottomAreaStateFile,request:darkOneRequestBottomAreaState,dispose:darkOneDisposeBottomAreaBridge,writeReset:darkOneWriteResetCommand,handleMenu:darkOneHandleBottomAreaMenuSelection,handleNotify:darkOneHandleNotify,toolsMenu:darkOneToolsMenu,viewBridge:DarkOneViewBridge};'
         );
         const api = factory(
             windowMock,
@@ -1052,7 +1058,7 @@ suite("bottom-area cross-host state", function () {
     // native popup must be disposed exactly once for selection, cancellation
     // and picker failure, while state changes only for a valid new colour.
     function assertMenusDisposedOnce(panel, label) {
-        if (panel.popupMenus.length !== 17 || panel.popupMenus.some(menu => menu.disposed !== 1))
+        if (panel.popupMenus.length !== 20 || panel.popupMenus.some(menu => menu.disposed !== 1))
             throw new Error(label + ' did not dispose every DarkOne Tools popup exactly once');
     }
 
@@ -1072,6 +1078,12 @@ suite("bottom-area cross-host state", function () {
             pickerPanel.popupMenus[2].children.map(item => item[1]).join(',') !==
             'Button style,Button depth,Button roundness')
         throw new Error('DarkOne Tools top-level Buttons hierarchy changed');
+    if (pickerPanel.popupMenus[0].children.map(item => item[1]).join(',') !==
+            'Appearance,Buttons,Fonts,High-DPI / scaling,Startup,Reset DarkOneJSP3,Utilities')
+        throw new Error('DarkOne Tools top-level hierarchy/order changed');
+    if (pickerPanel.popupMenus[16].items.map(item => item[2]).join(',') !==
+            'Renderer: Direct2D + DirectWrite (JSP3),Open DarkOneJSP3 folder,Open JScript Panel js_data cache,Open JScript Panel 3 component folder,Panel properties,Configure script...,Reload this panel')
+        throw new Error('DarkOne Tools Utilities grouping changed');
     const styleLabels = pickerPanel.popupMenus[3].items.map(item => item[2]).join(',');
     if (styleLabels !== 'Standard,Thick,Round,Round (Alt),Round (Alt + Narrow)')
         throw new Error('DarkOne Tools descriptive Button style labels changed');
@@ -1133,13 +1145,48 @@ suite("bottom-area cross-host state", function () {
         throw new Error('Partial DarkOne Tools construction leaked an earlier popup');
 
     const partialWeightPanel = makePanel();
-    partialWeightPanel.failPopupAppendAt(15);
+    partialWeightPanel.failPopupAppendAt(18);
     let weightConstructionFailed = false;
     try { partialWeightPanel.api.toolsMenu(10, 20); }
     catch (e) { weightConstructionFailed = true; }
-    if (!weightConstructionFailed || partialWeightPanel.popupMenus.length !== 15 ||
+    if (!weightConstructionFailed || partialWeightPanel.popupMenus.length !== 18 ||
             partialWeightPanel.popupMenus.some(menu => menu.disposed !== 1))
         throw new Error('Partially populated font-weight menu leaked its native popup');
+
+    files['P:\\js_data\\darkonejsp3.startup-menu-state.json'] = JSON.stringify({
+        version: 'v1',
+        issuedAt: Date.now(),
+        state: {transition: 1, minimumDelay: 300, readinessTimeout: 2500}
+    });
+    pickerPanel.setPopupCommand(0);
+    pickerPanel.api.toolsMenu(10, 20);
+    if (pickerPanel.popupMenus[14].radio.join(',') !== '9860,9862,9861' ||
+            pickerPanel.popupMenus[13].items.find(item => item[1] === 9865)[0] !== 0)
+        throw new Error('DarkOne Tools did not render the current root-owned Startup state');
+    assertMenusDisposedOnce(pickerPanel, 'Startup state display');
+
+    pickerPanel.setPopupCommand(9862);
+    if (!pickerPanel.api.toolsMenu(10, 20))
+        throw new Error('DarkOne Tools did not handle the Startup transition command');
+    const startupPayload = files['P:\\js_data\\darkonejsp3.view-command.txt'];
+    const startupCommand = pickerPanel.api.viewBridge.parse(startupPayload, Date.now());
+    if (!startupCommand || startupCommand.command !== 'startup-set:transition:2')
+        throw new Error('DarkOne Tools did not bridge only the selected Startup action');
+    assertMenusDisposedOnce(pickerPanel, 'Startup transition selection');
+
+    files['P:\\js_data\\darkonejsp3.startup-menu-state.json'] = JSON.stringify({
+        version: 'v1', issuedAt: Date.now(),
+        state: {transition: 'invalid', minimumDelay: -10, readinessTimeout: 99999}
+    });
+    const malformedStartupPanel = makePanel();
+    malformedStartupPanel.setPopupCommand(0);
+    malformedStartupPanel.api.toolsMenu(10, 20);
+    if (malformedStartupPanel.popupMenus[14].radio.join(',') !== '9860,9862,9860' ||
+            malformedStartupPanel.popupMenus[13].items.find(item => item[1] === 9863)[2] !==
+                'Minimum black hold... (250 ms)' ||
+            malformedStartupPanel.popupMenus[13].items.find(item => item[1] === 9865)[0] !== 1)
+        throw new Error('Malformed root-owned Startup state did not recover to safe TOOLS defaults');
+    assertMenusDisposedOnce(malformedStartupPanel, 'Malformed Startup state recovery');
 
     pickerPanel.setPopupCommand(9806);
     if (!pickerPanel.api.toolsMenu(10, 20))
@@ -1554,18 +1601,11 @@ suite("startup control bridge", function () {
     const queueBridgeSource = fs.readFileSync(__path("DarkOneJSP3/shared/queue_bridge.js"), 'utf8');
     const viewBridgeSource = fs.readFileSync(__path("DarkOneJSP3/shared/view_bridge.js"), 'utf8');
     const rootSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/01_root.js"), 'utf8');
-    const infoColourSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/info_stack_colours.js"), 'utf8');
-    const infoBridgeSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/info_stack_bridges.js"), 'utf8');
-    const infoSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/03_info_stack_tabs.js"), 'utf8');
     const rootProperties = new Map();
-    const infoProperties = new Map();
     const timers = new Map();
     let nextTimer = 1;
-    let rootNotify = null;
-    let infoNotify = null;
     const main = { visible: true, Show(value) { this.visible = Boolean(value); }, Move() {} };
     const controls = { visible: true, Show(value) { this.visible = Boolean(value); }, Move() {} };
-    const infoChildren = Array.from({length: 6}, () => ({Show() {}, Move() {}}));
     function fakeSetTimeout(fn, delay) {
         const id = nextTimer++;
         timers.set(id, {fn, delay});
@@ -1596,28 +1636,14 @@ suite("startup control bridge", function () {
         GetProperty(name, fallback) { return rootProperties.has(name) ? rootProperties.get(name) : fallback; },
         SetProperty(name, value) { rootProperties.set(name, value); },
         GetPanel(title) { return title === 'main' ? main : controls; },
-        NotifyOthers(name, data) { if (infoNotify) infoNotify(name, data); },
+        NotifyOthers() {},
         Repaint() {}, Reload() {}
-    };
-    const infoWindow = {
-        Name: 'DOJSP3.InfoStack',
-        GetProperty(name, fallback) { return infoProperties.has(name) ? infoProperties.get(name) : fallback; },
-        SetProperty(name, value) { infoProperties.set(name, value); },
-        GetPanel(title) {
-            const index = ['p0','p1','p2','p3','p4','p5'].indexOf(title);
-            return index >= 0 ? infoChildren[index] : null;
-        },
-        NotifyOthers(name, data) { if (rootNotify) rootNotify(name, data); },
-        Repaint() {}, RepaintRect() {}, SetCursor() {}, Reload() {}
     };
     const rootFactory = new Function(
         'window','fb','plman','include','utils','DOJSP3','darkOneJsp3HandleReset',
         'setTimeout','clearTimeout','console',
-        colourSource + '\n' + protocolSource + '\n' + queueBridgeSource + '\n' + rootSource + '\nreturn {on_size,on_notify_data,on_playback_queue_changed,startupTransition,startupMinimumDelay,startupSafetyTimeout};'
-    );
-    const infoFactory = new Function(
-        'window','fb','include','utils','DOJSP3','darkOneJsp3HandleReset','gdi',
-        colourSource + '\n' + protocolSource + '\n' + viewBridgeSource + '\n' + infoColourSource + '\n' + infoBridgeSource + '\n' + infoSource + '\nreturn {on_notify_data,requestStartupControlState,sendStartupControlCommand,parseDividerState:DarkOneProtocol.divider.parseState,getState:function(){return [startupMenuTransition,startupMenuMinimumDelay,startupMenuReadinessTimeout,startupMenuStateKnown];}};'
+        colourSource + '\n' + protocolSource + '\n' + viewBridgeSource + '\n' + queueBridgeSource + '\n' + rootSource +
+        '\nreturn {on_size,on_notify_data,on_playback_queue_changed,startupTransition,startupMinimumDelay,startupSafetyTimeout,viewBridge:DarkOneViewBridge};'
     );
     const bridgeWrites = new Map();
     const queueStatePath = 'js_data\\darkonejsp3.queue-state.json';
@@ -1675,15 +1701,15 @@ suite("startup control bridge", function () {
     };
     const root = rootFactory(rootWindow, rootFb, rootPlman, function(){}, rootUtils, DOJSP3,
         function(){return false;}, fakeSetTimeout, fakeClearTimeout, console);
-    const info = infoFactory(infoWindow, {ProfilePath:'',ShowPopupMessage(){}}, function(){},
-        {InputBox(){return '0';}}, DOJSP3, function(){return false;},
-        {Font(){return {Height:12};}});
-    rootNotify = root.on_notify_data;
-    infoNotify = info.on_notify_data;
     function assert(condition, message) { if (!condition) throw new Error(message); }
-    assert(bridgeWrites.size === 1,
-        'Root did not publish exactly one direct queue bridge state during startup');
-    const initialQueueState = JSON.parse([...bridgeWrites.values()][0]);
+    const startupStatePath = 'js_data\\darkonejsp3.startup-menu-state.json';
+    assert(bridgeWrites.size === 2,
+        'Root did not publish exactly one Startup state and one queue state during startup');
+    const initialStartupState = JSON.parse(bridgeWrites.get(startupStatePath)).state;
+    assert(initialStartupState.transition === 0 && initialStartupState.minimumDelay === 250 &&
+        initialStartupState.readinessTimeout === 2000,
+        'Root startup state file did not publish the defaults');
+    const initialQueueState = JSON.parse(bridgeWrites.get(queueStatePath));
     assert(initialQueueState.available === true && initialQueueState.writable === true &&
         initialQueueState.capabilities.includes('removeMany') && initialQueueState.entries.length === 0,
         'Root startup writable queue bridge state was invalid');
@@ -1693,7 +1719,7 @@ suite("startup control bridge", function () {
     ];
     sourceHandles.set(sourceKey(4,7), rootQueueContents[0].Handle);
     root.on_playback_queue_changed(0);
-    const populatedQueueState = JSON.parse([...bridgeWrites.values()][0]);
+    const populatedQueueState = JSON.parse(bridgeWrites.get(queueStatePath));
     assert(populatedQueueState.entries.length === 2 &&
         populatedQueueState.entries[0].queueIndex === 1 &&
         populatedQueueState.entries[0].playlistIndex === 4 &&
@@ -1860,28 +1886,34 @@ suite("startup control bridge", function () {
     runTimerWithDelay(25);
     assert(rootQueueContents.length === 0, 'Root writable bridge did not clear the playback queue');
 
-    info.requestStartupControlState();
-    assert(info.getState().join(',') === '0,250,2000,true', 'Initial root state did not reach InfoStack');
-    const darkDividerState = info.parseDividerState('v1|4|4279383126');
-    assert(darkDividerState && darkDividerState.mode === 4,
-        'InfoStack clamped DarkOne-dark-grey divider mode 4');
-    info.sendStartupControlCommand('set', 'transition', 1);
-    info.sendStartupControlCommand('set', 'minimum-delay', 5000);
-    info.sendStartupControlCommand('set', 'readiness-timeout', 7000);
+    function sendStartupAction(action, key, value) {
+        const command = root.viewBridge.startupActionCommand(action, key, value);
+        const notification = root.viewBridge.serialiseNotification(command, null);
+        root.on_notify_data(root.viewBridge.notification, notification);
+    }
+    sendStartupAction('set', 'transition', 1);
+    sendStartupAction('set', 'minimum-delay', 5000);
+    sendStartupAction('set', 'readiness-timeout', 7000);
     assert(root.startupTransition() === 1, 'Transition command did not update the root');
     assert(root.startupMinimumDelay() === 5000, 'Minimum hold did not update the root');
     assert(root.startupSafetyTimeout() === 7000, 'Readiness timeout did not update the root');
-    assert(info.getState().slice(0,3).join(',') === '1,5000,7000', 'Root state did not synchronise back to InfoStack');
+    const changedStartupState = JSON.parse(bridgeWrites.get(startupStatePath)).state;
+    assert([changedStartupState.transition, changedStartupState.minimumDelay,
+        changedStartupState.readinessTimeout].join(',') === '1,5000,7000',
+        'Changed root Startup state was not republished for TOOLS');
     root.on_size(1920, 1080);
     assert(main.visible === false && controls.visible === false, 'Black reveal did not hide root children');
-    info.sendStartupControlCommand('preview');
+    sendStartupAction('preview');
     runTimerWithDelay(5000);
     runTimerWithDelay(150);
     assert(main.visible === true && controls.visible === true, 'Preview did not honour root timing/reveal');
-    info.sendStartupControlCommand('restore');
+    sendStartupAction('restore');
     assert(root.startupTransition() === 0 && root.startupMinimumDelay() === 250 &&
         root.startupSafetyTimeout() === 2000, 'Startup defaults were not restored in the root');
-    assert(info.getState().slice(0,3).join(',') === '0,250,2000', 'Restored root state did not synchronise to InfoStack');
+    const restoredStartupState = JSON.parse(bridgeWrites.get(startupStatePath)).state;
+    assert([restoredStartupState.transition, restoredStartupState.minimumDelay,
+        restoredStartupState.readinessTimeout].join(',') === '0,250,2000',
+        'Restored root Startup state was not republished for TOOLS');
 });
 
 suite("JS Playlist settings back arrow", function () {

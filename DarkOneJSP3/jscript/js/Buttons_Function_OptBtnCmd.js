@@ -78,10 +78,7 @@ function darkOneInfoStackMenuFallbackState() {
         backgroundMode: 4,
         backgroundCustomColour: 0xff181818,
         dividerMode: 1,
-        dividerCustomColour: 0xff000000,
-        startupTransition: 0,
-        startupMinimumDelay: 250,
-        startupReadinessTimeout: 2000
+        dividerCustomColour: 0xff000000
     };
 }
 
@@ -116,9 +113,6 @@ function darkOneInfoStackMenuState() {
     result.backgroundCustomColour = DarkOneColour.opaque(state.backgroundCustomColour == null ? result.backgroundCustomColour : state.backgroundCustomColour);
     result.dividerMode = number(state.dividerMode, 1, 0, 5);
     result.dividerCustomColour = DarkOneColour.opaque(state.dividerCustomColour == null ? result.dividerCustomColour : state.dividerCustomColour);
-    result.startupTransition = number(state.startupTransition, 0, 0, 2);
-    result.startupMinimumDelay = number(state.startupMinimumDelay, 250, 0, 5000);
-    result.startupReadinessTimeout = number(state.startupReadinessTimeout, 2000, 500, 10000);
     return result;
 }
 
@@ -138,10 +132,8 @@ function darkOneShowInfoStackLocalMenu(button) {
     var areaMenu = window.CreatePopupMenu();
     var backgroundMenu = window.CreatePopupMenu();
     var dividerMenu = window.CreatePopupMenu();
-    var startupMenu = window.CreatePopupMenu();
-    var startupTransitionMenu = window.CreatePopupMenu();
     var submenus = [tabSettingsMenu, appearanceMenu, visibilityMenu, titlesMenu, fontMenu,
-        tabColourMenu, areaMenu, backgroundMenu, dividerMenu, startupMenu, startupTransitionMenu];
+        tabColourMenu, areaMenu, backgroundMenu, dividerMenu];
     var selectedId = 0;
 
     try {
@@ -186,17 +178,6 @@ function darkOneShowInfoStackLocalMenu(button) {
         dividerMenu.AppendMenuSeparator();
         dividerMenu.AppendMenuItem(0, 106, 'Set custom colour...');
 
-        startupTransitionMenu.AppendMenuItem(0, 1000, 'Off');
-        startupTransitionMenu.AppendMenuItem(0, 1001, 'Black reveal');
-        startupTransitionMenu.AppendMenuItem(0, 1002, 'Staged reveal');
-        startupTransitionMenu.CheckMenuRadioItem(1000, 1002, 1000 + state.startupTransition);
-        startupTransitionMenu.AppendTo(startupMenu, 16, 'Transition');
-        startupMenu.AppendMenuItem(0, 1010, 'Minimum black hold... (' + state.startupMinimumDelay + ' ms)');
-        startupMenu.AppendMenuItem(0, 1011, 'Layout-readiness timeout... (' + state.startupReadinessTimeout + ' ms)');
-        startupMenu.AppendMenuSeparator();
-        startupMenu.AppendMenuItem(state.startupTransition === 0 ? 1 : 0, 1012, 'Preview startup transition');
-        startupMenu.AppendMenuItem(0, 1013, 'Restore startup defaults');
-
         visibilityMenu.AppendTo(tabSettingsMenu, 16, 'Visible tabs');
         titlesMenu.AppendTo(tabSettingsMenu, 16, 'Tab titles');
         fontMenu.AppendTo(tabSettingsMenu, 16, 'Tab font size');
@@ -206,7 +187,6 @@ function darkOneShowInfoStackLocalMenu(button) {
         dividerMenu.AppendTo(appearanceMenu, 16, 'Side divider colour');
         tabSettingsMenu.AppendTo(menu, 16, 'Tab settings');
         appearanceMenu.AppendTo(menu, 16, 'Appearance');
-        startupMenu.AppendTo(menu, 16, 'Startup');
 
         var x = button ? Math.max(0, Math.round(Number(button.x) || 0)) : 0;
         var y = button ? Math.max(0, Math.round((Number(button.y) || 0) + (Number(button.h) || 0))) : 0;

@@ -1,14 +1,14 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12"
   },
   "modules": {
-    "control_left": "3.0.29-jsp3-3.8.5",
-    "control_right": "3.0.34-jsp3-3.8.5",
+    "control_left": "3.0.30-jsp3-3.8.5",
+    "control_right": "3.0.35-jsp3-3.8.5",
     "display": "3.0.34-jsp3-3.8.5",
     "queue_viewer": "0.8.1",
     "allmusic": "0.6.4",
@@ -17,17 +17,17 @@
     "playlist_manager": "0.5.7",
     "network_headers": "0.6.2",
     "album_notes": "0.6.8",
-    "info_stack_controller": "0.6.31",
-    "startup_controller": "0.7.37",
+    "info_stack_controller": "0.6.32",
+    "startup_controller": "0.7.38",
     "main_columns_controller": "0.7.38",
     "page_background": "0.1.4",
     "colour_helpers": "0.1.5",
     "jsplitter_protocols": "0.2.2",
     "optional_button_menu": "0.1.2",
-    "tools_menu": "0.1.0",
+    "tools_menu": "0.2.0",
     "info_stack_colours": "0.1.1",
-    "info_stack_bridges": "0.1.2",
-    "release_validator": "0.10.13",
+    "info_stack_bridges": "0.2.0",
+    "release_validator": "0.10.14",
     "performance_helpers": "0.1.5",
     "playlist_render_cache": "0.1.1",
     "ui_cadence": "0.1.1",
@@ -38,8 +38,8 @@
     "bottom_area_appearance": "0.2.14",
     "queue_bridge": "0.2.3",
     "quick_search": "0.1.17",
-    "view_bridge": "0.1.2"
+    "view_bridge": "0.2.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.0.15"
+  "release": "DarkOneJSP3 v1.0.16"
 }

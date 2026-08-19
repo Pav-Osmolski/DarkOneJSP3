@@ -971,11 +971,10 @@ def run(ctx: ValidationContext) -> None:
             'appendInfoStackTabColourMenu(tabColourMenu);',
             'appendInfoStackBackgroundMenu(backgroundMenu);',
             'appendInfoStackDividerMenu(dividerMenu);',
-            'appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);',
             'handleInfoStackColourMenu(id)',
             'handleInfoStackBridgeMenu(id)',
             'handleInfoStackBridgeNotification(name, data)',
-            'requestInfoStackBridgeStates();',
+            'requestInfoStackDividerState();',
         ]:
             if token not in body:
                 errors.append('InfoStack helper integration is missing: ' + token)
@@ -991,6 +990,8 @@ def run(ctx: ValidationContext) -> None:
             'function backgroundMode()',
             'function requestDividerState()',
             'function applyStartupMenuState(state)',
+            'appendInfoStackStartupMenu(',
+            "startupMenu.AppendTo(menu, MENU_POPUP, 'Startup')",
             'var DIVIDER_PROTOCOL = DarkOneProtocol.divider;',
             'var BACKGROUND_TRANSPARENT = 0;',
         ]:
@@ -1027,12 +1028,8 @@ def run(ctx: ValidationContext) -> None:
             'DIVIDER_PROTOCOL.notifications.state',
             'DIVIDER_PROTOCOL.serialiseState(',
             'DIVIDER_PROTOCOL.parseState(data)',
-            'STARTUP_PROTOCOL.notifications.queryControls',
-            'STARTUP_PROTOCOL.notifications.commandControls',
-            'STARTUP_PROTOCOL.notifications.stateControls',
-            'STARTUP_PROTOCOL.parseState(data)',
-            'function requestStartupControlState()',
-            'function sendStartupControlCommand(action, key, value)',
+            'STARTUP_PROTOCOL.createReadinessBridge(',
+            'function requestInfoStackDividerState()',
             'function handleInfoStackBridgeMenu(id)',
             'function handleInfoStackBridgeNotification(name, data)',
         ]:
@@ -1044,6 +1041,12 @@ def run(ctx: ValidationContext) -> None:
             'var DIVIDER_COLUMNS_UI = DIVIDER_PROTOCOL.modes.columnsUi;',
             'var STARTUP_BLACK_REVEAL = STARTUP_PROTOCOL.transitions.blackReveal;',
             'var STARTUP_STAGED_REVEAL = STARTUP_PROTOCOL.transitions.stagedReveal;',
+            'STARTUP_PROTOCOL.notifications.queryControls',
+            'STARTUP_PROTOCOL.notifications.commandControls',
+            'STARTUP_PROTOCOL.notifications.stateControls',
+            'function requestStartupControlState()',
+            'function sendStartupControlCommand(action, key, value)',
+            'function appendInfoStackStartupMenu(',
         ]:
             if obsolete in body:
                 errors.append('InfoStack bridge helper retains unused protocol alias: ' + obsolete)
@@ -1089,11 +1092,15 @@ def run(ctx: ValidationContext) -> None:
             'window.Repaint();',
             'var STARTUP_PROTOCOL = DarkOneProtocol.startup;',
             'var STARTUP_CONTROLLERS = STARTUP_PROTOCOL.controllers;',
-            'STARTUP_PROTOCOL.serialiseState(startupControlState())',
+            'STARTUP_PROTOCOL.serialiseState(state)',
             'STARTUP_PROTOCOL.parseCommand(data)',
             'STARTUP_PROTOCOL.notifications.queryControls',
             'STARTUP_PROTOCOL.notifications.commandControls',
             'STARTUP_PROTOCOL.notifications.ready',
+            'DarkOneViewBridge.writeStartupState(state)',
+            'DarkOneViewBridge.parseStartupActionCommand(data)',
+            'function handleStartupViewCommand(data)',
+            'if (name === DarkOneViewBridge.notification)',
             "if (key === 'readiness-timeout') return STARTUP_SAFETY_TIMEOUT_PROPERTY;",
             'function restoreStartupDefaults()',
         ]:
@@ -1130,8 +1137,7 @@ def run(ctx: ValidationContext) -> None:
             'appendInfoStackTabColourMenu(tabColourMenu);',
             'appendInfoStackBackgroundMenu(backgroundMenu);',
             'appendInfoStackDividerMenu(dividerMenu);',
-            'appendInfoStackStartupMenu(startupMenu, startupTransitionMenu);',
-            'requestInfoStackBridgeStates();',
+            'requestInfoStackDividerState();',
             'handleInfoStackBridgeNotification(name, data)',
         ]:
             if token not in body:
@@ -1146,6 +1152,18 @@ def run(ctx: ValidationContext) -> None:
     config_global = project / 'jscript' / 'js' / 'Config_Global_Script.js'
     if config_global.exists():
         body = text(config_global)
+        for token in [
+            'var DARKONE_TOOLS_STARTUP_IDS = Object.freeze({',
+            'function darkOneToolsStartupState()',
+            'DarkOneViewBridge.readStartupState()',
+            'function darkOneAppendToolsStartupMenu(menu, transitionMenu, state)',
+            'function darkOneHandleToolsStartupMenuSelection(id, state)',
+            'DarkOneViewBridge.startupActionCommand(action, key, value)',
+            "startup.AppendTo(m, MF_STRING, 'Startup')",
+            "utilities.AppendTo(m, MF_STRING, 'Utilities')",
+        ]:
+            if token not in body:
+                errors.append('DarkOne Tools Startup/Utilities integration is missing: ' + token)
         for obsolete in [
             'DARKONEJSP3_STARTUP_DEFAULTS',
             'darkOneStartupTransition',
@@ -1153,7 +1171,6 @@ def run(ctx: ValidationContext) -> None:
             'darkOneStartupSafetyTimeout',
             'darkOneSetStartupNumberProperty',
             'darkOnePreviewStartupTransition',
-            "startup.AppendTo(m, MF_STRING, 'Startup')",
             "'DARKONEJSP3.STARTUP.TRANSITION'",
             "'DARKONEJSP3.STARTUP.MINIMUM.DELAY'",
             "'DARKONEJSP3.STARTUP.SAFETY.TIMEOUT'",
@@ -1429,6 +1446,14 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('InfoStack button/tab-strip integration is missing: ' + token)
         if "selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');" in info_body:
             errors.append('InfoStack menu still nests tab selection under the obsolete Select tab submenu')
+        for obsolete in [
+            'startupTransition:',
+            'startupMinimumDelay:',
+            'startupReadinessTimeout:',
+            'appendInfoStackStartupMenu(',
+        ]:
+            if obsolete in info_body:
+                errors.append('InfoStack menu-state snapshot still contains Startup configuration: ' + obsolete)
         for token in [
             "visibilityMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Visible tabs');",
             "titlesMenu.AppendTo(tabSettingsMenu, MENU_POPUP, 'Tab titles');",
@@ -1439,7 +1464,6 @@ def run(ctx: ValidationContext) -> None:
             "dividerMenu.AppendTo(appearanceMenu, MENU_POPUP, 'Side divider colour');",
             "tabSettingsMenu.AppendTo(menu, MENU_POPUP, 'Tab settings');",
             "appearanceMenu.AppendTo(menu, MENU_POPUP, 'Appearance');",
-            "startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');",
         ]:
             if token not in info_body:
                 errors.append('InfoStack menu consolidation is missing: ' + token)
@@ -1451,6 +1475,7 @@ def run(ctx: ValidationContext) -> None:
             "areaMenu.AppendTo(menu, MENU_POPUP, 'Tab area');",
             "backgroundMenu.AppendTo(menu, MENU_POPUP, 'InfoStack backing colour');",
             "dividerMenu.AppendTo(menu, MENU_POPUP, 'Side divider colour');",
+            "startupMenu.AppendTo(menu, MENU_POPUP, 'Startup');",
         ]:
             if obsolete in info_body:
                 errors.append('InfoStack menu still exposes a configuration item at top level: ' + obsolete)
@@ -1466,15 +1491,26 @@ def run(ctx: ValidationContext) -> None:
             "darkonejsp3/infostack/menu",
             "darkonejsp3.view-command.txt",
             "darkonejsp3.infostack-menu-state.json",
+            "darkonejsp3.startup-menu-state.json",
             'function infoStackActionCommand(value)',
             'function infoStackActionFromCommand(value)',
+            'function startupActionCommand(action, key, value)',
+            'function parseStartupActionCommand(value)',
             'function writeInfoStackState(state)',
             'function readInfoStackState()',
+            'function writeStartupState(state)',
+            'function readStartupState()',
             'function writeCommand(command, anchorX)',
             'function parseNotificationData(data)',
         ]:
             if token not in body:
                 errors.append('View-command bridge is missing: ' + token)
+        for obsolete in [
+            '(value >= 1000 && value <= 1002)',
+            '(value >= 1010 && value <= 1013)',
+        ]:
+            if obsolete in body:
+                errors.append('InfoStack selected-action bridge still accepts removed Startup ids: ' + obsolete)
     else:
         errors.append('View-command bridge file is missing')
 
@@ -1493,6 +1529,14 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('INFOSTACK optional-button local popup is missing: ' + token)
         if 'DarkOneViewBridge.writeCommand(internal, anchorX)' in body:
             errors.append('INFOSTACK optional button still routes the menu itself across the view bridge')
+        for obsolete in [
+            'startupTransitionMenu.AppendMenuItem(',
+            "startupMenu.AppendTo(menu, 16, 'Startup')",
+            'startupMinimumDelay',
+            'startupReadinessTimeout',
+        ]:
+            if obsolete in body:
+                errors.append('INFOSTACK optional-button popup still exposes Startup: ' + obsolete)
     else:
         errors.append('Optional-button command script is missing')
 
@@ -1744,8 +1788,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Display context-menu cleanup is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.29-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.34-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.30-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.35-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():
@@ -1815,6 +1859,10 @@ def run(ctx: ValidationContext) -> None:
             "roundness.AppendTo(parent, MF_STRING, 'Button roundness')",
             "darkOneSetSharedProperty('Buttons appearance preset', id - 9830)",
             "darkOneSetSharedProperty('Buttons depth preset', id - 9840)",
+            "startup.AppendTo(m, MF_STRING, 'Startup')",
+            "utilities.AppendTo(m, MF_STRING, 'Utilities')",
+            "utilities.AppendMenuItem(MF_STRING, 9110, 'Open DarkOneJSP3 folder')",
+            "utilities.AppendMenuItem(MF_STRING, 9122, 'Reload this panel')",
         ]:
             if token not in body:
                 errors.append('DarkOne Tools shared Buttons appearance support is missing: ' + token)

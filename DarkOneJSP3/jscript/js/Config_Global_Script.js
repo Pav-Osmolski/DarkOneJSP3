@@ -1204,10 +1204,134 @@ function darkOneConfirmFactoryReset(scope) {
     return true;
 }
 
+// DarkOne Tools menu v0.2.0: Startup now uses a dedicated root-owned bridge,
+// while renderer, folder and panel maintenance actions live under Utilities.
+var DARKONE_TOOLS_STARTUP_IDS = Object.freeze({
+    transitionFirst: 9860,
+    transitionLast: 9862,
+    minimumDelay: 9863,
+    readinessTimeout: 9864,
+    preview: 9865,
+    restore: 9866
+});
+
+function darkOneToolsStartupState() {
+    var state = DarkOneViewBridge.readStartupState();
+    return state || {
+        transition: 0,
+        minimumDelay: 250,
+        readinessTimeout: 2000
+    };
+}
+
+function darkOneAppendToolsStartupMenu(menu, transitionMenu, state) {
+    transitionMenu.AppendMenuItem(MF_STRING, 9860, 'Off');
+    transitionMenu.AppendMenuItem(MF_STRING, 9861, 'Black reveal');
+    transitionMenu.AppendMenuItem(MF_STRING, 9862, 'Staged reveal');
+    transitionMenu.CheckMenuRadioItem(
+        DARKONE_TOOLS_STARTUP_IDS.transitionFirst,
+        DARKONE_TOOLS_STARTUP_IDS.transitionLast,
+        DARKONE_TOOLS_STARTUP_IDS.transitionFirst + state.transition
+    );
+    transitionMenu.AppendTo(menu, MF_STRING, 'Transition');
+    menu.AppendMenuItem(
+        MF_STRING,
+        DARKONE_TOOLS_STARTUP_IDS.minimumDelay,
+        'Minimum black hold... (' + state.minimumDelay + ' ms)'
+    );
+    menu.AppendMenuItem(
+        MF_STRING,
+        DARKONE_TOOLS_STARTUP_IDS.readinessTimeout,
+        'Layout-readiness timeout... (' + state.readinessTimeout + ' ms)'
+    );
+    menu.AppendMenuSeparator();
+    menu.AppendMenuItem(
+        state.transition === 0 ? MF_GRAYED : MF_STRING,
+        DARKONE_TOOLS_STARTUP_IDS.preview,
+        'Preview startup transition'
+    );
+    menu.AppendMenuItem(
+        MF_STRING,
+        DARKONE_TOOLS_STARTUP_IDS.restore,
+        'Restore startup defaults'
+    );
+}
+
+function darkOneSendToolsStartupCommand(action, key, value) {
+    var command = DarkOneViewBridge.startupActionCommand(action, key, value);
+    if (command && DarkOneViewBridge.writeCommand(command, null)) return true;
+    utils.MessageBox(
+        'DarkOneJSP3 could not publish the Startup command. Please try again.',
+        'DarkOneJSP3 Startup',
+        MB_OK | MB_ICONEXCLAMATION
+    );
+    return false;
+}
+
+function darkOneSetToolsStartupTiming(key, title, current, minimum, maximum) {
+    try {
+        var entered = Math.round(Number(utils.InputBox(
+            'Enter a value from ' + minimum + ' to ' + maximum + ' milliseconds.',
+            title,
+            String(current)
+        )));
+        if (!isFinite(entered) || entered < minimum || entered > maximum) {
+            utils.MessageBox(
+                'Enter a value from ' + minimum + ' to ' + maximum + ' milliseconds.',
+                title,
+                MB_OK | MB_ICONEXCLAMATION
+            );
+            return true;
+        }
+        darkOneSendToolsStartupCommand('set', key, entered);
+    } catch (e) {}
+    return true;
+}
+
+function darkOneHandleToolsStartupMenuSelection(id, state) {
+    if (id >= DARKONE_TOOLS_STARTUP_IDS.transitionFirst &&
+            id <= DARKONE_TOOLS_STARTUP_IDS.transitionLast) {
+        darkOneSendToolsStartupCommand(
+            'set',
+            'transition',
+            id - DARKONE_TOOLS_STARTUP_IDS.transitionFirst
+        );
+        return true;
+    }
+    if (id === DARKONE_TOOLS_STARTUP_IDS.minimumDelay) {
+        return darkOneSetToolsStartupTiming(
+            'minimum-delay',
+            'DarkOneJSP3 minimum black hold',
+            state.minimumDelay,
+            0,
+            5000
+        );
+    }
+    if (id === DARKONE_TOOLS_STARTUP_IDS.readinessTimeout) {
+        return darkOneSetToolsStartupTiming(
+            'readiness-timeout',
+            'DarkOneJSP3 layout-readiness timeout',
+            state.readinessTimeout,
+            500,
+            10000
+        );
+    }
+    if (id === DARKONE_TOOLS_STARTUP_IDS.preview) {
+        darkOneSendToolsStartupCommand('preview');
+        return true;
+    }
+    if (id === DARKONE_TOOLS_STARTUP_IDS.restore) {
+        darkOneSendToolsStartupCommand('restore');
+        return true;
+    }
+    return false;
+}
+
 function darkOneToolsMenu(x, y) {
     var menus = [];
     var idx = 0;
     var bottomAreaHandled = false;
+    var startupState = darkOneToolsStartupState();
 
     try {
     var m = window.CreatePopupMenu(); menus.push(m);
@@ -1223,7 +1347,10 @@ function darkOneToolsMenu(x, y) {
     var labels = window.CreatePopupMenu(); menus.push(labels);
     var values = window.CreatePopupMenu(); menus.push(values);
     var sc = window.CreatePopupMenu(); menus.push(sc);
+    var startup = window.CreatePopupMenu(); menus.push(startup);
+    var startupTransition = window.CreatePopupMenu(); menus.push(startupTransition);
     var reset = window.CreatePopupMenu(); menus.push(reset);
+    var utilities = window.CreatePopupMenu(); menus.push(utilities);
 
     darkOneAppendButtonsAppearanceMenu(buttons, buttonStyle, buttonDepth, buttonRoundness);
     darkOneAppendBottomAreaAppearanceMenu(appearance, bottomBackground, bottomDivider);
@@ -1266,6 +1393,9 @@ function darkOneToolsMenu(x, y) {
     sc.AppendMenuItem(MF_STRING, 9105, 'Reset scaling defaults');
     sc.AppendTo(m, MF_STRING, 'High-DPI / scaling');
 
+    darkOneAppendToolsStartupMenu(startup, startupTransition, startupState);
+    startup.AppendTo(m, MF_STRING, 'Startup');
+
     m.AppendMenuSeparator();
     reset.AppendMenuItem(MF_STRING, 9700, 'Reset this panel');
     reset.AppendMenuSeparator();
@@ -1276,15 +1406,16 @@ function darkOneToolsMenu(x, y) {
     reset.AppendTo(m, MF_STRING, 'Reset DarkOneJSP3');
 
     m.AppendMenuSeparator();
-    m.AppendMenuItem(MF_GRAYED, 0, 'Renderer: Direct2D + DirectWrite (JSP3)');
-    m.AppendMenuSeparator();
-    m.AppendMenuItem(MF_STRING, 9110, 'Open DarkOneJSP3 folder');
-    m.AppendMenuItem(MF_STRING, 9111, 'Open JScript Panel js_data cache');
-    m.AppendMenuItem(MF_STRING, 9112, 'Open JScript Panel 3 component folder');
-    m.AppendMenuSeparator();
-    m.AppendMenuItem(MF_STRING, 9120, 'Panel properties');
-    m.AppendMenuItem(MF_STRING, 9121, 'Configure script...');
-    m.AppendMenuItem(MF_STRING, 9122, 'Reload this panel');
+    utilities.AppendMenuItem(MF_GRAYED, 0, 'Renderer: Direct2D + DirectWrite (JSP3)');
+    utilities.AppendMenuSeparator();
+    utilities.AppendMenuItem(MF_STRING, 9110, 'Open DarkOneJSP3 folder');
+    utilities.AppendMenuItem(MF_STRING, 9111, 'Open JScript Panel js_data cache');
+    utilities.AppendMenuItem(MF_STRING, 9112, 'Open JScript Panel 3 component folder');
+    utilities.AppendMenuSeparator();
+    utilities.AppendMenuItem(MF_STRING, 9120, 'Panel properties');
+    utilities.AppendMenuItem(MF_STRING, 9121, 'Configure script...');
+    utilities.AppendMenuItem(MF_STRING, 9122, 'Reload this panel');
+    utilities.AppendTo(m, MF_STRING, 'Utilities');
 
     idx = m.TrackPopupMenu(x, y);
     // Route every bottom-area command through one path. The native picker
@@ -1301,6 +1432,7 @@ function darkOneToolsMenu(x, y) {
 
     if (bottomAreaHandled) return true;
     if (darkOneHandleButtonsAppearanceMenuSelection(idx)) return true;
+    if (darkOneHandleToolsStartupMenuSelection(idx, startupState)) return true;
 
     var weightMap = {
         9210 : DWRITE_FONT_WEIGHT_NORMAL,

@@ -70,22 +70,20 @@ ready. The default layout-readiness timeout reveals the interface after
 2000 ms and logs pending controller names.
 
 Confirm that all six JSplitter hosts use the supplied loaders and correct
-titles. Use InfoStack tab strip > Startup > Transition > Off while repairing the
-layout.
+titles. Use TOOLS > Startup > Transition > Off while repairing the layout.
 
 Startup menu values change but startup timing does not
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The supported Startup menu is on the InfoStack tab strip and displays values
-owned by DOJSP3.Root. If a Startup submenu appears in a JScript Panel DarkOne
-Tools menu, that panel is loading stale or mismatched script files. Replace the
-scripts from one complete package and restart foobar2000.
+The supported Startup menu is under TOOLS and displays values owned by
+DOJSP3.Root. If Startup still appears in the InfoStack tab-strip or INFOSTACK
+button menu, the layout is loading stale or mismatched script files. Replace
+the scripts from one complete package and restart foobar2000.
 
 Startup timing is unwanted or feels wrong
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Right-click the InfoStack tab strip and open Startup. Off is the default. For
-optional modes, adjust the minimum black hold and preview the sequence. Keep the
-layout-readiness timeout at 2000 ms unless diagnosing a slow or incomplete
-controller.
+Open TOOLS > Startup. Off is the default. For optional modes, adjust the minimum
+black hold and preview the sequence. Keep the layout-readiness timeout at
+2000 ms unless diagnosing a slow or incomplete controller.
 
 Script changes do not appear
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

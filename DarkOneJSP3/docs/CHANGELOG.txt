@@ -1,6 +1,23 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.16 - TOOLS Startup and Utilities consolidation
+---------------------------------------------------
+
+- Moved Startup from both InfoStack menu surfaces into the top-level TOOLS
+  menu immediately below High-DPI / scaling. Root remains the sole property
+  owner and now publishes dedicated menu state while receiving only selected
+  set, preview and restore actions through the established view-command bridge.
+- Kept the InfoStack startup-readiness handshake unchanged while removing its
+  obsolete Startup configuration snapshot, menu construction and relay code.
+- Added a bottom-positioned Utilities submenu containing the renderer status,
+  three folder shortcuts and the panel properties, configuration and reload
+  commands, reducing top-level TOOLS clutter without adding unnecessary depth.
+- Advanced Control Left to 3.0.30, Control Right to 3.0.35, InfoStack to
+  0.6.32, the root startup controller to 0.7.38, DarkOne Tools and the InfoStack
+  bridge helper to 0.2.0, the view bridge to 0.2.0 and the release validator to
+  0.10.14.
+
 v1.0.15 - Release validation and manifest streamlining
 ------------------------------------------------------
 

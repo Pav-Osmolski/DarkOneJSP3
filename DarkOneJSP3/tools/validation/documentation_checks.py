@@ -258,7 +258,7 @@ def run(ctx: ValidationContext) -> None:
             'Right-click the InfoStack tab strip',
             'generic Album Art JScript Panel',
             'cross-component notification path is not reliable',
-            'The supported Startup menu is on the InfoStack tab strip',
+            'The supported Startup menu is under TOOLS',
             'explicitly reactivates an idle same-album lookup',
         ]:
             if phrase not in body:

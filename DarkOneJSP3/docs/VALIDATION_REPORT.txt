@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.15 Validation Report
+DarkOneJSP3 v1.0.16 Validation Report
 =====================================
 
 Scope
@@ -45,16 +45,18 @@ Checks
   the native picker.
 - The real DarkOne Tools menu hierarchy is executed end to end through the
   optional `DarkOneJSP3/Tools/Menu` button command. Tests verify the top-level
-  Appearance/Buttons order, descriptive style labels, unique command IDs,
+  Appearance/Buttons/Fonts/High-DPI/Startup order, bottom-positioned Utilities,
+  descriptive style labels, unique command IDs,
   shared style/depth/roundness propagation and malformed-property defaults,
   together with saved Custom mode selection and Set custom colour... edit
   commands. Tests also verify
   signed picker arguments, remembered-colour reapplication without invoking the
   picker, selected-state persistence, cancellation, failure handling and
-  exactly-once disposal of every popup menu. The production menu uses one
-  bottom-area dispatch path protected by `try/finally` cleanup.
+  exactly-once disposal of every popup menu. Startup state and selected actions
+  are tested across the dedicated TOOLS-to-root bridge. The production menu
+  uses one bottom-area dispatch path protected by `try/finally` cleanup.
 - InfoStack navigation validation exercises the direct six-page top-level menu,
-  Tab settings/Appearance/Startup grouping, persistent Show tab strip state,
+  Tab settings/Appearance grouping, persistent Show tab strip state,
   full-height active-page layout while hidden, appearance-reset restoration and
   the optional `DarkOneJSP3/InfoStack/Menu` command. The button-opened popup is
   runtime-tested as locally owned by the invoking JScript Panel; live menu state
@@ -262,8 +264,10 @@ Checks
   and JSplitter receivers without applying defaults or reloading. Waveform
   blanking and reveal delay are validated as behaviour settings, while the Host
   background remains appearance-only.
-- Startup settings remain owned by the root controller and preserve the tested
-  reveal timing and first-layout safeguards.
+- Startup settings remain owned by the root controller. TOOLS reads the
+  published root state and forwards selected set, preview and restore commands
+  through the established view bridge while preserving reveal timing and
+  first-layout safeguards.
 - Biography, Last.fm, Album Notes, Properties and the scripted Queue
   Viewer use the shared Page background colour implementation and coordinated
   reset defaults.
@@ -278,9 +282,9 @@ Checks
   local. Context menus expose only Optional buttons; DarkOne Tools and shared
   button appearance are available exclusively from the locally owned TOOLS
   popup.
-- InfoStack colour state and startup/divider bridge plumbing remain isolated in
-  focused include helpers while layout, painting, menu IDs, saved properties and
-  notification behaviour remain unchanged.
+- InfoStack colour and divider plumbing remains isolated in focused include
+  helpers. Its startup-readiness handshake remains intact without retaining
+  Startup configuration or menu state.
 - Declarative menu mappings preserve the established menu-id-to-mode behaviour,
   including the legacy Custom mode positions.
 - JSplitter and JScript Panel native colour-picker signatures are tested

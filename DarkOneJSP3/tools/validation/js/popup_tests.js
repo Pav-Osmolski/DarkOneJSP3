@@ -318,6 +318,7 @@ suite("InfoStack button menu", function () {
     const properties = new Map();
     let stateWrites = 0;
     let popupTracks = 0;
+    const createdMenus = [];
     const panels = Array.from({length: 6}, () => ({visible:false, bounds:null, Show(v){this.visible=!!v;}, Move(x,y,w,h){this.bounds=[x,y,w,h];}}));
     const popup = { items:[], separators:0, checks:[], radio:null, children:[],
         AppendMenuItem(flags,id,label){this.items.push([flags,id,label]);}, AppendMenuSeparator(){this.separators++;},
@@ -327,7 +328,7 @@ suite("InfoStack button menu", function () {
         GetProperty(name,fallback){return properties.has(name)?properties.get(name):fallback;},
         SetProperty(name,value){properties.set(name,value);}, GetPanel(title){const i=['a','b','c','d','e','f'].indexOf(title); return i>=0?panels[i]:null;},
         NotifyOthers(){}, Repaint(){}, RepaintRect(){}, SetCursor(){}, GetColourCUI(){return 0xff202020;},
-        CreatePopupMenu(){const m=Object.create(popup); m.items=[];m.checks=[];m.children=[];m.separators=0;return m;} };
+        CreatePopupMenu(){const m=Object.create(popup); m.items=[];m.checks=[];m.children=[];m.separators=0;createdMenus.push(m);return m;} };
     const DOJSP3Mock = {titles:{playlistManager:'a',lastfmBio:'b',lastfmInfo:'c',albumNotes:'d',queue:'e',properties:'f'},
         colours:{bar:0xff202020,separator:0xff181818,buttonNormal:0xff298fcc,buttonActive:0xffffffff,buttonHover:0xff888888},
         clamp(v,a,b){return Math.max(a,Math.min(b,v));}, idiv(v,d){return Math.floor(v/d);},
@@ -348,6 +349,8 @@ suite("InfoStack button menu", function () {
     global.popupId=250; c.showInfoStackMenu(100,299,0);
     if (stateWrites !== 3) throw new Error('InfoStack menu action did not publish exactly one changed snapshot');
     if (!c.isTabStripVisible()) throw new Error('Show tab strip menu command did not restore the strip');
+    if (createdMenus[0].children.join(',') !== 'Tab settings,Appearance')
+        throw new Error('InfoStack tab-strip menu still exposes Startup or changed its configuration grouping');
     global.popupId=0; c.showInfoStackMenu(100,299,0);
     if (stateWrites !== 3) throw new Error('Cancelled InfoStack menu rewrote an unchanged snapshot');
     const tracksBeforeLegacyCommand = popupTracks;
@@ -363,11 +366,29 @@ suite("InfoStack button menu", function () {
     const actionCommand = c.bridge.infoStackActionCommand(250);
     if (actionCommand !== 'infostack-action:250' || c.bridge.infoStackActionFromCommand(actionCommand) !== 250)
         throw new Error('InfoStack selected-action command did not round-trip');
+    if (c.bridge.infoStackActionCommand(1000) !== null ||
+            c.bridge.infoStackActionFromCommand('infostack-action:1013') !== null)
+        throw new Error('InfoStack selected-action bridge still accepts removed Startup ids');
     const actionNotification = c.bridge.parseNotificationData(c.bridge.serialiseNotification(actionCommand, null));
     if (!actionNotification || actionNotification.command !== actionCommand) throw new Error('InfoStack selected action was lost in notification transport');
     const statePayload = c.bridge.serialiseInfoStackState({activeIndex:3,labels:['a','b','c','d','e','f']}, 1000);
     const stateParsed = c.bridge.parseInfoStackState(statePayload);
     if (!stateParsed || stateParsed.activeIndex !== 3 || stateParsed.labels[3] !== 'd') throw new Error('InfoStack menu state snapshot did not round-trip');
+    const startupAction = c.bridge.startupActionCommand('set', 'readiness-timeout', 12000);
+    const parsedStartupAction = c.bridge.parseStartupActionCommand(startupAction);
+    if (startupAction !== 'startup-set:readiness-timeout:10000' || !parsedStartupAction ||
+            parsedStartupAction.value !== 10000)
+        throw new Error('TOOLS Startup action did not clamp and round-trip');
+    const startupStatePayload = c.bridge.serialiseStartupState({
+        transition: 2, minimumDelay: 5000, readinessTimeout: 7000
+    }, 1000);
+    const startupStateParsed = c.bridge.parseStartupState(startupStatePayload);
+    if (!startupStateParsed || startupStateParsed.transition !== 2 ||
+            startupStateParsed.minimumDelay !== 5000 || startupStateParsed.readinessTimeout !== 7000)
+        throw new Error('Root-owned TOOLS Startup state did not round-trip');
+    if (c.bridge.parseStartupState('{"version":"v2","state":{"transition":0,"minimumDelay":250,"readinessTimeout":2000}}') !== null ||
+            c.bridge.parseStartupActionCommand('startup-set:unknown:1') !== null)
+        throw new Error('TOOLS Startup bridge accepted an unsupported state or command');
 });
 
 suite("InfoStack local popup ownership", function () {
@@ -378,8 +399,7 @@ suite("InfoStack local popup ownership", function () {
     let written = '';
     const state = {activeIndex:2,visible:[true,true,true,true,true,true],labels:['A','B','Custom Last.fm','D','E','F'],
         tabStripVisible:false,fixedFontSize:0,automaticFontScale:125,tabAreaHeight:0,tabColourMode:2,tabCustomColour:0xff123456,
-        backgroundMode:4,backgroundCustomColour:0xff181818,dividerMode:1,dividerCustomColour:0xff000000,
-        startupTransition:1,startupMinimumDelay:300,startupReadinessTimeout:2500};
+        backgroundMode:4,backgroundCustomColour:0xff181818,dividerMode:1,dividerCustomColour:0xff000000};
     const stateRaw = JSON.stringify({version:'v1',issuedAt:Date.now(),state});
     const menus = [];
     function popup() { return {items:[],checks:[],children:[],disposed:false,
@@ -398,6 +418,7 @@ suite("InfoStack local popup ownership", function () {
     api.show({x:100,y:10,w:80,h:20});
     if (!menus.length || !menus[0].tracked || !menus.every(m=>m.disposed)) throw new Error('INFOSTACK local popup was not tracked/disposed by the button panel');
     if (!menus[0].items.some(item=>item[1]===102 && item[2]==='Custom Last.fm')) throw new Error('INFOSTACK local popup did not use the live state snapshot labels');
+    if (menus[0].children.join(',') !== 'Tab settings,Appearance') throw new Error('INFOSTACK local popup still exposes Startup');
     const parsed = api.bridge.parse(written,Date.now());
     if (!parsed || parsed.command !== 'infostack-action:104' || parsed.anchorX !== null) throw new Error('INFOSTACK local popup did not bridge only its selected action');
 });
