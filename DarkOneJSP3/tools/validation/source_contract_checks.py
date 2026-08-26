@@ -818,6 +818,14 @@ def run(ctx: ValidationContext) -> None:
             if obsolete in body:
                 errors.append('Playlist Manager retains an obsolete performance path: ' + obsolete)
 
+    smooth_inputbox = samples / 'smooth' / 'inputbox.js'
+    if smooth_inputbox.exists():
+        body = text(smooth_inputbox)
+        if 'this.launch_timer = false;' not in body:
+            errors.append('Smooth input box does not clear its launch timer')
+        if 'this.lanch_timer' in body:
+            errors.append('Smooth input box retains the misspelled launch-timer field')
+
     registry_path = project / 'shared' / 'reset_defaults.js'
     sample_registry_path = samples / 'shared' / 'sample_defaults.js'
     if registry_path.exists():
@@ -867,6 +875,8 @@ def run(ctx: ValidationContext) -> None:
             '"DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR": 0xff000000',
             '"DARKONEJSP3.BOTTOM.DIVIDER.MODE": 4',
             '"DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR": 0xff000000',
+            '"DARKONEJSP3.BOTTOM.SIDE.DIVIDERS": true',
+            '"DARKONEJSP3.BOTTOM.DEPTH": 0',
         ]:
             if token not in registry:
                 errors.append('Bottom-area reset default is missing: ' + token)
@@ -1190,9 +1200,9 @@ def run(ctx: ValidationContext) -> None:
             'function mainLayoutGeometry(modeOverride)',
             'function prepareArtSpectrum(width, height)',
             'function layoutMainColumns(modeOverride, transition)',
-            'if (hideArtDuringTransition) DOJSP3.show(art, false);',
+            'if (transition && art) DOJSP3.show(art, false);',
             'if (hideArtDuringTransition) prepareArtSpectrum(geometry.artWidth, wh);',
-            'DOJSP3.show(art, true);',
+            'DOJSP3.show(art, layoutUsesArt);',
             'layoutMainColumns(MAIN_LAYOUT_ART_PLAYLIST, true);',
             'ART_SPECTRUM_PREPARE_NOTIFICATION',
             "var DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE';",
@@ -1206,7 +1216,9 @@ def run(ctx: ValidationContext) -> None:
             'if (dividerMode() === DIVIDER_TRANSPARENT) return;',
             "var MAIN_LAYOUT_MODE_PROPERTY = 'DARKONEJSP3.MAIN.LAYOUT.MODE';",
             'MAIN_LAYOUT_ART_PLAYLIST',
+            'MAIN_LAYOUT_INFO_PLAYLIST',
             'dividerPositions: [artWidth]',
+            'mode: MAIN_LAYOUT_INFO_PLAYLIST',
             'positions: geometry.dividerPositions',
             'gr.FillSolidRect(metrics.positions[i], 0, metrics.width, wh, colour);',
             'DarkOneViewBridge.commands.layoutToggle',
@@ -1241,18 +1253,30 @@ def run(ctx: ValidationContext) -> None:
         body = text(bottom_config)
         for token in [
             "'DarkOneJSP3.BottomArea.Query'",
-            "'DarkOneJSP3.BottomArea.Set'",
             "'DarkOneJSP3.BottomArea.State'",
             "'DARKONEJSP3.BOTTOM.BACKGROUND.MODE'",
             "'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR'",
+            "'DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT'",
             "'DARKONEJSP3.BOTTOM.DIVIDER.MODE'",
             "'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR'",
+            "'DARKONEJSP3.BOTTOM.SIDE.DIVIDERS'",
+            "'DARKONEJSP3.BOTTOM.DEPTH'",
             "'Bottom area background'",
             "'Bottom area side divider colour'",
+            "'Background linear gradient'",
+            "'Bottom side dividers'",
+            "'Bottom area depth'",
             "'Transparent / inherit background'",
             "'Columns UI global background'",
             'if (mode === DARKONE_BOTTOM_MODE_DARKONE) return 0xff202020;',
             'function darkOnePaintBottomAreaBackground(gr)',
+            'darkOneBottomScaleBrightness(p_backcol, 0.7)',
+            'darkOneBottomScaleBrightness(p_backcol, 1.2)',
+            'gr.FillRectangle(0, 0, ww, 1, 0xff000000);',
+            'gr.FillRectangle(0, 1, ww, 1, 0xff0f0f0f);',
+            'Math.min(2, Math.max(0, wh - 2))',
+            'function darkOneReadBottomAreaGeometry()',
+            "var DARKONE_BOTTOM_AREA_GEOMETRY_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-geometry.txt';",
             'function darkOneApplyBottomAreaState(state, repaint)',
             'function darkOneInitialiseBottomAreaState(queryPeers)',
             'function darkOneRequestBottomAreaState()',
@@ -1262,11 +1286,22 @@ def run(ctx: ValidationContext) -> None:
             "var DARKONE_BOTTOM_AREA_COMMIT_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';",
             "commit : 'DarkOneJSP3.BottomArea.Commit'",
             'function darkOneScheduleBottomAreaCommit(commit)',
+            'if (parts.length !== 11 || parts[0] !== DARKONE_BOTTOM_AREA_COMMIT_VERSION) return null;',
+            "var legacyV1 = parts.length === 5 && parts[0] === 'v1';",
+            'window.GetProperty(DARKONE_BOTTOM_DEPTH_PROPERTY, DARKONE_BOTTOM_DEPTH_DEFAULT)',
             "var DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';",
             "var DARKONE_RESET_COMMAND_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';",
             'function darkOneWriteResetCommand(scope)',
             'function darkOneResetBottomAreaDefaults()',
+            'function darkOneApplyBottomAreaDefaultsLocally()',
             'function darkOneScheduleBottomAreaStateRetry(serialised)',
+            'function darkOneRetryBottomAreaStateWrite()',
+            'var DARKONE_BOTTOM_AREA_STATE_RETRY_LIMIT = 8;',
+            'function darkOneBottomNormaliseRevision(value, fallback)',
+            'var DARKONE_BOTTOM_AREA_COMMIT_MAX_LEAD = 1000;',
+            'state.revision = id;',
+            'function darkOneBottomAreaBrush()',
+            "darkOneBottomAreaGradientBrushKey = '';",
             "utils.WriteTextFile(path, String(content))",
             "appearance.AppendTo(m, MF_STRING, 'Appearance');",
         ]:
@@ -1275,6 +1310,16 @@ def run(ctx: ValidationContext) -> None:
         for obsolete in [
             'darkOneBottomAreaStatePollTimer',
             'window.SetInterval(function ()',
+            "var legacyV1 = parts.length === 8 && parts[0] === 'v1';",
+            "var legacyV2 = parts.length === 9 && parts[0] === 'v2';",
+            "var legacyV3 = parts.length === 10 && parts[0] === 'v3';",
+            "var legacyV4 =",
+            "parts[0] === 'v4'",
+            "var legacyV2 = parts.length === 6 && parts[0] === 'v2';",
+            "var legacyV3 = parts.length === 7 && parts[0] === 'v3';",
+            'var compatibilityDefault = darkOneBottomBackgroundLinearGradient()',
+            "'DarkOneJSP3.BottomArea.Set'",
+            "name == 'DarkOneJSP3.SetProperty'",
             "DARKONE_BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt'",
         ]:
             if obsolete in body[body.index('// Shared bottom-area appearance.'):body.index('function repeat(')]:
@@ -1289,9 +1334,12 @@ def run(ctx: ValidationContext) -> None:
             'var DARKONEJSP3_RESET_ROLE = "bottom-controls";',
             'var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;',
             "var BOTTOM_BACKGROUND_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.MODE';",
+            "var BOTTOM_BACKGROUND_GRADIENT_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT';",
             "var BOTTOM_DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.MODE';",
-            'function bottomBackgroundColour()',
-            'function bottomDividerColour()',
+            "var BOTTOM_SIDE_DIVIDERS_PROPERTY = 'DARKONEJSP3.BOTTOM.SIDE.DIVIDERS';",
+            "var BOTTOM_DEPTH_PROPERTY = 'DARKONEJSP3.BOTTOM.DEPTH';",
+            'function bottomBackgroundColour(state)',
+            'function bottomDividerColour(state, backgroundColour)',
             "var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\\\';",
             "var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';",
             "var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';",
@@ -1300,27 +1348,46 @@ def run(ctx: ValidationContext) -> None:
             'function scheduleBottomAreaCommit(commit)',
             "var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';",
             "var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';",
-            'var RUNTIME_BRIDGE_POLL_INTERVAL = 100;',
-            'var RESET_COMMAND_POLL_INTERVAL = 500;',
-            'var RESET_COMMAND_POLL_DIVISOR = Math.max(1, Math.round(',
+            'var RUNTIME_BRIDGE_POLL_INTERVAL = BOTTOM_AREA_COMMIT_POLL_MS;',
+            'var RUNTIME_COMMAND_POLL_DIVISOR = 4;',
+            'var RUNTIME_STATE_POLL_DIVISOR = 20;',
+            'var RESET_COMMAND_POLL_DIVISOR = 20;',
             'function syncBottomAreaStateFile(createIfMissing)',
+            'function bottomAreaStateRevisionIssuedAt(state)',
+            'var BOTTOM_AREA_STATE_CONFIRM_MS = 2000;',
             'function broadcastBottomAreaState(state)',
             'BOTTOM_AREA_PROTOCOL.notifications.state',
+            'BOTTOM_AREA_PROTOCOL.defaults.depthMode',
             'function syncResetCommandFile()',
             'function processResetCommand(command)',
             'function acknowledgeResetCommandFile()',
-            'runtimeBridgePollTimer = setInterval(function ()',
+            'runtimeBridgePollTimer = setTimeout(poll, RUNTIME_BRIDGE_POLL_INTERVAL);',
+            'if (!state.commit) {\n        acknowledgeBottomAreaCommitFile();',
+            'if (!state.command) {\n        acknowledgeResetCommandFile();',
             'window.NotifyOthers(DARKONEJSP3_RESET_NOTIFICATION, payload)',
-            'gr.FillSolidRect(0, 0, ww, wh, bottomBackgroundColour());',
+            'function paintBottomAreaBackground(gr, state, colour)',
+            'bottomAreaExpectedStateDeadline',
+            'currentIssuedAt > bottomAreaExpectedIssuedAt',
+            'function retireLegacyBottomAreaStateFile()',
+            'if (!command) {\n        acknowledgeQuickSearchLayoutCommand();',
+            "if (parts[0] !== 'v3' || parts.length !== 5)",
+            'DarkOneColour.scaleBrightness(colour, 0.7)',
+            'DarkOneColour.scaleBrightness(colour, 1.2)',
+            'gr.FillSolidRect(0, 0, ww, 1, 0xff000000);',
+            'gr.FillSolidRect(0, 1, ww, 1, 0xff0f0f0f);',
+            'Math.min(2, Math.max(0, wh - 2))',
+            'function publishBottomAreaGeometry(height, displayTop)',
+            'publishBottomAreaGeometry(wh, displayTop);',
             'DOJSP3.colours.separator',
-            'if (state.dividerMode !== BOTTOM_AREA_PROTOCOL.modes.transparent)',
+            'if (state.sideDividersVisible &&',
+            'state.dividerMode !== BOTTOM_AREA_PROTOCOL.modes.transparent)',
             'var leftDivider = DOJSP3.idiv(ww, 3) - px;',
             'var rightDivider = ww - DOJSP3.idiv(ww, 3) - px;',
             'gr.FillSolidRect(leftDivider, 0, px * 2, wh, dividerColour);',
             'gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);',
             'function on_colours_changed()',
             'function readViewCommandFile()',
-            'if (state.raw) acknowledgeViewCommandFile();',
+            'if (!command) {\n        // A crash/restart can leave an expired or malformed command behind.',
         ]:
             if token not in body:
                 errors.append('Shared bottom-area appearance is missing: ' + token)
@@ -1328,6 +1395,13 @@ def run(ctx: ValidationContext) -> None:
             'bottomAreaStateBroadcast',
             'BOTTOM_AREA_PROTOCOL.notifications.query',
             'BOTTOM_AREA_PROTOCOL.notifications.set',
+            'var backgroundLinearGradient = window.GetProperty(',
+            'setInterval(function ()',
+            "parts[0] !== 'v1' && parts[0] !== 'v2'",
+            'if (state.raw) acknowledgeBottomAreaCommitFile();',
+            'if (state.raw) acknowledgeResetCommandFile();',
+            'if (state.raw) acknowledgeQuickSearchLayoutCommand();',
+            'if (state.raw) acknowledgeViewCommandFile();',
         ]:
             if obsolete in body:
                 errors.append('Bottom Controls retains obsolete JSplitter notification plumbing: ' + obsolete)
@@ -1341,9 +1415,33 @@ def run(ctx: ValidationContext) -> None:
             "commit: 'DarkOneJSP3.BottomArea.Commit'",
             'function serialiseBottomAreaCommit(commit)',
             'function parseBottomAreaCommit(data, now)',
+            "version: 'v5'",
+            "var bottomAreaCommitVersion = 'v5';",
+            'var bottomAreaCommitMaxLeadMs = 1000;',
+            'function normaliseBottomAreaRevision(value, fallback)',
+            'state = bottomAreaState(',
+            'state.depthMode,\n            id',
+            'if (parts.length !== 11 || parts[0] !== bottomAreaCommitVersion) return null;',
+            "var legacyV1 = parts.length === 5 && parts[0] === 'v1';",
+            'backgroundLinearGradient',
+            'sideDividersVisible',
+            'depthMode',
         ]:
             if token not in protocol_body:
                 errors.append('Shared colour-menu ID mapping has drifted: ' + token)
+        for obsolete in [
+            'if (arguments.length <',
+            "var legacyV1 = parts.length === 8 && parts[0] === 'v1';",
+            "var legacyV2 = parts.length === 9 && parts[0] === 'v2';",
+            "var legacyV3 = parts.length === 10 && parts[0] === 'v3';",
+            "var legacyV4 =",
+            "parts[0] === 'v4'",
+            "var legacyV2 = parts.length === 6 && parts[0] === 'v2';",
+            "var legacyV3 = parts.length === 7 && parts[0] === 'v3';",
+            "set: 'DarkOneJSP3.BottomArea.Set'",
+        ]:
+            if obsolete in protocol_body:
+                errors.append('Bottom-area protocol retains obsolete transient compatibility: ' + obsolete)
 
     display_waveform = project / 'jsplitter' / '06_display_waveform.js'
     if display_waveform.exists():
@@ -1362,12 +1460,21 @@ def run(ctx: ValidationContext) -> None:
             'if (mode === BACKGROUND_COLUMNS_UI) return DarkOneColour.columnsUi(3, DOJSP3.colours.bar);',
             "var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\\\darkonejsp3.bottom-area-state.txt';",
             'var sharedBottomAreaState = readBottomAreaStateFile();',
+            'BOTTOM_AREA_PROTOCOL.defaults.sideDividersVisible',
+            'BOTTOM_AREA_PROTOCOL.defaults.depthMode',
             'function applySharedBottomAreaState(data, repaint)',
             'function scheduleSharedBottomAreaCommit(data)',
             'BOTTOM_AREA_PROTOCOL.notifications.commit',
             'if (mode === BACKGROUND_AUTOMATIC) return sharedBottomAreaBackgroundColour();',
             'return DOJSP3.colours.separator;',
-            'gr.FillSolidRect(0, 0, ww, wh, backgroundColour());',
+            'function paintBackground(gr)',
+            'function backgroundLinearGradient(mode)',
+            'function sharedSoftDepth(mode)',
+            'state.depthMode !== sharedBottomAreaState.depthMode',
+            'bottomAreaGradientOffsetY >= 4',
+            'DarkOneColour.scaleBrightness(colour, 1.2)',
+            'function applyBottomAreaGeometry(data)',
+            'DarkOneColour.scaleBrightness(colour, 0.7)',
             'BOTTOM_AREA_PROTOCOL.notifications.state',
             'DarkOneColour.normaliseMode(',
             'DarkOneColour.appendRadioOptions(',
@@ -1406,6 +1513,7 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             '"DARKONEJSP3.MAIN.LAYOUT.MODE": 0',
             '"DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE": 0',
+            '"DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT": false',
         ]:
             if token not in reset_body:
                 errors.append('View-layout reset default is missing: ' + token)
@@ -1788,8 +1896,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Display context-menu cleanup is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.30-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.35-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.32-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.37-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():

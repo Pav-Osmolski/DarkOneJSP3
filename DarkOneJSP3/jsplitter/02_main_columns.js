@@ -7,6 +7,8 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 // spectrum column, and right playlist column.
 //
 // Version history (newest first):
+// v0.7.39 adds InfoStack | Playlist as a third persistent LAYOUT mode.
+//
 // v0.7.38 adds persistent standard/alternate main view modes, synchronised
 // Spectrum visibility and atomic ArtSpectrum geometry/divider transitions.
 //
@@ -30,6 +32,7 @@ var wh = 0;
 var MAIN_LAYOUT_MODE_PROPERTY = 'DARKONEJSP3.MAIN.LAYOUT.MODE';
 var MAIN_LAYOUT_STANDARD = 0;
 var MAIN_LAYOUT_ART_PLAYLIST = 1;
+var MAIN_LAYOUT_INFO_PLAYLIST = 2;
 
 var ART_SPECTRUM_PREPARE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.PrepareLayout';
 var ART_SPECTRUM_MODE_QUERY_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Mode.Query';
@@ -63,11 +66,15 @@ var MENU_POPUP = 0x00000010;
 
 function mainLayoutMode() {
     var mode = Math.round(Number(window.GetProperty(MAIN_LAYOUT_MODE_PROPERTY, MAIN_LAYOUT_STANDARD)));
-    return mode === MAIN_LAYOUT_ART_PLAYLIST ? mode : MAIN_LAYOUT_STANDARD;
+    return mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST
+        ? mode
+        : MAIN_LAYOUT_STANDARD;
 }
 
 function setMainLayoutMode(mode) {
-    mode = mode === MAIN_LAYOUT_ART_PLAYLIST ? mode : MAIN_LAYOUT_STANDARD;
+    mode = mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST
+        ? mode
+        : MAIN_LAYOUT_STANDARD;
     if (mode === mainLayoutMode()) return;
 
     window.SetProperty(MAIN_LAYOUT_MODE_PROPERTY, mode);
@@ -76,9 +83,12 @@ function setMainLayoutMode(mode) {
 }
 
 function toggleMainLayoutMode() {
-    setMainLayoutMode(mainLayoutMode() === MAIN_LAYOUT_STANDARD
+    var mode = mainLayoutMode();
+    setMainLayoutMode(mode === MAIN_LAYOUT_STANDARD
         ? MAIN_LAYOUT_ART_PLAYLIST
-        : MAIN_LAYOUT_STANDARD);
+        : mode === MAIN_LAYOUT_ART_PLAYLIST
+            ? MAIN_LAYOUT_INFO_PLAYLIST
+            : MAIN_LAYOUT_STANDARD);
 }
 
 function dividerMode() {
@@ -164,11 +174,11 @@ function mainLayoutGeometry(modeOverride) {
         Math.max(1, ww - 2)
     );
 
-    var layoutMode = modeOverride === MAIN_LAYOUT_ART_PLAYLIST
-        ? MAIN_LAYOUT_ART_PLAYLIST
-        : modeOverride === MAIN_LAYOUT_STANDARD
-            ? MAIN_LAYOUT_STANDARD
-            : mainLayoutMode();
+    var layoutMode = modeOverride === MAIN_LAYOUT_ART_PLAYLIST ||
+            modeOverride === MAIN_LAYOUT_INFO_PLAYLIST ||
+            modeOverride === MAIN_LAYOUT_STANDARD
+        ? modeOverride
+        : mainLayoutMode();
 
     if (layoutMode === MAIN_LAYOUT_ART_PLAYLIST) {
         var artWidth = alternateArtWidth(leftWidth, dividerWidth);
@@ -186,6 +196,24 @@ function mainLayoutGeometry(modeOverride) {
             playlistX: playlistLeft,
             playlistWidth: Math.max(1, ww - playlistLeft),
             dividerPositions: [artWidth]
+        };
+    }
+
+    if (layoutMode === MAIN_LAYOUT_INFO_PLAYLIST) {
+        var infoPlaylistLeft = DOJSP3.clamp(
+            leftWidth + dividerWidth,
+            leftWidth + 1,
+            Math.max(leftWidth + 1, ww - 1)
+        );
+        return {
+            mode: MAIN_LAYOUT_INFO_PLAYLIST,
+            px: px,
+            dividerWidth: dividerWidth,
+            infoX: 0,
+            infoWidth: leftWidth,
+            playlistX: infoPlaylistLeft,
+            playlistWidth: Math.max(1, ww - infoPlaylistLeft),
+            dividerPositions: [leftWidth]
         };
     }
 
@@ -228,20 +256,26 @@ function layoutMainColumns(modeOverride, transition) {
     var art = DOJSP3.panel(DOJSP3.titles.artSpectrum);
     var playlist = DOJSP3.panel(DOJSP3.titles.playlist);
     var geometry = mainLayoutGeometry(modeOverride);
-    var hideArtDuringTransition = Boolean(transition && art);
+    var layoutUsesArt = geometry.mode !== MAIN_LAYOUT_INFO_PLAYLIST;
+    var hideArtDuringTransition = Boolean(transition && art && layoutUsesArt);
 
     // ArtSpectrum contains native child windows. Hide only this outer host while
     // changing layouts, pre-layout its grandchildren at the final target size,
     // move every sibling with parent repainting suppressed, then expose the host
     // again. All operations complete in the same script callback, so Windows does
     // not get an opportunity to paint an old child/divider geometry in between.
-    if (hideArtDuringTransition) DOJSP3.show(art, false);
+    if (transition && art) DOJSP3.show(art, false);
     if (hideArtDuringTransition) prepareArtSpectrum(geometry.artWidth, wh);
 
     if (geometry.mode === MAIN_LAYOUT_ART_PLAYLIST) {
         DOJSP3.move(art, geometry.artX, 0, geometry.artWidth, wh);
         DOJSP3.move(playlist, geometry.playlistX, 0, geometry.playlistWidth, wh);
         DOJSP3.show(info, false);
+        DOJSP3.show(playlist, true);
+    } else if (geometry.mode === MAIN_LAYOUT_INFO_PLAYLIST) {
+        DOJSP3.move(info, geometry.infoX, 0, geometry.infoWidth, wh);
+        DOJSP3.move(playlist, geometry.playlistX, 0, geometry.playlistWidth, wh);
+        DOJSP3.show(info, true);
         DOJSP3.show(playlist, true);
     } else {
         DOJSP3.move(info, geometry.infoX, 0, geometry.infoWidth, wh);
@@ -251,7 +285,7 @@ function layoutMainColumns(modeOverride, transition) {
         DOJSP3.show(playlist, true);
     }
 
-    DOJSP3.show(art, true);
+    DOJSP3.show(art, layoutUsesArt);
 
     if (!dividerStateBroadcast) broadcastDividerState();
     if (!startupReadiness.isReady() && info && art && playlist) {

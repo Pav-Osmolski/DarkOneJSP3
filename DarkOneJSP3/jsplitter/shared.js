@@ -8,6 +8,34 @@ include(fb.ProfilePath + 'DarkOneJSP3\\shared\\colour_utils.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\jsplitter_protocols.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\view_bridge.js');
 
+var darkOneGradientRunCacheKey = '';
+var darkOneGradientRunCache = [];
+
+function darkOneVerticalGradientRuns(height, topColour, bottomColour) {
+    height = Math.max(0, Math.round(height));
+    var key = String(height) + '|' + String(topColour >>> 0) + '|' +
+        String(bottomColour >>> 0);
+    if (key === darkOneGradientRunCacheKey) return darkOneGradientRunCache;
+
+    var runs = [];
+    if (height > 0) {
+        var denominator = Math.max(1, height - 1);
+        var runTop = 0;
+        var runColour = DarkOneColour.blend(topColour, bottomColour, 0);
+        for (var row = 1; row < height; row++) {
+            var colour = DarkOneColour.blend(topColour, bottomColour, row / denominator);
+            if ((colour >>> 0) === (runColour >>> 0)) continue;
+            runs.push({ top: runTop, height: row - runTop, colour: runColour });
+            runTop = row;
+            runColour = colour;
+        }
+        runs.push({ top: runTop, height: height - runTop, colour: runColour });
+    }
+    darkOneGradientRunCacheKey = key;
+    darkOneGradientRunCache = runs;
+    return runs;
+}
+
 var DOJSP3 = Object.freeze({
     colours: Object.freeze({
         bar: 0xff202020,
@@ -56,6 +84,20 @@ var DOJSP3 = Object.freeze({
 
     clamp: function (value, minimum, maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    },
+
+    fillVerticalGradient: function (gr, x, y, width, height, topColour, bottomColour) {
+        width = Math.max(0, Math.round(width));
+        height = Math.max(0, Math.round(height));
+        if (!gr || width <= 0 || height <= 0) return;
+
+        // Cache the coalesced row runs. Repaints at unchanged geometry and
+        // colours then perform draw calls only, without repeating colour math.
+        var runs = darkOneVerticalGradientRuns(height, topColour, bottomColour);
+        for (var i = 0; i < runs.length; i++) {
+            var run = runs[i];
+            gr.FillSolidRect(x, y + run.top, width, run.height, run.colour);
+        }
     },
 
     panel: function (caption) {
@@ -131,4 +173,3 @@ function darkOneJsp3HandleReset(name, data) {
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;
 }
-

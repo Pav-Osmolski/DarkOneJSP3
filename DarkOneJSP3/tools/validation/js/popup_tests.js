@@ -36,6 +36,12 @@ suite("native colour helper", function () {
     assert(colour.toHex(0xff123456) === '#123456', 'Hex conversion failed');
     assert((colour.parseOpaque('18, 52, 86') >>> 0) === 0xff123456, 'RGB parsing failed');
     assert((colour.parseOpaque('300, 0, 86') >>> 0) === 0xffff0056, 'RGB channel clamping failed');
+    assert((colour.scaleBrightness(0xff204080, 0.7) >>> 0) === 0xff162d5a,
+        'Brightness reduction did not scale RGB channels by 30%');
+    assert((colour.scaleBrightness(0xfff0f8ff, 1.2) >>> 0) === 0xffffffff,
+        'Brightness increase did not clamp RGB channels');
+    assert((colour.blend(0xff000000, 0xffffffff, 0.5) >>> 0) === 0xff808080,
+        'Colour interpolation failed');
     assert((colour.normalisePickerChoice(-15654349) >>> 0) === 0xff112233,
         'Signed native picker result was rejected');
     assert((colour.normalisePickerChoice(0xff112233) >>> 0) === 0xff112233,
@@ -497,6 +503,7 @@ suite("Waveform background modes", function () {
     const initialBottomState = 'v1|1|4278190080|4|4278190080';
     let repaintCount = 0;
     const fills = [];
+    const gradientCalls = [];
     const waveformTimers = [];
     function waveformSetTimeout(fn, delay) { waveformTimers.push({fn, delay, active:true}); return waveformTimers.length; }
     function waveformClearTimeout(id) { if (id > 0 && id <= waveformTimers.length) waveformTimers[id - 1].active = false; }
@@ -513,6 +520,10 @@ suite("Waveform background modes", function () {
         colours: { bar: 0xff202020, separator: 0xff181818 },
         clamp(value, minimum, maximum) {
             return Math.max(minimum, Math.min(maximum, value));
+        },
+        fillVerticalGradient(gr, x, y, width, height, topColour, bottomColour) {
+            gradientCalls.push([x, y, width, height, topColour >>> 0, bottomColour >>> 0]);
+            gr.FillSolidRect(x, y, width, height, topColour);
         }
     };
     const utilsMock = {
@@ -593,6 +604,46 @@ suite("Waveform background modes", function () {
     if (fills.length !== 1 || fills[0][4] !== 0xff181818)
         throw new Error('Automatic inherited waveform host does not paint the uniform parent tone');
 
+    controller.on_notify_data(
+        'DarkOneJSP3.BottomArea.Geometry.State',
+        'v1|600|30'
+    );
+    controller.on_notify_data(
+        'DarkOneJSP3.BottomArea.State',
+        'v5|gradient-test|2|4278190080|1|4|4278190080|1|0'
+    );
+    fills.length = 0;
+    gradientCalls.length = 0;
+    controller.on_paint({ FillSolidRect(x,y,w,h,colour) { fills.push([x,y,w,h,colour>>>0]); } });
+    if (gradientCalls.length !== 1 || gradientCalls[0][4] !== 0xff1f1f1f ||
+            gradientCalls[0][5] !== 0xff1b1b1b || fills.length !== 1)
+        throw new Error('Automatic waveform host restarted the gradient or added a nested border');
+
+    controller.on_notify_data(
+        'DarkOneJSP3.BottomArea.State',
+        'v5|depth-test|2|4278190080|0|4|4278190080|1|1'
+    );
+    const softDepthSegments = [
+        [0, [[0,1,0xff000000],[1,1,0xff0f0f0f],[2,2,0xff262626]]],
+        [1, [[0,1,0xff0f0f0f],[1,2,0xff262626]]],
+        [2, [[0,2,0xff262626]]],
+        [3, [[0,1,0xff262626]]],
+        [4, []]
+    ];
+    softDepthSegments.forEach(function(entry) {
+        controller.on_notify_data(
+            'DarkOneJSP3.BottomArea.Geometry.State',
+            'v1|600|' + entry[0]
+        );
+        fills.length = 0;
+        controller.on_paint({ FillSolidRect(x,y,w,h,colour) {
+            fills.push([x,y,w,h,colour>>>0]);
+        }});
+        const depthFills = fills.slice(1).map(item => [item[1], item[3], item[4]]);
+        if (JSON.stringify(depthFills) !== JSON.stringify(entry[1]))
+            throw new Error('Waveform Soft-depth segment was incorrect at parent offset ' + entry[0]);
+    });
+
     properties.set('DarkOneJSP3.DisplayWaveform.BackgroundMode', 0);
     fills.length = 0;
     if ((controller.backgroundColour() >>> 0) !== 0xff181818)
@@ -608,7 +659,9 @@ suite("Waveform background modes", function () {
 
     const waveformCommit = controller.Protocol.bottomArea.commit(
         'waveform-sync', Date.now(), Date.now() + 50,
-        controller.Protocol.bottomArea.state(1, 0xff000000, 4, 0xff000000)
+        controller.Protocol.bottomArea.state(
+            1, 0xff000000, false, 4, 0xff000000, true, 0
+        )
     );
     const beforeCommitRepaint = repaintCount;
     controller.on_notify_data(
@@ -677,7 +730,7 @@ suite("upper-divider state", function () {
     };
     const factory = new Function(
         'window', 'fb', 'include', 'utils', 'DOJSP3', 'darkOneJsp3HandleReset', 'DarkOneViewBridge',
-        colourSource + '\n' + protocolSource + '\n' + source + '\nreturn { on_paint, on_notify_data, dividerMode, dividerColour, dividerState, parseDividerState: DarkOneProtocol.divider.parseState, isDividerPoint, dividerMetrics, setMainLayoutMode, setSize: function(w, h) { ww = w; wh = h; } };'
+        colourSource + '\n' + protocolSource + '\n' + source + '\nreturn { on_paint, on_notify_data, dividerMode, dividerColour, dividerState, parseDividerState: DarkOneProtocol.divider.parseState, isDividerPoint, dividerMetrics, mainLayoutMode, setMainLayoutMode, toggleMainLayoutMode, setSize: function(w, h) { ww = w; wh = h; } };'
     );
     const controller = factory(
         windowMock,
@@ -752,6 +805,32 @@ suite("upper-divider state", function () {
     controller.on_paint(gr);
     if (fills.length !== 2 || fills[1][0] !== 900)
         throw new Error('Alternate layout did not paint exactly its right divider');
+
+    // The third layout keeps InfoStack in the original left column, gives the
+    // remaining width to Playlist and owns exactly one divider between them.
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 2);
+    fills.length = 0;
+    controller.on_paint(gr);
+    if (fills.length !== 2 || fills[1][0] !== 637)
+        throw new Error('InfoStack | Playlist did not paint exactly its shared divider');
+
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 1);
+    operations.length = 0;
+    controller.setMainLayoutMode(2);
+    if (panels.Info.visible !== true || panels.Art.visible !== false ||
+            panels.Playlist.visible !== true || panels.Info.Width !== 637 ||
+            panels.Playlist.Width !== 1277)
+        throw new Error('InfoStack | Playlist panel visibility or geometry is incorrect');
+    if (operations.some(item => item[0] === 'prepare'))
+        throw new Error('InfoStack | Playlist unnecessarily prepared hidden ArtSpectrum children');
+
+    controller.setMainLayoutMode(0);
+    controller.toggleMainLayoutMode();
+    if (controller.mainLayoutMode() !== 1) throw new Error('LAYOUT cycle did not reach ArtSpectrum | Playlist');
+    controller.toggleMainLayoutMode();
+    if (controller.mainLayoutMode() !== 2) throw new Error('LAYOUT cycle did not reach InfoStack | Playlist');
+    controller.toggleMainLayoutMode();
+    if (controller.mainLayoutMode() !== 0) throw new Error('LAYOUT cycle did not return to the three-column layout');
 
     // Layout transitions must hide ArtSpectrum, prepare final child geometry,
     // move the host/siblings, then reveal ArtSpectrum in the same callback.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import re
 
 from .context import ValidationContext
 
@@ -135,6 +136,20 @@ def _check_inventory(ctx: ValidationContext, manifest: dict[str, Any]) -> None:
             continue
         if not target.is_file():
             errors.append('Layout manifest panel source is missing: ' + rel(target))
+            continue
+        declared_version = item.get('version')
+        if declared_version is not None:
+            match = re.search(
+                r'^//\s*@version\s+"([^"]+)"',
+                ctx.text(target),
+                re.MULTILINE,
+            )
+            if not isinstance(declared_version, str) or not declared_version:
+                errors.append('Layout manifest panel version is invalid: ' + title)
+            elif not match:
+                errors.append('Layout manifest panel source lacks @version: ' + title)
+            elif declared_version != match.group(1):
+                errors.append('Layout manifest panel version differs from source: ' + title)
     if sorted(numbers) != list(range(1, 15)):
         errors.append('Layout manifest panel numbers must be unique 1-14')
     if len(set(titles)) != len(titles):

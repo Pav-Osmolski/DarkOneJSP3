@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.17
+DarkOneJSP3 v1.0.18
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -95,9 +95,9 @@ Current highlights
 - The scripted JScript Panel 3 Quick Search provides responsive sizing,
   history/favourites, multiple search/result modes, protected reusable Standard
   results playlists and shared Normal/Error background palette options.
-- Optional LAYOUT and SPECTRUM buttons can switch between the standard and
-  ArtSpectrum/Playlist views and toggle the Spectrum panel without rebuilding
-  the Columns UI hierarchy.
+- Optional LAYOUT and SPECTRUM buttons can cycle between the three-column,
+  ArtSpectrum/Playlist and InfoStack/Playlist views and toggle the Spectrum
+  panel without rebuilding the Columns UI hierarchy.
 - An optional TOOLS button is the sole DarkOne Tools launcher. It owns the
   popup locally in the invoking control panel and exposes the shared Button
   style, depth and roundness controls for both left and right panels.
@@ -121,11 +121,16 @@ Current highlights
 - One synchronised bottom-area background setting controls the left controls,
   right controls, centre display and Bottom Controls backing; Transparent /
   inherit parent resolves uniformly to DarkOne dark grey (#181818), while a
-  second shared setting controls both lower side-divider strips.
+  second shared setting controls both lower side-divider strips and a default-on
+  toggle can hide or restore them without discarding their selected colour. An
+  independent Flat/Soft depth setting controls an in-place four-row top edge:
+  black, #0F0F0F and two rows derived 20% brighter from the chosen background.
+  An optional vertical gradient darkens that background by 30%. Nested panel
+  surfaces use matching gradient coordinates, so the colour remains continuous.
 - Default, Columns UI selected-item or custom display accent shared by Plain
   Font and Dot Matrix modes.
 - Root-owned startup transition defaults to Off, with optional Black reveal
-  and Staged reveal modes controlled from the InfoStack tab-strip menu.
+  and Staged reveal modes controlled from TOOLS > Startup.
 - Consolidated Album Notes with configurable providers, caching, diagnostics,
   same-album provider reactivation and MusicBrainz Releases and Links views.
 - Demand-driven playlist rendering, cached title formatting, Direct2D bitmap

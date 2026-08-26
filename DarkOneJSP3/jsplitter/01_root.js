@@ -10,6 +10,9 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // invisible overlay intercepting mouse input.
 //
 // Version history (newest first):
+// v0.7.39 hardens queue reconstruction with rollback and authoritative failure
+// publication, retires malformed commands and lowers idle command polling.
+//
 // v0.7.38 publishes root-owned startup state for the TOOLS popup and accepts
 // its selected actions through the established view-command bridge.
 //
@@ -76,7 +79,8 @@ var queueBridgeFailureLogged = false;
 var queueBridgeCommandTimer = 0;
 var queueBridgeLastCommandId = '';
 var queueBridgeMutationInProgress = false;
-var QUEUE_BRIDGE_COMMAND_POLL_MS = 25;
+var queueBridgeCommandRemoveFailureLogged = false;
+var QUEUE_BRIDGE_COMMAND_POLL_MS = 50;
 var QUEUE_BRIDGE_STATE_RETRY_MS = 50;
 var QUEUE_BRIDGE_STATE_RETRY_LIMIT = 3;
 var queueBridgeSourceIdTfo = fb.TitleFormat('%path%|%subsong%');
@@ -244,12 +248,10 @@ function queueBridgeSnapshotItem(item) {
 }
 
 function queueBridgeReorder(contents, selectedIndexes, action) {
-    var rows = [];
+    var rows = queueBridgeSnapshotRows(contents);
     var selected = Object.create(null);
     for (var i = 0; i < selectedIndexes.length; i++) selected[selectedIndexes[i]] = true;
-    for (var n = 0; n < contents.length; n++) {
-        rows.push({ item: queueBridgeSnapshotItem(contents[n]), selected: selected[n] === true });
-    }
+    for (var n = 0; n < rows.length; n++) rows[n].selected = selected[n] === true;
 
     var temp;
     if (action === 'moveUp') {
@@ -273,17 +275,17 @@ function queueBridgeReorder(contents, selectedIndexes, action) {
     return rows;
 }
 
+function queueBridgeSnapshotRows(contents) {
+    var rows = [];
+    for (var i = 0; i < contents.length; i++) {
+        rows.push({ item: queueBridgeSnapshotItem(contents[i]), selected: false });
+    }
+    return rows;
+}
+
 function queueBridgePlaylistItemCount(playlistIndex) {
-    // JSplitter inherits the Spider Monkey Panel playlist API, where the
-    // canonical count method is PlaylistItemCount(). Keep the older JSP-style
-    // alias only as a defensive fallback for compatible hosts.
-    if (typeof plman.PlaylistItemCount === 'function') {
-        return plman.PlaylistItemCount(playlistIndex);
-    }
-    if (typeof plman.GetPlaylistItemCount === 'function') {
-        return plman.GetPlaylistItemCount(playlistIndex);
-    }
-    throw new Error('Playlist item count API is unavailable');
+    // JSplitter 4.1.12 inherits the Spider Monkey Panel playlist API.
+    return plman.PlaylistItemCount(playlistIndex);
 }
 
 function queueBridgeCanRestorePlaylistSource(item) {
@@ -339,6 +341,13 @@ function executeQueueBridgeCommand(command) {
         return { accepted: false, message: 'No valid playback queue entries were selected.' };
     }
 
+    var supported = QUEUE_BRIDGE_PROTOCOL.capabilities.indexOf(command.action) >= 0;
+    if (!supported) {
+        return { accepted: false, message: 'Unsupported playback queue command.' };
+    }
+
+    var outcome = { accepted: false, message: '' };
+    var originalRows = null;
     queueBridgeMutationInProgress = true;
     try {
         switch (command.action) {
@@ -355,48 +364,51 @@ function executeQueueBridgeCommand(command) {
         case 'moveDown':
         case 'moveTop':
         case 'moveBottom':
+            originalRows = queueBridgeSnapshotRows(contents);
             queueBridgeRestoreQueue(queueBridgeReorder(contents, indexes, command.action));
             break;
-        default:
-            return { accepted: false, message: 'Unsupported playback queue command.' };
         }
+        outcome.accepted = true;
     } catch (e) {
-        return { accepted: false, message: 'Playback queue command failed: ' + e.message };
+        outcome.message = 'Playback queue command failed: ' + e.message;
+        if (originalRows) {
+            try {
+                queueBridgeRestoreQueue(originalRows);
+                outcome.message += ' The original queue was restored.';
+            } catch (rollbackError) {
+                outcome.message += ' Queue rollback also failed: ' + rollbackError.message;
+            }
+        }
     } finally {
         queueBridgeMutationInProgress = false;
+        // Publish the authoritative queue after every attempted mutation. This
+        // also repairs the viewer after a partial host failure or failed rollback.
+        writeQueueBridgeState();
     }
-
-    writeQueueBridgeState();
-    return { accepted: true, message: '' };
+    return outcome;
 }
 
 function acknowledgeQueueBridgeCommandFile() {
     try {
         var removed = utils.RemovePath(QUEUE_BRIDGE_COMMAND_FILE);
         if (removed === false) throw new Error('utils.RemovePath returned false');
+        queueBridgeCommandRemoveFailureLogged = false;
         return true;
     } catch (e) {
-        // Keep compatibility with hosts that cannot remove the bridge file.
-        // A blank acknowledgement still prevents a processed command payload
-        // from being replayed or reparsed indefinitely.
-        try {
-            var cleared = utils.WriteTextFile(QUEUE_BRIDGE_COMMAND_FILE, '');
-            if (cleared === false) throw new Error('utils.WriteTextFile returned false');
-            return true;
-        } catch (clearError) {
-            console.log('[DarkOneJSP3] Queue command acknowledgement failed: ' + clearError.message);
-            return false;
+        if (!queueBridgeCommandRemoveFailureLogged) {
+            console.log('[DarkOneJSP3] Queue command removal failed: ' + e.message);
+            queueBridgeCommandRemoveFailureLogged = true;
         }
     }
+    return false;
 }
 
 function pollQueueBridgeCommand() {
     queueBridgeCommandTimer = 0;
     try {
         if (utils.IsFile(QUEUE_BRIDGE_COMMAND_FILE)) {
-            var command = QUEUE_BRIDGE_PROTOCOL.parseCommand(
-                utils.ReadTextFile(QUEUE_BRIDGE_COMMAND_FILE, 65001)
-            );
+            var raw = String(utils.ReadTextFile(QUEUE_BRIDGE_COMMAND_FILE, 65001) || '');
+            var command = QUEUE_BRIDGE_PROTOCOL.parseCommand(raw);
             if (command) {
                 if (command.id !== queueBridgeLastCommandId) {
                     // Mark first: even a failing mutation must never be replayed.
@@ -405,9 +417,11 @@ function pollQueueBridgeCommand() {
                     writeQueueBridgeResult(command, outcome.accepted, outcome.message);
                 }
                 // Commands are short-lived. Remove the processed/stale payload
-                // so the 25 ms poll normally performs only a cheap existence check.
-                acknowledgeQueueBridgeCommandFile();
+                // so the 50 ms poll normally performs only a cheap existence check.
             }
+            // Retire processed, stale, empty and malformed command files once.
+            // A corrupt payload must not be parsed on every idle poll.
+            acknowledgeQueueBridgeCommandFile();
         }
     } catch (e) {
         console.log('[DarkOneJSP3] Queue command bridge failed: ' + e.message);

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.17 Validation Report
+DarkOneJSP3 v1.0.18 Validation Report
 =====================================
 
 Scope
@@ -55,6 +55,19 @@ Checks
   exactly-once disposal of every popup menu. Startup state and selected actions
   are tested across the dedicated TOOLS-to-root bridge. The production menu
   uses one bottom-area dispatch path protected by `try/finally` cleanup.
+- The Background linear gradient toggle is exercised through the real TOOLS
+  hierarchy. Tests verify the supported public v1-to-v5 state migration,
+  rejection of unpublished v2-v4 state, revisioned persistence, strict v5
+  transient-commit round-tripping and rejection of obsolete commits,
+  coordinated cross-host application, appearance reset, exact 30% brightness
+  reduction and nested-coordinate continuity without gradient restarts. The
+  preceding
+  Bottom area depth submenu is checked for Flat/Soft radio state, independence
+  from the gradient, an exact 20% brightness increase with channel clamping and
+  the exact in-place four-row `#000000` / `#0F0F0F` / two-row highlight
+  contract. The adjacent default-on Bottom side dividers toggle is checked for
+  separator placement, persistence, cross-host hiding/restoration and retained
+  colour settings.
 - InfoStack navigation validation exercises the direct six-page top-level menu,
   Tab settings/Appearance grouping, persistent Show tab strip state,
   full-height active-page layout while hidden, appearance-reset restoration and
@@ -103,7 +116,11 @@ Checks
   Move down, Move to top and Move to bottom are all exercised with mixed
   playlist-backed/detached queues and multi-selection, preserving Queue Viewer
   title formatting, source associations and JS Playlist queue-position fields.
-- Processed queue command files are acknowledged and removed so the 25 ms root
+- Queue-reconstruction failure tests inject errors during both the initial
+  rebuild and rollback. A successful rollback restores original order and source
+  coordinates; a failed rollback reports the secondary failure and publishes
+  the actual partial queue rather than leaving consumers on stale state.
+- Processed, malformed, empty and stale queue command files are removed so the 50 ms root
   poll does not repeatedly reread and parse an already-consumed payload. Failed
   queue-state writes use bounded publication retries without falsely advancing
   the published generation, and the Queue Viewer waits for an acknowledged
@@ -119,15 +136,20 @@ Checks
 - InfoStack optional-button menu-state publication is change-driven: unchanged
   resizes, cancelled menus and action paths that already published their new
   state do not rewrite the runtime snapshot.
+- Main-column validation exercises all three persistent LAYOUT modes, including
+  the InfoStack | Playlist geometry, single divider, ArtSpectrum visibility and
+  the complete three-step cycle back to the standard layout.
 - Album Art blur work is deferred until a blur-using layout paints, generated
   once per source and cancelled/disposed safely on metadata changes or unload.
 - Bottom-area state is shared through js_data\darkonejsp3.bottom-area-state.txt
   so the three JScript Panel instances and the Bottom Controls JSplitter host do
   not depend on cross-component NotifyOthers delivery. Legacy state stored under
-  DarkOneJSP3\shared is migrated automatically.
+  DarkOneJSP3\shared is migrated automatically, rewritten as revisioned v5 state
+  and retired after successful canonical persistence.
 - JScript Panel state persistence uses the canonical two-argument
   `utils.WriteTextFile(path, content)` form. False returns and exceptions are
-  logged with the target path, and failed bottom-area writes are retried once.
+  logged with the target path, and failed bottom-area writes receive up to eight
+  bounded retries with a state notification after successful recovery.
 - Each JScript panel reads and applies the state once during initialisation,
   before its first paint. Live updates stage the same pending state and apply it
   at one shared timestamp across participating component hosts.
@@ -136,14 +158,19 @@ Checks
 - Shared bottom-area appearance refreshes call only methods exported by the real
   DisplaySystem implementation; validation rejects mocks or compatibility helpers
   that invent removed Display cache APIs.
-- Bottom Controls remains the sole cross-host polling owner. Active colour
-  commits use a lightweight 25 ms existence check and a shared 50 ms apply
-  target; canonical state remains a 100 ms startup/recovery path, while reset
-  commands are checked at 500 ms and acknowledged after processing.
+- Bottom Controls remains the sole cross-host polling owner. One ordered 25 ms
+  timeout scheduler consumes active colour commits before slower work; Quick
+  Search and View commands are checked at 100 ms, while canonical state and
+  reset commands use 500 ms fallback cadence. The previous overlapping interval
+  and duplicate commit check are rejected.
 - Coordinated-commit tests verify that JSP3 panels, Bottom Controls, inherited
   Quick Search backgrounds and Automatic Display/Waveform backing do not expose
   the new colour before the shared apply time; rapid commits supersede older
   pending commits without flashing intermediate states.
+- Persistence-failure tests preserve the applied revision while canonical state
+  is stale, repair it after a bounded deadline and yield only to a revision with
+  a newer issue timestamp. This covers both retry recovery and command-write
+  failure without timing-dependent rollback.
 - Display/Waveform reads the shared bottom-area state once, defaults to
   Automatic Host background and receives coordinated commit/state notifications
   relayed by Bottom Controls inside the JSplitter domain. Automatic custom and
@@ -160,6 +187,8 @@ Checks
 - Cross-host factory reset is exercised through
   js_data\darkonejsp3.reset-command.txt; Bottom Controls must consume the
   short-lived command and rebroadcast it to the other JSplitter controllers.
+  JScript peers apply defaults locally; tests require exactly one coordinated
+  bottom-area commit from the initiator.
 - Bottom-area painting covers the complete Bottom Controls host, including the
   lower Quick Search region and the narrow layout gaps beside both divider
   strips; Transparent / inherit parent resolves every bottom surface to #181818,
@@ -200,6 +229,8 @@ Checks
 - Every scripted JSplitter and panel source declared by the layout manifest
   resolves to a distributed file; native-component entries are identified
   explicitly.
+- Every versioned panel entry in the layout manifest matches the `@version`
+  declared by its distributed source file.
 - Temporary, backup, empty and case-colliding package files are rejected.
 - Build metadata and the layout manifest identify the same release version.
 - Every fixed module version recorded by build metadata matches its maintained
@@ -216,7 +247,7 @@ Checks
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 31 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 32 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -243,6 +274,10 @@ Checks
 - Active playlist panels no longer contain permanent idle repaint intervals;
   Playlist Manager row type/lock flags and JS Playlist column geometry are
   cached.
+- Bottom Controls paint tests require one seven-field property snapshot per
+  frame instead of repeated state reads. JScript gradient-brush serialisation
+  and JSplitter row-colour blending are each executed once for unchanged colour
+  and geometry, with explicit cache invalidation coverage.
 - Album covers, immutable control sprites and display sprite output use reusable
   Direct2D bitmaps with explicit disposal checks.
 - Centre Display style tests verify that Plain Font and Dot Matrix selections are
@@ -296,18 +331,25 @@ Checks
   background colour.
 - Upper-divider colour controls retain established geometry and remain
   independent from the lower control-divider settings.
-- LAYOUT/SPECTRUM view-mode tests cover standard and alternate upper geometry,
-  persistent Spectrum visibility, square-leading art-only allocation, standard
-  two-divider and alternate right-divider-only painting, and synchronous
+- LAYOUT/SPECTRUM view-mode tests cover the standard three-column,
+  ArtSpectrum/Playlist and InfoStack/Playlist upper geometries, persistent
+  Spectrum visibility, square-leading art-only allocation, the correct
+  two-divider or one-divider painting for each mode, and synchronous
   hide/prepare/move/show ordering that prevents intermediate native-child frames.
 - View-command bridge tests reject and acknowledge stale/malformed command files
   so the 100 ms runtime bridge cannot reread one invalid payload indefinitely.
+- Reset, Quick Search and bottom-area command tests apply the same one-observation
+  retirement rule, and Quick Search accepts only its current v3 transient shape.
 - Album Art 0.1.2 tests require both Panel sizing modes and the full-height square
   crop geometry while preserving the existing image-aspect controls.
 - Bottom-area runtime tests isolate the JScript Panel and JSplitter notification
   domains, verify file-backed synchronisation for all three child panels and the
   host, cover every palette mode, transparent painting, full-host geometry,
-  divider painting, Columns UI live updates and protocol serialisation.
+  divider painting, optional gradient endpoints and independent depth highlights,
+  Columns UI live updates and legacy/current protocol serialisation.
+  Extreme-height tests cover every Display/Waveform parent offset from zero
+  through four so the opaque centre child preserves exactly its covered portion
+  of the Soft-depth edge without changing geometry.
 - Album Notes provider settings, caching controls and embedded MusicBrainz
   settings are included in coordinated reset coverage.
 - Managed AllMusic activation completes or fails closed without leaving a

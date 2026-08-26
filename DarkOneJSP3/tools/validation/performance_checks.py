@@ -139,15 +139,18 @@ def run(ctx: ValidationContext) -> None:
                       'initialiseQueueCommandBridge();', 'plman.RemoveItemFromPlaybackQueue(',
                       'plman.RemoveItemsFromPlaybackQueue(', 'plman.FlushPlaybackQueue()',
                       'function queueBridgeSnapshotItem(item)', 'RestorePlaylistSource:',
-                      'item: queueBridgeSnapshotItem(contents[n])',
+                      'function queueBridgeSnapshotRows(contents)',
                       'function queueBridgePlaylistItemCount(playlistIndex)',
-                      "typeof plman.PlaylistItemCount === 'function'",
+                      'return plman.PlaylistItemCount(playlistIndex);',
                       'plman.AddPlaylistItemToPlaybackQueue(', 'plman.AddItemToPlaybackQueue(',
                       'QUEUE_BRIDGE_COMMAND_FILE', 'QUEUE_BRIDGE_RESULT_FILE',
                       'utils.WriteTextFile(', 'QUEUE_BRIDGE_STATE_FILE',
                       'function acknowledgeQueueBridgeCommandFile()',
                       'utils.RemovePath(QUEUE_BRIDGE_COMMAND_FILE)',
-                      'QUEUE_BRIDGE_STATE_RETRY_LIMIT', 'queueBridgePublishedGeneration']:
+                      'QUEUE_BRIDGE_STATE_RETRY_LIMIT', 'queueBridgePublishedGeneration',
+                      'var QUEUE_BRIDGE_COMMAND_POLL_MS = 50;',
+                      'The original queue was restored.',
+                      'writeQueueBridgeState();']:
             if token not in body:
                 errors.append('JSplitter root direct queue bridge is incomplete: ' + token)
         guard_start = body.find('function queueBridgeCanRestorePlaylistSource(item)')
@@ -155,6 +158,28 @@ def run(ctx: ValidationContext) -> None:
         guard_body = body[guard_start:guard_end] if guard_start >= 0 and guard_end > guard_start else ''
         if 'plman.GetPlaylistItemCount(' in guard_body:
             errors.append('JSplitter queue restore guard uses the JSP3 GetPlaylistItemCount API instead of the JSplitter/SMP PlaylistItemCount API')
+
+    shared_jsplitter = project / 'jsplitter' / 'shared.js'
+    if shared_jsplitter.exists():
+        body = text(shared_jsplitter)
+        for token in [
+            'var darkOneGradientRunCacheKey',
+            'function darkOneVerticalGradientRuns(height, topColour, bottomColour)',
+            'if (key === darkOneGradientRunCacheKey) return darkOneGradientRunCache;',
+        ]:
+            if token not in body:
+                errors.append('JSplitter gradient hot-path cache is missing: ' + token)
+
+    global_config = project / 'jscript' / 'js' / 'Config_Global_Script.js'
+    if global_config.exists():
+        body = text(global_config)
+        for token in [
+            'var darkOneBottomAreaGradientBrushKey',
+            'function darkOneBottomAreaBrush()',
+            'if (key === darkOneBottomAreaGradientBrushKey && darkOneBottomAreaGradientBrush)',
+        ]:
+            if token not in body:
+                errors.append('JScript bottom-gradient brush cache is missing: ' + token)
 
     quick_search_wrapper = project / 'jscript' / 'DarkOneJSP3 - Quick Search.txt'
     quick_search_source = project / 'jscript' / 'js' / 'Quick_Search.js'

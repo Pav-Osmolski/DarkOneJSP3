@@ -1,5 +1,5 @@
 {
-  "version": "1.0.17",
+  "version": "1.0.18",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.12",
@@ -98,7 +98,7 @@
       "title": "DOJSP3.ControlsLeft",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Left.txt",
-      "version": "3.0.30-jsp3-3.8.5"
+      "version": "3.0.32-jsp3-3.8.5"
     },
     {
       "number": 11,
@@ -112,7 +112,7 @@
       "title": "DOJSP3.Display",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt",
-      "version": "3.0.35-jsp3-3.8.5"
+      "version": "3.0.36-jsp3-3.8.5"
     },
     {
       "number": 13,
@@ -125,7 +125,7 @@
       "title": "DOJSP3.ControlsRight",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt",
-      "version": "3.0.34-jsp3-3.8.5"
+      "version": "3.0.37-jsp3-3.8.5"
     }
   ],
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

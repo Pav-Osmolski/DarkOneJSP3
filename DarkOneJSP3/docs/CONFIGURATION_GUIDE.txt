@@ -137,8 +137,8 @@ limited to ten characters so they remain within the intended button area.
 
 DarkOneJSP3 internal view commands:
 - LAYOUT: `DarkOneJSP3/Layout/Toggle`
-  Toggles the upper main area between InfoStack | ArtSpectrum | Playlist and
-  ArtSpectrum | Playlist. The selected mode persists.
+  Cycles the upper main area through InfoStack | ArtSpectrum | Playlist,
+  ArtSpectrum | Playlist and InfoStack | Playlist. The selected mode persists.
 - SPECTRUM: `DarkOneJSP3/Visualiser/Toggle`
   Toggles DOJSP3.Spectrum. When hidden, Album Art receives the complete
   ArtSpectrum host. The selected mode persists.
@@ -273,6 +273,38 @@ leaves the selected bottom-area background visible in their place. Quick Search
 has independent frame and normal/error background settings and is not affected
 by this divider-colour setting.
 
+Bottom area depth
+- Flat (default)
+- Soft
+
+Flat paints no top depth edge. Soft paints four rows at the top of the existing
+surface: the first is black (`#000000`), the second is `#0F0F0F`, and the third
+and fourth are derived 20% brighter from the selected Bottom area background,
+with RGB channels clamped at 255. All four rows are painted inside the panel, so
+positions and heights do not change. Depth is independent of the gradient: Soft
+remains visible with either a solid or gradient background.
+
+Background linear gradient
+- Disabled (default)
+- Enabled
+
+When enabled, the three bottom columns paint the selected Bottom area background
+from its chosen colour at the top to a colour 30% less bright at the bottom.
+Nested JScript and JSplitter surfaces sample the same full-height gradient
+coordinates instead of restarting the gradient within their own bounds, so
+their edges remain visually seamless. The effect does not alter Bottom area
+depth, the Bottom area side divider colour or Quick Search's independent frame
+and background settings.
+
+Bottom side dividers
+- Enabled (default)
+- Disabled
+
+This toggle appears after a separator beneath Background linear gradient. When
+disabled, both lower vertical divider strips are hidden while their selected
+colour remains saved. Re-enabling the toggle restores both strips with that
+same colour. It does not affect the upper Album Art/Spectrum dividers.
+
 For both menus, Custom colour immediately reapplies the remembered custom value.
 Set custom colour... opens the native picker and, when a different colour is
 accepted, stores it and selects Custom. Cancelling or leaving the native picker
@@ -281,15 +313,20 @@ unchanged is non-destructive.
 The shared properties are:
 - DARKONEJSP3.BOTTOM.BACKGROUND.MODE
 - DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR
+- DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT
 - DARKONEJSP3.BOTTOM.DIVIDER.MODE
 - DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR
+- DARKONEJSP3.BOTTOM.SIDE.DIVIDERS
+- DARKONEJSP3.BOTTOM.DEPTH
 
 The JScript Panel and JSplitter component hosts keep separate panel properties.
 DarkOneJSP3 therefore mirrors this state through a small runtime-generated file
 at js_data\darkonejsp3.bottom-area-state.txt. The file is created and updated
 automatically; it is not part of the release package and should not be edited.
-Existing state from DarkOneJSP3\shared\bottom-area-state.txt is migrated
-automatically.
+The revisioned v5 state identifies the coordinated commit that produced it.
+Persistent v1 state from the previous public release, including the former
+DarkOneJSP3\shared\bottom-area-state.txt location, is migrated directly to v5
+and the legacy file is retired after successful canonical persistence.
 
 Each JScript panel reads and applies the shared state once during
 initialisation, before its first paint. Live colour changes use a coordinated
@@ -300,15 +337,19 @@ avoid rebuilding JScript button or Display rendering resources.
 A short-lived commit marker is written to
 js_data\darkonejsp3.bottom-area-command.txt with one shared apply timestamp.
 Bottom Controls checks for active commits every 25 ms and relays the same target
-time inside the JSplitter domain. The established 100 ms state-file bridge remains
-as the startup/recovery fallback and defers to any pending coordinated commit.
-Failed canonical-state writes are logged with the target path and retried once.
+time inside the JSplitter domain. One ordered scheduler also checks Quick Search
+and View commands every 100 ms, and the canonical state fallback every 500 ms.
+Failed canonical-state writes are logged with the target path and receive up to
+eight bounded retries. Bottom Controls retains the applied revision while the
+file is stale, repairs it after a bounded deadline and yields only to a provably
+newer revision, preventing a failed write from flashing the previous appearance.
 
 Factory reset uses a second short-lived runtime command file at
 js_data\darkonejsp3.reset-command.txt. The same Bottom Controls timer checks
-that command every 500 ms, consumes it, removes or clears the processed file and
-rebroadcasts the established reset notification to all JSplitter controllers,
-so JScript Panel and JSplitter-owned settings reset together.
+that command every 500 ms, consumes and removes it, then rebroadcasts the
+established reset notification to all JSplitter controllers. Reset peers apply
+their defaults locally; only the initiating panel publishes the single shared
+bottom-area commit.
 
 Fonts
 - Control-panel labels
@@ -463,11 +504,12 @@ Choices:
 - Set custom colour...
 
 Custom colour reapplies the remembered value immediately; Set custom colour...
-opens the native picker. Standard layout uses both upper dividers, including
-when Spectrum is hidden. Alternate LAYOUT mode uses only the right divider
-between ArtSpectrum and Playlist. Transparent removes explicit divider fill
-while preserving the reserved alignment. The lower control-panel dividers are
-unaffected.
+opens the native picker. The three-column layout uses both upper dividers,
+including when Spectrum is hidden. ArtSpectrum | Playlist and InfoStack |
+Playlist each use one divider between their two visible panels. Transparent
+removes explicit divider fill while preserving the reserved alignment. The
+lower control-panel dividers are unaffected. The lower control-panel dividers
+remain independently configured.
 
 Enhanced Spectrum Analyser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1333,6 +1375,13 @@ Control appearance
 Main view modes
   DARKONEJSP3.MAIN.LAYOUT.MODE
   DARKONEJSP3.ARTSPECTRUM.LAYOUT.MODE
+
+Bottom area appearance
+  DARKONEJSP3.BOTTOM.BACKGROUND.MODE
+  DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR
+  DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT
+  DARKONEJSP3.BOTTOM.DIVIDER.MODE
+  DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR
 
 Album Art/Spectrum side dividers
   DARKONEJSP3.ART.SPECTRUM.DIVIDER.MODE

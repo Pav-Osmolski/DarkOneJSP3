@@ -1,6 +1,91 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.18 - Third main layout and bottom-area appearance
+------------------------------------------------------
+
+- Expanded the optional LAYOUT button to cycle through three persistent main
+  views: InfoStack | ArtSpectrum | Playlist, ArtSpectrum | Playlist and the new
+  InfoStack | Playlist layout.
+- Added TOOLS > Appearance > Background linear gradient beneath the two shared
+  bottom-area colour controls. The optional effect begins with the selected
+  Bottom area background colour and ends 30% less bright across the three bottom
+  panels.
+- Added TOOLS > Appearance > Bottom area depth immediately above Background
+  linear gradient. Flat paints no depth edge; Soft adds four in-place top rows:
+  `#000000`, `#0F0F0F`, then two rows derived 20% brighter from the selected
+  background. Depth operates independently from the optional gradient and does
+  not move or resize panels.
+- Added a default-on TOOLS > Appearance > Bottom side dividers toggle after a
+  separator beneath Background linear gradient. Disabling it hides both lower
+  divider strips while retaining their selected colour for later restoration.
+- Carried the shared gradient state through the Bottom Controls and Automatic
+  Display/Waveform backings. Nested JScript and JSplitter regions now use the
+  owning bottom area's gradient coordinates rather than restarting the effect,
+  keeping native transparent areas and adjacent regions visually continuous.
+  Persistent v1 state from the public v1.0.17 release migrates safely with the
+  new options initialised to their documented defaults: gradient off, side
+  dividers on and Flat depth.
+- Replaced the unpublished bottom-area protocol with revisioned v5 state and
+  commit payloads. The revision ties durable state to its originating commit,
+  allowing the owner to distinguish stale persistence from a genuinely newer
+  change without timing guesses. Public v1.0.17 v1 state migrates directly to
+  v5 with safe defaults; unpublished v2-v4 state and v1-v4 transient commits
+  are rejected. Accepted legacy state is rewritten once and the old source-tree
+  state file is retired so it cannot later resurrect stale settings.
+- Hardened bottom-area persistence failure recovery. JScript senders now make
+  up to eight bounded canonical-state retries and rebroadcast after recovery;
+  Bottom Controls retains the applied revision until persistence is confirmed,
+  repairs stale canonical state after a bounded deadline and yields only to a
+  provably newer revision. A failed state write can no longer flash the previous
+  appearance between the coordinated commit and retry.
+- Consolidated Bottom Controls runtime-file work into one ordered 25 ms timeout
+  scheduler: commits are processed first, Quick Search and View commands at
+  100 ms, and canonical-state/reset fallbacks at 500 ms. Removed the duplicate
+  commit check and overlapping interval. Together with a 50 ms root queue poll
+  and absence checks before command reads, nominal idle bridge file operations
+  fall from roughly 122 to 84 per second.
+- Added transactional playback-queue reorder recovery. Original queue entries
+  and source coordinates are snapshotted before flush; a reconstruction failure
+  attempts a complete rollback, reports rollback failure separately and always
+  publishes the authoritative final queue state, including a partial queue if
+  the host also rejects rollback.
+- Invalid, expired, empty and obsolete Queue, bottom-area, reset, Quick Search
+  and View command files are now removed after one observation. Current
+  JSplitter 4.1.12
+  removal is used directly; obsolete blank-file acknowledgement fallbacks and
+  their repeated empty-file reads were removed.
+- Reduced Bottom Controls paint-time property access from as many as 28 reads to
+  exactly one seven-field state snapshot. JScript Panel gradient brushes and
+  JSplitter coalesced gradient row runs are cached until colour or geometry
+  changes, eliminating repeated colour blending and brush serialisation during
+  unchanged repaints.
+- Preserved the four-row Soft-depth edge in the centre Display/Waveform host
+  during extreme vertical resizing, when that opaque child can overlap the
+  parent's first four rows. Normal geometry remains unchanged.
+- Factory-reset peers now apply bottom-area defaults locally before reload;
+  only the initiator publishes the coordinated commit. This removes duplicate
+  reset commits without risking stale local properties after immediate reload.
+- Corrected the Smooth Playlist Manager input-box `launch_timer` cleanup typo.
+- Tightened commit validation to reject unsafe identifiers, backwards apply
+  times and apply targets more than one second beyond issue time.
+- Added regression coverage for three-mode LAYOUT cycling, InfoStack/Playlist
+  geometry and visibility, gradient colour derivation, menu state, persistence,
+  reset behaviour, cross-host commits, nested-coordinate continuity, default-on
+  divider visibility, colour preservation, independent Flat/Soft depth and the
+  exact four-row in-place depth contract, public v1-to-v5 state migration,
+  revision ordering, write-failure hold/repair, cached paint paths, seven-read
+  paint snapshots, malformed-command retirement, queue rollback success/failure
+  and authoritative state publication. The behavioural harness now runs 32
+  isolated suites.
+- Corrected the swapped Display/Control Right version labels in the layout
+  manifest and added automatic source-header verification for every manifest
+  panel that declares a version.
+- Advanced Control Left to 3.0.32, Control Right to 3.0.37, Display to 3.0.36,
+  the root controller to 0.7.39, JSplitter protocols and shared bottom-area
+  appearance to 0.3.0, the direct queue bridge to 0.2.4 and the release
+  validator to 0.10.22.
+
 v1.0.17 - Enhanced Spectrum Analyser reference preferences
 ----------------------------------------------------------
 

@@ -5,6 +5,13 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // Replaces Panel Stack Splitter 06.
 //
 // Version history (newest first):
+// v0.3.14 preserves the shared Soft-depth edge when extreme vertical resizing
+// moves this opaque host into the parent's four-row in-place depth stack.
+//
+// v0.3.13 carries the shared optional bottom-area gradient through the
+// Automatic host backing used by transparent Waveform Minibar surfaces and
+// aligns its colour stops with the owning bottom-area coordinate space.
+//
 // v0.3.12 opts the native Waveform Minibar child into JSplitter's
 // pseudo-transparency support so the component's Transparent background mode
 // can reveal this host's resolved backing instead of the native black fallback.
@@ -48,12 +55,17 @@ var REVEAL_DELAY_PROPERTY = 'DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay';
 var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt';
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
+var BOTTOM_AREA_GEOMETRY_VERSION = 'v1';
+var BOTTOM_AREA_GEOMETRY_QUERY = 'DarkOneJSP3.BottomArea.Geometry.Query';
+var BOTTOM_AREA_GEOMETRY_STATE = 'DarkOneJSP3.BottomArea.Geometry.State';
 
 var revealTimer = 0;
 var bottomAreaCommitTimer = 0;
 var bottomAreaCommitId = '';
 var waveformVisible = null;
 var hiddenAfterStop = hideWhenStopped() && !fb.IsPlaying;
+var bottomAreaGradientHeight = 1;
+var bottomAreaGradientOffsetY = 0;
 
 // 0 = transparent / inherit parent, 1 = black, 2 = DarkOne grey,
 // 3 = custom (legacy), 4 = DarkOne dark grey, 5 = Columns UI global
@@ -92,8 +104,11 @@ function defaultBottomAreaState() {
     return BOTTOM_AREA_PROTOCOL.state(
         BOTTOM_AREA_PROTOCOL.defaults.backgroundMode,
         BOTTOM_AREA_PROTOCOL.defaults.backgroundCustomColour,
+        BOTTOM_AREA_PROTOCOL.defaults.backgroundLinearGradient,
         BOTTOM_AREA_PROTOCOL.defaults.dividerMode,
-        BOTTOM_AREA_PROTOCOL.defaults.dividerCustomColour
+        BOTTOM_AREA_PROTOCOL.defaults.dividerCustomColour,
+        BOTTOM_AREA_PROTOCOL.defaults.sideDividersVisible,
+        BOTTOM_AREA_PROTOCOL.defaults.depthMode
     );
 }
 
@@ -119,7 +134,9 @@ function applySharedBottomAreaState(data, repaint) {
     var changed = !sharedBottomAreaState ||
         state.backgroundMode !== sharedBottomAreaState.backgroundMode ||
         (state.backgroundCustomColour >>> 0) !==
-            (sharedBottomAreaState.backgroundCustomColour >>> 0);
+            (sharedBottomAreaState.backgroundCustomColour >>> 0) ||
+        state.backgroundLinearGradient !== sharedBottomAreaState.backgroundLinearGradient ||
+        state.depthMode !== sharedBottomAreaState.depthMode;
     sharedBottomAreaState = state;
 
     if (changed && repaint !== false && backgroundMode() === BACKGROUND_AUTOMATIC) {
@@ -177,8 +194,8 @@ function sharedBottomAreaBackgroundColour() {
     return DOJSP3.colours.separator;
 }
 
-function backgroundColour() {
-    var mode = backgroundMode();
+function backgroundColour(mode) {
+    if (typeof mode === 'undefined') mode = backgroundMode();
     if (mode === BACKGROUND_AUTOMATIC) return sharedBottomAreaBackgroundColour();
     if (mode === BACKGROUND_BLACK) return 0xff000000;
     if (mode === BACKGROUND_DARKONE) return DOJSP3.colours.bar;
@@ -191,6 +208,96 @@ function backgroundColour() {
         ));
     }
     return DOJSP3.colours.separator;
+}
+
+function backgroundLinearGradient(mode) {
+    if (typeof mode === 'undefined') mode = backgroundMode();
+    return mode === BACKGROUND_AUTOMATIC &&
+        Boolean(sharedBottomAreaState.backgroundLinearGradient);
+}
+
+function sharedSoftDepth(mode) {
+    if (typeof mode === 'undefined') mode = backgroundMode();
+    return mode === BACKGROUND_AUTOMATIC &&
+        sharedBottomAreaState.depthMode === BOTTOM_AREA_PROTOCOL.depths.soft;
+}
+
+function parseBottomAreaGeometry(data) {
+    var parts = String(data || '').split('|');
+    if (parts.length !== 3 || parts[0] !== BOTTOM_AREA_GEOMETRY_VERSION) return null;
+    var height = Math.round(Number(parts[1]));
+    var displayTop = Math.round(Number(parts[2]));
+    if (!isFinite(height) || height < 1 || !isFinite(displayTop)) return null;
+    return {
+        height: height,
+        displayTop: DOJSP3.clamp(displayTop, 0, height - 1)
+    };
+}
+
+function applyBottomAreaGeometry(data) {
+    var geometry = parseBottomAreaGeometry(data);
+    if (!geometry) return false;
+    var changed = geometry.height !== bottomAreaGradientHeight ||
+        geometry.displayTop !== bottomAreaGradientOffsetY;
+    bottomAreaGradientHeight = geometry.height;
+    bottomAreaGradientOffsetY = geometry.displayTop;
+    if (changed && (backgroundLinearGradient() || sharedSoftDepth())) window.Repaint();
+    return changed;
+}
+
+function requestBottomAreaGeometry() {
+    try { window.NotifyOthers(BOTTOM_AREA_GEOMETRY_QUERY, true); } catch (e) {}
+}
+
+function paintBackground(gr) {
+    var mode = backgroundMode();
+    var colour = backgroundColour(mode);
+    if (!backgroundLinearGradient(mode)) {
+        gr.FillSolidRect(0, 0, ww, wh, colour);
+    } else {
+        var endColour = DarkOneColour.scaleBrightness(colour, 0.7);
+        var denominator = Math.max(1, bottomAreaGradientHeight - 1);
+        var topAmount = DOJSP3.clamp(bottomAreaGradientOffsetY / denominator, 0, 1);
+        var bottomAmount = DOJSP3.clamp(
+            (bottomAreaGradientOffsetY + Math.max(0, wh - 1)) / denominator,
+            0,
+            1
+        );
+        DOJSP3.fillVerticalGradient(
+            gr,
+            0,
+            0,
+            ww,
+            wh,
+            DarkOneColour.blend(colour, endColour, topAmount),
+            DarkOneColour.blend(colour, endColour, bottomAmount)
+        );
+    }
+
+    if (!sharedSoftDepth(mode) || ww <= 0 || wh <= 0 ||
+            bottomAreaGradientOffsetY >= 4) return;
+
+    // Paint only the portion of the parent's in-place four-row depth edge that
+    // this opaque child covers. Normal layouts start below row four, so this is
+    // active only during extreme vertical resizing.
+    if (bottomAreaGradientOffsetY === 0) {
+        gr.FillSolidRect(0, 0, ww, 1, 0xff000000);
+    }
+    if (bottomAreaGradientOffsetY <= 1 &&
+            bottomAreaGradientOffsetY + wh > 1) {
+        gr.FillSolidRect(0, 1 - bottomAreaGradientOffsetY, ww, 1, 0xff0f0f0f);
+    }
+    var highlightTop = Math.max(0, 2 - bottomAreaGradientOffsetY);
+    var highlightBottom = Math.min(wh, 4 - bottomAreaGradientOffsetY);
+    if (highlightBottom > highlightTop) {
+        gr.FillSolidRect(
+            0,
+            highlightTop,
+            ww,
+            highlightBottom - highlightTop,
+            DarkOneColour.scaleBrightness(colour, 1.2)
+        );
+    }
 }
 
 function hideWhenStopped() {
@@ -332,12 +439,13 @@ function on_size(width, height) {
     ww = width;
     wh = height;
     layoutDisplayWaveform();
+    requestBottomAreaGeometry();
 }
 
 function on_paint(gr) {
     // Paint the whole host. Transparent / inherit parent is resolved by
     // backgroundColour() to the common #181818 parent tone.
-    gr.FillSolidRect(0, 0, ww, wh, backgroundColour());
+    paintBackground(gr);
 }
 
 function on_playback_starting(command, is_paused) {
@@ -379,6 +487,10 @@ function on_playback_stop(reason) {
 }
 
 function on_notify_data(name, data) {
+    if (name === BOTTOM_AREA_GEOMETRY_STATE) {
+        applyBottomAreaGeometry(data);
+        return;
+    }
     if (name === BOTTOM_AREA_PROTOCOL.notifications.commit) {
         scheduleSharedBottomAreaCommit(data);
         return;

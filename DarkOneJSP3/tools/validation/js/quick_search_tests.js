@@ -192,7 +192,9 @@ suite("scripted Quick Search state", function () {
     // backing while Error retains its separate semantic default.
     qs.setBackgroundColourMode('normalBackgroundMode', quickApi.Protocol.bottomArea.modes.transparent, false);
     qs.parentBackgroundChanged(quickApi.Protocol.bottomArea.serialiseState(
-        quickApi.Protocol.bottomArea.state(3, 0xff123456, 4, 0xff000000)
+        quickApi.Protocol.bottomArea.state(
+            3, 0xff123456, false, 4, 0xff000000, true, 0
+        )
     ));
     assert((qs.colours.background >>> 0) === 0xff123456,
         'Quick Search Transparent normal background did not inherit the live Bottom-area custom colour');
@@ -203,7 +205,9 @@ suite("scripted Quick Search state", function () {
         'Quick Search Transparent error background did not inherit the live Bottom-area custom colour');
     const qsCommit = quickApi.Protocol.bottomArea.commit(
         'quick-sync', Date.now(), Date.now() + 50,
-        quickApi.Protocol.bottomArea.state(1, 0xff000000, 4, 0xff000000)
+        quickApi.Protocol.bottomArea.state(
+            1, 0xff000000, false, 4, 0xff000000, true, 0
+        )
     );
     qs.parentBackgroundCommit(quickApi.Protocol.bottomArea.serialiseCommit(qsCommit));
     assert((qs.colours.background >>> 0) === 0xff123456,

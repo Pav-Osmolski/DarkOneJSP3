@@ -8,6 +8,31 @@ var DarkOneColour = Object.freeze({
         return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
     },
 
+    scaleBrightness: function (colour, factor) {
+        colour = Number(colour) >>> 0;
+        factor = Number(factor);
+        if (!isFinite(factor)) factor = 1;
+        var red = Math.max(0, Math.min(255, Math.round(((colour >>> 16) & 0xff) * factor)));
+        var green = Math.max(0, Math.min(255, Math.round(((colour >>> 8) & 0xff) * factor)));
+        var blue = Math.max(0, Math.min(255, Math.round((colour & 0xff) * factor)));
+        return 0xff000000 +
+            (red * 0x10000) + (green * 0x100) + blue;
+    },
+
+    blend: function (colour1, colour2, amount) {
+        colour1 = Number(colour1) >>> 0;
+        colour2 = Number(colour2) >>> 0;
+        amount = Math.max(0, Math.min(1, Number(amount) || 0));
+        var red1 = (colour1 >>> 16) & 0xff;
+        var green1 = (colour1 >>> 8) & 0xff;
+        var blue1 = colour1 & 0xff;
+        var red = Math.round(red1 + amount * (((colour2 >>> 16) & 0xff) - red1));
+        var green = Math.round(green1 + amount * (((colour2 >>> 8) & 0xff) - green1));
+        var blue = Math.round(blue1 + amount * ((colour2 & 0xff) - blue1));
+        return 0xff000000 +
+            (red * 0x10000) + (green * 0x100) + blue;
+    },
+
     nativeSigned: function (colour) {
         return Number(colour) | 0;
     },

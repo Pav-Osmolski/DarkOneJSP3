@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Control Panel - Left"
-// @version "3.0.30-jsp3-3.8.5"
+// @version "3.0.32-jsp3-3.8.5"
 // @author "tedGo / DeViLhoOD"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\performance_utils.js"
 // @import "%fb2k_component_path%helpers.txt"

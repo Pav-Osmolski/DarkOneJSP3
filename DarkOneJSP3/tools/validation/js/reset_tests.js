@@ -11,6 +11,7 @@ suite("shared startup/divider protocol", function () {
     const api = factory({});
     const startup = api.DarkOneProtocol.startup;
     const divider = api.DarkOneProtocol.divider;
+    const bottomArea = api.DarkOneProtocol.bottomArea;
     function assert(condition, message) { if (!condition) throw new Error(message); }
     assert(startup.serialiseState({transition: 2, minimumDelay: 5000,
         readinessTimeout: 7000}) === 'v1|state|2|5000|7000',
@@ -48,6 +49,86 @@ suite("shared startup/divider protocol", function () {
     assert(options.map(item => item.id + ':' + item.mode).join(',') ===
         '900:0,901:1,902:2,903:4,904:5,905:3',
         'Divider menu mapping changed');
+    const currentState = bottomArea.state(
+        2, 0xff123456, true, 4, 0xff654321, false, 0
+    );
+    const currentMessage = bottomArea.serialiseState(currentState);
+    assert(currentMessage === 'v5|state|2|4279383126|1|4|4284826401|0|0',
+        'Bottom-area v5 state serialisation changed');
+    assert(bottomArea.parseState(currentMessage).backgroundLinearGradient === true &&
+        bottomArea.parseState(currentMessage).sideDividersVisible === false &&
+        bottomArea.parseState(currentMessage).depthMode === 0,
+        'Bottom-area v5 state did not round-trip');
+    const legacyBottomState = bottomArea.parseState('v1|2|4279383126|4|4284826401');
+    assert(legacyBottomState && legacyBottomState.backgroundLinearGradient === false &&
+        legacyBottomState.dividerMode === 4 &&
+        legacyBottomState.sideDividersVisible === true &&
+        legacyBottomState.depthMode === 0,
+        'Bottom-area v1 state did not migrate with safe feature defaults');
+    assert(bottomArea.parseState('v2|2|4279383126|1|4|4284826401') === null &&
+        bottomArea.parseState('v3|2|4279383126|1|4|4284826401|0') === null &&
+        bottomArea.parseState('v4|2|4279383126|1|4|4284826401|0|0') === null,
+        'Bottom-area state parser accepted an unpublished test protocol');
+    assert(bottomArea.parseState('v5|bad revision|2|4279383126|1|4|4284826401|0|0') === null,
+        'Bottom-area state parser accepted an unsafe revision');
+    assert(bottomArea.parseState({
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: 'invalid',
+        dividerMode: 4,
+        dividerCustomColour: 0xff654321,
+        sideDividersVisible: 'invalid',
+        depthMode: 'invalid'
+    }).backgroundLinearGradient === false && bottomArea.parseState({
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
+        dividerMode: 4,
+        dividerCustomColour: 0xff654321,
+        sideDividersVisible: 'invalid'
+    }).sideDividersVisible === true && bottomArea.parseState({
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
+        dividerMode: 4,
+        dividerCustomColour: 0xff654321,
+        sideDividersVisible: true,
+        depthMode: 'invalid'
+    }).depthMode === 0,
+        'Malformed bottom-area booleans did not recover to safe defaults');
+    const currentCommit = bottomArea.commit(
+        'current', Date.now(), Date.now() + 50, currentState
+    );
+    const currentCommitMessage = bottomArea.serialiseCommit(currentCommit);
+    const parsedCurrentCommit = bottomArea.parseCommit(currentCommitMessage, Date.now());
+    assert(parsedCurrentCommit && parsedCurrentCommit.id === 'current' &&
+        parsedCurrentCommit.state.backgroundLinearGradient === true &&
+        parsedCurrentCommit.state.sideDividersVisible === false &&
+        parsedCurrentCommit.state.depthMode === 0 &&
+        parsedCurrentCommit.state.revision === 'current',
+        'Bottom-area v5 commit did not round-trip');
+    const scheduleNow = Date.now();
+    assert(bottomArea.commit('backwards', scheduleNow, scheduleNow - 1, currentState) === null &&
+        bottomArea.commit('too-far', scheduleNow, scheduleNow + 1001, currentState) === null &&
+        bottomArea.commit('bad|id', scheduleNow, scheduleNow + 50, currentState) === null,
+        'Bottom-area commit accepted an invalid applyAt schedule');
+    assert(bottomArea.parseCommit(
+        'v1|legacy|' + Date.now() + '|' + Date.now() + '|2|4279383126|4|4284826401',
+        Date.now()
+    ) === null && bottomArea.parseCommit(
+        'v2|legacy-v2|' + Date.now() + '|' + Date.now() +
+            '|2|4279383126|1|4|4284826401',
+        Date.now()
+    ) === null && bottomArea.parseCommit(
+        'v3|legacy-v3|' + Date.now() + '|' + Date.now() +
+            '|2|4279383126|1|4|4284826401|0',
+        Date.now()
+    ) === null && bottomArea.parseCommit(
+        'v4|legacy-v4|' + Date.now() + '|' + Date.now() +
+            '|2|4279383126|1|4|4284826401|0|0',
+        Date.now()
+    ) === null,
+        'Bottom-area commit parser accepted an obsolete transient protocol');
     const events = [];
     const readiness = startup.createReadinessBridge(
         {NotifyOthers(name, data) { events.push([name, data]); }},
@@ -262,10 +343,23 @@ suite("legacy saved-entry reset", function () {
 suite("project JScript reset receiver", function () {
     let applied = [];
     let reloads = 0;
+    let localBottomResets = 0;
+    let coordinatedBottomResets = 0;
+    let resetCommands = 0;
+    const notifications = [];
+    const IDYES = 6, MB_YESNO = 4, MB_ICONQUESTION = 32;
+    const DARKONEJSP3_RESET_NOTIFICATION = 'DarkOneJSP3.Reset.Properties';
+    const utils = {MessageBox() { return IDYES; }};
+    function darkOneApplyBottomAreaDefaultsLocally() { localBottomResets++; }
+    function darkOneResetBottomAreaDefaults() { coordinatedBottomResets++; }
+    function darkOneWriteResetCommand() { resetCommands++; return true; }
     global.DARKONEJSP3_RESET_ROLE = 'display';
     global.DARKONEJSP3_RESET_REGISTRY = {display: {appearance: {}, behaviour: {}}};
     global.darkOneJsp3ApplyRoleReset = function(role, scope) { applied.push([role, scope]); return true; };
-    global.window = {Reload() { reloads++; }, Repaint() {}};
+    global.window = {
+        Reload() { reloads++; }, Repaint() {},
+        NotifyOthers(name, data) { notifications.push([name, data]); }
+    };
     /*__CONFIG_RESET_FUNCTIONS__*/
     function assert(condition, message) { if (!condition) throw new Error(message); }
     assert(darkOneResetScope(JSON.stringify({version: 1, scope: 'appearance'})) === 'appearance',
@@ -284,7 +378,20 @@ suite("project JScript reset receiver", function () {
         'Project JScript receiver did not handle a valid reset');
     assert(applied.length === 1 && applied[0][0] === 'display' && applied[0][1] === 'appearance',
         'Project JScript receiver applied the wrong role or scope');
+    assert(localBottomResets === 1 && coordinatedBottomResets === 0,
+        'Peer reset published a duplicate coordinated bottom-area commit');
     assert(reloads === 1, 'Project JScript receiver did not reload exactly once');
+
+    applied = [];
+    reloads = 0;
+    localBottomResets = 0;
+    assert(darkOneConfirmFactoryReset('appearance'),
+        'Project JScript reset initiator rejected a confirmed reset');
+    assert(resetCommands === 1 && coordinatedBottomResets === 1 &&
+        notifications.length === 1 && localBottomResets === 0,
+        'Reset initiator did not publish exactly one coordinated bottom-area commit');
+    assert(applied.length === 1 && reloads === 1,
+        'Reset initiator did not apply its role and reload exactly once');
 });
 
 suite("JSplitter reset receiver", function () {

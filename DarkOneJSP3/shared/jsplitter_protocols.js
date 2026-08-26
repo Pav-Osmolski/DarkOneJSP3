@@ -264,7 +264,6 @@ var DarkOneProtocol = (function () {
 
     var bottomAreaNotifications = Object.freeze({
         query: 'DarkOneJSP3.BottomArea.Query',
-        set: 'DarkOneJSP3.BottomArea.Set',
         state: 'DarkOneJSP3.BottomArea.State',
         commit: 'DarkOneJSP3.BottomArea.Commit'
     });
@@ -272,25 +271,65 @@ var DarkOneProtocol = (function () {
     var bottomAreaDefaults = Object.freeze({
         backgroundMode: dividerModes.darkOne,
         backgroundCustomColour: 0xff000000,
+        backgroundLinearGradient: false,
         dividerMode: dividerModes.darkOneDark,
-        dividerCustomColour: 0xff000000
+        dividerCustomColour: 0xff000000,
+        sideDividersVisible: true,
+        depthMode: 0
     });
 
+    var bottomAreaDepths = Object.freeze({ flat: 0, soft: 1 });
+    var bottomAreaDepthValues = Object.freeze([
+        bottomAreaDepths.flat,
+        bottomAreaDepths.soft
+    ]);
+
+    function normaliseBottomAreaBoolean(value, fallback) {
+        if (value === true || value === 1 || value === '1' || value === 'true') return true;
+        if (value === false || value === 0 || value === '0' || value === 'false') return false;
+        return Boolean(fallback);
+    }
+
+    function normaliseBottomAreaDepth(value, fallback) {
+        value = Math.round(Number(value));
+        return bottomAreaDepthValues.indexOf(value) >= 0 ? value : fallback;
+    }
+
+    function normaliseBottomAreaRevision(value, fallback) {
+        value = String(value || '');
+        if (/^[A-Za-z0-9._-]{1,128}$/.test(value)) return value;
+        return typeof fallback !== 'undefined' ? String(fallback) : 'state';
+    }
+
     function bottomAreaState(backgroundMode, backgroundCustomColour,
-            dividerMode, dividerCustomColour) {
+            backgroundLinearGradient, dividerMode, dividerCustomColour,
+            sideDividersVisible, depthMode, revision) {
         return {
+            revision: normaliseBottomAreaRevision(revision, 'state'),
             backgroundMode: DarkOneColour.normaliseMode(
                 backgroundMode,
                 dividerModeValues,
                 bottomAreaDefaults.backgroundMode
             ),
             backgroundCustomColour: DarkOneColour.opaque(backgroundCustomColour),
+            backgroundLinearGradient: normaliseBottomAreaBoolean(
+                backgroundLinearGradient,
+                bottomAreaDefaults.backgroundLinearGradient
+            ),
             dividerMode: DarkOneColour.normaliseMode(
                 dividerMode,
                 dividerModeValues,
                 bottomAreaDefaults.dividerMode
             ),
-            dividerCustomColour: DarkOneColour.opaque(dividerCustomColour)
+            dividerCustomColour: DarkOneColour.opaque(dividerCustomColour),
+            sideDividersVisible: normaliseBottomAreaBoolean(
+                sideDividersVisible,
+                bottomAreaDefaults.sideDividersVisible
+            ),
+            depthMode: normaliseBottomAreaDepth(
+                depthMode,
+                bottomAreaDefaults.depthMode
+            )
         };
     }
 
@@ -299,14 +338,22 @@ var DarkOneProtocol = (function () {
         state = bottomAreaState(
             state.backgroundMode,
             state.backgroundCustomColour,
+            state.backgroundLinearGradient,
             state.dividerMode,
-            state.dividerCustomColour
+            state.dividerCustomColour,
+            state.sideDividersVisible,
+            state.depthMode,
+            state.revision
         );
         return bottomArea.version + '|' +
+            String(state.revision) + '|' +
             String(state.backgroundMode) + '|' +
             String(state.backgroundCustomColour >>> 0) + '|' +
+            (state.backgroundLinearGradient ? '1' : '0') + '|' +
             String(state.dividerMode) + '|' +
-            String(state.dividerCustomColour >>> 0);
+            String(state.dividerCustomColour >>> 0) + '|' +
+            (state.sideDividersVisible ? '1' : '0') + '|' +
+            String(state.depthMode);
     }
 
     function parseBottomAreaState(data) {
@@ -314,37 +361,68 @@ var DarkOneProtocol = (function () {
             return bottomAreaState(
                 data.backgroundMode,
                 data.backgroundCustomColour,
+                data.backgroundLinearGradient,
                 data.dividerMode,
-                data.dividerCustomColour
+                data.dividerCustomColour,
+                data.sideDividersVisible,
+                data.depthMode,
+                data.revision
             );
         }
         var parts = String(data || '').split('|');
-        if (parts.length !== 5 || parts[0] !== bottomArea.version) return null;
-        var backgroundMode = Number(parts[1]);
-        var backgroundCustomColour = Number(parts[2]);
-        var dividerMode = Number(parts[3]);
-        var dividerCustomColour = Number(parts[4]);
+        var legacyV1 = parts.length === 5 && parts[0] === 'v1';
+        if (!legacyV1 &&
+                (parts.length !== 9 || parts[0] !== bottomArea.version)) return null;
+        var revision = legacyV1 ? 'v1-migration' :
+            normaliseBottomAreaRevision(parts[1], '');
+        if (!revision) return null;
+        var offset = legacyV1 ? 0 : 1;
+        var backgroundMode = Number(parts[1 + offset]);
+        var backgroundCustomColour = Number(parts[2 + offset]);
+        var backgroundLinearGradient = legacyV1 ? false : parts[4];
+        var dividerMode = Number(parts[legacyV1 ? 3 : 5]);
+        var dividerCustomColour = Number(parts[legacyV1 ? 4 : 6]);
+        var sideDividersVisible = legacyV1 ? true : parts[7];
+        var depthMode = legacyV1 ? bottomAreaDepths.flat : parts[8];
         if (!isFinite(backgroundMode) || !isFinite(backgroundCustomColour) ||
                 !isFinite(dividerMode) || !isFinite(dividerCustomColour)) return null;
         return bottomAreaState(
             backgroundMode,
             backgroundCustomColour,
+            backgroundLinearGradient,
             dividerMode,
-            dividerCustomColour
+            dividerCustomColour,
+            sideDividersVisible,
+            depthMode,
+            revision
         );
     }
 
 
 
-    var bottomAreaCommitVersion = 'v1';
+    var bottomAreaCommitVersion = 'v5';
     var bottomAreaCommitMaxAgeMs = 5000;
+    var bottomAreaCommitMaxLeadMs = 1000;
 
     function bottomAreaCommit(id, issuedAt, applyAt, state) {
         id = String(id || '');
         issuedAt = Math.round(Number(issuedAt));
         applyAt = Math.round(Number(applyAt));
         state = parseBottomAreaState(state);
-        if (!id || !isFinite(issuedAt) || !isFinite(applyAt) || !state) return null;
+        if (!/^[A-Za-z0-9._-]{1,128}$/.test(id) ||
+                !isFinite(issuedAt) || !isFinite(applyAt) || !state ||
+                applyAt < issuedAt ||
+                applyAt - issuedAt > bottomAreaCommitMaxLeadMs) return null;
+        state = bottomAreaState(
+            state.backgroundMode,
+            state.backgroundCustomColour,
+            state.backgroundLinearGradient,
+            state.dividerMode,
+            state.dividerCustomColour,
+            state.sideDividersVisible,
+            state.depthMode,
+            id
+        );
         return {
             id: id,
             issuedAt: issuedAt,
@@ -368,8 +446,11 @@ var DarkOneProtocol = (function () {
             String(commit.applyAt) + '|' +
             String(state.backgroundMode) + '|' +
             String(state.backgroundCustomColour >>> 0) + '|' +
+            (state.backgroundLinearGradient ? '1' : '0') + '|' +
             String(state.dividerMode) + '|' +
-            String(state.dividerCustomColour >>> 0);
+            String(state.dividerCustomColour >>> 0) + '|' +
+            (state.sideDividersVisible ? '1' : '0') + '|' +
+            String(state.depthMode);
     }
 
     function parseBottomAreaCommit(data, now) {
@@ -388,12 +469,20 @@ var DarkOneProtocol = (function () {
             return objectCommit;
         }
         var parts = String(data || '').split('|');
-        if (parts.length !== 8 || parts[0] !== bottomAreaCommitVersion) return null;
+        if (parts.length !== 11 || parts[0] !== bottomAreaCommitVersion) return null;
         var commit = bottomAreaCommit(
             parts[1],
             Number(parts[2]),
             Number(parts[3]),
-            bottomAreaState(Number(parts[4]), Number(parts[5]), Number(parts[6]), Number(parts[7]))
+            bottomAreaState(
+                Number(parts[4]),
+                Number(parts[5]),
+                parts[6],
+                Number(parts[7]),
+                Number(parts[8]),
+                parts[9],
+                parts[10]
+            )
         );
         if (!commit) return null;
         now = Math.round(Number(now));
@@ -410,16 +499,18 @@ var DarkOneProtocol = (function () {
     }
 
     var bottomArea = Object.freeze({
-        version: 'v1',
+        version: 'v5',
         notifications: bottomAreaNotifications,
         modes: dividerModes,
         modeValues: dividerModeValues,
         defaults: bottomAreaDefaults,
+        depths: bottomAreaDepths,
         state: bottomAreaState,
         serialiseState: serialiseBottomAreaState,
         parseState: parseBottomAreaState,
         commitVersion: bottomAreaCommitVersion,
         commitMaxAgeMs: bottomAreaCommitMaxAgeMs,
+        commitMaxLeadMs: bottomAreaCommitMaxLeadMs,
         commit: bottomAreaCommit,
         serialiseCommit: serialiseBottomAreaCommit,
         parseCommit: parseBottomAreaCommit,

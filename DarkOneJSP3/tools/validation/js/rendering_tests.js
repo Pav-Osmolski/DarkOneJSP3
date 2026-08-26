@@ -840,6 +840,7 @@ suite("bottom-area cross-host state", function () {
     const files = Object.create(null);
     const NEW_STATE = 'P:\\js_data\\darkonejsp3.bottom-area-state.txt';
     const COMMIT_COMMAND = 'P:\\js_data\\darkonejsp3.bottom-area-command.txt';
+    const GEOMETRY_STATE = 'P:\\js_data\\darkonejsp3.bottom-area-geometry.txt';
     const LEGACY_STATE = 'P:\\DarkOneJSP3\\shared\\bottom-area-state.txt';
     const RESET_COMMAND = 'P:\\js_data\\darkonejsp3.reset-command.txt';
     let failWrites = 0;
@@ -883,13 +884,15 @@ suite("bottom-area cross-host state", function () {
         };
     }
 
-    function makePanel(initialProperties) {
+    function makePanel(initialProperties, panelRole) {
+        panelRole = panelRole || 'control-left';
         const properties = new Map(Object.entries(initialProperties || {}));
         const notifications = [];
         const timers = [];
         let repaints = 0;
         let intervalCalls = 0;
         let appearanceApplications = 0;
+        let jsonStringifyCalls = 0;
         let popupCommand = 0;
         let popupMenus = [];
         let popupCreateCalls = 0;
@@ -904,15 +907,20 @@ suite("bottom-area cross-host state", function () {
                 disposed: 0,
                 items: [],
                 children: [],
+                entries: [],
                 AppendMenuItem(flags, id, label) {
                     if (failPopupAppendAt === popupNumber)
                         throw new Error('simulated native popup append failure');
                     this.items.push([flags, id, label]);
+                    this.entries.push('item:' + label);
                 },
-                AppendMenuSeparator() {},
+                AppendMenuSeparator() { this.entries.push('separator'); },
                 CheckMenuRadioItem(minimum, maximum, selected) { this.radio = [minimum, maximum, selected]; },
                 CheckMenuItem(id, checked) { if (checked) this.checked = id; },
-                AppendTo(parent, flags, label) { parent.children.push([this, label]); },
+                AppendTo(parent, flags, label) {
+                    parent.children.push([this, label]);
+                    parent.entries.push('child:' + label);
+                },
                 TrackPopupMenu() { return popupCommand; },
                 Dispose() { this.disposed++; }
             };
@@ -939,7 +947,8 @@ suite("bottom-area cross-host state", function () {
         const factory = new Function(
             'window', 'fb', 'utils', 'MF_STRING', 'MF_GRAYED', 'MB_OK', 'MB_ICONEXCLAMATION',
             'ui_backcol', 'p_backcol', 'ww', 'wh', 'console', 'darkOneApplySharedValues',
-            'buttonsColours', 'display_system',
+            'buttonsColours', 'display_system', 'panelRole', 'JSON',
+            'var DARKONEJSP3_RESET_ROLE=panelRole;\n' +
             resetSource + '\n' + viewBridgeSource + '\n' + bottomSource + '\n' +
             'function darkOneButtonRoundness(){return Number(window.GetProperty("DARKONEJSP3.BUTTON.ROUNDNESS",-1));}\n' +
             'function darkOneSetSharedProperty(name,value){window.SetProperty(name,value);window.NotifyOthers("DarkOneJSP3.Settings.Batch",JSON.stringify({values:{[name]:value}}));}\n' +
@@ -973,6 +982,14 @@ suite("bottom-area cross-host state", function () {
             {
                 InitColours() { appearanceApplications++; },
                 setColours() { appearanceApplications++; }
+            },
+            panelRole,
+            {
+                parse: JSON.parse,
+                stringify(value) {
+                    jsonStringifyCalls++;
+                    return JSON.stringify(value);
+                }
             }
         );
         return {
@@ -1004,9 +1021,12 @@ suite("bottom-area cross-host state", function () {
                 failPopupAppendAt = value;
             },
             get popupMenus() { return popupMenus; },
-            get appearanceApplications() { return appearanceApplications; }
+            get appearanceApplications() { return appearanceApplications; },
+            get jsonStringifyCalls() { return jsonStringifyCalls; }
         };
     }
+
+    files[GEOMETRY_STATE] = 'v1|300|27';
 
     // Legacy state is migrated out of DarkOneJSP3/shared into js_data.
     files[LEGACY_STATE] = 'v1|1|4278190080|4|4278190080';
@@ -1014,8 +1034,27 @@ suite("bottom-area cross-host state", function () {
     migratingPanel.api.request();
     if (migratingPanel.intervalCalls !== 0)
         throw new Error('JScript panel started a continuous state-file poller');
-    if (files[NEW_STATE] !== files[LEGACY_STATE])
+    if (files[NEW_STATE] !== 'v5|v1-migration|1|4278190080|0|4|4278190080|1|0')
         throw new Error('Legacy bottom-area state was not migrated into js_data');
+    if (migratingPanel.api.parse('v2|2|4279383126|1|4|4284826401') !== null ||
+            migratingPanel.api.parse('v3|2|4279383126|1|4|4284826401|0') !== null ||
+            migratingPanel.api.parse('v4|2|4279383126|1|4|4284826401|0|0') !== null)
+        throw new Error('JScript parser accepted an unpublished bottom-area state');
+    const legacyCommitNow = Date.now();
+    if (migratingPanel.api.parseCommit(
+            'v1|legacy|' + legacyCommitNow + '|' + legacyCommitNow +
+                '|2|4279383126|4|4284826401',
+            legacyCommitNow) !== null || migratingPanel.api.parseCommit(
+            'v2|legacy|' + legacyCommitNow + '|' + legacyCommitNow +
+                '|2|4279383126|1|4|4284826401',
+            legacyCommitNow) !== null || migratingPanel.api.parseCommit(
+            'v3|legacy|' + legacyCommitNow + '|' + legacyCommitNow +
+                '|2|4279383126|1|4|4284826401|0',
+            legacyCommitNow) !== null || migratingPanel.api.parseCommit(
+            'v4|legacy|' + legacyCommitNow + '|' + legacyCommitNow +
+                '|2|4279383126|1|4|4284826401|0|0',
+            legacyCommitNow) !== null)
+        throw new Error('JScript parser accepted an obsolete transient bottom-area commit');
     delete files[LEGACY_STATE];
 
     // A saved mode must be resolved before the first paint even when the panel's
@@ -1049,6 +1088,11 @@ suite("bottom-area cross-host state", function () {
 
     const panelA = makePanel();
     const panelB = makePanel();
+    const missingDepthPropertyPanel = makePanel({
+        'DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT': true
+    });
+    if (missingDepthPropertyPanel.api.state().depthMode !== 0)
+        throw new Error('Missing bottom-area depth did not recover to Flat');
     panelA.api.request();
     panelB.api.request();
     if (panelA.intervalCalls || panelB.intervalCalls)
@@ -1058,7 +1102,7 @@ suite("bottom-area cross-host state", function () {
     // native popup must be disposed exactly once for selection, cancellation
     // and picker failure, while state changes only for a valid new colour.
     function assertMenusDisposedOnce(panel, label) {
-        if (panel.popupMenus.length !== 20 || panel.popupMenus.some(menu => menu.disposed !== 1))
+        if (panel.popupMenus.length !== 21 || panel.popupMenus.some(menu => menu.disposed !== 1))
             throw new Error(label + ' did not dispose every DarkOne Tools popup exactly once');
     }
 
@@ -1074,14 +1118,21 @@ suite("bottom-area cross-host state", function () {
     if (pickerPanel.popupMenus[0].children.slice(0, 2).map(item => item[1]).join(',') !==
             'Appearance,Buttons' ||
             pickerPanel.popupMenus[1].children.map(item => item[1]).join(',') !==
-            'Bottom area background,Bottom area side divider colour' ||
+            'Bottom area background,Bottom area side divider colour,Bottom area depth' ||
+            pickerPanel.popupMenus[1].items.map(item => item[2]).join(',') !==
+            'Background linear gradient,Bottom side dividers' ||
+            pickerPanel.popupMenus[1].entries.join(',') !==
+            'child:Bottom area background,child:Bottom area side divider colour,child:Bottom area depth,item:Background linear gradient,separator,item:Bottom side dividers' ||
+            pickerPanel.popupMenus[1].checked !== 9828 ||
+            pickerPanel.popupMenus[8].items.map(item => item[2]).join(',') !==
+            'Flat,Soft' || pickerPanel.popupMenus[8].radio.join(',') !== '9829,9830,9829' ||
             pickerPanel.popupMenus[2].children.map(item => item[1]).join(',') !==
             'Button style,Button depth,Button roundness')
         throw new Error('DarkOne Tools top-level Buttons hierarchy changed');
     if (pickerPanel.popupMenus[0].children.map(item => item[1]).join(',') !==
             'Appearance,Buttons,Fonts,High-DPI / scaling,Startup,Reset DarkOneJSP3,Utilities')
         throw new Error('DarkOne Tools top-level hierarchy/order changed');
-    if (pickerPanel.popupMenus[16].items.map(item => item[2]).join(',') !==
+    if (pickerPanel.popupMenus[17].items.map(item => item[2]).join(',') !==
             'Renderer: Direct2D + DirectWrite (JSP3),Open DarkOneJSP3 folder,Open JScript Panel js_data cache,Open JScript Panel 3 component folder,Panel properties,Configure script...,Reload this panel')
         throw new Error('DarkOne Tools Utilities grouping changed');
     const styleLabels = pickerPanel.popupMenus[3].items.map(item => item[2]).join(',');
@@ -1101,6 +1152,78 @@ suite("bottom-area cross-host state", function () {
             !stylePeerChange || !stylePeerChange.categories.controls)
         throw new Error('Peer control panel did not apply/classify shared Button style');
     assertMenusDisposedOnce(pickerPanel, 'Button style selection');
+
+    pickerPanel.api.handleMenu(9802);
+    pickerPanel.runTimers();
+    pickerPanel.setPopupCommand(9827);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.api.state().backgroundLinearGradient !== true)
+        throw new Error('DarkOne Tools did not enable Background linear gradient');
+    pickerPanel.runTimers();
+    const gradientFills = [];
+    pickerPanel.api.paint({
+        FillRectangle(x, y, w, h, colour) { gradientFills.push([x, y, w, h, colour]); }
+    });
+    const gradientBrush = gradientFills.length ? JSON.parse(gradientFills[0][4]) : null;
+    if (gradientFills.length !== 1 || !gradientBrush ||
+            (gradientBrush.Stops[0][1] >>> 0) !== 0xff202020 ||
+            (gradientBrush.Stops[1][1] >>> 0) !== 0xff1c1c1c)
+        throw new Error('Flat depth painted a highlight over the continuous gradient');
+
+    pickerPanel.setPopupCommand(9830);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.api.state().depthMode !== 1)
+        throw new Error('DarkOne Tools did not select Soft Bottom area depth');
+    pickerPanel.runTimers();
+    gradientFills.length = 0;
+    pickerPanel.api.paint({
+        FillRectangle(x, y, w, h, colour) { gradientFills.push([x, y, w, h, colour]); }
+    });
+    if (gradientFills.length !== 4 || gradientFills[1][1] !== 0 ||
+            gradientFills[1][3] !== 1 ||
+            (gradientFills[1][4] >>> 0) !== 0xff000000 ||
+            gradientFills[2][1] !== 1 || gradientFills[2][3] !== 1 ||
+            (gradientFills[2][4] >>> 0) !== 0xff0f0f0f ||
+            gradientFills[3][1] !== 2 || gradientFills[3][3] !== 2 ||
+            (gradientFills[3][4] >>> 0) !== 0xff262626)
+        throw new Error('Soft depth did not paint its exact four-row edge');
+
+    pickerPanel.api.handleMenu(9827);
+    pickerPanel.runTimers();
+    gradientFills.length = 0;
+    pickerPanel.api.paint({
+        FillRectangle(x, y, w, h, colour) { gradientFills.push([x, y, w, h, colour]); }
+    });
+    if (gradientFills.length !== 4 || (gradientFills[0][4] >>> 0) !== 0xff202020 ||
+            (gradientFills[1][4] >>> 0) !== 0xff000000 ||
+            (gradientFills[2][4] >>> 0) !== 0xff0f0f0f ||
+            gradientFills[3][1] !== 2 || gradientFills[3][3] !== 2 ||
+            (gradientFills[3][4] >>> 0) !== 0xff262626)
+        throw new Error('Soft depth remained incorrectly coupled to the gradient toggle');
+    pickerPanel.api.handleMenu(9827);
+    pickerPanel.runTimers();
+    const displayGradientPanel = makePanel({}, 'display');
+    displayGradientPanel.api.request();
+    const displayGradientFills = [];
+    displayGradientPanel.api.paint({
+        FillRectangle(x, y, w, h, colour) {
+            displayGradientFills.push([x, y, w, h, colour]);
+        }
+    });
+    const displayGradientBrush = displayGradientFills.length
+        ? JSON.parse(displayGradientFills[0][4])
+        : null;
+    if (displayGradientFills.length !== 1 || !displayGradientBrush ||
+            (displayGradientBrush.Stops[0][1] >>> 0) !== 0xff1f1f1f ||
+            (displayGradientBrush.Stops[1][1] >>> 0) !== 0xff1b1b1b)
+        throw new Error('Display panel restarted the gradient or painted a nested top border');
+
+    pickerPanel.setPopupCommand(9828);
+    if (!pickerPanel.api.toolsMenu(10, 20) ||
+            pickerPanel.api.state().sideDividersVisible !== false)
+        throw new Error('DarkOne Tools did not disable Bottom side dividers');
+    pickerPanel.runTimers();
+    assertMenusDisposedOnce(pickerPanel, 'Background gradient selection');
 
     pickerPanel.setPopupCommand(9842);
     if (!pickerPanel.api.toolsMenu(10, 20) ||
@@ -1145,11 +1268,11 @@ suite("bottom-area cross-host state", function () {
         throw new Error('Partial DarkOne Tools construction leaked an earlier popup');
 
     const partialWeightPanel = makePanel();
-    partialWeightPanel.failPopupAppendAt(18);
+    partialWeightPanel.failPopupAppendAt(19);
     let weightConstructionFailed = false;
     try { partialWeightPanel.api.toolsMenu(10, 20); }
     catch (e) { weightConstructionFailed = true; }
-    if (!weightConstructionFailed || partialWeightPanel.popupMenus.length !== 18 ||
+    if (!weightConstructionFailed || partialWeightPanel.popupMenus.length !== 19 ||
             partialWeightPanel.popupMenus.some(menu => menu.disposed !== 1))
         throw new Error('Partially populated font-weight menu leaked its native popup');
 
@@ -1160,8 +1283,8 @@ suite("bottom-area cross-host state", function () {
     });
     pickerPanel.setPopupCommand(0);
     pickerPanel.api.toolsMenu(10, 20);
-    if (pickerPanel.popupMenus[14].radio.join(',') !== '9860,9862,9861' ||
-            pickerPanel.popupMenus[13].items.find(item => item[1] === 9865)[0] !== 0)
+    if (pickerPanel.popupMenus[15].radio.join(',') !== '9860,9862,9861' ||
+            pickerPanel.popupMenus[14].items.find(item => item[1] === 9865)[0] !== 0)
         throw new Error('DarkOne Tools did not render the current root-owned Startup state');
     assertMenusDisposedOnce(pickerPanel, 'Startup state display');
 
@@ -1181,10 +1304,10 @@ suite("bottom-area cross-host state", function () {
     const malformedStartupPanel = makePanel();
     malformedStartupPanel.setPopupCommand(0);
     malformedStartupPanel.api.toolsMenu(10, 20);
-    if (malformedStartupPanel.popupMenus[14].radio.join(',') !== '9860,9862,9860' ||
-            malformedStartupPanel.popupMenus[13].items.find(item => item[1] === 9863)[2] !==
+    if (malformedStartupPanel.popupMenus[15].radio.join(',') !== '9860,9862,9860' ||
+            malformedStartupPanel.popupMenus[14].items.find(item => item[1] === 9863)[2] !==
                 'Minimum black hold... (250 ms)' ||
-            malformedStartupPanel.popupMenus[13].items.find(item => item[1] === 9865)[0] !== 1)
+            malformedStartupPanel.popupMenus[14].items.find(item => item[1] === 9865)[0] !== 1)
         throw new Error('Malformed root-owned Startup state did not recover to safe TOOLS defaults');
     assertMenusDisposedOnce(malformedStartupPanel, 'Malformed Startup state recovery');
 
@@ -1254,18 +1377,25 @@ suite("bottom-area cross-host state", function () {
     // short-lived coordination command before simulating a fresh host startup.
     delete files[COMMIT_COMMAND];
     files[NEW_STATE] = 'v1|1|4278190080|4|4278190080';
+    files[LEGACY_STATE] = 'v1|2|4278190080|4|4278190080';
 
     const hostProperties = new Map();
     const hostNotifications = [];
     let hostRepaints = 0;
     let hostReloads = 0;
-    let hostIntervalDelay = 0;
-    let hostIntervalCallback = null;
+    const hostPropertyCounter = {count: 0};
+    let hostIntervalCalls = 0;
+    let hostNow = Date.now();
+    function HostDate() {}
+    HostDate.prototype.getTime = function () { return hostNow; };
     const hostTimeouts = [];
     function hostSetTimeout(fn, delay) { hostTimeouts.push({fn, delay, active:true}); return hostTimeouts.length; }
     function hostClearTimeout(id) { if (id > 0 && id <= hostTimeouts.length) hostTimeouts[id - 1].active = false; }
     const hostWindow = {
-        GetProperty(name, fallback) { return hostProperties.has(name) ? hostProperties.get(name) : fallback; },
+        GetProperty(name, fallback) {
+            hostPropertyCounter.count++;
+            return hostProperties.has(name) ? hostProperties.get(name) : fallback;
+        },
         SetProperty(name, value) { hostProperties.set(name, value); },
         GetColourCUI(index) { return index === 3 ? 0xff445566 : 0xffffffff; },
         NotifyOthers(name, data) { hostNotifications.push([name, data]); },
@@ -1273,19 +1403,24 @@ suite("bottom-area cross-host state", function () {
         Reload() { hostReloads++; },
         GetPanel() { return null; }
     };
+    const hostGradientCalls = [];
     const DOJSP3Mock = {
         colours: { bar: 0xff202020, separator: 0xff181818, quickSearchBorder: 0xff696969, quickSearchFill: 0xff1e1e1e },
         titles: { controlsLeft:'l',quickSearch:'q',displayStack:'d',controlsRight:'r' },
         idiv(value, divisor) { return Math.floor(value / divisor); },
         mulDiv(value, multiplier, divisor) { return Math.round(value * multiplier / divisor); },
         clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); },
-        panel() { return null; }, move() {}, show() {}
+        panel() { return null; }, move() {}, show() {},
+        fillVerticalGradient(gr, x, y, width, height, topColour, bottomColour) {
+            hostGradientCalls.push([x, y, width, height, topColour >>> 0, bottomColour >>> 0]);
+            gr.FillSolidRect(x, y, width, height, topColour);
+        }
     };
     const hostFactory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'console',
-        'darkOneJsp3ResetScope', 'DarkOneViewBridge',
+        'darkOneJsp3ResetScope', 'DarkOneViewBridge', 'Date', 'propertyCounter',
         colourSource + '\n' + protocolSource + '\n' + resetSource + '\n' + hostSource +
-        '\nreturn {paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncCommit:syncBottomAreaCommitFile,syncReset:syncResetCommandFile,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,dispose:disposeRuntimeBridge,setSize:function(w,h){ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}};'
+        '\nreturn {Protocol:BOTTOM_AREA_PROTOCOL,paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncCommit:syncBottomAreaCommitFile,syncReset:syncResetCommandFile,syncQuick:syncQuickSearchLayoutCommand,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,layout:layoutBottomControls,dispose:disposeRuntimeBridge,propertyReads:function(){return propertyCounter.count;},resetPropertyReads:function(){propertyCounter.count=0;},setSize:function(w,h){ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}};'
     );
     const host = hostFactory(
         hostWindow,
@@ -1293,8 +1428,8 @@ suite("bottom-area cross-host state", function () {
         function() {},
         DOJSP3Mock,
         fileUtils(),
-        function(fn, delay) { hostIntervalCallback = fn; hostIntervalDelay = delay; return 1; },
-        function() { hostIntervalCallback = null; },
+        function() { hostIntervalCalls++; throw new Error('Bottom Controls must use one ordered timeout scheduler'); },
+        function() {},
         hostSetTimeout,
         hostClearTimeout,
         { log(message) { logs.push(String(message)); } },
@@ -1311,16 +1446,38 @@ suite("bottom-area cross-host state", function () {
                 return null;
             },
             serialiseNotification(command) { return command ? 'v1|' + command : null; }
-        }
+        },
+        HostDate,
+        hostPropertyCounter
     );
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT', true);
+    if (host.state().depthMode !== 0)
+        throw new Error('Bottom Controls coupled a missing depth property to the gradient');
+    hostProperties.delete('DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT');
     host.setSize(1920, 300);
+    delete files[GEOMETRY_STATE];
     host.ensure();
-    if (hostIntervalDelay !== 100 || typeof hostIntervalCallback !== 'function')
-        throw new Error('Bottom Controls lost its 100 ms canonical-state fallback poller');
-    if (!hostTimeouts.some(item => item.active && item.delay === 25))
-        throw new Error('Bottom Controls did not start the 25 ms lightweight commit existence poll');
+    if (host.state().backgroundLinearGradient !== false ||
+            host.state().sideDividersVisible !== true || host.state().depthMode !== 0)
+        throw new Error('Bottom Controls did not apply public v1 state with release defaults');
+    if (files[NEW_STATE] !== 'v5|v1-migration|1|4278190080|0|4|4278190080|1|0' ||
+            Object.prototype.hasOwnProperty.call(files, LEGACY_STATE))
+        throw new Error('Bottom Controls did not canonicalise v1 state and retire the legacy source');
+    host.layout();
+    if (files[GEOMETRY_STATE] !== 'v1|300|27')
+        throw new Error('Bottom Controls did not publish the owning gradient coordinate space');
+    if (hostIntervalCalls !== 0)
+        throw new Error('Bottom Controls retained an overlapping interval poller');
+    if (!hostTimeouts.some(item => item.active && item.delay === 25 && item.fn.name === 'poll'))
+        throw new Error('Bottom Controls did not start its ordered 25 ms runtime scheduler');
+    function runHostPollTick() {
+        const item = hostTimeouts.find(timer => timer.active && timer.delay === 25 && timer.fn.name === 'poll');
+        if (!item) throw new Error('Bottom Controls runtime scheduler stopped');
+        item.active = false;
+        item.fn();
+    }
     function runLatestHostApplyTimer() {
-        const item = [...hostTimeouts].reverse().find(timer => timer.active && timer.delay !== 25);
+        const item = [...hostTimeouts].reverse().find(timer => timer.active && timer.fn.name !== 'poll');
         if (!item) return false;
         item.active = false;
         item.fn();
@@ -1328,20 +1485,27 @@ suite("bottom-area cross-host state", function () {
     }
     const resetReadsAfterEnsure = readCounts[RESET_COMMAND] || 0;
     const stateReadsAfterEnsure = readCounts[NEW_STATE] || 0;
-    for (let i = 0; i < 4; i++) hostIntervalCallback();
+    const resetChecksAfterEnsure = isFileCounts[RESET_COMMAND] || 0;
+    for (let i = 0; i < 19; i++) runHostPollTick();
+    if ((readCounts[NEW_STATE] || 0) !== stateReadsAfterEnsure)
+        throw new Error('Canonical bottom-area state was polled before its 500 ms fallback tick');
     if ((readCounts[RESET_COMMAND] || 0) !== resetReadsAfterEnsure)
-        throw new Error('Factory-reset command file was polled at the 100 ms colour cadence');
-    if ((readCounts[NEW_STATE] || 0) !== stateReadsAfterEnsure + 4)
-        throw new Error('Bottom-area state was not checked on every 100 ms host tick');
-    hostIntervalCallback();
-    if ((readCounts[RESET_COMMAND] || 0) !== resetReadsAfterEnsure + 1)
-        throw new Error('Factory-reset command file was not checked at 500 ms');
+        throw new Error('Absent factory-reset commands triggered file reads');
+    runHostPollTick();
+    if ((readCounts[NEW_STATE] || 0) !== stateReadsAfterEnsure + 1)
+        throw new Error('Canonical bottom-area state was not checked at 500 ms');
+    if ((isFileCounts[RESET_COMMAND] || 0) !== resetChecksAfterEnsure + 1)
+        throw new Error('Factory-reset command was not checked at 500 ms');
 
     const VIEW_COMMAND = 'P:\js_data\darkonejsp3.view-command.txt';
     files[VIEW_COMMAND] = 'expired-view';
     if (host.syncView()) throw new Error('An invalid/expired view command was processed');
     if (Object.prototype.hasOwnProperty.call(files, VIEW_COMMAND))
         throw new Error('Invalid/expired view command file was not acknowledged and removed');
+    files[VIEW_COMMAND] = '';
+    host.syncView();
+    if (Object.prototype.hasOwnProperty.call(files, VIEW_COMMAND))
+        throw new Error('Empty view command file was not retired');
     files[VIEW_COMMAND] = 'valid-view';
     if (!host.syncView()) throw new Error('A valid view command was not relayed');
     if (Object.prototype.hasOwnProperty.call(files, VIEW_COMMAND))
@@ -1350,12 +1514,105 @@ suite("bottom-area cross-host state", function () {
     if (!viewEvent || viewEvent[1] !== 'v1|layout-toggle')
         throw new Error('Valid view command was not rebroadcast correctly');
 
+    files[RESET_COMMAND] = 'malformed-reset';
+    if (host.syncReset()) throw new Error('A malformed reset command was processed');
+    if (Object.prototype.hasOwnProperty.call(files, RESET_COMMAND))
+        throw new Error('Malformed reset command file was not retired');
+    files[RESET_COMMAND] = '';
+    host.syncReset();
+    if (Object.prototype.hasOwnProperty.call(files, RESET_COMMAND))
+        throw new Error('Empty reset command file was not retired');
+    const QUICKSEARCH_COMMAND = NEW_STATE.replace(
+        'darkonejsp3.bottom-area-state.txt',
+        'darkonejsp3.quicksearch-layout-command.txt'
+    );
+    files[QUICKSEARCH_COMMAND] = 'v2|obsolete|2|44|24';
+    if (host.syncQuick()) throw new Error('An obsolete Quick Search command was processed');
+    if (Object.prototype.hasOwnProperty.call(files, QUICKSEARCH_COMMAND))
+        throw new Error('Obsolete Quick Search command file was not retired');
+    files[QUICKSEARCH_COMMAND] = '';
+    host.syncQuick();
+    if (Object.prototype.hasOwnProperty.call(files, QUICKSEARCH_COMMAND))
+        throw new Error('Empty Quick Search command file was not retired');
+    files[QUICKSEARCH_COMMAND] = 'v3|current|0|55|32';
+    if (!host.syncQuick() || hostProperties.get('DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES') !== 0 ||
+            hostProperties.get('DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT') !== 55 ||
+            hostProperties.get('DARKONEJSP3.QUICKSEARCH.LAYOUT.LINE.PIXELS') !== 32)
+        throw new Error('Current Quick Search layout command was not applied');
+
+    // Obsolete transient commits are deliberately rejected. The command is
+    // acknowledged once and the durable v5 state remains the recovery path.
+    const obsoleteCommitNow = Date.now();
+    files[COMMIT_COMMAND] = 'v3|obsolete|' + obsoleteCommitNow + '|' +
+        obsoleteCommitNow + '|1|4278190080|1|4|4278190080|0';
+    files[NEW_STATE] = 'v5|recovery-state|2|4278190080|0|4|4278190080|1|0';
+    if (host.syncCommit())
+        throw new Error('Bottom Controls processed an obsolete transient commit');
+    if (Object.prototype.hasOwnProperty.call(files, COMMIT_COMMAND))
+        throw new Error('Obsolete transient commit was not acknowledged and removed');
+    files[COMMIT_COMMAND] = '';
+    host.syncCommit();
+    if (Object.prototype.hasOwnProperty.call(files, COMMIT_COMMAND))
+        throw new Error('Empty bottom-area commit file was not retired');
+    const recoveredCanonical = host.syncFile(false);
+    if ((host.backgroundColour() >>> 0) !== 0xff202020)
+        throw new Error('Bottom Controls did not recover through canonical v5 state: changed=' +
+            recoveredCanonical + ', colour=' + (host.backgroundColour() >>> 0).toString(16));
+    files[NEW_STATE] = 'v5|baseline-state|1|4278190080|0|4|4278190080|1|0';
+    if (!host.syncFile(false) || (host.backgroundColour() >>> 0) !== 0xff000000)
+        throw new Error('Bottom Controls did not restore the test baseline after recovery');
+
     const fills = [];
     const gr = { FillSolidRect(x,y,w,h,colour) { fills.push([x,y,w,h,colour>>>0]); } };
+    host.resetPropertyReads();
     host.paint(gr);
+    if (host.propertyReads() !== 7)
+        throw new Error('Bottom Controls paint reread the seven-field appearance state');
     if (fills.length !== 5 || fills[0][4] !== 0xff000000 ||
             fills[1][4] !== 0xff181818 || fills[2][4] !== 0xff181818)
         throw new Error('Migrated bottom background/dividers are incorrect');
+
+    // The visibility toggle suppresses both host-owned divider strips without
+    // changing their saved colour. Re-enabling it must restore those strips.
+    panelA.api.send({
+        backgroundMode: 1,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: false,
+        depthMode: 0
+    });
+    panelA.runTimers();
+    if (!host.syncCommit())
+        throw new Error('Bottom Controls did not consume the disabled-divider commit');
+    runLatestHostApplyTimer();
+    fills.length = 0;
+    host.paint(gr);
+    if (fills.length !== 3 || fills[0][4] !== 0xff000000 ||
+            fills[1][4] !== 0xff696969 || fills[2][4] !== 0xff1e1e1e)
+        throw new Error('Bottom side dividers remained visible after being disabled');
+    if (host.state().dividerMode !== 4 ||
+            (host.state().dividerCustomColour >>> 0) !== 0xff765432)
+        throw new Error('Disabling Bottom side dividers discarded their colour settings');
+    panelA.api.send({
+        backgroundMode: 1,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
+    });
+    panelA.runTimers();
+    if (!host.syncCommit())
+        throw new Error('Bottom Controls did not consume the enabled-divider commit');
+    runLatestHostApplyTimer();
+    fills.length = 0;
+    host.paint(gr);
+    if (fills.length !== 5 || fills[1][4] !== 0xff181818 ||
+            fills[2][4] !== 0xff181818)
+        throw new Error('Bottom side dividers were not restored with their saved colour');
 
     // Every shared background mode must resolve identically in the JScript
     // panels and the Bottom Controls JSplitter host. This specifically guards
@@ -1374,8 +1631,11 @@ suite("bottom-area cross-host state", function () {
         panelA.api.send({
             backgroundMode: mode,
             backgroundCustomColour: 0xff123456,
+            backgroundLinearGradient: false,
             dividerMode: 4,
-            dividerCustomColour: 0xff765432
+            dividerCustomColour: 0xff765432,
+            sideDividersVisible: true,
+            depthMode: 0
         });
         if ((panelA.api.backgroundColour() >>> 0) !== expected)
             throw new Error('JScript bottom mode ' + mode + ' resolved incorrectly');
@@ -1391,21 +1651,74 @@ suite("bottom-area cross-host state", function () {
             throw new Error('Bottom Controls mode ' + mode + ' did not paint its expected backing');
     });
 
+    panelA.api.send({
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: true,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 1
+    });
+    panelA.runTimers();
+    const gradientStringifiesBeforePaint = panelA.jsonStringifyCalls;
+    const jscriptGradientFills = [];
+    const jscriptGradientGraphics = {
+        FillRectangle(x, y, w, h, colour) {
+            jscriptGradientFills.push([x, y, w, h, colour]);
+        }
+    };
+    panelA.api.paint(jscriptGradientGraphics);
+    const gradientStringifiesAfterFirstPaint = panelA.jsonStringifyCalls;
+    panelA.api.paint(jscriptGradientGraphics);
+    if (gradientStringifiesAfterFirstPaint !== gradientStringifiesBeforePaint + 1 ||
+            panelA.jsonStringifyCalls !== gradientStringifiesAfterFirstPaint)
+        throw new Error('JScript bottom gradient brush was rebuilt on an unchanged repaint');
+    if (!host.syncCommit()) throw new Error('Bottom Controls did not consume the gradient commit');
+    runLatestHostApplyTimer();
+    hostGradientCalls.length = 0;
+    fills.length = 0;
+    host.paint(gr);
+    if (hostGradientCalls.length !== 1 || hostGradientCalls[0][4] !== 0xff202020 ||
+            hostGradientCalls[0][5] !== 0xff161616 ||
+            !fills.some(item => item[1] === 0 && item[3] === 1 && item[4] === 0xff000000) ||
+            !fills.some(item => item[1] === 1 && item[3] === 1 && item[4] === 0xff0f0f0f) ||
+            !fills.some(item => item[1] === 2 && item[3] === 2 && item[4] === 0xff262626))
+        throw new Error('Bottom Controls did not paint the shared gradient and Soft depth highlight');
+    panelA.api.send({
+        backgroundMode: 2,
+        backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
+        dividerMode: 4,
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
+    });
+    panelA.runTimers();
+    host.syncCommit();
+    runLatestHostApplyTimer();
+
     // Divider-only changes update shared menu properties and persistence but
     // must not rebuild buttons, Display colour caches or repaint JScript panels.
     panelA.api.send({
         backgroundMode: 3,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 4,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     const dividerOnlyRepaints = panelA.repaints;
     const dividerOnlyAppearance = panelA.appearanceApplications;
     panelA.api.send({
         backgroundMode: 3,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 1,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     if (panelA.api.state().dividerMode !== 1)
         throw new Error('Divider-only state did not update the JScript menu properties');
@@ -1416,15 +1729,21 @@ suite("bottom-area cross-host state", function () {
     panelA.api.send({
         backgroundMode: 2,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 1,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
 
     const customState = {
         backgroundMode: 3,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 5,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     };
     const panelARepaints = panelA.repaints;
     panelA.api.send(customState);
@@ -1478,14 +1797,20 @@ suite("bottom-area cross-host state", function () {
     panelA.api.send({
         backgroundMode: 1,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 5,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     panelA.api.send({
         backgroundMode: 4,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 5,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     panelA.runTimers();
     const rapidPaint = [];
@@ -1505,17 +1830,58 @@ suite("bottom-area cross-host state", function () {
     panelA.api.send({
         backgroundMode: 1,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 4,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     failWritePath = '';
     if (!logs.some(line => line.indexOf(NEW_STATE) >= 0 && line.indexOf('returned false') >= 0))
         throw new Error('A false bottom-area state write was not diagnosed with its path');
-    panelA.runTimers();
-    if (files[NEW_STATE] !== 'v1|1|4279383126|4|4285944882')
-        throw new Error('The failed bottom-area state write was not retried successfully');
-    host.syncCommit();
+    if (!host.syncCommit())
+        throw new Error('Bottom Controls did not consume a commit whose canonical write failed');
     runLatestHostApplyTimer();
+    host.syncFile(false);
+    if ((host.backgroundColour() >>> 0) !== 0xff000000)
+        throw new Error('Stale canonical state rolled back an applied bottom-area commit');
+    hostNow += 2001;
+    host.syncFile(false);
+    var repairedState = panelA.api.parse(files[NEW_STATE]);
+    if (!repairedState || repairedState.revision === 'state' ||
+            repairedState.backgroundMode !== 1 ||
+            (repairedState.backgroundCustomColour >>> 0) !== 0xff123456 ||
+            repairedState.dividerMode !== 4 ||
+            (repairedState.dividerCustomColour >>> 0) !== 0xff765432 ||
+            (host.backgroundColour() >>> 0) !== 0xff000000)
+        throw new Error('Bottom Controls did not repair canonical state after the persistence deadline: ' +
+            String(files[NEW_STATE]) + ' / ' + JSON.stringify(repairedState));
+    panelA.runTimers();
+    repairedState = panelA.api.parse(files[NEW_STATE]);
+    if (!repairedState || repairedState.backgroundMode !== 1 ||
+            repairedState.revision === 'state')
+        throw new Error('The failed bottom-area state write was not retried successfully');
+
+    const revisionBase = hostNow;
+    const olderCommit = host.Protocol.commit(
+        String(revisionBase) + '-older',
+        revisionBase,
+        revisionBase,
+        host.Protocol.state(1, 0xff000000, false, 4, 0xff000000, true, 0)
+    );
+    files[COMMIT_COMMAND] = host.Protocol.serialiseCommit(olderCommit);
+    if (!host.syncCommit())
+        throw new Error('Bottom Controls did not accept the revision-order test commit');
+    files[NEW_STATE] = host.Protocol.serialiseState(
+        host.Protocol.state(
+            2, 0xff000000, false, 4, 0xff000000, true, 0,
+            String(revisionBase + 1) + '-newer'
+        )
+    );
+    hostNow += 2001;
+    host.syncFile(false);
+    if ((host.backgroundColour() >>> 0) !== 0xff202020)
+        throw new Error('A newer canonical revision was overwritten by an older commit repair');
 
     // If the coordination command itself cannot be written, the initiator must
     // fall back to the legacy immediate repaint path rather than silently doing nothing.
@@ -1525,8 +1891,11 @@ suite("bottom-area cross-host state", function () {
     panelA.api.send({
         backgroundMode: 2,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 4,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     failWritePath = '';
     if (panelA.repaints !== fallbackRepaints + 1)
@@ -1538,13 +1907,19 @@ suite("bottom-area cross-host state", function () {
     // Cross-host factory reset: JScript writes a short-lived command, Bottom
     // Controls consumes it, resets its own role and rebroadcasts within JSplitter.
     hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.MODE', 1);
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT', true);
     hostProperties.set('DARKONEJSP3.BOTTOM.DIVIDER.MODE', 1);
+    hostProperties.set('DARKONEJSP3.BOTTOM.SIDE.DIVIDERS', false);
+    hostProperties.set('DARKONEJSP3.BOTTOM.DEPTH', 1);
     if (!panelA.api.writeReset('appearance') || !files[RESET_COMMAND])
         throw new Error('JScript factory reset did not write the reset command');
     const resetEventsBefore = hostNotifications.length;
     if (!host.syncReset()) throw new Error('Bottom Controls did not consume the reset command');
     if (hostProperties.get('DARKONEJSP3.BOTTOM.BACKGROUND.MODE') !== 2 ||
-            hostProperties.get('DARKONEJSP3.BOTTOM.DIVIDER.MODE') !== 4)
+            hostProperties.get('DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT') !== false ||
+            hostProperties.get('DARKONEJSP3.BOTTOM.DIVIDER.MODE') !== 4 ||
+            hostProperties.get('DARKONEJSP3.BOTTOM.SIDE.DIVIDERS') !== true ||
+            hostProperties.get('DARKONEJSP3.BOTTOM.DEPTH') !== 0)
         throw new Error('Bottom Controls did not restore its reset defaults');
     const resetEvent = hostNotifications.slice(resetEventsBefore).find(item => item[0] === 'DarkOneJSP3.Reset.Properties');
     if (!resetEvent || JSON.parse(resetEvent[1]).scope !== 'appearance')
@@ -1557,18 +1932,26 @@ suite("bottom-area cross-host state", function () {
     const now = Date.now();
     files[RESET_COMMAND] = 'v1|stale|' + String(now - 60000) + '|all';
     if (host.syncReset()) throw new Error('An expired reset command was processed');
+    if (Object.prototype.hasOwnProperty.call(files, RESET_COMMAND))
+        throw new Error('Expired reset command file was not retired');
 
     const restartedPanel = makePanel();
     restartedPanel.api.request();
     const restartedState = restartedPanel.api.state();
-    if (restartedState.backgroundMode !== 2 || restartedState.dividerMode !== 4)
+    if (restartedState.backgroundMode !== 2 ||
+            restartedState.backgroundLinearGradient !== false ||
+            restartedState.dividerMode !== 4 ||
+            restartedState.sideDividersVisible !== true || restartedState.depthMode !== 0)
         throw new Error('Reset bottom-area defaults did not survive a simulated restart');
 
     panelA.api.send({
         backgroundMode: 0,
         backgroundCustomColour: 0xff123456,
+        backgroundLinearGradient: false,
         dividerMode: 0,
-        dividerCustomColour: 0xff765432
+        dividerCustomColour: 0xff765432,
+        sideDividersVisible: true,
+        depthMode: 0
     });
     if ((panelA.api.backgroundColour() >>> 0) !== 0xff181818)
         throw new Error('JScript inherited bottom background does not resolve to #181818');
@@ -1591,7 +1974,38 @@ suite("bottom-area cross-host state", function () {
     firstPaintPanel.api.dispose();
     panelA.api.dispose();
     panelB.api.dispose();
+    missingDepthPropertyPanel.api.dispose();
     restartedPanel.api.dispose();
+});
+
+suite("JSplitter gradient run cache", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path("DarkOneJSP3/jsplitter/shared.js"), 'utf8');
+    let blendCalls = 0;
+    const colour = {
+        blend(top, bottom, amount) {
+            blendCalls++;
+            const topChannel = top & 0xff;
+            const bottomChannel = bottom & 0xff;
+            const channel = Math.round(topChannel + (bottomChannel - topChannel) * amount);
+            return (0xff000000 | channel * 0x10000 | channel * 0x100 | channel) >>> 0;
+        }
+    };
+    const factory = new Function(
+        'include', 'DarkOneColour', 'window', 'fb', 'utils',
+        source + '\nreturn DOJSP3;'
+    );
+    const api = factory(function(){}, colour, {GetPanel(){return null;}}, {}, {});
+    const fills = [];
+    const gr = {FillSolidRect(x,y,w,h,c){fills.push([x,y,w,h,c]);}};
+    api.fillVerticalGradient(gr, 0, 0, 100, 120, 0xff202020, 0xff161616);
+    const firstBlendCalls = blendCalls;
+    api.fillVerticalGradient(gr, 0, 0, 200, 120, 0xff202020, 0xff161616);
+    if (firstBlendCalls !== 120 || blendCalls !== firstBlendCalls)
+        throw new Error('JSplitter recomputed unchanged gradient row colours');
+    api.fillVerticalGradient(gr, 0, 0, 200, 121, 0xff202020, 0xff161616);
+    if (blendCalls !== firstBlendCalls + 121)
+        throw new Error('JSplitter gradient cache did not invalidate after geometry changed');
 });
 
 suite("startup control bridge", function () {
@@ -1617,6 +2031,12 @@ suite("startup control bridge", function () {
         if (!match) throw new Error('Missing timer with delay ' + delay);
         timers.delete(match[0]);
         match[1].fn();
+    }
+    function runAllTimersWithDelay(delay) {
+        const matches = [...timers.entries()].filter(item => item[1].delay === delay);
+        if (!matches.length) throw new Error('Missing timer with delay ' + delay);
+        matches.forEach(match => timers.delete(match[0]));
+        matches.forEach(match => match[1].fn());
     }
     const DOJSP3 = {
         colours: {bar: 0xff202020, buttonNormal: 0xff298fcc,
@@ -1657,6 +2077,18 @@ suite("startup control bridge", function () {
     function sourceKey(p, i) { return p + ':' + i; }
     let playlistQueueAdds = 0;
     let detachedQueueAdds = 0;
+    let queueAddAttempts = 0;
+    let queueAddFailureAt = 0;
+    let queueAddFailureAt2 = 0;
+    function maybeFailQueueAdd() {
+        queueAddAttempts++;
+        if ((queueAddFailureAt && queueAddAttempts === queueAddFailureAt) ||
+                (queueAddFailureAt2 && queueAddAttempts === queueAddFailureAt2)) {
+            if (queueAddAttempts === queueAddFailureAt) queueAddFailureAt = 0;
+            if (queueAddAttempts === queueAddFailureAt2) queueAddFailureAt2 = 0;
+            throw new Error('simulated queue reconstruction failure');
+        }
+    }
     const rootPlman = {
         PlaylistCount: 10,
         PlaylistItemCount() { return 100; },
@@ -1676,11 +2108,13 @@ suite("startup control bridge", function () {
             rootQueueContents = [];
         },
         AddPlaylistItemToPlaybackQueue(playlist, item) {
+            maybeFailQueueAdd();
             playlistQueueAdds++;
             rootQueueContents.push({PlaylistIndex:playlist,PlaylistItemIndex:item,
                 Handle:sourceHandles.get(sourceKey(playlist,item))});
         },
         AddItemToPlaybackQueue(handle) {
+            maybeFailQueueAdd();
             detachedQueueAdds++;
             rootQueueContents.push({PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:handle});
         }
@@ -1740,7 +2174,7 @@ suite("startup control bridge", function () {
     const failedState = JSON.parse(bridgeWrites.get(queueStatePath));
     assert(failedState.generation === beforeRetryGeneration,
         'Failed queue-state write incorrectly appeared as a published generation');
-    runTimerWithDelay(50);
+    runAllTimersWithDelay(50);
     const retriedState = JSON.parse(bridgeWrites.get(queueStatePath));
     assert(retriedState.generation === beforeRetryGeneration + 1 && retriedState.entries.length === 1,
         'Queue bridge did not retry the failed state publication without skipping generations');
@@ -1757,7 +2191,7 @@ suite("startup control bridge", function () {
     const currentBeforeRemove = JSON.parse(bridgeWrites.get(queueStatePath));
     bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'remove-1',session:currentBeforeRemove.session,
         generation:currentBeforeRemove.generation,action:'remove',queueIndexes:[1]}));
-    runTimerWithDelay(25);
+    runTimerWithDelay(50);
     assert(rootQueueContents.length === 1 && rootQueueContents[0].Handle.Path === 'C:/Detached/b.flac',
         'Root writable bridge did not remove the requested queue occurrence');
     const removeResult = JSON.parse(bridgeWrites.get(resultPath));
@@ -1777,7 +2211,7 @@ suite("startup control bridge", function () {
     const reorderState = JSON.parse(bridgeWrites.get('js_data\\darkonejsp3.queue-state.json'));
     bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'move-bottom',session:reorderState.session,
         generation:reorderState.generation,action:'moveBottom',queueIndexes:[1]}));
-    runTimerWithDelay(25);
+    runTimerWithDelay(50);
     assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
         'C:/Music/two.flac,C:/Detached/three.flac,C:/Music/one.flac',
         'Root writable bridge did not preserve order/handles while moving an item to the bottom');
@@ -1791,10 +2225,71 @@ suite("startup control bridge", function () {
     const movedState = JSON.parse(bridgeWrites.get('js_data\\darkonejsp3.queue-state.json'));
     bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'stale',session:movedState.session,
         generation:movedState.generation - 1,action:'clear',queueIndexes:[]}));
-    runTimerWithDelay(25);
+    runTimerWithDelay(50);
     const staleResult = JSON.parse(bridgeWrites.get(resultPath));
     assert(staleResult.accepted === false && rootQueueContents.length === 3,
         'Root writable bridge did not reject a stale-generation command');
+
+    bridgeWrites.set(commandPath, '{malformed');
+    runTimerWithDelay(50);
+    assert(!bridgeWrites.has(commandPath),
+        'Malformed queue command file was not retired after one poll');
+    bridgeWrites.set(commandPath, '');
+    runTimerWithDelay(50);
+    assert(!bridgeWrites.has(commandPath),
+        'Empty queue command file was not retired after one poll');
+
+    rootQueueContents = [
+        {PlaylistIndex:6, PlaylistItemIndex:1, Handle:{Path:'C:/Rollback/one.flac',SubSong:0}},
+        {PlaylistIndex:6, PlaylistItemIndex:2, Handle:{Path:'C:/Rollback/two.flac',SubSong:0}},
+        {PlaylistIndex:-1, PlaylistItemIndex:-1, Handle:{Path:'C:/Rollback/three.flac',SubSong:0}}
+    ];
+    sourceHandles.set(sourceKey(6,1), rootQueueContents[0].Handle);
+    sourceHandles.set(sourceKey(6,2), rootQueueContents[1].Handle);
+    root.on_playback_queue_changed(0);
+    const rollbackState = JSON.parse(bridgeWrites.get(queueStatePath));
+    queueAddAttempts = 0;
+    queueAddFailureAt = 2;
+    bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'rollback-reorder',
+        session:rollbackState.session,generation:rollbackState.generation,
+        action:'moveBottom',queueIndexes:[1]}));
+    runTimerWithDelay(50);
+    const rollbackResult = JSON.parse(bridgeWrites.get(resultPath));
+    const rollbackPublished = JSON.parse(bridgeWrites.get(queueStatePath));
+    assert(rollbackResult.accepted === false &&
+        rollbackResult.message.indexOf('original queue was restored') !== -1,
+        'Failed queue reconstruction did not report a successful rollback');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/Rollback/one.flac,C:/Rollback/two.flac,C:/Rollback/three.flac',
+        'Failed queue reconstruction did not restore the original order');
+    assert(rollbackPublished.generation > rollbackState.generation &&
+        rollbackPublished.entries.map(item => item.sourceId).join(',') ===
+            'C:/Rollback/one.flac|0,C:/Rollback/two.flac|0,C:/Rollback/three.flac|0',
+        'Failed queue reconstruction did not publish authoritative restored state');
+
+    rootQueueContents = [
+        {PlaylistIndex:6, PlaylistItemIndex:1, Handle:{Path:'C:/Rollback/one.flac',SubSong:0}},
+        {PlaylistIndex:6, PlaylistItemIndex:2, Handle:{Path:'C:/Rollback/two.flac',SubSong:0}},
+        {PlaylistIndex:-1, PlaylistItemIndex:-1, Handle:{Path:'C:/Rollback/three.flac',SubSong:0}}
+    ];
+    root.on_playback_queue_changed(0);
+    const failedRollbackState = JSON.parse(bridgeWrites.get(queueStatePath));
+    queueAddAttempts = 0;
+    queueAddFailureAt = 2;
+    queueAddFailureAt2 = 5;
+    bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'failed-rollback',
+        session:failedRollbackState.session,generation:failedRollbackState.generation,
+        action:'moveBottom',queueIndexes:[1]}));
+    runTimerWithDelay(50);
+    const failedRollbackResult = JSON.parse(bridgeWrites.get(resultPath));
+    const failedRollbackPublished = JSON.parse(bridgeWrites.get(queueStatePath));
+    assert(failedRollbackResult.accepted === false &&
+        failedRollbackResult.message.indexOf('rollback also failed') !== -1,
+        'Queue bridge did not report a failed rollback');
+    assert(failedRollbackPublished.entries.length === rootQueueContents.length &&
+        failedRollbackPublished.entries.map(item => item.sourceId).join(',') ===
+            rootQueueContents.map(item => item.Handle.Path + '|0').join(','),
+        'Failed rollback did not publish the actual partial queue state');
 
 
     function setMixedQueue() {
@@ -1829,7 +2324,7 @@ suite("startup control bridge", function () {
         const current = JSON.parse(bridgeWrites.get(queueStatePath));
         bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:id,session:current.session,
             generation:current.generation,action:action,queueIndexes:queueIndexes}));
-        runTimerWithDelay(25);
+        runTimerWithDelay(50);
         assert(!bridgeWrites.has(commandPath), id + ' left a processed command file behind');
         return JSON.parse(bridgeWrites.get(resultPath));
     }
@@ -1877,13 +2372,13 @@ suite("startup control bridge", function () {
     const multiState = JSON.parse(bridgeWrites.get('js_data\\darkonejsp3.queue-state.json'));
     bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'remove-many',session:multiState.session,
         generation:multiState.generation,action:'removeMany',queueIndexes:[2,4]}));
-    runTimerWithDelay(25);
+    runTimerWithDelay(50);
     assert(rootQueueContents.map(item => item.Handle.Path).join(',') === 'C:/Q/a.flac,C:/Q/c.flac',
         'Root writable bridge did not remove the exact selected duplicate queue occurrences');
     const clearState = JSON.parse(bridgeWrites.get('js_data\\darkonejsp3.queue-state.json'));
     bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'clear-all',session:clearState.session,
         generation:clearState.generation,action:'clear',queueIndexes:[]}));
-    runTimerWithDelay(25);
+    runTimerWithDelay(50);
     assert(rootQueueContents.length === 0, 'Root writable bridge did not clear the playback queue');
 
     function sendStartupAction(action, key, value) {

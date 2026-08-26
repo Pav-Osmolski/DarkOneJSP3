@@ -30,24 +30,36 @@ get_colours();
 // long-standing global configuration import so older saved control/display
 // entries receive the feature without requiring a new @import line.
 var DARKONE_RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
-var DARKONE_BOTTOM_AREA_PROTOCOL_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_PROTOCOL_VERSION = 'v5';
 var DARKONE_BOTTOM_AREA_STATE_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
 var DARKONE_BOTTOM_AREA_COMMIT_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
-var DARKONE_BOTTOM_AREA_COMMIT_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_GEOMETRY_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-geometry.txt';
+var DARKONE_BOTTOM_AREA_GEOMETRY_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_COMMIT_VERSION = 'v5';
 var DARKONE_BOTTOM_AREA_COMMIT_DELAY = 50;
 var DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE = 5000;
+var DARKONE_BOTTOM_AREA_COMMIT_MAX_LEAD = 1000;
 var DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var DARKONE_RESET_COMMAND_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
 var DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY = 250;
+var DARKONE_BOTTOM_AREA_STATE_RETRY_LIMIT = 8;
 var darkOneBottomAreaStateRetryTimer = null;
+var darkOneBottomAreaStateRetryAttempt = 0;
+var darkOneBottomAreaStateRetrySerialised = '';
 var darkOneBottomAreaCommitTimer = null;
 var darkOneBottomAreaPendingCommitId = '';
 var darkOneBottomAreaCommitSequence = 0;
 var darkOneBottomAreaInitialised = false;
+var darkOneBottomAreaPaintGradient = false;
+var darkOneBottomAreaPaintDepthMode = 0;
+var darkOneBottomAreaGradientHeight = 1;
+var darkOneBottomAreaGradientOffsetY = 0;
+var darkOneBottomAreaGradientBrushKey = '';
+var darkOneBottomAreaGradientBrush = '';
+var darkOneBottomAreaHighlightColour = 0xff262626;
 var darkOneResetCommandSequence = 0;
 var DARKONE_BOTTOM_AREA_NOTIFICATIONS = Object.freeze({
     query : 'DarkOneJSP3.BottomArea.Query',
-    set : 'DarkOneJSP3.BottomArea.Set',
     state : 'DarkOneJSP3.BottomArea.State',
     commit : 'DarkOneJSP3.BottomArea.Commit'
 });
@@ -60,11 +72,24 @@ var DARKONE_BOTTOM_MODE_COLUMNS_UI = 5;
 var DARKONE_BOTTOM_MODE_VALUES = [0, 1, 2, 3, 4, 5];
 var DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.MODE';
 var DARKONE_BOTTOM_BACKGROUND_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR';
+var DARKONE_BOTTOM_BACKGROUND_GRADIENT_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT';
 var DARKONE_BOTTOM_DIVIDER_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.MODE';
 var DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR';
+var DARKONE_BOTTOM_SIDE_DIVIDERS_PROPERTY = 'DARKONEJSP3.BOTTOM.SIDE.DIVIDERS';
+var DARKONE_BOTTOM_DEPTH_PROPERTY = 'DARKONEJSP3.BOTTOM.DEPTH';
 var DARKONE_BOTTOM_BACKGROUND_DEFAULT = DARKONE_BOTTOM_MODE_DARKONE;
 var DARKONE_BOTTOM_DIVIDER_DEFAULT = DARKONE_BOTTOM_MODE_DARKONE_DARK;
 var DARKONE_BOTTOM_CUSTOM_DEFAULT = 0xff000000;
+var DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT = false;
+var DARKONE_BOTTOM_BACKGROUND_GRADIENT_MENU_ID = 9827;
+var DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT = true;
+var DARKONE_BOTTOM_SIDE_DIVIDERS_MENU_ID = 9828;
+var DARKONE_BOTTOM_DEPTH_FLAT = 0;
+var DARKONE_BOTTOM_DEPTH_SOFT = 1;
+var DARKONE_BOTTOM_DEPTH_VALUES = [DARKONE_BOTTOM_DEPTH_FLAT, DARKONE_BOTTOM_DEPTH_SOFT];
+var DARKONE_BOTTOM_DEPTH_DEFAULT = DARKONE_BOTTOM_DEPTH_FLAT;
+var DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID = 9829;
+var DARKONE_BOTTOM_DEPTH_LAST_MENU_ID = 9830;
 
 function darkOneBottomMenuOptions(baseId, transparentLabel) {
     return [
@@ -106,6 +131,20 @@ function darkOneBottomNormaliseMode(value, fallback) {
     value = Math.round(Number(value));
     return DARKONE_BOTTOM_MODE_VALUES.indexOf(value) >= 0 ? value : fallback;
 }
+function darkOneBottomNormaliseBoolean(value, fallback) {
+    if (value === true || value === 1 || value === '1' || value === 'true') return true;
+    if (value === false || value === 0 || value === '0' || value === 'false') return false;
+    return Boolean(fallback);
+}
+function darkOneBottomNormaliseDepth(value, fallback) {
+    value = Math.round(Number(value));
+    return DARKONE_BOTTOM_DEPTH_VALUES.indexOf(value) >= 0 ? value : fallback;
+}
+function darkOneBottomNormaliseRevision(value, fallback) {
+    value = String(value || '');
+    if (/^[A-Za-z0-9._-]{1,128}$/.test(value)) return value;
+    return typeof fallback !== 'undefined' ? String(fallback) : 'state';
+}
 function darkOneBottomBackgroundMode() {
     return darkOneBottomNormaliseMode(
         window.GetProperty(DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
@@ -124,50 +163,117 @@ function darkOneBottomBackgroundCustomColour() {
         DARKONE_BOTTOM_CUSTOM_DEFAULT
     ));
 }
+function darkOneBottomBackgroundLinearGradient() {
+    return darkOneBottomNormaliseBoolean(
+        window.GetProperty(
+            DARKONE_BOTTOM_BACKGROUND_GRADIENT_PROPERTY,
+            DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT
+        ),
+        DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT
+    );
+}
 function darkOneBottomDividerCustomColour() {
     return darkOneBottomOpaque(window.GetProperty(
         DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY,
         DARKONE_BOTTOM_CUSTOM_DEFAULT
     ));
 }
+function darkOneBottomSideDividersVisible() {
+    return darkOneBottomNormaliseBoolean(
+        window.GetProperty(
+            DARKONE_BOTTOM_SIDE_DIVIDERS_PROPERTY,
+            DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT
+        ),
+        DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT
+    );
+}
+function darkOneBottomDepthMode() {
+    return darkOneBottomNormaliseDepth(
+        window.GetProperty(DARKONE_BOTTOM_DEPTH_PROPERTY, DARKONE_BOTTOM_DEPTH_DEFAULT),
+        DARKONE_BOTTOM_DEPTH_DEFAULT
+    );
+}
 function darkOneBottomAreaState() {
     return {
+        revision : 'state',
         backgroundMode : darkOneBottomBackgroundMode(),
         backgroundCustomColour : darkOneBottomBackgroundCustomColour(),
+        backgroundLinearGradient : darkOneBottomBackgroundLinearGradient(),
         dividerMode : darkOneBottomDividerMode(),
-        dividerCustomColour : darkOneBottomDividerCustomColour()
+        dividerCustomColour : darkOneBottomDividerCustomColour(),
+        sideDividersVisible : darkOneBottomSideDividersVisible(),
+        depthMode : darkOneBottomDepthMode()
     };
 }
 function darkOneBottomAreaSerialiseState(state) {
     state = state || darkOneBottomAreaState();
     return DARKONE_BOTTOM_AREA_PROTOCOL_VERSION + '|' +
+        darkOneBottomNormaliseRevision(state.revision, 'state') + '|' +
         String(darkOneBottomNormaliseMode(state.backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT)) + '|' +
         String(darkOneBottomOpaque(state.backgroundCustomColour) >>> 0) + '|' +
+        (darkOneBottomNormaliseBoolean(state.backgroundLinearGradient, false) ? '1' : '0') + '|' +
         String(darkOneBottomNormaliseMode(state.dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT)) + '|' +
-        String(darkOneBottomOpaque(state.dividerCustomColour) >>> 0);
+        String(darkOneBottomOpaque(state.dividerCustomColour) >>> 0) + '|' +
+        (darkOneBottomNormaliseBoolean(state.sideDividersVisible, true) ? '1' : '0') + '|' +
+        String(darkOneBottomNormaliseDepth(state.depthMode, DARKONE_BOTTOM_DEPTH_DEFAULT));
 }
 function darkOneBottomAreaParseState(data) {
     if (data && typeof data == 'object') {
         return {
+            revision : darkOneBottomNormaliseRevision(data.revision, 'state'),
             backgroundMode : darkOneBottomNormaliseMode(data.backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
             backgroundCustomColour : darkOneBottomOpaque(data.backgroundCustomColour),
+            backgroundLinearGradient : darkOneBottomNormaliseBoolean(
+                data.backgroundLinearGradient,
+                DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT
+            ),
             dividerMode : darkOneBottomNormaliseMode(data.dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT),
-            dividerCustomColour : darkOneBottomOpaque(data.dividerCustomColour)
+            dividerCustomColour : darkOneBottomOpaque(data.dividerCustomColour),
+            sideDividersVisible : darkOneBottomNormaliseBoolean(
+                data.sideDividersVisible,
+                DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT
+            ),
+            depthMode : darkOneBottomNormaliseDepth(
+                data.depthMode,
+                DARKONE_BOTTOM_DEPTH_DEFAULT
+            )
         };
     }
     var parts = String(data || '').split('|');
-    if (parts.length !== 5 || parts[0] !== DARKONE_BOTTOM_AREA_PROTOCOL_VERSION) return null;
-    var backgroundMode = Number(parts[1]);
-    var backgroundCustomColour = Number(parts[2]);
-    var dividerMode = Number(parts[3]);
-    var dividerCustomColour = Number(parts[4]);
+    var legacyV1 = parts.length === 5 && parts[0] === 'v1';
+    if (!legacyV1 &&
+            (parts.length !== 9 || parts[0] !== DARKONE_BOTTOM_AREA_PROTOCOL_VERSION)) return null;
+    var revision = legacyV1 ? 'v1-migration' :
+        darkOneBottomNormaliseRevision(parts[1], '');
+    if (!revision) return null;
+    var offset = legacyV1 ? 0 : 1;
+    var backgroundMode = Number(parts[1 + offset]);
+    var backgroundCustomColour = Number(parts[2 + offset]);
+    var backgroundLinearGradient = legacyV1 ? false : parts[4];
+    var dividerMode = Number(parts[legacyV1 ? 3 : 5]);
+    var dividerCustomColour = Number(parts[legacyV1 ? 4 : 6]);
+    var sideDividersVisible = legacyV1 ? true : parts[7];
+    var depthMode = legacyV1 ? DARKONE_BOTTOM_DEPTH_FLAT : parts[8];
     if (!isFinite(backgroundMode) || !isFinite(backgroundCustomColour) ||
             !isFinite(dividerMode) || !isFinite(dividerCustomColour)) return null;
     return {
+        revision : revision,
         backgroundMode : darkOneBottomNormaliseMode(backgroundMode, DARKONE_BOTTOM_BACKGROUND_DEFAULT),
         backgroundCustomColour : darkOneBottomOpaque(backgroundCustomColour),
+        backgroundLinearGradient : darkOneBottomNormaliseBoolean(
+            backgroundLinearGradient,
+            DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT
+        ),
         dividerMode : darkOneBottomNormaliseMode(dividerMode, DARKONE_BOTTOM_DIVIDER_DEFAULT),
-        dividerCustomColour : darkOneBottomOpaque(dividerCustomColour)
+        dividerCustomColour : darkOneBottomOpaque(dividerCustomColour),
+        sideDividersVisible : darkOneBottomNormaliseBoolean(
+            sideDividersVisible,
+            DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT
+        ),
+        depthMode : darkOneBottomNormaliseDepth(
+            depthMode,
+            DARKONE_BOTTOM_DEPTH_DEFAULT
+        )
     };
 }
 
@@ -176,7 +282,11 @@ function darkOneBottomAreaCommit(id, issuedAt, applyAt, state) {
     issuedAt = Math.round(Number(issuedAt));
     applyAt = Math.round(Number(applyAt));
     state = darkOneBottomAreaParseState(state);
-    if (!id || !isFinite(issuedAt) || !isFinite(applyAt) || !state) return null;
+    if (!/^[A-Za-z0-9._-]{1,128}$/.test(id) ||
+            !isFinite(issuedAt) || !isFinite(applyAt) || !state ||
+            applyAt < issuedAt ||
+            applyAt - issuedAt > DARKONE_BOTTOM_AREA_COMMIT_MAX_LEAD) return null;
+    state.revision = id;
     return { id : id, issuedAt : issuedAt, applyAt : applyAt, state : state };
 }
 function darkOneBottomAreaSerialiseCommit(commit) {
@@ -191,7 +301,9 @@ function darkOneBottomAreaSerialiseCommit(commit) {
     return DARKONE_BOTTOM_AREA_COMMIT_VERSION + '|' + commit.id + '|' +
         String(commit.issuedAt) + '|' + String(commit.applyAt) + '|' +
         String(state.backgroundMode) + '|' + String(state.backgroundCustomColour >>> 0) + '|' +
-        String(state.dividerMode) + '|' + String(state.dividerCustomColour >>> 0);
+        (state.backgroundLinearGradient ? '1' : '0') + '|' +
+        String(state.dividerMode) + '|' + String(state.dividerCustomColour >>> 0) + '|' +
+        (state.sideDividersVisible ? '1' : '0') + '|' + String(state.depthMode);
 }
 function darkOneBottomAreaParseCommit(data, now) {
     if (data && typeof data == 'object') {
@@ -209,7 +321,7 @@ function darkOneBottomAreaParseCommit(data, now) {
         return objectCommit;
     }
     var parts = String(data || '').split('|');
-    if (parts.length !== 8 || parts[0] !== DARKONE_BOTTOM_AREA_COMMIT_VERSION) return null;
+    if (parts.length !== 11 || parts[0] !== DARKONE_BOTTOM_AREA_COMMIT_VERSION) return null;
     var commit = darkOneBottomAreaCommit(
         parts[1],
         Number(parts[2]),
@@ -217,8 +329,11 @@ function darkOneBottomAreaParseCommit(data, now) {
         {
             backgroundMode : Number(parts[4]),
             backgroundCustomColour : Number(parts[5]),
-            dividerMode : Number(parts[6]),
-            dividerCustomColour : Number(parts[7])
+            backgroundLinearGradient : parts[6],
+            dividerMode : Number(parts[7]),
+            dividerCustomColour : Number(parts[8]),
+            sideDividersVisible : parts[9],
+            depthMode : parts[10]
         }
     );
     if (!commit) return null;
@@ -253,13 +368,120 @@ function darkOneBottomBackgroundColour() {
     // this fallback and resolves to the established recessed DarkOne backing.
     return 0xff181818;
 }
+function darkOneBottomScaleBrightness(colour, factor) {
+    colour = Number(colour) >>> 0;
+    factor = Number(factor);
+    if (!isFinite(factor)) factor = 1;
+    var red = Math.max(0, Math.min(255, Math.round(((colour >>> 16) & 0xff) * factor)));
+    var green = Math.max(0, Math.min(255, Math.round(((colour >>> 8) & 0xff) * factor)));
+    var blue = Math.max(0, Math.min(255, Math.round((colour & 0xff) * factor)));
+    return 0xff000000 +
+        red * 0x10000 + green * 0x100 + blue;
+}
+function darkOneBottomBlendColour(colour1, colour2, amount) {
+    colour1 = Number(colour1) >>> 0;
+    colour2 = Number(colour2) >>> 0;
+    amount = Math.max(0, Math.min(1, Number(amount) || 0));
+    var red1 = (colour1 >>> 16) & 0xff;
+    var green1 = (colour1 >>> 8) & 0xff;
+    var blue1 = colour1 & 0xff;
+    var red = Math.round(red1 + amount * (((colour2 >>> 16) & 0xff) - red1));
+    var green = Math.round(green1 + amount * (((colour2 >>> 8) & 0xff) - green1));
+    var blue = Math.round(blue1 + amount * ((colour2 & 0xff) - blue1));
+    return 0xff000000 + red * 0x10000 + green * 0x100 + blue;
+}
+function darkOneReadBottomAreaGeometry() {
+    var height = Math.max(1, Math.round(Number(wh)) || 1);
+    var displayTop = 0;
+    try {
+        var parts = String(utils.ReadTextFile(
+            DARKONE_BOTTOM_AREA_GEOMETRY_FILE,
+            65001
+        ) || '').split('|');
+        if (parts.length === 3 && parts[0] === DARKONE_BOTTOM_AREA_GEOMETRY_VERSION) {
+            var parsedHeight = Math.round(Number(parts[1]));
+            var parsedDisplayTop = Math.round(Number(parts[2]));
+            if (isFinite(parsedHeight) && parsedHeight >= 1 && isFinite(parsedDisplayTop)) {
+                height = parsedHeight;
+                displayTop = Math.max(0, Math.min(height - 1, parsedDisplayTop));
+            }
+        }
+    } catch (e) {}
+    var role = typeof DARKONEJSP3_RESET_ROLE == 'string'
+        ? DARKONEJSP3_RESET_ROLE
+        : '';
+    var offsetY = role === 'display' ? displayTop : 0;
+    if (height !== darkOneBottomAreaGradientHeight ||
+            offsetY !== darkOneBottomAreaGradientOffsetY) {
+        darkOneBottomAreaGradientHeight = height;
+        darkOneBottomAreaGradientOffsetY = offsetY;
+        darkOneBottomAreaGradientBrushKey = '';
+        darkOneBottomAreaGradientBrush = '';
+    }
+}
+function darkOneBottomAreaBrush() {
+    var key = String(p_backcol >>> 0) + '|' + String(wh) + '|' +
+        String(darkOneBottomAreaGradientHeight) + '|' +
+        String(darkOneBottomAreaGradientOffsetY);
+    if (key === darkOneBottomAreaGradientBrushKey && darkOneBottomAreaGradientBrush) {
+        return darkOneBottomAreaGradientBrush;
+    }
+    var darker = darkOneBottomScaleBrightness(p_backcol, 0.7);
+    var denominator = Math.max(1, darkOneBottomAreaGradientHeight - 1);
+    var topAmount = Math.max(0, Math.min(
+        1,
+        darkOneBottomAreaGradientOffsetY / denominator
+    ));
+    var bottomAmount = Math.max(0, Math.min(
+        1,
+        (darkOneBottomAreaGradientOffsetY + Math.max(0, wh - 1)) / denominator
+    ));
+    darkOneBottomAreaGradientBrushKey = key;
+    darkOneBottomAreaGradientBrush = JSON.stringify({
+        Start : [0, 0],
+        End : [0, Math.max(1, wh)],
+        Stops : [
+            [0, darkOneBottomBlendColour(p_backcol, darker, topAmount)],
+            [1, darkOneBottomBlendColour(p_backcol, darker, bottomAmount)]
+        ]
+    });
+    return darkOneBottomAreaGradientBrush;
+}
 function darkOnePaintBottomAreaBackground(gr) {
     // Transparent / inherit parent is resolved to the common #181818 parent
     // tone rather than skipping paint and exposing component-specific backings.
-    gr.FillRectangle(0, 0, ww, wh, p_backcol);
+    if (!darkOneBottomAreaPaintGradient) {
+        gr.FillRectangle(0, 0, ww, wh, p_backcol);
+    } else {
+        gr.FillRectangle(0, 0, ww, wh, darkOneBottomAreaBrush());
+    }
+    var role = typeof DARKONEJSP3_RESET_ROLE == 'string'
+        ? DARKONEJSP3_RESET_ROLE
+        : '';
+    if (darkOneBottomAreaPaintDepthMode === DARKONE_BOTTOM_DEPTH_SOFT &&
+            (role === 'control-left' || role === 'control-right') &&
+            ww > 0 && wh > 0) {
+        gr.FillRectangle(0, 0, ww, 1, 0xff000000);
+        if (wh > 1) gr.FillRectangle(0, 1, ww, 1, 0xff0f0f0f);
+        var highlightHeight = Math.min(2, Math.max(0, wh - 2));
+        if (highlightHeight > 0) {
+            gr.FillRectangle(
+                0,
+                2,
+                ww,
+                highlightHeight,
+                darkOneBottomAreaHighlightColour
+            );
+        }
+    }
 }
 function darkOneApplyBottomAreaAppearance() {
     p_backcol = darkOneBottomBackgroundColour();
+    darkOneBottomAreaPaintGradient = darkOneBottomBackgroundLinearGradient();
+    darkOneBottomAreaPaintDepthMode = darkOneBottomDepthMode();
+    darkOneBottomAreaHighlightColour = darkOneBottomScaleBrightness(p_backcol, 1.2);
+    darkOneBottomAreaGradientBrushKey = '';
+    darkOneBottomAreaGradientBrush = '';
     if (typeof buttonsColours == 'function') buttonsColours();
     if (typeof volknob != 'undefined' && volknob && typeof vknbOpt != 'undefined') {
         volknob.line_normal = vknbOpt.line_normal;
@@ -279,15 +501,21 @@ function darkOneApplyBottomAreaState(state, repaint) {
 
     var current = darkOneBottomAreaState();
     var backgroundChanged = current.backgroundMode !== state.backgroundMode ||
-        (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0);
+        (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0) ||
+        current.backgroundLinearGradient !== state.backgroundLinearGradient ||
+        current.depthMode !== state.depthMode;
     var dividerChanged = current.dividerMode !== state.dividerMode ||
-        (current.dividerCustomColour >>> 0) !== (state.dividerCustomColour >>> 0);
+        (current.dividerCustomColour >>> 0) !== (state.dividerCustomColour >>> 0) ||
+        current.sideDividersVisible !== state.sideDividersVisible;
 
     var values = {};
     values[DARKONE_BOTTOM_BACKGROUND_MODE_PROPERTY] = state.backgroundMode;
     values[DARKONE_BOTTOM_BACKGROUND_CUSTOM_PROPERTY] = state.backgroundCustomColour;
+    values[DARKONE_BOTTOM_BACKGROUND_GRADIENT_PROPERTY] = state.backgroundLinearGradient;
     values[DARKONE_BOTTOM_DIVIDER_MODE_PROPERTY] = state.dividerMode;
     values[DARKONE_BOTTOM_DIVIDER_CUSTOM_PROPERTY] = state.dividerCustomColour;
+    values[DARKONE_BOTTOM_SIDE_DIVIDERS_PROPERTY] = state.sideDividersVisible;
+    values[DARKONE_BOTTOM_DEPTH_PROPERTY] = state.depthMode;
     var result = darkOneApplySharedValues(values);
     result.backgroundChanged = backgroundChanged;
     result.dividerChanged = dividerChanged;
@@ -323,37 +551,83 @@ function darkOneTryWriteRuntimeFile(path, content, label) {
 }
 function darkOneReadBottomAreaStatePath(path) {
     try {
-        var serialised = utils.ReadTextFile(path, 65001);
-        var state = darkOneBottomAreaParseState(serialised);
-        return state ? { state : state, serialised : darkOneBottomAreaSerialiseState(state) } : null;
+        var raw = String(utils.ReadTextFile(path, 65001) || '');
+        var state = darkOneBottomAreaParseState(raw);
+        return state ? {
+            state : state,
+            raw : raw,
+            serialised : darkOneBottomAreaSerialiseState(state)
+        } : null;
     } catch (e) {}
     return null;
 }
 function darkOneReadBottomAreaStateFile() {
     var current = darkOneReadBottomAreaStatePath(DARKONE_BOTTOM_AREA_STATE_FILE);
-    if (current) return current;
+    if (current) {
+        if (current.raw !== current.serialised) {
+            darkOneWriteBottomAreaStateFile(current.state);
+        }
+        return current;
+    }
     var legacy = darkOneReadBottomAreaStatePath(DARKONE_BOTTOM_AREA_LEGACY_STATE_FILE);
     if (!legacy) return null;
-    // Migrate v0.9.22/v0.9.23 state out of the maintained source tree.
+    // Migrate the public v1.0.17 state into the current js_data location.
     darkOneWriteBottomAreaStateFile(legacy.state);
     return legacy;
 }
 function darkOneCancelBottomAreaStateRetry() {
-    if (!darkOneBottomAreaStateRetryTimer) return;
-    try { window.ClearTimeout(darkOneBottomAreaStateRetryTimer); } catch (e) {}
+    if (darkOneBottomAreaStateRetryTimer) {
+        try { window.ClearTimeout(darkOneBottomAreaStateRetryTimer); } catch (e) {}
+    }
     darkOneBottomAreaStateRetryTimer = null;
+    darkOneBottomAreaStateRetryAttempt = 0;
+    darkOneBottomAreaStateRetrySerialised = '';
+}
+function darkOneRetryBottomAreaStateWrite() {
+    darkOneBottomAreaStateRetryTimer = null;
+    if (!darkOneBottomAreaStateRetrySerialised) return;
+    if (darkOneTryWriteRuntimeFile(
+            DARKONE_BOTTOM_AREA_STATE_FILE,
+            darkOneBottomAreaStateRetrySerialised,
+            'shared bottom-area state retry')) {
+        var state = darkOneBottomAreaParseState(darkOneBottomAreaStateRetrySerialised);
+        darkOneBottomAreaStateRetryAttempt = 0;
+        darkOneBottomAreaStateRetrySerialised = '';
+        if (state) darkOneBroadcastBottomAreaState(state);
+        return;
+    }
+    darkOneBottomAreaStateRetryAttempt++;
+    if (darkOneBottomAreaStateRetryAttempt >= DARKONE_BOTTOM_AREA_STATE_RETRY_LIMIT) {
+        darkOneLogRuntimeWriteFailure(
+            'shared bottom-area state retry limit',
+            DARKONE_BOTTOM_AREA_STATE_FILE,
+            'canonical state remains held by the active commit'
+        );
+        darkOneBottomAreaStateRetrySerialised = '';
+        return;
+    }
+    try {
+        darkOneBottomAreaStateRetryTimer = window.SetTimeout(
+            darkOneRetryBottomAreaStateWrite,
+            DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY
+        );
+    } catch (e) {
+        darkOneLogRuntimeWriteFailure(
+            'shared bottom-area state retry',
+            DARKONE_BOTTOM_AREA_STATE_FILE,
+            String(e)
+        );
+    }
 }
 function darkOneScheduleBottomAreaStateRetry(serialised) {
     darkOneCancelBottomAreaStateRetry();
+    darkOneBottomAreaStateRetrySerialised = String(serialised || '');
+    darkOneBottomAreaStateRetryAttempt = 0;
     try {
-        darkOneBottomAreaStateRetryTimer = window.SetTimeout(function () {
-            darkOneBottomAreaStateRetryTimer = null;
-            darkOneTryWriteRuntimeFile(
-                DARKONE_BOTTOM_AREA_STATE_FILE,
-                serialised,
-                'shared bottom-area state retry'
-            );
-        }, DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY);
+        darkOneBottomAreaStateRetryTimer = window.SetTimeout(
+            darkOneRetryBottomAreaStateWrite,
+            DARKONE_BOTTOM_AREA_STATE_RETRY_DELAY
+        );
     } catch (e) {
         darkOneLogRuntimeWriteFailure(
             'shared bottom-area state retry',
@@ -401,7 +675,13 @@ function darkOneApplyScheduledBottomAreaCommit(commit) {
     // Comparing against p_backcol also handles rapid superseding commits: the
     // properties may already match while the previous colour was never painted.
     var nextBackground = darkOneBottomBackgroundColour();
-    if ((p_backcol >>> 0) !== (nextBackground >>> 0)) darkOneApplyBottomAreaAppearance();
+    var nextGradient = darkOneBottomBackgroundLinearGradient();
+    var nextDepth = darkOneBottomDepthMode();
+    if ((p_backcol >>> 0) !== (nextBackground >>> 0) ||
+            darkOneBottomAreaPaintGradient !== nextGradient ||
+            darkOneBottomAreaPaintDepthMode !== nextDepth) {
+        darkOneApplyBottomAreaAppearance();
+    }
     return true;
 }
 function darkOneScheduleBottomAreaCommit(commit) {
@@ -442,7 +722,7 @@ function darkOneSendBottomAreaState(state) {
         serialisedCommit,
         'shared bottom-area commit'
     );
-    darkOneWriteBottomAreaStateFile(state);
+    darkOneWriteBottomAreaStateFile(commit.state);
     if (commandWritten) {
         darkOneScheduleBottomAreaCommit(commit);
         darkOneBroadcastBottomAreaCommit(commit);
@@ -470,7 +750,7 @@ function darkOneInitialiseBottomAreaState(queryPeers) {
     if (queryPeers !== false) {
         // Query same-component peers once. Continuous disk polling is deliberately
         // reserved for the Bottom Controls JSplitter host.
-        try { window.NotifyOthers(DARKONE_BOTTOM_AREA_NOTIFICATIONS.query, 'v1'); } catch (e) {}
+        try { window.NotifyOthers(DARKONE_BOTTOM_AREA_NOTIFICATIONS.query, DARKONE_BOTTOM_AREA_PROTOCOL_VERSION); } catch (e) {}
     }
 
     // p_backcol starts at DarkOne grey. Explicitly resolve the saved mode before
@@ -479,19 +759,30 @@ function darkOneInitialiseBottomAreaState(queryPeers) {
     return true;
 }
 function darkOneRequestBottomAreaState() {
+    darkOneReadBottomAreaGeometry();
     return darkOneInitialiseBottomAreaState(true);
 }
 function darkOneDisposeBottomAreaBridge() {
     darkOneCancelBottomAreaStateRetry();
     darkOneCancelBottomAreaCommit();
 }
-function darkOneResetBottomAreaDefaults() {
-    darkOneSendBottomAreaState({
+function darkOneBottomAreaDefaultState() {
+    return {
         backgroundMode : DARKONE_BOTTOM_BACKGROUND_DEFAULT,
         backgroundCustomColour : DARKONE_BOTTOM_CUSTOM_DEFAULT,
+        backgroundLinearGradient : DARKONE_BOTTOM_BACKGROUND_GRADIENT_DEFAULT,
         dividerMode : DARKONE_BOTTOM_DIVIDER_DEFAULT,
-        dividerCustomColour : DARKONE_BOTTOM_CUSTOM_DEFAULT
-    });
+        dividerCustomColour : DARKONE_BOTTOM_CUSTOM_DEFAULT,
+        sideDividersVisible : DARKONE_BOTTOM_SIDE_DIVIDERS_DEFAULT,
+        depthMode : DARKONE_BOTTOM_DEPTH_DEFAULT
+    };
+}
+function darkOneApplyBottomAreaDefaultsLocally() {
+    darkOneApplyBottomAreaState(darkOneBottomAreaDefaultState(), false);
+    darkOneApplyBottomAreaAppearance();
+}
+function darkOneResetBottomAreaDefaults() {
+    darkOneSendBottomAreaState(darkOneBottomAreaDefaultState());
 }
 function darkOneCreateResetCommand(scope) {
     scope = darkOneJsp3ResetCommandScope(scope);
@@ -582,7 +873,7 @@ function darkOneAppendBottomColourOptions(menu, options, selectedMode, customCol
     }
     menu.CheckMenuRadioItem(first, last, selectedId);
 }
-function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) {
+function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider, depth) {
     darkOneAppendBottomColourOptions(
         background,
         DARKONE_BOTTOM_BACKGROUND_MENU_OPTIONS,
@@ -601,6 +892,33 @@ function darkOneAppendBottomAreaAppearanceMenu(appearance, background, divider) 
     divider.AppendMenuSeparator();
     divider.AppendMenuItem(MF_STRING, 9826, 'Set custom colour...');
     divider.AppendTo(appearance, MF_STRING, 'Bottom area side divider colour');
+    depth.AppendMenuItem(MF_STRING, DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID, 'Flat');
+    depth.AppendMenuItem(MF_STRING, DARKONE_BOTTOM_DEPTH_LAST_MENU_ID, 'Soft');
+    depth.CheckMenuRadioItem(
+        DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID,
+        DARKONE_BOTTOM_DEPTH_LAST_MENU_ID,
+        DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID + darkOneBottomDepthMode()
+    );
+    depth.AppendTo(appearance, MF_STRING, 'Bottom area depth');
+    appearance.AppendMenuItem(
+        MF_STRING,
+        DARKONE_BOTTOM_BACKGROUND_GRADIENT_MENU_ID,
+        'Background linear gradient'
+    );
+    appearance.CheckMenuItem(
+        DARKONE_BOTTOM_BACKGROUND_GRADIENT_MENU_ID,
+        darkOneBottomBackgroundLinearGradient()
+    );
+    appearance.AppendMenuSeparator();
+    appearance.AppendMenuItem(
+        MF_STRING,
+        DARKONE_BOTTOM_SIDE_DIVIDERS_MENU_ID,
+        'Bottom side dividers'
+    );
+    appearance.CheckMenuItem(
+        DARKONE_BOTTOM_SIDE_DIVIDERS_MENU_ID,
+        darkOneBottomSideDividersVisible()
+    );
 }
 
 var DARKONE_BUTTON_STYLE_LABELS = [
@@ -729,6 +1047,25 @@ function darkOneHandleBottomAreaMenuSelection(id) {
         if (chosen === null) return true;
         state.dividerCustomColour = chosen;
         state.dividerMode = DARKONE_BOTTOM_MODE_CUSTOM;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    if (id === DARKONE_BOTTOM_BACKGROUND_GRADIENT_MENU_ID) {
+        state = darkOneBottomAreaState();
+        state.backgroundLinearGradient = !state.backgroundLinearGradient;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    if (id === DARKONE_BOTTOM_SIDE_DIVIDERS_MENU_ID) {
+        state = darkOneBottomAreaState();
+        state.sideDividersVisible = !state.sideDividersVisible;
+        darkOneSendBottomAreaState(state);
+        return true;
+    }
+    if (id >= DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID &&
+            id <= DARKONE_BOTTOM_DEPTH_LAST_MENU_ID) {
+        state = darkOneBottomAreaState();
+        state.depthMode = id - DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID;
         darkOneSendBottomAreaState(state);
         return true;
     }
@@ -994,17 +1331,6 @@ function darkOneHandleNotify(name, info) {
         darkOneCancelBottomAreaCommit();
         return darkOneApplyBottomAreaState(peerState);
     }
-    // v0.9.21 sent Set notifications while assuming JScript Panel and
-    // JSplitter shared one notification bus. Accept them as a compatibility
-    // bridge, persist the state, then rebroadcast it to JScript peers.
-    if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.set) {
-        var legacyState = darkOneBottomAreaParseState(info);
-        if (!legacyState) return false;
-        var legacyResult = darkOneApplyBottomAreaState(legacyState);
-        darkOneWriteBottomAreaStateFile(legacyState);
-        darkOneBroadcastBottomAreaState(legacyState);
-        return legacyResult;
-    }
     if (name == DARKONE_BOTTOM_AREA_NOTIFICATIONS.query) {
         // A peer may query before this panel's first on_size callback. Initialise
         // once without recursively querying peers, then answer from local state.
@@ -1021,30 +1347,6 @@ function darkOneHandleNotify(name, info) {
         } catch (e) {
             return darkOneSettingsResult([], true);
         }
-    }
-
-    if (name == 'DarkOneJSP3.SetProperty') {
-        var property_name = '';
-        var property_value;
-        if (typeof info == 'string' && info.charAt(0) == '{') {
-            try {
-                var payload = JSON.parse(info);
-                property_name = String(payload.name || '');
-                property_value = payload.value;
-            } catch (e2) {}
-        }
-        if (!property_name) {
-            var arr = String(info).split('\t');
-            if (arr.length >= 2) {
-                property_name = arr.shift();
-                property_value = arr.join('\t');
-                var numeric_value = Number(property_value);
-                if (!isNaN(numeric_value)) property_value = numeric_value;
-            }
-        }
-        var single = {};
-        if (property_name) single[property_name] = property_value;
-        return darkOneApplySharedValues(single);
     }
 
     if (name == 'DarkOneJSP3.Settings.Changed') {
@@ -1179,8 +1481,8 @@ function darkOneHandleResetNotification(name, info) {
     if (!scope || !role || !DARKONEJSP3_RESET_REGISTRY[role]) return false;
     darkOneJsp3ApplyRoleReset(role, scope);
     if ((scope == 'appearance' || scope == 'all') &&
-            typeof darkOneResetBottomAreaDefaults == 'function') {
-        darkOneResetBottomAreaDefaults();
+            typeof darkOneApplyBottomAreaDefaultsLocally == 'function') {
+        darkOneApplyBottomAreaDefaultsLocally();
     }
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;
@@ -1204,7 +1506,10 @@ function darkOneConfirmFactoryReset(scope) {
     return true;
 }
 
-// DarkOne Tools menu v0.2.0: Startup now uses a dedicated root-owned bridge,
+// DarkOne Tools menu v0.2.3: Appearance now includes independent Flat/Soft
+// Bottom area depth above the optional Background linear gradient.
+//
+// v0.2.0: Startup now uses a dedicated root-owned bridge,
 // while renderer, folder and panel maintenance actions live under Utilities.
 var DARKONE_TOOLS_STARTUP_IDS = Object.freeze({
     transitionFirst: 9860,
@@ -1342,6 +1647,7 @@ function darkOneToolsMenu(x, y) {
     var buttonRoundness = window.CreatePopupMenu(); menus.push(buttonRoundness);
     var bottomBackground = window.CreatePopupMenu(); menus.push(bottomBackground);
     var bottomDivider = window.CreatePopupMenu(); menus.push(bottomDivider);
+    var bottomDepth = window.CreatePopupMenu(); menus.push(bottomDepth);
     var fonts = window.CreatePopupMenu(); menus.push(fonts);
     var control = window.CreatePopupMenu(); menus.push(control);
     var labels = window.CreatePopupMenu(); menus.push(labels);
@@ -1353,7 +1659,12 @@ function darkOneToolsMenu(x, y) {
     var utilities = window.CreatePopupMenu(); menus.push(utilities);
 
     darkOneAppendButtonsAppearanceMenu(buttons, buttonStyle, buttonDepth, buttonRoundness);
-    darkOneAppendBottomAreaAppearanceMenu(appearance, bottomBackground, bottomDivider);
+    darkOneAppendBottomAreaAppearanceMenu(
+        appearance,
+        bottomBackground,
+        bottomDivider,
+        bottomDepth
+    );
     appearance.AppendTo(m, MF_STRING, 'Appearance');
     buttons.AppendTo(m, MF_STRING, 'Buttons');
 
