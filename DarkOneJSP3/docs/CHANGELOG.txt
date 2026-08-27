@@ -20,6 +20,7 @@ v1.0.19 - Queue-aware skip-to-track playback
   generation rejection and failed-advance restoration.
 - Advanced Queue Viewer to 0.8.2, the root controller to 0.7.40, the direct
   queue bridge to 0.2.5 and the release validator to 0.10.23.
+- Updated the developed-and-tested JSplitter target to 4.1.14.
 
 v1.0.18 - Third main layout and bottom-area appearance
 ------------------------------------------------------

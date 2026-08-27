@@ -287,7 +287,7 @@ function queueBridgeSnapshotRows(contents) {
 }
 
 function queueBridgePlaylistItemCount(playlistIndex) {
-    // JSplitter 4.1.12 inherits the Spider Monkey Panel playlist API.
+    // JSplitter 4.1.14 inherits the Spider Monkey Panel playlist API.
     return plman.PlaylistItemCount(playlistIndex);
 }
 

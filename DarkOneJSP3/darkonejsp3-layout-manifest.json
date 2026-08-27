@@ -2,7 +2,7 @@
   "version": "1.0.19",
   "target": {
     "jscript_panel": "3.8.5",
-    "jsplitter": "4.1.12",
+    "jsplitter": "4.1.14",
     "foobar2000": "v2 x64"
   },
   "jsplitters": [
