@@ -1078,9 +1078,10 @@ Appearance
 - Normal/Error foreground colours: Default or Custom
 - Normal background: Transparent / inherit parent, Black, DarkOne grey,
   DarkOne dark grey, Columns UI global background or Custom
+- Border: Default or Custom colour
 - Error background: existing dark-red Default plus the same shared background
   palette
-- Frame: None, Grey or Sunken
+- Frame: None, Enabled (2 px) or Sunken
 
 Automatic height consumes the available lower-left slot. The fixed 1-line and
 2-line modes are preferred sizes that shrink safely when the foobar2000 window
@@ -1096,6 +1097,13 @@ Transparent / inherit parent for either Quick Search background follows the
 effective shared Bottom area background, including live Black, DarkOne grey,
 DarkOne dark grey, Columns UI and Custom changes. Error background keeps its
 dedicated dark-red Default as a separate option.
+
+The Border colour applies when Frame is Enabled or Sunken. Default preserves
+the original grey Enabled and two-tone Sunken shades. Custom uses the chosen
+colour for both pixels of the Enabled frame and derives the darker inner Sunken
+shade from that same colour. The Enabled frame uses integer-aligned filled strips
+for a clean two-pixel edge. Frame None is genuinely borderless. All three styles
+paint inside the same panel rectangle and keep its content geometry unchanged.
 
 History, favourites, custom tags, Autosearch, autocomplete and Search for same
 are configured from the same menu. Search for same entries are published to

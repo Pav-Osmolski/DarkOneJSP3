@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -27,7 +27,7 @@
     "tools_menu": "0.2.3",
     "info_stack_colours": "0.1.1",
     "info_stack_bridges": "0.2.0",
-    "release_validator": "0.10.23",
+    "release_validator": "0.10.26",
     "performance_helpers": "0.1.5",
     "playlist_render_cache": "0.1.1",
     "ui_cadence": "0.1.1",
@@ -37,9 +37,9 @@
     "album_art": "0.1.2",
     "bottom_area_appearance": "0.3.0",
     "queue_bridge": "0.2.5",
-    "quick_search": "0.1.17",
+    "quick_search": "0.1.20",
     "view_bridge": "0.2.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.0.19"
+  "release": "DarkOneJSP3 v1.0.20"
 }

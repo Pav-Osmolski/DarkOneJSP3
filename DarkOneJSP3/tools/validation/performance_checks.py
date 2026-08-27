@@ -171,6 +171,9 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('JSplitter gradient hot-path cache is missing: ' + token)
+        for obsolete in ['quickSearchFill:', 'quickSearchBorder:']:
+            if obsolete in body:
+                errors.append('JSplitter shared colours retain obsolete parent-owned Quick Search frame state: ' + obsolete)
 
     global_config = project / 'jscript' / 'js' / 'Config_Global_Script.js'
     if global_config.exists():
@@ -188,7 +191,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.17"',
+            '// @version "0.1.20"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',
@@ -218,12 +221,21 @@ def run(ctx: ValidationContext) -> None:
             'this.parentBackgroundChanged = function (data)',
             'this.resolveSharedBackground = function (mode, customColour, columnsUiBackground, inheritedBackground, allowErrorDefault)',
             'QS_ERROR_BACKGROUND_DEFAULT',
+            "borderMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE'",
+            "borderCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM'",
+            "this.appendColourChoiceMenu(colourMenu, 870, 'Border'",
+            'this.frameColours = function ()',
+            'this.fillFrameRing = function (gr, inset, thickness, colour)',
+            'this.paintFrame = function (gr)',
+            "frameMenu.AppendMenuItem(MF_STRING, 851, 'Enabled')",
+            "frameMenu.AppendTo(visualMenu, MF_STRING, 'Frame')",
         ]:
             if token not in body:
                 errors.append('Scripted Quick Search hardening is missing: ' + token)
         if 'utils.RemovePath(DARKONE_QUICKSEARCH_CONTEXT_FILE)' not in body:
             errors.append('Scripted Quick Search does not remove its Search-for-same bridge file on unload')
-        for forbidden in ['RunCmdAsync', 'powershell', 'Set custom PNG path', 'Reset New Playlist mode after execution', 'fb.GetQueryItems']:
+        for forbidden in ['RunCmdAsync', 'powershell', 'Set custom PNG path', 'Reset New Playlist mode after execution',
+                          'fb.GetQueryItems', 'gr.DrawRectangle(0, 0, this.w - 1']:
             if forbidden.lower() in body.lower():
                 errors.append('Scripted Quick Search retains obsolete prototype code: ' + forbidden)
 

@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.19
+DarkOneJSP3 v1.0.20
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -94,7 +94,7 @@ Current highlights
   render model and unchanged fonts.
 - The scripted JScript Panel 3 Quick Search provides responsive sizing,
   history/favourites, multiple search/result modes, protected reusable Standard
-  results playlists and shared Normal/Error background palette options.
+  results playlists and configurable text, background and border colours.
 - Optional LAYOUT and SPECTRUM buttons can cycle between the three-column,
   ArtSpectrum/Playlist and InfoStack/Playlist views and toggle the Spectrum
   panel without rebuilding the Columns UI hierarchy.

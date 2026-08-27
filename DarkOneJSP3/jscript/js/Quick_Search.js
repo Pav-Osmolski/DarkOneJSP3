@@ -34,7 +34,7 @@ var QS_LOCK_REMOVE_PLAYLIST = 32;
 var QS_LOCK_RECOMMENDED = QS_LOCK_ADD | QS_LOCK_REMOVE | QS_LOCK_REORDER | QS_LOCK_REPLACE | QS_LOCK_RENAME;
 
 var QS_FRAME_NONE = 0;
-var QS_FRAME_GREY = 1;
+var QS_FRAME_ENABLED = 1;
 var QS_FRAME_SUNKEN = 2;
 
 var QS_COLOUR_DEFAULT = 0;
@@ -239,6 +239,8 @@ function DarkOneQuickSearch() {
         normalTextCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM', 0xffdcdcdc)),
         normalBackgroundMode: quickSearchNormaliseBackgroundMode(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE', QS_BACKGROUND_MODES.columnsUi), QS_BACKGROUND_MODES.columnsUi, false),
         normalBackgroundCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM', 0xff1e1e1e)),
+        borderMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
+        borderCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM', 0xff696969)),
         errorTextMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.MODE', QS_COLOUR_DEFAULT), QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM)),
         errorTextCustom: DarkOneColour.opaque(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.CUSTOM', 0xffffe1e1)),
         errorBackgroundMode: quickSearchNormaliseBackgroundMode(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE', QS_ERROR_BACKGROUND_DEFAULT), QS_ERROR_BACKGROUND_DEFAULT, true),
@@ -366,6 +368,8 @@ function DarkOneQuickSearch() {
             normalTextCustom: 'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM',
             normalBackgroundMode: 'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE',
             normalBackgroundCustom: 'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM',
+            borderMode: 'DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE',
+            borderCustom: 'DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM',
             errorTextMode: 'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.MODE',
             errorTextCustom: 'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.CUSTOM',
             errorBackgroundMode: 'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE',
@@ -530,6 +534,7 @@ function DarkOneQuickSearch() {
                 parentBackground,
                 false
             ),
+            border: this.properties.borderMode === QS_COLOUR_CUSTOM ? this.properties.borderCustom : RGB(105, 105, 105),
             accent: defaultAccent,
             errorText: this.properties.errorTextMode === QS_COLOUR_CUSTOM ? this.properties.errorTextCustom : RGB(255, 225, 225),
             errorBackground: this.resolveSharedBackground(
@@ -604,7 +609,7 @@ function DarkOneQuickSearch() {
         // responsive-width principle as the InfoStack and control panels while
         // remaining independent of the user's chosen Quick Search width.
         var percent = quickSearchClamp(this.properties.widthPercent, 20, 100);
-        var outerWidth = Math.max(1, this.w + 4);
+        var outerWidth = Math.max(1, this.w);
         return outerWidth * 16 * 100 / (5 * percent);
     };
 
@@ -644,7 +649,10 @@ function DarkOneQuickSearch() {
 
     this.rebuildResponsiveFont = function () {
         var size = this.responsiveFontSize();
-        var maximumTextHeight = Math.max(8, this.h - 14);
+        // Quick Search now owns the complete former host-framed rectangle.
+        // Reserve the same two pixels on each edge so font fitting and content
+        // geometry remain unchanged regardless of the selected frame style.
+        var maximumTextHeight = Math.max(8, this.h - 18);
         var font = this.buildResponsiveFont(size);
         var measured = this.measureTextLineHeight(font);
         while (size > 8 && measured > maximumTextHeight) {
@@ -827,11 +835,15 @@ function DarkOneQuickSearch() {
         this.w = Math.max(1, Number(w) || 1);
         this.h = Math.max(1, Number(h) || 1);
 
-        // Treat the JSP3 child rectangle as a real content box. The JSplitter
-        // host supplies the outer DarkOne frame. Insets also contract slightly
-        // when the host is vertically compressed so fixed modes remain usable.
-        var padX = Math.max(2, Math.min(4, Math.floor(this.w / 80)));
-        var padY = Math.max(2, Math.min(4, Math.floor(this.h / 8)));
+        // Quick Search owns the complete outer slot. Keep a permanent two-pixel
+        // content inset for the optional Enabled/Sunken frame so toggling Frame
+        // never moves the icon, text or status badge. The former parent host
+        // supplied these two pixels outside the child rectangle.
+        var effectiveW = Math.max(1, this.w - 4);
+        var effectiveH = Math.max(1, this.h - 4);
+        var contentPadX = Math.max(2, Math.min(4, Math.floor(effectiveW / 80)));
+        var padX = 2 + contentPadX;
+        var padY = 2 + Math.max(2, Math.min(4, Math.floor(effectiveH / 8)));
         var innerH = Math.max(1, this.h - padY * 2);
 
         this.rebuildResponsiveFont();
@@ -862,9 +874,9 @@ function DarkOneQuickSearch() {
             this.statusY = Math.floor((this.h - this.statusH) / 2);
         }
 
-        this.inputX = Math.min(this.w - 1, this.iconX + iconCell + padX);
+        this.inputX = Math.min(this.w - 1, this.iconX + iconCell + contentPadX);
         this.inputY = padY;
-        var inputRight = this.properties.statusBadge ? this.statusX - padX : this.w - padX;
+        var inputRight = this.properties.statusBadge ? this.statusX - contentPadX : this.w - padX;
         this.inputW = Math.max(1, inputRight - this.inputX);
         this.inputH = Math.max(1, this.h - padY * 2);
         this.input.w = this.inputW;
@@ -932,6 +944,65 @@ function DarkOneQuickSearch() {
         return '';
     };
 
+    this.frameColours = function () {
+        if (this.properties.borderMode !== QS_COLOUR_CUSTOM) {
+            return this.properties.frame === QS_FRAME_SUNKEN
+                ? { outer: RGB(72, 72, 72), inner: RGB(20, 20, 20) }
+                : { outer: RGB(105, 105, 105), inner: RGB(105, 105, 105) };
+        }
+        var outer = DarkOneColour.opaque(this.colours.border);
+        return {
+            outer: outer,
+            inner: DarkOneColour.scaleBrightness(outer, 20 / 72)
+        };
+    };
+
+    this.fillFrameRing = function (gr, inset, thickness, colour) {
+        inset = Math.max(0, Math.round(Number(inset) || 0));
+        thickness = Math.max(1, Math.round(Number(thickness) || 1));
+        var width = Math.max(0, this.w - inset * 2);
+        var height = Math.max(0, this.h - inset * 2);
+        if (width <= 0 || height <= 0) return;
+
+        var horizontalThickness = Math.min(thickness, height);
+        var verticalThickness = Math.min(thickness, width);
+        gr.FillRectangle(inset, inset, width, horizontalThickness, colour);
+        if (height > horizontalThickness) {
+            gr.FillRectangle(
+                inset,
+                inset + height - horizontalThickness,
+                width,
+                horizontalThickness,
+                colour
+            );
+        }
+
+        var sideY = inset + horizontalThickness;
+        var sideHeight = Math.max(0, height - horizontalThickness * 2);
+        if (sideHeight <= 0) return;
+        gr.FillRectangle(inset, sideY, verticalThickness, sideHeight, colour);
+        if (width > verticalThickness) {
+            gr.FillRectangle(
+                inset + width - verticalThickness,
+                sideY,
+                verticalThickness,
+                sideHeight,
+                colour
+            );
+        }
+    };
+
+    this.paintFrame = function (gr) {
+        if (this.properties.frame === QS_FRAME_ENABLED) {
+            this.fillFrameRing(gr, 0, 2, this.frameColours().outer);
+            return;
+        }
+        if (this.properties.frame !== QS_FRAME_SUNKEN) return;
+        var frameColours = this.frameColours();
+        this.fillFrameRing(gr, 0, 1, frameColours.outer);
+        this.fillFrameRing(gr, 1, 1, frameColours.inner);
+    };
+
     this.paint = function (gr) {
         // The icon, spacing and optional status area are part of the same
         // Quick Search control as the text field. Paint the complete JSP3
@@ -940,12 +1011,7 @@ function DarkOneQuickSearch() {
         // background over its own rectangle after a failed search.
         gr.FillRectangle(0, 0, this.w, this.h, this.colours.background);
 
-        if (this.properties.frame === QS_FRAME_GREY) {
-            gr.DrawRectangle(0, 0, this.w - 1, this.h - 1, 1, RGB(105, 105, 105));
-        } else if (this.properties.frame === QS_FRAME_SUNKEN) {
-            gr.DrawRectangle(0, 0, this.w - 1, this.h - 1, 1, RGB(72, 72, 72));
-            if (this.w > 2 && this.h > 2) gr.DrawRectangle(1, 1, this.w - 3, this.h - 3, 1, RGB(20, 20, 20));
-        }
+        this.paintFrame(gr);
 
         var iconColour = this.iconHover ? RGB(235, 235, 235) : RGB(165, 165, 165);
         if (!this.drawCustomIcon(gr, this.iconX, this.iconY, this.iconW, this.iconW)) {
@@ -1901,6 +1967,8 @@ function DarkOneQuickSearch() {
                 normalTextCustom: 0xffdcdcdc,
                 normalBackgroundMode: QS_BACKGROUND_MODES.columnsUi,
                 normalBackgroundCustom: 0xff1e1e1e,
+                borderMode: QS_COLOUR_DEFAULT,
+                borderCustom: 0xff696969,
                 errorTextMode: QS_COLOUR_DEFAULT,
                 errorTextCustom: 0xffffe1e1,
                 errorBackgroundMode: QS_ERROR_BACKGROUND_DEFAULT,
@@ -1952,6 +2020,7 @@ function DarkOneQuickSearch() {
         var widthMenu = window.CreatePopupMenu();
         var fontMenu = window.CreatePopupMenu();
         var colourMenu = window.CreatePopupMenu();
+        var frameMenu = window.CreatePopupMenu();
         var colourSubmenus = [];
 
         var idSource = 100;
@@ -2076,13 +2145,16 @@ function DarkOneQuickSearch() {
         visualMenu.AppendMenuSeparator();
         colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 860, 'Normal text', this.properties.normalTextMode, this.properties.normalTextCustom));
         colourSubmenus.push(this.appendBackgroundColourMenu(colourMenu, 880, 'Normal background', this.properties.normalBackgroundMode, this.properties.normalBackgroundCustom, false));
+        colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 870, 'Border', this.properties.borderMode, this.properties.borderCustom));
         colourSubmenus.push(this.appendColourChoiceMenu(colourMenu, 866, 'Error text', this.properties.errorTextMode, this.properties.errorTextCustom));
         colourSubmenus.push(this.appendBackgroundColourMenu(colourMenu, 890, 'Error background', this.properties.errorBackgroundMode, this.properties.errorBackgroundCustom, true));
         colourMenu.AppendTo(visualMenu, MF_STRING, 'Colours');
         visualMenu.AppendMenuSeparator();
-        visualMenu.AppendMenuItem(MF_STRING, 850, this.properties.frame === QS_FRAME_NONE ? 'Frame: None ✓' : 'Frame: None');
-        visualMenu.AppendMenuItem(MF_STRING, 851, this.properties.frame === QS_FRAME_GREY ? 'Frame: Grey ✓' : 'Frame: Grey');
-        visualMenu.AppendMenuItem(MF_STRING, 852, this.properties.frame === QS_FRAME_SUNKEN ? 'Frame: Sunken ✓' : 'Frame: Sunken');
+        frameMenu.AppendMenuItem(MF_STRING, 850, 'None');
+        frameMenu.AppendMenuItem(MF_STRING, 851, 'Enabled');
+        frameMenu.AppendMenuItem(MF_STRING, 852, 'Sunken');
+        quickSearchMenuRadio(frameMenu, 850, 852, 850 + this.properties.frame);
+        frameMenu.AppendTo(visualMenu, MF_STRING, 'Frame');
         visualMenu.AppendTo(root, MF_STRING, 'Appearance');
 
         root.AppendMenuSeparator();
@@ -2094,7 +2166,7 @@ function DarkOneQuickSearch() {
         root.AppendMenuItem(MF_STRING, 999, 'Reset Quick Search configuration');
 
         var idx = root.TrackPopupMenu(x, y);
-        root.Dispose(); sourceMenu.Dispose(); tagMenu.Dispose(); matchMenu.Dispose(); historyMenu.Dispose(); favoritesMenu.Dispose(); resultMenu.Dispose(); lockMenu.Dispose(); optionsMenu.Dispose(); visualMenu.Dispose(); heightMenu.Dispose(); widthMenu.Dispose(); fontMenu.Dispose(); colourMenu.Dispose();
+        root.Dispose(); sourceMenu.Dispose(); tagMenu.Dispose(); matchMenu.Dispose(); historyMenu.Dispose(); favoritesMenu.Dispose(); resultMenu.Dispose(); lockMenu.Dispose(); optionsMenu.Dispose(); visualMenu.Dispose(); heightMenu.Dispose(); widthMenu.Dispose(); fontMenu.Dispose(); colourMenu.Dispose(); frameMenu.Dispose();
         for (var colourDisposeIndex = 0; colourDisposeIndex < colourSubmenus.length; colourDisposeIndex++) quickSearchSafeDispose(colourSubmenus[colourDisposeIndex]);
 
         if (idx >= 100 && idx <= 103) this.setSource(idx - 100);
@@ -2187,6 +2259,9 @@ function DarkOneQuickSearch() {
             if (normalBackgroundOption) this.setBackgroundColourMode('normalBackgroundMode', normalBackgroundOption.mode, false);
         }
         else if (idx === 886) this.editCustomColour('normalBackgroundMode', 'normalBackgroundCustom', 'Quick Search - Normal background colour', QS_BACKGROUND_MODES.custom);
+        else if (idx === 870) this.setColourMode('borderMode', QS_COLOUR_DEFAULT);
+        else if (idx === 871) this.setColourMode('borderMode', QS_COLOUR_CUSTOM);
+        else if (idx === 872) this.editCustomColour('borderMode', 'borderCustom', 'Quick Search - Border colour');
         else if (idx === 866) this.setColourMode('errorTextMode', QS_COLOUR_DEFAULT);
         else if (idx === 867) this.setColourMode('errorTextMode', QS_COLOUR_CUSTOM);
         else if (idx === 868) this.editCustomColour('errorTextMode', 'errorTextCustom', 'Quick Search - Error text colour');

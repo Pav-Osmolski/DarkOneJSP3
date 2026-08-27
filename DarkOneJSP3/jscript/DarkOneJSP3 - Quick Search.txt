@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Quick Search"
-// @version "0.1.17"
+// @version "0.1.20"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"

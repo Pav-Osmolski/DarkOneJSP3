@@ -188,6 +188,81 @@ suite("scripted Quick Search state", function () {
     assert(source.indexOf('quicksearch.png') !== -1 && source.indexOf('RunCmdAsync') === -1 && source.indexOf('powershell') === -1,
         'Quick Search custom PNG path regressed to external file-picker machinery');
     assert(qs.properties.lines === 2 && qs.properties.showPlaceholder === true, 'Quick Search reset/default appearance values regressed');
+    assert(source.indexOf("appendColourChoiceMenu(colourMenu, 870, 'Border'") !== -1,
+        'Quick Search Colours menu does not expose the Border submenu');
+    assert(source.indexOf("frameMenu.AppendMenuItem(MF_STRING, 851, 'Enabled')") !== -1 &&
+            source.indexOf("frameMenu.AppendTo(visualMenu, MF_STRING, 'Frame')") !== -1,
+        'Quick Search Appearance menu does not expose the None/Enabled/Sunken Frame submenu');
+    const frameFills = [];
+    const frameGr = {FillRectangle(...args) { frameFills.push(args); }};
+    function assertFrameFills(expected, message) {
+        var actual = frameFills.map(function (args) {
+            return args.slice(0, 4).concat(args[4] >>> 0);
+        });
+        assert(JSON.stringify(actual) === JSON.stringify(expected), message + ': ' + JSON.stringify(actual));
+    }
+    qs.w = 100;
+    qs.h = 40;
+    qs.save('frame', 0);
+    qs.paintFrame(frameGr);
+    assert(frameFills.length === 0, 'Quick Search Frame None still painted a border');
+    qs.save('frame', 1);
+    let frameColours = qs.frameColours();
+    assert((frameColours.outer >>> 0) === 0xff696969 && (frameColours.inner >>> 0) === 0xff696969,
+        'Quick Search Default Enabled border colour changed');
+    qs.paintFrame(frameGr);
+    assertFrameFills([
+        [0, 0, 100, 2, 0xff696969],
+        [0, 38, 100, 2, 0xff696969],
+        [0, 2, 2, 36, 0xff696969],
+        [98, 2, 2, 36, 0xff696969]
+    ], 'Quick Search Enabled frame was not painted as an exact in-place 2 px ring');
+    frameFills.length = 0;
+    qs.save('frame', 2);
+    frameColours = qs.frameColours();
+    assert((frameColours.outer >>> 0) === 0xff484848 && (frameColours.inner >>> 0) === 0xff141414,
+        'Quick Search Default Sunken border colours changed');
+    qs.paintFrame(frameGr);
+    assertFrameFills([
+        [0, 0, 100, 1, 0xff484848],
+        [0, 39, 100, 1, 0xff484848],
+        [0, 1, 1, 38, 0xff484848],
+        [99, 1, 1, 38, 0xff484848],
+        [1, 1, 98, 1, 0xff141414],
+        [1, 38, 98, 1, 0xff141414],
+        [1, 2, 1, 36, 0xff141414],
+        [98, 2, 1, 36, 0xff141414]
+    ], 'Quick Search Default Sunken frame coordinates or colours changed');
+    frameFills.length = 0;
+    qs.save('borderCustom', 0xff4080c0);
+    qs.setColourMode('borderMode', 1);
+    frameColours = qs.frameColours();
+    assert(properties.get('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE') === 1 &&
+            (properties.get('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM') >>> 0) === 0xff4080c0,
+        'Quick Search custom Border colour did not persist');
+    assert((frameColours.outer >>> 0) === 0xff4080c0 && (frameColours.inner >>> 0) === 0xff122435,
+        'Quick Search custom Sunken border did not derive its inner shade from the selected colour');
+    qs.paintFrame(frameGr);
+    assertFrameFills([
+        [0, 0, 100, 1, 0xff4080c0],
+        [0, 39, 100, 1, 0xff4080c0],
+        [0, 1, 1, 38, 0xff4080c0],
+        [99, 1, 1, 38, 0xff4080c0],
+        [1, 1, 98, 1, 0xff122435],
+        [1, 38, 98, 1, 0xff122435],
+        [1, 2, 1, 36, 0xff122435],
+        [98, 2, 1, 36, 0xff122435]
+    ], 'Quick Search custom Sunken frame did not paint exact outer and inner rings');
+    frameFills.length = 0;
+    qs.resetConfiguration('appearance');
+    assert(qs.properties.borderMode === 0 && (qs.properties.borderCustom >>> 0) === 0xff696969,
+        'Quick Search appearance reset did not restore the Border colour defaults');
+    qs.paintFrame(frameGr);
+    assert(frameFills.length === 0, 'Quick Search appearance reset did not restore a genuinely borderless Frame None');
+    qs.size(504, 64);
+    assert(qs.iconX === 6 && qs.inputX === 46 && qs.inputY === 6 &&
+            qs.inputW === 452 && qs.inputH === 52,
+        'Quick Search full-slot ownership changed the established inner content geometry');
     // Shared background palette: Transparent must follow the live Bottom-area
     // backing while Error retains its separate semantic default.
     qs.setBackgroundColourMode('normalBackgroundMode', quickApi.Protocol.bottomArea.modes.transparent, false);

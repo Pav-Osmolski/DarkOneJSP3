@@ -1404,13 +1404,19 @@ suite("bottom-area cross-host state", function () {
         GetPanel() { return null; }
     };
     const hostGradientCalls = [];
+    const hostMoves = [];
+    const hostPanels = {
+        l: {id:'l'}, q: {id:'q'}, d: {id:'d'}, r: {id:'r'}
+    };
     const DOJSP3Mock = {
-        colours: { bar: 0xff202020, separator: 0xff181818, quickSearchBorder: 0xff696969, quickSearchFill: 0xff1e1e1e },
+        colours: { bar: 0xff202020, separator: 0xff181818 },
         titles: { controlsLeft:'l',quickSearch:'q',displayStack:'d',controlsRight:'r' },
         idiv(value, divisor) { return Math.floor(value / divisor); },
         mulDiv(value, multiplier, divisor) { return Math.round(value * multiplier / divisor); },
         clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); },
-        panel() { return null; }, move() {}, show() {},
+        panel(title) { return hostPanels[title] || null; },
+        move(panel, x, y, w, h) { hostMoves.push([panel && panel.id, x, y, w, h]); },
+        show() {},
         fillVerticalGradient(gr, x, y, width, height, topColour, bottomColour) {
             hostGradientCalls.push([x, y, width, height, topColour >>> 0, bottomColour >>> 0]);
             gr.FillSolidRect(x, y, width, height, topColour);
@@ -1466,6 +1472,10 @@ suite("bottom-area cross-host state", function () {
     host.layout();
     if (files[GEOMETRY_STATE] !== 'v1|300|27')
         throw new Error('Bottom Controls did not publish the owning gradient coordinate space');
+    const quickSearchMove = hostMoves.find(item => item[0] === 'q');
+    if (!quickSearchMove || quickSearchMove[1] !== 16 || quickSearchMove[2] !== 203 ||
+            quickSearchMove[3] !== 264 || quickSearchMove[4] !== 60)
+        throw new Error('Bottom Controls did not give Quick Search its complete existing outer slot');
     if (hostIntervalCalls !== 0)
         throw new Error('Bottom Controls retained an overlapping interval poller');
     if (!hostTimeouts.some(item => item.active && item.delay === 25 && item.fn.name === 'poll'))
@@ -1568,9 +1578,9 @@ suite("bottom-area cross-host state", function () {
     host.paint(gr);
     if (host.propertyReads() !== 7)
         throw new Error('Bottom Controls paint reread the seven-field appearance state');
-    if (fills.length !== 5 || fills[0][4] !== 0xff000000 ||
+    if (fills.length !== 3 || fills[0][4] !== 0xff000000 ||
             fills[1][4] !== 0xff181818 || fills[2][4] !== 0xff181818)
-        throw new Error('Migrated bottom background/dividers are incorrect');
+        throw new Error('Migrated bottom background/dividers are incorrect or the host still paints a Quick Search frame');
 
     // The visibility toggle suppresses both host-owned divider strips without
     // changing their saved colour. Re-enabling it must restore those strips.
@@ -1589,8 +1599,7 @@ suite("bottom-area cross-host state", function () {
     runLatestHostApplyTimer();
     fills.length = 0;
     host.paint(gr);
-    if (fills.length !== 3 || fills[0][4] !== 0xff000000 ||
-            fills[1][4] !== 0xff696969 || fills[2][4] !== 0xff1e1e1e)
+    if (fills.length !== 1 || fills[0][4] !== 0xff000000)
         throw new Error('Bottom side dividers remained visible after being disabled');
     if (host.state().dividerMode !== 4 ||
             (host.state().dividerCustomColour >>> 0) !== 0xff765432)
@@ -1610,7 +1619,7 @@ suite("bottom-area cross-host state", function () {
     runLatestHostApplyTimer();
     fills.length = 0;
     host.paint(gr);
-    if (fills.length !== 5 || fills[1][4] !== 0xff181818 ||
+    if (fills.length !== 3 || fills[1][4] !== 0xff181818 ||
             fills[2][4] !== 0xff181818)
         throw new Error('Bottom side dividers were not restored with their saved colour');
 
@@ -1786,7 +1795,7 @@ suite("bottom-area cross-host state", function () {
         throw new Error('Bottom Controls did not repaint exactly once at the coordinated apply time');
     fills.length = 0;
     host.paint(gr);
-    if (fills.length !== 5 || fills[0][4] !== 0xff123456 ||
+    if (fills.length !== 3 || fills[0][4] !== 0xff123456 ||
             fills[1][4] !== 0xff445566 || fills[2][4] !== 0xff445566)
         throw new Error('File-backed custom background / divider state did not paint correctly');
     if (fills[0][0] !== 0 || fills[0][1] !== 0 || fills[0][2] !== 1920 || fills[0][3] !== 300)
@@ -1966,8 +1975,7 @@ suite("bottom-area cross-host state", function () {
     runLatestHostApplyTimer();
     fills.length = 0;
     host.paint(gr);
-    if (fills.length !== 3 || fills[0][4] !== 0xff181818 ||
-            fills[1][4] !== 0xff696969 || fills[2][4] !== 0xff1e1e1e)
+    if (fills.length !== 1 || fills[0][4] !== 0xff181818)
         throw new Error('Inherited bottom background does not paint #181818 while transparent dividers reveal it');
     if (hostRepaints < 3) throw new Error('File state changes did not repaint the JSplitter host');
     host.dispose();

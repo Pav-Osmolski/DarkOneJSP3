@@ -40,8 +40,6 @@ var DOJSP3 = Object.freeze({
     colours: Object.freeze({
         bar: 0xff202020,
         separator: 0xff181818,
-        quickSearchFill: 0xff1e1e1e,
-        quickSearchBorder: 0xff696969,
         buttonNormal: 0xff298fcc,
         buttonHover: 0xff9b9b9b,
         buttonActive: 0xffffffff

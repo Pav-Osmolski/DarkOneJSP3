@@ -721,23 +721,12 @@ function layoutBottomControls() {
     qsW = Math.min(Math.max(1, quickSearchOuterWidth), Math.max(1, ww - qsX));
     qsH = Math.min(Math.max(1, quickSearchHeight), Math.max(1, wh - qsY));
 
-    var quickSearchLeft = DOJSP3.clamp(qsX + 2, 0, Math.max(0, ww - 1));
-    var quickSearchChildTop = DOJSP3.clamp(quickSearchTop + 2, 0, Math.max(0, wh - 1));
-    var quickSearchWidth = Math.min(
-        Math.max(1, quickSearchOuterWidth - 4),
-        Math.max(1, ww - quickSearchLeft)
-    );
-    var quickSearchChildHeight = Math.min(
-        Math.max(1, quickSearchHeight - 4),
-        Math.max(1, wh - quickSearchChildTop)
-    );
-
     DOJSP3.move(left, 0, 0, sideWidth, leftHeight);
     DOJSP3.move(quickSearch,
-        quickSearchLeft,
-        quickSearchChildTop,
-        quickSearchWidth,
-        quickSearchChildHeight);
+        qsX,
+        qsY,
+        qsW,
+        qsH);
     DOJSP3.move(displayStack, displayLeft, displayTop, panelWidth, displayHeight);
     DOJSP3.move(right, Math.max(0, ww - sideWidth), 0, sideWidth, wh);
 
@@ -776,17 +765,6 @@ function on_paint(gr) {
         gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);
     }
 
-    // Match the original DarkOne2021/PSS Quick Search outer frame exactly:
-    // a two-pixel #696969 border with a #1e1e1e interior. The scripted
-    // Quick Search normally uses its own internal frame setting of None.
-    gr.FillSolidRect(qsX, qsY, qsW, qsH, DOJSP3.colours.quickSearchBorder);
-    gr.FillSolidRect(
-        qsX + 2,
-        qsY + 2,
-        Math.max(1, qsW - 4),
-        Math.max(1, qsH - 4),
-        DOJSP3.colours.quickSearchFill
-    );
 }
 
 function on_notify_data(name, data) {

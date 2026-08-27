@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.19 Validation Report
+DarkOneJSP3 v1.0.20 Validation Report
 =====================================
 
 Scope
@@ -87,10 +87,17 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
-- Quick Search 0.1.17 background tests verify the shared six-mode DarkOne
+- Quick Search 0.1.20 colour tests verify the shared six-mode DarkOne
   palette, one-time migration from the previous Default/Custom background model and live
   Transparent / inherit parent resolution against Bottom-area state for both
   Normal and Error backgrounds. The dedicated dark-red Error Default is retained.
+  Border tests verify menu exposure, persistent Custom selection, genuinely
+  borderless None painting, integer-aligned edge-strip coordinates for exact
+  Enabled and Sunken edges/corners, unchanged Default shades and the derived
+  inner Sunken shade. Static checks reject a return to centred DrawRectangle
+  frame strokes, while host tests reject the old
+  parent-owned frame and require the Quick Search child to occupy its complete
+  existing slot without changing content geometry.
 - The scripted Quick Search is runtime-tested for persistent result modes,
   reusable Standard-results refresh including valid zero-match clearing,
   persistent-GUID-plus-mask lock ownership, target rename/change/reset cleanup

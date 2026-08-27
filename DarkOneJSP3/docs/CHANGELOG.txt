@@ -1,6 +1,31 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.20 - Configurable Quick Search border colour
+-------------------------------------------------
+
+- Added Appearance > Colours > Border to the scripted Quick Search, with
+  Default and Custom colour choices plus the native colour picker.
+- Replaced the three flat Frame commands with a dedicated None, Enabled and
+  Sunken submenu. Enabled paints a two-pixel in-place border using the selected
+  Border colour; Sunken uses the selected outer colour and a darker inner shade.
+- Removed the compulsory parent-JSplitter grey frame and expanded the Quick
+  Search child into that existing slot. Frame None is now genuinely borderless,
+  while permanent two-pixel content insets keep the icon, text and status badge
+  in the same positions across all three choices.
+- Preserved the former Enabled and Sunken shades in Default mode. Custom mode
+  applies the selected colour to Enabled and derives the darker inner Sunken
+  shade from the same colour.
+- Replaced centred outline strokes with integer-aligned filled edge strips.
+  Enabled is now an exact two-pixel ring at every edge and corner, while Sunken
+  retains separate exact one-pixel outer and inner rings without antialiasing.
+- Included the new setting in persistent properties and appearance/complete
+  resets, with coordinate-level regression coverage for true borderless
+  painting, exact Enabled/Sunken edges and corners, default compatibility,
+  custom-colour persistence, unchanged content geometry and removal of the
+  parent-owned frame.
+- Advanced Quick Search to 0.1.20 and the release validator to 0.10.26.
+
 v1.0.19 - Queue-aware skip-to-track playback
 --------------------------------------------
 

@@ -1395,6 +1395,7 @@ def run(ctx: ValidationContext) -> None:
             'var rightDivider = ww - DOJSP3.idiv(ww, 3) - px;',
             'gr.FillSolidRect(leftDivider, 0, px * 2, wh, dividerColour);',
             'gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);',
+            'DOJSP3.move(quickSearch,\n        qsX,\n        qsY,\n        qsW,\n        qsH);',
             'function on_colours_changed()',
             'function readViewCommandFile()',
             'if (!command) {\n        // A crash/restart can leave an expired or malformed command behind.',
@@ -1412,6 +1413,10 @@ def run(ctx: ValidationContext) -> None:
             'if (state.raw) acknowledgeResetCommandFile();',
             'if (state.raw) acknowledgeQuickSearchLayoutCommand();',
             'if (state.raw) acknowledgeViewCommandFile();',
+            'DOJSP3.colours.quickSearchBorder',
+            'DOJSP3.colours.quickSearchFill',
+            'var quickSearchLeft =',
+            'var quickSearchChildTop =',
         ]:
             if obsolete in body:
                 errors.append('Bottom Controls retains obsolete JSplitter notification plumbing: ' + obsolete)
