@@ -265,6 +265,12 @@ stale generations rather than applying an operation to the wrong queue. The
 viewer refreshes the authoritative state automatically; retry the command after
 that refresh.
 
+If double-clicking a queued row clears the whole queue, the panel is running an
+older Queue Viewer script or the source-play command was selected. In the current
+project wrapper, double-click and Skip to this track remove only preceding queue
+entries, advance to the target and preserve the remaining tail. Play source item
+now deliberately starts the playlist source directly and may clear the queue.
+
 Queue Viewer reports jsp3EnhancedHandleSampleReset is undefined
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The DarkOneJSP3 Queue Viewer wrapper must import the component-local

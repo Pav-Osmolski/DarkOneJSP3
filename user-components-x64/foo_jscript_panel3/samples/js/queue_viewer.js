@@ -450,6 +450,7 @@ function _queue_viewer(x, y, w, h) {
     this.mutation_selection_target = function (action, queueIndexes) {
         queueIndexes = (queueIndexes || []).slice().sort(function (a, b) { return a - b; });
         if (action === 'clear') return { queueIndexes: [], activeQueueIndex: -1 };
+        if (action === 'skipTo') return { queueIndexes: [], activeQueueIndex: -1 };
         if (action === 'remove' || action === 'removeMany') {
             var remaining = Math.max(0, this.count - queueIndexes.length);
             if (!remaining) return { queueIndexes: [], activeQueueIndex: -1 };
@@ -632,6 +633,19 @@ function _queue_viewer(x, y, w, h) {
     this.move_selected_queue = function (action) {
         var indexes = this.selected_queue_indexes();
         return indexes.length > 0 && this.request_queue_mutation(action, indexes);
+    }
+
+    this.skip_to_queue_row = function (index) {
+        if (!this.valid_index(index) || !this.bridge_has_capability('skipTo')) return false;
+        var queueIndex = Number(this.data[index].queue_index) || 0;
+        if (queueIndex < 1) return false;
+        if (!this.is_selected(index)) this.select_only(index, false);
+        else {
+            this.selected_index = index;
+            this.ensure_visible(index);
+            window.RepaintRect(this.x, this.y, this.w, this.h);
+        }
+        return this.request_queue_mutation('skipTo', [queueIndex]);
     }
 
     this.font_changed = function () {
@@ -852,7 +866,10 @@ function _queue_viewer(x, y, w, h) {
 
     this.lbtn_dblclk = function (x, y) {
         var row = this.row_at(x, y);
-        return row >= 0 ? this.focus_row(row) : false;
+        if (row < 0) return false;
+        return this.bridge_has_capability('skipTo')
+            ? this.skip_to_queue_row(row)
+            : this.focus_row(row);
     }
 
     this.move = function (x, y) {
@@ -958,6 +975,13 @@ function _queue_viewer(x, y, w, h) {
         }
 
         panel.m.AppendMenuItem(EnableMenuIf(active_valid), 1402, 'Show source playlist item');
+        if (this.bridge_has_capability('skipTo')) {
+            panel.m.AppendMenuItem(
+                EnableMenuIf(!this.mutation_pending_id && this.valid_index(active)),
+                1408,
+                'Skip to this track'
+            );
+        }
         panel.m.AppendMenuItem(EnableMenuIf(active_valid), 1403, 'Play source item now');
         panel.m.AppendMenuItem(EnableMenuIf(active_valid && utils.IsFile(active_path)), 1404, 'Open containing folder');
         panel.m.AppendMenuItem(EnableMenuIf(valid_source_count > 0), 1405, selected_count > 1 ? 'Properties for selected items' : 'Properties');
@@ -1008,6 +1032,9 @@ function _queue_viewer(x, y, w, h) {
             break;
         case 1403:
             this.play_row(this.active_row_index());
+            break;
+        case 1408:
+            this.skip_to_queue_row(this.active_row_index());
             break;
         case 1404:
             this.open_containing_folder();

@@ -12,7 +12,7 @@ var DarkOneQueueBridge = (function () {
     var RESULT_FILE_NAME = 'darkonejsp3.queue-command-result.json';
     var CAPABILITIES = [
         'remove', 'removeMany', 'clear',
-        'moveUp', 'moveDown', 'moveTop', 'moveBottom'
+        'moveUp', 'moveDown', 'moveTop', 'moveBottom', 'skipTo'
     ];
 
     function integer(value, fallback) {

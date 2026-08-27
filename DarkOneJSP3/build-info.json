@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -10,7 +10,7 @@
     "control_left": "3.0.32-jsp3-3.8.5",
     "control_right": "3.0.37-jsp3-3.8.5",
     "display": "3.0.36-jsp3-3.8.5",
-    "queue_viewer": "0.8.1",
+    "queue_viewer": "0.8.2",
     "allmusic": "0.6.4",
     "musicbrainz": "0.6.4",
     "js_playlist": "0.6.4",
@@ -18,7 +18,7 @@
     "network_headers": "0.6.2",
     "album_notes": "0.6.8",
     "info_stack_controller": "0.6.32",
-    "startup_controller": "0.7.39",
+    "startup_controller": "0.7.40",
     "main_columns_controller": "0.7.39",
     "page_background": "0.1.4",
     "colour_helpers": "0.1.7",
@@ -27,7 +27,7 @@
     "tools_menu": "0.2.3",
     "info_stack_colours": "0.1.1",
     "info_stack_bridges": "0.2.0",
-    "release_validator": "0.10.22",
+    "release_validator": "0.10.23",
     "performance_helpers": "0.1.5",
     "playlist_render_cache": "0.1.1",
     "ui_cadence": "0.1.1",
@@ -36,10 +36,10 @@
     "standalone_sample_compatibility": "0.1.1",
     "album_art": "0.1.2",
     "bottom_area_appearance": "0.3.0",
-    "queue_bridge": "0.2.4",
+    "queue_bridge": "0.2.5",
     "quick_search": "0.1.17",
     "view_bridge": "0.2.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.0.18"
+  "release": "DarkOneJSP3 v1.0.19"
 }

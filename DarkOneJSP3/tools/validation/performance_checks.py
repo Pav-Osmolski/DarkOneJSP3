@@ -149,6 +149,8 @@ def run(ctx: ValidationContext) -> None:
                       'utils.RemovePath(QUEUE_BRIDGE_COMMAND_FILE)',
                       'QUEUE_BRIDGE_STATE_RETRY_LIMIT', 'queueBridgePublishedGeneration',
                       'var QUEUE_BRIDGE_COMMAND_POLL_MS = 50;',
+                      "case 'skipTo':", 'fb.Next();',
+                      'Skip to track requires exactly one playback queue entry.',
                       'The original queue was restored.',
                       'writeQueueBridgeState();']:
             if token not in body:

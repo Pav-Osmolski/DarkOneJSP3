@@ -1,6 +1,26 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.19 - Queue-aware skip-to-track playback
+--------------------------------------------
+
+- Added Skip to this track to the scripted Queue Viewer context menu and made
+  it the default double-click action in the DarkOneJSP3 project wrapper.
+- The generation-bound bridge removes only queued entries before the selected
+  position, invokes foobar2000's normal Next action to consume the target and
+  preserves every later queue entry in its existing order.
+- Kept Play source item now as a separate direct source-play action, since that
+  command intentionally follows foobar2000 behaviour and may clear the queue.
+- Supported playlist-backed and detached queue entries without requiring a
+  valid source playlist row. The standalone read-only sample retains its
+  existing double-click source-focus behaviour outside DarkOneJSP3.
+- Added rollback if playback advance fails after preceding entries were removed,
+  plus regression coverage for context-menu and double-click dispatch, exact
+  queue-position serialisation, tail preservation, detached targets, stale
+  generation rejection and failed-advance restoration.
+- Advanced Queue Viewer to 0.8.2, the root controller to 0.7.40, the direct
+  queue bridge to 0.2.5 and the release validator to 0.10.23.
+
 v1.0.18 - Third main layout and bottom-area appearance
 ------------------------------------------------------
 

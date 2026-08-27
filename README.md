@@ -2,7 +2,7 @@
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2.x-1f6feb?style=flat-square)
 ![Architecture](https://img.shields.io/badge/Architecture-64--bit-555555?style=flat-square)
 ![JScript Panel 3](https://img.shields.io/badge/JScript%20Panel%203-3.8.5-8a2be2?style=flat-square)
-![JSplitter](https://img.shields.io/badge/JSplitter-4.1.12-7b68ee?style=flat-square)
+![JSplitter](https://img.shields.io/badge/JSplitter-4.1.14-7b68ee?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/Pav-Osmolski/DarkOneJSP3?style=flat-square)
 
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.0.18
+  <strong>Current release:</strong> v1.0.19
 </p>
 
 > [!IMPORTANT]
@@ -68,7 +68,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.18** is the current release.
+**DarkOneJSP3 v1.0.19** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -121,7 +121,7 @@ for standalone installation, compatibility guarantees and integration details.
 * [foobar2000 v2 x64](https://www.foobar2000.org/windows)
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-* [JSplitter 4.x, tested with 4.1.12](https://github.com/dima-lur/jsplitter/releases)
+* [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
 

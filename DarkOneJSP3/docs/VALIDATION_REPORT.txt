@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.18 Validation Report
+DarkOneJSP3 v1.0.19 Validation Report
 =====================================
 
 Scope
@@ -108,14 +108,18 @@ Checks
   the always-running root JSplitter through `plman.GetPlaybackQueueContents()`.
   Valid bridge generations are applied without evaluating `%queue_indexes%` or
   scanning playlists. The same bridge now accepts generation-bound mutation
-  commands for single/multi removal, clear and queue reordering; stale commands
-  are rejected, duplicate occurrences are addressed by queue position and
-  detached handles remain reorderable.
+  commands for single/multi removal, clear, queue reordering and skip-to-track;
+  stale commands are rejected, duplicate occurrences are addressed by queue
+  position and detached handles remain reorderable or directly skippable.
   Reorder tests model live queue-wrapper invalidation at flush time and verify
   that playlist-backed source coordinates are snapshotted beforehand. Move up,
   Move down, Move to top and Move to bottom are all exercised with mixed
   playlist-backed/detached queues and multi-selection, preserving Queue Viewer
   title formatting, source associations and JS Playlist queue-position fields.
+- Skip-to-track tests cover double-click and context-menu dispatch, exact
+  generation/position serialisation, removal of only preceding entries,
+  foobar2000 Next playback, preserved queue tails, detached targets, stale
+  command rejection and complete rollback when playback advance fails.
 - Queue-reconstruction failure tests inject errors during both the initial
   rebuild and rollback. A successful rollback restores original order and source
   coordinates; a failed rollback reports the secondary failure and publishes

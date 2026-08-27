@@ -964,6 +964,7 @@ session and generation, so a stale command is rejected instead of being applied
 to a queue that changed between the menu click and execution.
 
 Queue editing commands:
+- Skip to this track
 - Remove item from queue
 - Remove selected items from queue
 - Move up
@@ -989,12 +990,14 @@ Selection and navigation:
 - Shift+Up/Down: extend the selection
 - Home/End: first or last row
 - Page Up/Page Down: move by the visible page
-- Enter or double-click: show the source playlist item
+- Enter: show the source playlist item
+- Double-click: skip playback to that queued track
 - Escape: clear selection
 - Delete: remove the selected queue entry or entries
 
 Source and utility commands:
 - Show source playlist item
+- Skip to this track
 - Play source item now
 - Open containing folder
 - Properties or Properties for selected items
@@ -1002,6 +1005,13 @@ Source and utility commands:
 - Copy file path or selected file paths
 - Item display title formatting...
 - Re-scan playback queue
+
+Skip to this track is queue-aware: DarkOneJSP3 removes only the queued entries
+before the chosen position, advances through foobar2000's normal Next action and
+leaves every later entry queued in its existing order. It is also the default
+double-click action. Play source item now instead launches the source playlist
+item directly and can clear the playback queue; use it only when that behaviour
+is intended.
 
 The script also appends Font size, Page background colour and Configure... from
 the shared page controls. It has no Selection mode submenu because queue rows

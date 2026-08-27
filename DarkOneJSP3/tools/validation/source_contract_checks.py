@@ -65,8 +65,8 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.8.1"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.1')
+        if '// @version "0.8.2"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.2')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
@@ -80,8 +80,8 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('DarkOneJSP3 Queue Viewer direct bridge wrapper is incomplete: ' + token)
 
     generic_queue_entry = samples / 'Queue Viewer.txt'
-    if generic_queue_entry.exists() and '// @version "0.8.1"' not in text(generic_queue_entry):
-        errors.append('Generic enhanced Queue Viewer entry version is not 0.8.1')
+    if generic_queue_entry.exists() and '// @version "0.8.2"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.8.2')
 
     queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
     if queue_source.exists():
@@ -101,6 +101,9 @@ def run(ctx: ValidationContext) -> None:
             "case 1415:",
             "case 0x2E: // Delete",
             "this.request_queue_mutation = function",
+            "this.skip_to_queue_row = function",
+            "this.request_queue_mutation('skipTo', [queueIndex])",
+            "'Skip to this track'",
             "'Remove item from queue'",
             "'Move to top'",
             "'Clear playback queue'",
@@ -115,9 +118,16 @@ def run(ctx: ValidationContext) -> None:
             'RemoveItemFromPlaybackQueue',
             'RemoveItemsFromPlaybackQueue',
             'GetPlaybackQueueHandles',
+            'fb.Next()',
         ]:
             if forbidden in body:
                 errors.append('Queue Viewer uses unsupported queue API: ' + forbidden)
+
+    queue_protocol = project / 'shared' / 'queue_bridge.js'
+    if queue_protocol.exists():
+        body = text(queue_protocol)
+        if "'moveUp', 'moveDown', 'moveTop', 'moveBottom', 'skipTo'" not in body:
+            errors.append('Direct queue bridge does not advertise skip-to-track capability')
 
     for path in [
         samples / 'js' / 'darkone_network.js',

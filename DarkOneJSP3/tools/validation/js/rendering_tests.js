@@ -2070,9 +2070,18 @@ suite("startup control bridge", function () {
     let stateWriteFailures = 0;
     let stateWriteAttempts = 0;
     let rootQueueContents = [];
+    let nextCalls = 0;
+    let nextFailure = false;
     const rootFb = {ProfilePath:'', TitleFormat() { return {EvalWithMetadb(handle) {
         return String(handle.Path || '') + '|' + String(handle.SubSong || 0);
-    }}; }};
+    }}; }, Next() {
+        nextCalls++;
+        if (nextFailure) {
+            nextFailure = false;
+            throw new Error('simulated playback advance failure');
+        }
+        if (rootQueueContents.length) rootQueueContents.shift();
+    }};
     const sourceHandles = new Map();
     function sourceKey(p, i) { return p + ':' + i; }
     let playlistQueueAdds = 0;
@@ -2145,7 +2154,8 @@ suite("startup control bridge", function () {
         'Root startup state file did not publish the defaults');
     const initialQueueState = JSON.parse(bridgeWrites.get(queueStatePath));
     assert(initialQueueState.available === true && initialQueueState.writable === true &&
-        initialQueueState.capabilities.includes('removeMany') && initialQueueState.entries.length === 0,
+        initialQueueState.capabilities.includes('removeMany') &&
+        initialQueueState.capabilities.includes('skipTo') && initialQueueState.entries.length === 0,
         'Root startup writable queue bridge state was invalid');
     rootQueueContents = [
         {PlaylistIndex:4, PlaylistItemIndex:7, Handle:{Path:'C:/Music/a.flac',SubSong:0}},
@@ -2238,6 +2248,60 @@ suite("startup control bridge", function () {
     runTimerWithDelay(50);
     assert(!bridgeWrites.has(commandPath),
         'Empty queue command file was not retired after one poll');
+
+    rootQueueContents = [
+        {PlaylistIndex:7,PlaylistItemIndex:1,Handle:{Path:'C:/Skip/a.flac',SubSong:0}},
+        {PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{Path:'C:/Skip/b.flac',SubSong:0}},
+        {PlaylistIndex:7,PlaylistItemIndex:3,Handle:{Path:'C:/Skip/c.flac',SubSong:0}},
+        {PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{Path:'C:/Skip/d.flac',SubSong:0}}
+    ];
+    sourceHandles.set(sourceKey(7,1), rootQueueContents[0].Handle);
+    sourceHandles.set(sourceKey(7,3), rootQueueContents[2].Handle);
+    root.on_playback_queue_changed(0);
+    const skipState = JSON.parse(bridgeWrites.get(queueStatePath));
+    const nextCallsBeforeSkip = nextCalls;
+    bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'skip-third',
+        session:skipState.session,generation:skipState.generation,
+        action:'skipTo',queueIndexes:[3]}));
+    runTimerWithDelay(50);
+    const skipResult = JSON.parse(bridgeWrites.get(resultPath));
+    assert(skipResult.accepted === true && nextCalls === nextCallsBeforeSkip + 1,
+        'Skip-to-track command did not advance playback through fb.Next()');
+    assert(rootQueueContents.length === 1 && rootQueueContents[0].Handle.Path === 'C:/Skip/d.flac',
+        'Skip-to-track did not consume only the target and preceding queue entries');
+
+    const nextCallsBeforeStaleSkip = nextCalls;
+    const afterSkipState = JSON.parse(bridgeWrites.get(queueStatePath));
+    bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'skip-stale',
+        session:afterSkipState.session,generation:afterSkipState.generation - 1,
+        action:'skipTo',queueIndexes:[1]}));
+    runTimerWithDelay(50);
+    const staleSkipResult = JSON.parse(bridgeWrites.get(resultPath));
+    assert(staleSkipResult.accepted === false && nextCalls === nextCallsBeforeStaleSkip &&
+        rootQueueContents.length === 1,
+        'Stale skip-to-track command changed playback or the queue');
+
+    rootQueueContents = [
+        {PlaylistIndex:8,PlaylistItemIndex:1,Handle:{Path:'C:/SkipRollback/a.flac',SubSong:0}},
+        {PlaylistIndex:-1,PlaylistItemIndex:-1,Handle:{Path:'C:/SkipRollback/b.flac',SubSong:0}},
+        {PlaylistIndex:8,PlaylistItemIndex:3,Handle:{Path:'C:/SkipRollback/c.flac',SubSong:0}}
+    ];
+    sourceHandles.set(sourceKey(8,1), rootQueueContents[0].Handle);
+    sourceHandles.set(sourceKey(8,3), rootQueueContents[2].Handle);
+    root.on_playback_queue_changed(0);
+    const failedSkipState = JSON.parse(bridgeWrites.get(queueStatePath));
+    nextFailure = true;
+    bridgeWrites.set(commandPath, JSON.stringify({version:'v2',id:'skip-rollback',
+        session:failedSkipState.session,generation:failedSkipState.generation,
+        action:'skipTo',queueIndexes:[3]}));
+    runTimerWithDelay(50);
+    const failedSkipResult = JSON.parse(bridgeWrites.get(resultPath));
+    assert(failedSkipResult.accepted === false &&
+        failedSkipResult.message.indexOf('The original queue was restored.') !== -1,
+        'Failed skip-to-track did not report successful queue rollback');
+    assert(rootQueueContents.map(item => item.Handle.Path).join(',') ===
+        'C:/SkipRollback/a.flac,C:/SkipRollback/b.flac,C:/SkipRollback/c.flac',
+        'Failed skip-to-track did not restore the original queue');
 
     rootQueueContents = [
         {PlaylistIndex:6, PlaylistItemIndex:1, Handle:{Path:'C:/Rollback/one.flac',SubSong:0}},

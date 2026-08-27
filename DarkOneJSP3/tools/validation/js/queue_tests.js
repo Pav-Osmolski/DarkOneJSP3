@@ -118,6 +118,9 @@ suite("Queue Viewer interaction", function () {
     assert(focused && focused[1] === 1, 'Queue source navigation failed');
     queue.open_containing_folder();
     assert(explored === 'C:/Music/b.flac', 'Queue containing-folder command failed');
+    queue.lbtn_dblclk(10, 12 + (2 * panel.row_height) + 1);
+    assert(focused && focused[1] === 2,
+        'Standalone Queue Viewer double-click no longer focuses the source item');
     const snapshot = queue.capture_selection();
     queue.selected_indices = [];
     queue.selected_index = -1;
@@ -419,7 +422,7 @@ suite("Queue Viewer direct bridge", function () {
         function(name,value){this.value=value;},console,()=>{},{user_added:0,user_removed:1,playback_advance:2});
     function state(generation, entries, available=true, writable=true) {
         return JSON.stringify({version:'v2',session:'session-a',generation,available,writable,
-            capabilities:['remove','removeMany','clear','moveUp','moveDown','moveTop','moveBottom'],entries});
+            capabilities:['remove','removeMany','clear','moveUp','moveDown','moveTop','moveBottom','skipTo'],entries});
     }
     bridgeText = state(1,[
         {queueIndex:1,playlistIndex:0,playlistItemIndex:1,sourceId:'C:/Music/b.flac|0'},
@@ -473,4 +476,33 @@ suite("Queue Viewer direct bridge", function () {
     assert(queue.count === 1 && queue.data[0].text === 'Artist B - B' && queue.bridge_generation === 4,
         'Queue Viewer did not wait for and consume the acknowledged authoritative generation');
     assert(queueIndexEvaluations === 0, 'Writable command path triggered fallback queue scanning');
+
+    queue.select_only(0, false);
+    const realSkipToQueueRow = queue.skip_to_queue_row;
+    let contextSkipRow = -1;
+    queue.skip_to_queue_row = function(index) { contextSkipRow = index; return true; };
+    queue.rbtn_up_done(1408);
+    queue.skip_to_queue_row = realSkipToQueueRow;
+    assert(contextSkipRow === 0, 'Skip to this track context command targeted the wrong queue row');
+
+    bridgeText = state(5,[
+        {queueIndex:1,playlistIndex:0,playlistItemIndex:1,sourceId:'C:/Music/b.flac|0'},
+        {queueIndex:2,playlistIndex:-1,playlistItemIndex:-1,sourceId:'C:/Detached/c.flac|0'}
+    ]);
+    queue.playback_queue_changed(0);
+    drainTimers(30);
+    assert(queue.count === 2 && queue.bridge_generation === 5,
+        'Queue Viewer did not prepare the skip-to-track test generation');
+    assert(queue.lbtn_dblclk(10, 12 + panel.row_height + 1),
+        'Queue Viewer double-click did not request skip-to-track');
+    const skipCommand = JSON.parse(commandText);
+    assert(skipCommand.action === 'skipTo' && skipCommand.queueIndexes.join(',') === '2' &&
+        skipCommand.generation === 5,
+        'Queue Viewer serialised double-click skip-to-track incorrectly');
+    resultText = JSON.stringify({version:'v2',id:skipCommand.id,session:'session-a',
+        accepted:true,generation:6,message:''});
+    bridgeText = state(6,[]);
+    drainTimers(30);
+    assert(queue.count === 0 && queue.bridge_generation === 6,
+        'Queue Viewer did not consume the authoritative state after skip-to-track');
 });

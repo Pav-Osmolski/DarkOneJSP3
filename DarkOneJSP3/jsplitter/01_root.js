@@ -10,6 +10,9 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // invisible overlay intercepting mouse input.
 //
 // Version history (newest first):
+// v0.7.40 adds generation-bound Queue Viewer skip-to-track playback while
+// preserving the queue tail and rolling back if playback advance fails.
+//
 // v0.7.39 hardens queue reconstruction with rollback and authoritative failure
 // publication, retires malformed commands and lowers idle command polling.
 //
@@ -340,6 +343,9 @@ function executeQueueBridgeCommand(command) {
     if (command.action !== 'clear' && !indexes.length) {
         return { accepted: false, message: 'No valid playback queue entries were selected.' };
     }
+    if (command.action === 'skipTo' && indexes.length !== 1) {
+        return { accepted: false, message: 'Skip to track requires exactly one playback queue entry.' };
+    }
 
     var supported = QUEUE_BRIDGE_PROTOCOL.capabilities.indexOf(command.action) >= 0;
     if (!supported) {
@@ -366,6 +372,17 @@ function executeQueueBridgeCommand(command) {
         case 'moveBottom':
             originalRows = queueBridgeSnapshotRows(contents);
             queueBridgeRestoreQueue(queueBridgeReorder(contents, indexes, command.action));
+            break;
+        case 'skipTo':
+            originalRows = queueBridgeSnapshotRows(contents);
+            if (indexes[0] > 0) {
+                var skipped = [];
+                for (var skip = 0; skip < indexes[0]; skip++) skipped.push(skip);
+                plman.RemoveItemsFromPlaybackQueue(skipped);
+            }
+            // Next consumes the selected queue head through foobar2000's normal
+            // playback path, leaving every entry after it queued in order.
+            fb.Next();
             break;
         }
         outcome.accepted = true;

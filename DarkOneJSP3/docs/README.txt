@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.18
+DarkOneJSP3 v1.0.19
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -10,7 +10,7 @@ Supported environment
 - foobar2000 v2 x64
 - Columns UI
 - JScript Panel 3.8.5
-- JSplitter 4.x, developed and tested with 4.1.12
+- JSplitter 4.x, developed and tested with 4.1.14
 - Enhanced Spectrum Analyser
 - Waveform Minibar (mod)
 
@@ -103,7 +103,9 @@ Current highlights
   style, depth and roundness controls for both left and right panels.
 - The recommended DarkOneJSP3 Queue Viewer uses a direct, writable JSplitter
   playback-queue bridge, avoiding playlist-wide discovery scans and restoring
-  remove, multi-remove, clear and reorder controls. The standalone sample stays
+  remove, multi-remove, clear, reorder and queue-preserving skip-to-track
+  controls. Double-click skips to the chosen queued track without discarding
+  later entries. The standalone sample stays
   read-only and retains bounded fallback scans with early completion when
   %queue_total% is known, while Album Art creates blurred backgrounds only when
   a blur-using layout actually paints.
