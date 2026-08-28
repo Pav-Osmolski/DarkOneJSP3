@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.0.21
+  <strong>Current release:</strong> v1.0.22
 </p>
 
 > [!IMPORTANT]
@@ -68,7 +68,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.21** is the current release.
+**DarkOneJSP3 v1.0.22** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a

@@ -32,6 +32,17 @@ var DARKONE_PAGE_SELECTED_CUSTOM = 1;
 var DARKONE_PAGE_SELECTED_DEFAULT_MENU_ID = 150;
 var DARKONE_PAGE_SELECTED_CUSTOM_MENU_ID = 151;
 var DARKONE_PAGE_SELECTED_PICKER_MENU_ID = 152;
+var DARKONE_PAGE_WALLPAPER_NONE = 0;
+var DARKONE_PAGE_WALLPAPER_FRONT = 1;
+var DARKONE_PAGE_WALLPAPER_CUSTOM = 2;
+var DARKONE_PAGE_WALLPAPER_NONE_MENU_ID = 160;
+var DARKONE_PAGE_WALLPAPER_FRONT_MENU_ID = 161;
+var DARKONE_PAGE_WALLPAPER_CUSTOM_MENU_ID = 162;
+var DARKONE_PAGE_WALLPAPER_PATH_MENU_ID = 163;
+var DARKONE_PAGE_WALLPAPER_BLUR_MENU_ID = 164;
+var DARKONE_PAGE_WALLPAPER_OPACITY = 0.1;
+var DARKONE_PAGE_WALLPAPER_BLUR_VALUE = 50;
+var on_script_unload;
 
 function _panel(options) {
 	// Optional enhanced information-page background support is enabled only
@@ -118,11 +129,17 @@ function _panel(options) {
 		);
 	}
 
-	this.playback_colours_changed = function () {
-		if (!this.enhanced_page_background || !this.dynamic_colours.value) return false;
-		this.colours_changed();
-		window.Repaint();
-		return true;
+	this.playback_colours_changed = function (type) {
+		if (!this.enhanced_page_background) return false;
+		var changed = arguments.length == 0 || type == 1
+			? this.update_wallpaper()
+			: false;
+		if (this.dynamic_colours.value) {
+			this.colours_changed();
+			changed = true;
+		}
+		if (changed) window.Repaint();
+		return changed;
 	}
 
 	this.font_changed = function () {
@@ -196,9 +213,111 @@ function _panel(options) {
 			: this.colours.highlight;
 	}
 
+	this.wallpaper_mode = function () {
+		if (!this.enhanced_page_background || !this.wallpaper) return DARKONE_PAGE_WALLPAPER_NONE;
+		var mode = Math.round(Number(this.wallpaper.mode.value));
+		return mode == DARKONE_PAGE_WALLPAPER_FRONT || mode == DARKONE_PAGE_WALLPAPER_CUSTOM
+			? mode
+			: DARKONE_PAGE_WALLPAPER_NONE;
+	}
+
+	this.dispose_wallpaper = function () {
+		if (!this.wallpaper_image) return false;
+		try { this.wallpaper_image.Dispose(); } catch (e) {}
+		this.wallpaper_image = null;
+		return true;
+	}
+
+	this.update_wallpaper = function (force) {
+		var changed = this.dispose_wallpaper();
+		var mode = this.wallpaper_mode();
+		this.wallpaper_pending = false;
+		if (mode == DARKONE_PAGE_WALLPAPER_NONE) return changed;
+		if (!force && window.IsVisible === false) {
+			this.wallpaper_pending = true;
+			return changed;
+		}
+
+		var metadb = fb.GetNowPlaying();
+		if (!metadb) return changed;
+
+		var source = null;
+		var bitmap = null;
+		try {
+			if (mode == DARKONE_PAGE_WALLPAPER_FRONT) {
+				source = metadb.GetAlbumArt();
+			} else if (!String(this.wallpaper.path.value || '').length) {
+				return changed;
+			} else if (utils.IsFile(this.wallpaper.path.value)) {
+				source = utils.LoadImage(this.wallpaper.path.value);
+			} else {
+				source = utils.LoadImage(fb.ProfilePath + this.wallpaper.path.value);
+			}
+
+			if (!source) return changed;
+			if (this.wallpaper.blurred.value) source.StackBlur(DARKONE_PAGE_WALLPAPER_BLUR_VALUE);
+			try {
+				bitmap = source.CreateBitmap();
+			} catch (bitmap_error) {
+				// GDI+ render paths may already provide the drawable image object.
+				bitmap = source;
+				source = null;
+			}
+		} catch (e) {
+			console.log('[Information page wallpaper] Could not load the selected image: ' + e.message);
+		} finally {
+			if (source) {
+				try { source.Dispose(); } catch (dispose_error) {}
+			}
+		}
+
+		this.wallpaper_image = bitmap;
+		return changed || Boolean(bitmap);
+	}
+
+	this.draw_wallpaper = function (gr) {
+		if (this.wallpaper_pending && window.IsVisible !== false) this.update_wallpaper(true);
+		if (!this.wallpaper_image || this.wallpaper_mode() == DARKONE_PAGE_WALLPAPER_NONE) return;
+		var width = this.w;
+		var height = this.h - TM;
+		if (width <= 0 || height <= 0) return;
+
+		if (this.wallpaper_image.Width / this.wallpaper_image.Height < width / height) {
+			var src_x = 0;
+			var src_w = this.wallpaper_image.Width;
+			var src_h = Math.round(height * this.wallpaper_image.Width / width);
+			var src_y = Math.round((this.wallpaper_image.Height - src_h) / 2);
+		} else {
+			var src_y = 0;
+			var src_w = Math.round(width * this.wallpaper_image.Height / height);
+			var src_h = this.wallpaper_image.Height;
+			var src_x = Math.round((this.wallpaper_image.Width - src_w) / 2);
+		}
+
+		_drawImageOrBitmap(
+			gr,
+			this.wallpaper_image,
+			0,
+			TM,
+			width,
+			height,
+			src_x + 3,
+			src_y + 3,
+			src_w - 6,
+			src_h - 6,
+			DARKONE_PAGE_WALLPAPER_OPACITY
+		);
+	}
+
+	this.dispose = function () {
+		this.wallpaper_pending = false;
+		this.dispose_wallpaper();
+	}
+
 	this.paint = function (gr) {
 		if (this.enhanced_page_background) {
 			gr.Clear(this.page_background_colour());
+			this.draw_wallpaper(gr);
 			return;
 		}
 
@@ -232,6 +351,7 @@ function _panel(options) {
 		this.s16 = null;
 		this.s17 = null;
 		this.s18 = null;
+		this.s19 = null;
 
 		// panel 1-999
 		// object 1000+
@@ -298,6 +418,30 @@ function _panel(options) {
 				this.s18.AppendTo(this.s15, MF_STRING, 'Selected background');
 			}
 			this.s15.AppendTo(this.m, MF_STRING, 'Colours');
+			this.m.AppendMenuSeparator();
+
+			this.s19 = window.CreatePopupMenu();
+			this.s19.AppendMenuItem(MF_STRING, DARKONE_PAGE_WALLPAPER_NONE_MENU_ID, 'None');
+			this.s19.AppendMenuItem(MF_STRING, DARKONE_PAGE_WALLPAPER_FRONT_MENU_ID, 'Front cover of playing track');
+			this.s19.AppendMenuItem(MF_STRING, DARKONE_PAGE_WALLPAPER_CUSTOM_MENU_ID, 'Custom image');
+			this.s19.CheckMenuRadioItem(
+				DARKONE_PAGE_WALLPAPER_NONE_MENU_ID,
+				DARKONE_PAGE_WALLPAPER_CUSTOM_MENU_ID,
+				DARKONE_PAGE_WALLPAPER_NONE_MENU_ID + this.wallpaper_mode()
+			);
+			this.s19.AppendMenuSeparator();
+			this.s19.AppendMenuItem(
+				EnableMenuIf(this.wallpaper_mode() == DARKONE_PAGE_WALLPAPER_CUSTOM),
+				DARKONE_PAGE_WALLPAPER_PATH_MENU_ID,
+				'Custom image path...'
+			);
+			this.s19.AppendMenuSeparator();
+			this.s19.AppendMenuItem(
+				GetMenuFlags(this.wallpaper_mode() != DARKONE_PAGE_WALLPAPER_NONE, this.wallpaper.blurred.value),
+				DARKONE_PAGE_WALLPAPER_BLUR_MENU_ID,
+				'Blur'
+			);
+			this.s19.AppendTo(this.m, MF_STRING, 'Background Wallpaper');
 			this.m.AppendMenuSeparator();
 		} else if (this.custom_background) {
 			this.s2.AppendMenuItem(MF_STRING, 100, window.IsDefaultUI ? 'Use default UI setting' : 'Use columns UI setting');
@@ -418,6 +562,30 @@ function _panel(options) {
 			this.selected_background.mode.value = DARKONE_PAGE_SELECTED_CUSTOM;
 			window.Repaint();
 			break;
+		case idx >= DARKONE_PAGE_WALLPAPER_NONE_MENU_ID &&
+				idx <= DARKONE_PAGE_WALLPAPER_CUSTOM_MENU_ID:
+			this.wallpaper.mode.value = idx - DARKONE_PAGE_WALLPAPER_NONE_MENU_ID;
+			this.update_wallpaper();
+			window.Repaint();
+			break;
+		case idx == DARKONE_PAGE_WALLPAPER_PATH_MENU_ID:
+			try {
+				var path = utils.InputBox(
+					'Enter the full path to an image.',
+					window.Name,
+					this.wallpaper.path.value
+				);
+				if (path == this.wallpaper.path.value) break;
+				this.wallpaper.path.value = path;
+				this.update_wallpaper();
+				window.Repaint();
+			} catch (input_error) {}
+			break;
+		case idx == DARKONE_PAGE_WALLPAPER_BLUR_MENU_ID:
+			this.wallpaper.blurred.value = !this.wallpaper.blurred.value;
+			this.update_wallpaper();
+			window.Repaint();
+			break;
 		case idx > 999:
 			if (object) {
 				object.rbtn_up_done(idx);
@@ -449,6 +617,9 @@ function _panel(options) {
 	this.dynamic_colours = null;
 	this.text_colour = null;
 	this.selected_background = null;
+	this.wallpaper = null;
+	this.wallpaper_image = null;
+	this.wallpaper_pending = false;
 	this.w = 0;
 	this.h = 0;
 	this.metadb = fb.GetFocusItem();
@@ -474,6 +645,11 @@ function _panel(options) {
 				mode : new _p('DARKONEJSP3.PAGE.TEXT.MODE', DARKONE_PAGE_TEXT_DEFAULT),
 				custom : new _p('DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR', RGB(220, 220, 220))
 			};
+			this.wallpaper = {
+				mode : new _p('DARKONEJSP3.PAGE.WALLPAPER.MODE', DARKONE_PAGE_WALLPAPER_NONE),
+				path : new _p('DARKONEJSP3.PAGE.WALLPAPER.PATH', ''),
+				blurred : new _p('DARKONEJSP3.PAGE.WALLPAPER.BLURRED', false)
+			};
 			// Existing Columns UI layouts retain the wrapper source saved inside the
 			// JScript Panel instance. Detect the project Queue bridge as well as the
 			// current explicit option so upgraded layouts gain the selection controls
@@ -496,4 +672,14 @@ function _panel(options) {
 
 	this.colours_changed();
 	this.font_changed();
+	this.update_wallpaper();
+
+	if (this.enhanced_page_background) {
+		var previous_unload = typeof on_script_unload == 'function' ? on_script_unload : null;
+		var self = this;
+		on_script_unload = function () {
+			self.dispose();
+			if (previous_unload) previous_unload();
+		};
+	}
 }

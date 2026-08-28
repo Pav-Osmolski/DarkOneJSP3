@@ -709,7 +709,30 @@ suite("page background modes", function () {
     let menuCommand = 0;
     let menuItems = [];
     let blendArguments = null;
+    let repaints = 0;
+    let nowPlaying = null;
+    let sourceDisposals = 0;
+    let bitmapDisposals = 0;
+    let blurValues = [];
+    let loadedPaths = [];
+    let wallpaperDraws = [];
+    let previousUnloadCalls = 0;
     function property(name, fallback) { this.name = name; this.value = fallback; }
+    function image(width, height) {
+        return {
+            Width: width,
+            Height: height,
+            StackBlur(value) { blurValues.push(value); },
+            CreateBitmap() {
+                return {
+                    Width: width,
+                    Height: height,
+                    Dispose() { bitmapDisposals++; }
+                };
+            },
+            Dispose() { sourceDisposals++; }
+        };
+    }
     function menuFactory() {
         return {
             AppendMenuItem(flags, id, label) { menuItems.push([id, label]); },
@@ -726,7 +749,7 @@ suite("page background modes", function () {
         GetColourDUI() { return 0xff000000; },
         GetFontCUI() { return JSON.stringify({Name: 'Segoe UI'}); },
         GetFontDUI() { return JSON.stringify({Name: 'Segoe UI'}); },
-        Repaint() {},
+        Repaint() { repaints++; },
         CreatePopupMenu: menuFactory,
         ShowConfigure() {},
         Name: 'Information page'
@@ -735,12 +758,24 @@ suite("page background modes", function () {
     const factory = new Function(
         'window', 'fb', '_p', '_scale', '_', 'RGB', 'blendColours',
         'GetNowPlayingColours', 'DetermineTextColour', 'utils', 'MF_STRING',
-        'CheckMenuIf', 'DARKONEJSP3_QUEUE_BRIDGE_ENABLED',
-        colourSource + '\n' + source + '\nreturn _panel;'
+        'CheckMenuIf', 'EnableMenuIf', 'GetMenuFlags', '_drawImageOrBitmap',
+        'TM', 'existingUnload', 'DARKONEJSP3_QUEUE_BRIDGE_ENABLED',
+        'var on_script_unload = existingUnload;\n' + colourSource + '\n' + source +
+            '\nreturn { Panel: _panel, getUnload: function () { return on_script_unload; } };'
     );
-    const Panel = factory(
+    const fbMock = {
+        ProfilePath: 'P:\\',
+        GetFocusItem() { return null; },
+        GetNowPlaying() { return nowPlaying; }
+    };
+    const utilsMock = {
+        IsFile(path) { return path === 'C:\\wallpaper.jpg'; },
+        LoadImage(path) { loadedPaths.push(path); return image(900, 1200); },
+        InputBox() { return 'images\\new-wallpaper.jpg'; }
+    };
+    const api = factory(
         windowMock,
-        { GetFocusItem() { return null; } },
+        fbMock,
         property,
         value => value,
         underscore,
@@ -751,8 +786,14 @@ suite("page background modes", function () {
         },
         () => [0xff102030, 0xffe0d0c0, 0xff405060, 0xfff0e0d0],
         () => 0xfffefefe,
-        {}, 0, value => value ? 8 : 0, true
+        utilsMock, 0, value => value ? 8 : 0, value => value ? 8 : 0,
+        (enabled, checked) => enabled && checked ? 8 : enabled ? 0 : 1,
+        (gr, bitmap, dx, dy, dw, dh, sx, sy, sw, sh, opacity) => {
+            wallpaperDraws.push({bitmap, dx, dy, dw, dh, sx, sy, sw, sh, opacity});
+        },
+        32, () => { previousUnloadCalls++; }, true
     );
+    const Panel = api.Panel;
     const panel = new Panel({enhanced_page_background: true});
     if (!panel.enhanced_selected_background)
         throw new Error('Saved DarkOneJSP3 Queue wrappers do not gain Selected background automatically');
@@ -797,17 +838,86 @@ suite("page background modes", function () {
     menuItems = [];
     panel.rbtn_up(0, 0);
     const labels = menuItems.map(item => item[1]);
-    for (const label of ['Colours', 'Enable Dynamic', 'Page background', 'Text', 'Selected background']) {
+    for (const label of [
+        'Colours', 'Enable Dynamic', 'Page background', 'Text', 'Selected background',
+        'Background Wallpaper', 'None', 'Front cover of playing track',
+        'Custom image', 'Custom image path...', 'Blur'
+    ]) {
         if (labels.indexOf(label) === -1) throw new Error('Information-page Colours menu is missing ' + label);
     }
     const ids = menuItems.map(item => item[0]).filter(id => id !== null);
     if (ids.filter(id => id === 130).length !== 1 || ids.filter(id => id === 137).length !== 1)
         throw new Error('Dynamic and page-background picker commands do not have unique IDs');
+    for (const id of [160, 161, 162, 163, 164]) {
+        if (ids.filter(item => item === id).length !== 1)
+            throw new Error('Information-page wallpaper command is missing or duplicated: ' + id);
+    }
 
     menuCommand = 130;
     panel.rbtn_up(0, 0);
     if (!panel.dynamic_colours.value)
         throw new Error('Enable Dynamic menu command did not toggle page colours');
+
+    panel.dynamic_colours.value = false;
+    nowPlaying = { GetAlbumArt() { return image(1200, 800); } };
+    menuCommand = 161;
+    panel.rbtn_up(0, 0);
+    if (panel.wallpaper.mode.value !== 1 || !panel.wallpaper_image || sourceDisposals !== 1)
+        throw new Error('Front-cover wallpaper was not selected, converted and source-disposed');
+    const disposalsBeforeMetadataOnlyChange = bitmapDisposals;
+    panel.playback_colours_changed(0);
+    if (bitmapDisposals !== disposalsBeforeMetadataOnlyChange)
+        throw new Error('Metadata-only dynamic info regenerated unchanged front artwork');
+    panel.playback_colours_changed(1);
+    if (bitmapDisposals !== disposalsBeforeMetadataOnlyChange + 1)
+        throw new Error('Artwork dynamic info did not refresh the front-cover wallpaper');
+    panel.size();
+    panel.paint({ Clear() {} });
+    const draw = wallpaperDraws[wallpaperDraws.length - 1];
+    if (!draw || draw.dy !== 32 || draw.dw !== 640 || draw.dh !== 448 || draw.opacity !== 0.1)
+        throw new Error('Information-page wallpaper does not paint below the header at 10% opacity');
+
+    const disposalsBeforeBlur = bitmapDisposals;
+    menuCommand = 164;
+    panel.rbtn_up(0, 0);
+    if (!panel.wallpaper.blurred.value || blurValues[blurValues.length - 1] !== 50 ||
+        bitmapDisposals !== disposalsBeforeBlur + 1)
+        throw new Error('Wallpaper Blur did not regenerate at the Playlist Manager blur strength');
+
+    panel.wallpaper.path.value = 'C:\\wallpaper.jpg';
+    menuCommand = 162;
+    panel.rbtn_up(0, 0);
+    if (loadedPaths[loadedPaths.length - 1] !== 'C:\\wallpaper.jpg')
+        throw new Error('Absolute custom wallpaper path was not loaded');
+    menuCommand = 163;
+    panel.rbtn_up(0, 0);
+    if (panel.wallpaper.path.value !== 'images\\new-wallpaper.jpg' ||
+        loadedPaths[loadedPaths.length - 1] !== 'P:\\images\\new-wallpaper.jpg')
+        throw new Error('Profile-relative custom wallpaper path was not persisted or resolved');
+
+    menuCommand = 160;
+    panel.rbtn_up(0, 0);
+    if (panel.wallpaper.mode.value !== 0 || panel.wallpaper_image !== null)
+        throw new Error('Wallpaper None did not dispose and clear the active image');
+
+    windowMock.IsVisible = false;
+    const sourceDisposalsBeforeHiddenRefresh = sourceDisposals;
+    menuCommand = 161;
+    panel.rbtn_up(0, 0);
+    if (!panel.wallpaper_pending || panel.wallpaper_image !== null ||
+        sourceDisposals !== sourceDisposalsBeforeHiddenRefresh)
+        throw new Error('Hidden information page generated wallpaper work eagerly');
+    windowMock.IsVisible = true;
+    panel.paint({ Clear() {} });
+    if (panel.wallpaper_pending || !panel.wallpaper_image ||
+        sourceDisposals !== sourceDisposalsBeforeHiddenRefresh + 1)
+        throw new Error('Visible information page did not complete deferred wallpaper work');
+    const disposalsBeforeUnload = bitmapDisposals;
+    api.getUnload()();
+    if (panel.wallpaper_image !== null || bitmapDisposals !== disposalsBeforeUnload + 1 ||
+        previousUnloadCalls !== 1)
+        throw new Error('Information-page unload did not dispose wallpaper and preserve the existing callback');
+    if (repaints < 5) throw new Error('Wallpaper changes did not repaint immediately');
 });
 
 suite("volume knob indicator colour", function () {

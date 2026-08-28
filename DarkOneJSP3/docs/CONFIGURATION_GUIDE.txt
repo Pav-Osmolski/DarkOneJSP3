@@ -113,6 +113,31 @@ Custom selected backgrounds automatically receive a contrasting text colour.
 With Dynamic enabled, both selected background and selected text instead follow
 the current artwork palette.
 
+Background Wallpaper
+~~~~~~~~~~~~~~~~~~~~
+
+Available on Biography, Last.fm, Album Notes, Properties and the recommended
+scripted Queue Viewer. Each panel instance stores its wallpaper independently.
+
+Choices:
+- None (default)
+- Front cover of playing track
+- Custom image
+- Custom image path...
+- Blur
+
+Front cover follows the currently playing track rather than the panel's
+Selection mode. Custom image accepts either a complete image path or a path
+relative to the foobar2000 profile directory. The wallpaper is cover-cropped
+below the page header and painted at 10% opacity over the selected fixed or
+Dynamic page background. Blur uses the same strength as Playlist Manager.
+
+Wallpaper images refresh when playback or artwork changes. They remain in place
+during the intermediate stop between tracks and are released when playback
+fully stops, the wallpaper is disabled, the source is replaced or the panel is
+unloaded. Hidden InfoStack pages defer image loading and blur until they next
+become visible.
+
 Selection mode
 ~~~~~~~~~~~~~~
 
@@ -927,7 +952,7 @@ Panel-specific commands:
 - Show extra info
 - Open containing folder
 
-The panel then appends Font size, Colours, Selection mode and
+The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
 Last.fm
@@ -964,7 +989,7 @@ Account and file commands:
 - Last.fm API key...
 - Open containing folder
 
-The panel then appends Font size, Colours, Selection mode and
+The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
 Properties
@@ -979,7 +1004,7 @@ Panel-specific commands:
 - Open containing folder
 
 Metadata, Location and Tech Info independently show or hide those sections.
-The panel then appends Font size, Colours, Selection mode and
+The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
 8. Queue Viewer
@@ -1059,10 +1084,10 @@ double-click action. Play source item now instead launches the source playlist
 item directly and can clear the playback queue; use it only when that behaviour
 is intended.
 
-The script also appends Font size, Colours and Configure... from the shared page
-controls. Its Colours menu additionally includes Selected background. It has no
-Selection mode submenu because queue rows already represent explicit source
-playlist items.
+The script also appends Font size, Colours, Background Wallpaper and
+Configure... from the shared page controls. Its Colours menu additionally
+includes Selected background. It has no Selection mode submenu because queue
+rows already represent explicit source playlist items.
 
 Existing DarkOneJSP3 layouts whose Queue wrapper was saved inside the FCL are
 recognised through the project queue bridge, so Selected background appears
@@ -1395,7 +1420,7 @@ Local state files
   js_data\darkonejsp3.network-state.json
   js_data\musicbrainz.artist-map.json
 
-The panel then appends Font size, Colours, Selection mode and
+The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
 11. Standalone metadata panels
@@ -1470,6 +1495,14 @@ InfoStack
 Information-page controls (stored independently by each panel instance)
   DARKONEJSP3.PAGE.BACKGROUND.MODE
   DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR
+  DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED
+  DARKONEJSP3.PAGE.TEXT.MODE
+  DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR
+  DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE
+  DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR
+  DARKONEJSP3.PAGE.WALLPAPER.MODE
+  DARKONEJSP3.PAGE.WALLPAPER.PATH
+  DARKONEJSP3.PAGE.WALLPAPER.BLURRED
   2K3.PANEL.FONTS.SIZE
   2K3.PANEL.SELECTION
 
@@ -1564,7 +1597,9 @@ performance-diagnostic options. Playlist Manager also resets those behaviour set
 width, row height and alternating-row option belong to appearance. Full reset
 additionally clears its saved scroll anchors. InfoStack appearance reset
 restores the automatic font base scale to 100%, DarkOne dark grey page backing
-and Black upper side dividers. Quick Search honours the same reset scopes:
+and Black upper side dividers. Information-page appearance reset also disables
+each page wallpaper, clears its custom path and restores Blur to off. Quick
+Search honours the same reset scopes:
 appearance resets sizing, font, icon, frame and colours; behaviour resets search
 and result preferences. Tag definitions, history and favourites are preserved by
 scoped resets and cleared only by the panel's explicit complete reset.

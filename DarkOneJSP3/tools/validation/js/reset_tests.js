@@ -196,7 +196,10 @@ suite("sample reset registry", function () {
         'DARKONEJSP3.PAGE.TEXT.MODE': 1,
         'DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR': 0xff123456,
         'DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE': 1,
-        'DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR': 0xff654321
+        'DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR': 0xff654321,
+        'DARKONEJSP3.PAGE.WALLPAPER.MODE': 2,
+        'DARKONEJSP3.PAGE.WALLPAPER.PATH': 'C:\\wallpaper.jpg',
+        'DARKONEJSP3.PAGE.WALLPAPER.BLURRED': true
     });
     assert(jsp3EnhancedHandleSampleReset(
         'JSP3Enhanced.Reset.Properties', {scope: 'appearance'}, 'queue-viewer'),
@@ -205,8 +208,11 @@ suite("sample reset registry", function () {
         properties['DARKONEJSP3.PAGE.TEXT.MODE'] === 0 &&
         properties['DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR'] === 0xffdcdcdc &&
         properties['DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE'] === 0 &&
-        properties['DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR'] === 0xff303030,
-        'Queue Viewer page-colour defaults were not restored');
+        properties['DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR'] === 0xff303030 &&
+        properties['DARKONEJSP3.PAGE.WALLPAPER.MODE'] === 0 &&
+        properties['DARKONEJSP3.PAGE.WALLPAPER.PATH'] === '' &&
+        properties['DARKONEJSP3.PAGE.WALLPAPER.BLURRED'] === false,
+        'Queue Viewer page-appearance defaults were not restored');
     assert(reloads === 1, 'Queue Viewer appearance reset did not reload exactly once');
 
     reset({

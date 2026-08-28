@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Properties"
-// @version "0.1.2"
+// @version "0.1.3"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -72,7 +72,7 @@ function on_paint(gr) {
 }
 
 function on_playback_dynamic_info_track(type) {
-	panel.playback_colours_changed();
+	panel.playback_colours_changed(type);
 	if (type == 0) {
 		properties.metadb_changed();
 	}

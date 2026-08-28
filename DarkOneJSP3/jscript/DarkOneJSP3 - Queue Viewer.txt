@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Queue Viewer"
-// @version "0.8.5"
+// @version "0.8.6"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -37,7 +37,7 @@ function on_paint(gr) {
     queue.paint(gr);
 }
 function on_playback_queue_changed(origin) { queue.playback_queue_changed(origin); }
-function on_playback_dynamic_info_track() { panel.playback_colours_changed(); }
+function on_playback_dynamic_info_track(type) { panel.playback_colours_changed(type); }
 function on_playback_new_track() { panel.playback_colours_changed(); }
 function on_playback_stop(reason) { if (reason != 2) panel.playback_colours_changed(); }
 function on_playlists_changed() { queue.source_topology_changed(); }

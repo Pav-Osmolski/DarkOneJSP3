@@ -65,8 +65,8 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.8.5"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.5')
+        if '// @version "0.8.6"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.6')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
@@ -175,6 +175,9 @@ def run(ctx: ValidationContext) -> None:
             "new _p('DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR', RGB(220, 220, 220))",
             "new _p('DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE', DARKONE_PAGE_SELECTED_DEFAULT)",
             "new _p('DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR', RGB(48, 48, 48))",
+            "new _p('DARKONEJSP3.PAGE.WALLPAPER.MODE', DARKONE_PAGE_WALLPAPER_NONE)",
+            "new _p('DARKONEJSP3.PAGE.WALLPAPER.PATH', '')",
+            "new _p('DARKONEJSP3.PAGE.WALLPAPER.BLURRED', false)",
             "typeof DARKONEJSP3_QUEUE_BRIDGE_ENABLED != 'undefined'",
             'DARKONEJSP3_QUEUE_BRIDGE_ENABLED === true',
             "'DarkOne grey'",
@@ -184,10 +187,23 @@ def run(ctx: ValidationContext) -> None:
             "'Page background'",
             "'Text'",
             "'Selected background'",
+            "'Background Wallpaper'",
+            "'Front cover of playing track'",
+            "'Custom image path...'",
+            "'Blur'",
             "'Colours'",
             'GetNowPlayingColours()',
             'this.playback_colours_changed = function',
+            'arguments.length == 0 || type == 1',
             'this.page_contrast_background_colour = function',
+            'this.update_wallpaper = function',
+            'this.draw_wallpaper = function',
+            'this.dispose_wallpaper = function',
+            'this.wallpaper_pending = true',
+            'window.IsVisible === false',
+            'DARKONE_PAGE_WALLPAPER_OPACITY',
+            'DARKONE_PAGE_WALLPAPER_BLUR_VALUE',
+            '_drawImageOrBitmap(',
             'gr.Clear(this.page_background_colour())',
             "typeof DarkOneColour !== 'undefined'",
             'case Boolean(background_option):',
@@ -198,6 +214,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Page-background custom picker collides with the Dynamic menu command')
         if 'this.s15 = window.CreatePopupMenu();\n\t\tthis.s16 = window.CreatePopupMenu();' in body:
             errors.append('Generic panels eagerly allocate inactive enhanced-colour submenus')
+        if 'this.s15 = window.CreatePopupMenu();\n\t\tthis.s19 = window.CreatePopupMenu();' in body:
+            errors.append('Generic panels eagerly allocate the inactive wallpaper submenu')
 
     page_background_entries = {
         samples / 'Last.fm Bio.txt': 'lastfm-bio',
@@ -207,11 +225,11 @@ def run(ctx: ValidationContext) -> None:
         samples / 'Properties.txt': 'properties',
     }
     page_background_versions = {
-        samples / 'Last.fm Bio.txt': '0.1.2',
-        samples / 'Last.fm Artist Info + User Info.txt': '0.1.2',
-        samples / 'Album Notes.txt': '0.6.9',
-        project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.5',
-        samples / 'Properties.txt': '0.1.2',
+        samples / 'Last.fm Bio.txt': '0.1.3',
+        samples / 'Last.fm Artist Info + User Info.txt': '0.1.3',
+        samples / 'Album Notes.txt': '0.6.10',
+        project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.6',
+        samples / 'Properties.txt': '0.1.3',
     }
     for entry, role in page_background_entries.items():
         if not entry.exists():
@@ -223,6 +241,8 @@ def run(ctx: ValidationContext) -> None:
             errors.append(rel(entry) + ' does not identify its reset role: ' + role)
         if 'panel.playback_colours_changed();' not in body:
             errors.append(rel(entry) + ' does not refresh dynamic colours on playback changes')
+        if 'panel.playback_colours_changed(type)' not in body:
+            errors.append(rel(entry) + ' does not distinguish artwork from metadata-only dynamic changes')
         stop_callback = re.search(
             r'function on_playback_stop\(reason\)\s*\{.*?\}',
             body,
@@ -429,8 +449,8 @@ def run(ctx: ValidationContext) -> None:
         token = 'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
         if token not in album_notes_entry_body:
             errors.append('Album Notes does not reset embedded MusicBrainz settings')
-        if '// @version "0.6.9"' not in album_notes_entry_body:
-            errors.append('Album Notes entry version is not 0.6.9')
+        if '// @version "0.6.10"' not in album_notes_entry_body:
+            errors.append('Album Notes entry version is not 0.6.10')
 
     album_art_entry = samples / 'Album Art.txt'
     if album_art_entry.exists():

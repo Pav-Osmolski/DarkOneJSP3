@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.21 Validation Report
+DarkOneJSP3 v1.0.22 Validation Report
 =====================================
 
 Scope
@@ -149,6 +149,14 @@ Checks
   Columns UI background, selected Queue colours are resolved once per paint,
   generic panels do not allocate inactive enhanced-colour submenus and
   intermediate playback stops cannot trigger a transient Dynamic repaint.
+- Shared information-page wallpaper tests exercise None, playing-track front
+  cover and absolute/profile-relative custom-image sources, optional 50-strength
+  blur, cover-cropped painting below the page header at 10% opacity, immediate
+  menu repainting, artwork-specific refreshes without metadata-only reloads,
+  appearance-reset defaults and
+  native image/bitmap disposal during replacement, disabling and script unload.
+  Hidden pages defer image loading and blur until their next visible paint, and
+  generic panels do not allocate the inactive wallpaper submenu.
 - The standalone/fallback Queue Viewer retains constant-time selection lookup,
   5 ms work slices with 1 ms yields, no full-playlist handle-list allocation,
   progressive publishing and targeted removal/playback-advance refreshes.

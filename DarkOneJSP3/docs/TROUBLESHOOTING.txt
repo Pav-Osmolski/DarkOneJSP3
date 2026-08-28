@@ -463,9 +463,21 @@ Double Track Line.
 Biography, Last.fm or Properties menu cannot be found
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Right-click empty content space inside the page. Panel-specific commands appear
-first, followed by the shared Font size, Colours, Selection mode and
-Configure... controls. Clicking directly on selectable text or a link can
-invoke that object's action instead.
+first, followed by the shared Font size, Colours, Background Wallpaper,
+Selection mode and Configure... controls. Clicking directly on selectable text
+or a link can invoke that object's action instead.
+
+Background Wallpaper is enabled but no image appears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Front cover of playing track and Custom image follow active playback, matching
+Playlist Manager. Start playback and confirm the playing track has embedded or
+external front artwork. For Custom image, select Custom image first and then
+open Custom image path.... A relative path is resolved beneath the active
+foobar2000 profile directory; use a complete path when the image is elsewhere.
+
+The image is deliberately subtle: it is cover-cropped below the page header and
+painted at 10% opacity over the current page background. Selecting None,
+stopping playback normally or resetting page appearance removes it.
 
 Colours is missing from Queue
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
