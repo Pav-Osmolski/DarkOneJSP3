@@ -706,7 +706,18 @@ suite("page background modes", function () {
     const fs = require('fs');
     const colourSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/shared/colour_utils.js"), 'utf8');
     const source = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/js/panel.js"), 'utf8');
+    let menuCommand = 0;
+    let menuItems = [];
+    let blendArguments = null;
     function property(name, fallback) { this.name = name; this.value = fallback; }
+    function menuFactory() {
+        return {
+            AppendMenuItem(flags, id, label) { menuItems.push([id, label]); },
+            AppendMenuSeparator() {}, CheckMenuRadioItem() {},
+            AppendTo(parent, flags, label) { menuItems.push([null, label]); },
+            Dispose() {}, TrackPopupMenu() { return menuCommand; }
+        };
+    }
     const windowMock = {
         IsDefaultUI: false,
         Width: 640,
@@ -716,11 +727,15 @@ suite("page background modes", function () {
         GetFontCUI() { return JSON.stringify({Name: 'Segoe UI'}); },
         GetFontDUI() { return JSON.stringify({Name: 'Segoe UI'}); },
         Repaint() {},
-        CreatePopupMenu() { throw new Error('Menu should not be opened by colour smoke test'); }
+        CreatePopupMenu: menuFactory,
+        ShowConfigure() {},
+        Name: 'Information page'
     };
     const underscore = { invoke() {}, forEach() {}, first(a) { return a[0]; }, last(a) { return a[a.length - 1]; } };
     const factory = new Function(
         'window', 'fb', '_p', '_scale', '_', 'RGB', 'blendColours',
+        'GetNowPlayingColours', 'DetermineTextColour', 'utils', 'MF_STRING',
+        'CheckMenuIf', 'DARKONEJSP3_QUEUE_BRIDGE_ENABLED',
         colourSource + '\n' + source + '\nreturn _panel;'
     );
     const Panel = factory(
@@ -730,9 +745,17 @@ suite("page background modes", function () {
         value => value,
         underscore,
         (r, g, b) => 0xff000000 + (r << 16) + (g << 8) + b,
-        () => 0xff888888
+        (first, second, factor) => {
+            blendArguments = [first >>> 0, second >>> 0, factor];
+            return 0xff888888;
+        },
+        () => [0xff102030, 0xffe0d0c0, 0xff405060, 0xfff0e0d0],
+        () => 0xfffefefe,
+        {}, 0, value => value ? 8 : 0, true
     );
-    const panel = new Panel({ enhanced_page_background: true });
+    const panel = new Panel({enhanced_page_background: true});
+    if (!panel.enhanced_selected_background)
+        throw new Error('Saved DarkOneJSP3 Queue wrappers do not gain Selected background automatically');
     if ((panel.page_background_colour() >>> 0) !== 0xff181818)
         throw new Error('Default information-page background is not DarkOne dark grey');
     panel.page_background.custom.value = 0xff123456;
@@ -742,13 +765,149 @@ suite("page background modes", function () {
     panel.page_background.mode.value = 5;
     if ((panel.page_background_colour() >>> 0) !== 0xff445566)
         throw new Error('Information page does not follow the Columns UI global background');
+
+    panel.text_colour.mode.value = 1;
+    panel.text_colour.custom.value = 0xffabcdef;
+    panel.selected_background.mode.value = 1;
+    panel.selected_background.custom.value = 0xff203040;
+    panel.colours_changed();
+    if ((panel.colours.text >>> 0) !== 0xffabcdef ||
+        (panel.selected_background_colour() >>> 0) !== 0xff203040 ||
+        (panel.selected_text_colour() >>> 0) !== 0xfffefefe)
+        throw new Error('Custom information-page text or selected background did not resolve');
+
+    panel.dynamic_colours.value = true;
+    panel.colours_changed();
+    if ((panel.page_background_colour() >>> 0) !== 0xff102030 ||
+        (panel.colours.text >>> 0) !== 0xffe0d0c0 ||
+        (panel.selected_background_colour() >>> 0) !== 0xff405060 ||
+        (panel.selected_text_colour() >>> 0) !== 0xfff0e0d0)
+        throw new Error('Dynamic information-page palette did not override all active colours');
+    panel.dynamic_colours.value = false;
+    panel.colours_changed();
+    if ((panel.colours.text >>> 0) !== 0xffabcdef ||
+        (panel.selected_background_colour() >>> 0) !== 0xff203040)
+        throw new Error('Disabling dynamic colours did not restore saved page colours');
+
+    panel.page_background.mode.value = 0;
+    panel.colours_changed();
+    if (!blendArguments || blendArguments[1] !== 0xff445566)
+        throw new Error('Transparent page highlight does not use the inherited background for contrast');
+
+    menuItems = [];
+    panel.rbtn_up(0, 0);
+    const labels = menuItems.map(item => item[1]);
+    for (const label of ['Colours', 'Enable Dynamic', 'Page background', 'Text', 'Selected background']) {
+        if (labels.indexOf(label) === -1) throw new Error('Information-page Colours menu is missing ' + label);
+    }
+    const ids = menuItems.map(item => item[0]).filter(id => id !== null);
+    if (ids.filter(id => id === 130).length !== 1 || ids.filter(id => id === 137).length !== 1)
+        throw new Error('Dynamic and page-background picker commands do not have unique IDs');
+
+    menuCommand = 130;
+    panel.rbtn_up(0, 0);
+    if (!panel.dynamic_colours.value)
+        throw new Error('Enable Dynamic menu command did not toggle page colours');
+});
+
+suite("volume knob indicator colour", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path("DarkOneJSP3/jscript/js/Object_Volumeknob.js"), 'utf8');
+    let repaints = 0;
+    let menuCommand = 27;
+    let indicatorMode = 0;
+    let indicatorCustom = 0xff404040;
+    const menuLabels = [];
+    const fills = [];
+    function menuFactory() {
+        return {
+            AppendMenuItem(flags, id, label) { menuLabels.push(label); },
+            AppendMenuSeparator() {},
+            AppendTo(parent, flags, label) { menuLabels.push(label); },
+            CheckMenuRadioItem() {},
+            TrackPopupMenu() { return menuCommand; }, Dispose() {}
+        };
+    }
+    const windowMock = {
+        CreatePopupMenu: menuFactory,
+        RepaintRect() { repaints++; },
+        SetProperty(name, value) {
+            if (name === 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE') indicatorMode = Number(value);
+            if (name === 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR') indicatorCustom = value >>> 0;
+        }
+    };
+    const fbMock = {
+        Volume: -20, VolumeUp() {}, VolumeDown() {}, VolumeMute() {},
+        RunMainMenuCommand() {}
+    };
+    const performance = {
+        createRepaintScheduler() { return {request() {}, reschedule() {}, cancel() {}}; },
+        createValueCoalescer() { return {request() {}, flush() {}, reschedule() {}, cancel() {}}; }
+    };
+    const cadence = {
+        appendVolumeMenu() {}, volumeModeForMenuId() { return null; }
+    };
+    const knobOptions = { inactive_colour: 0xff404040 };
+    const factory = new Function(
+        'window', 'fb', 'DarkOnePerformance', 'DarkOneUiCadence',
+        'darkOneGetVolumeDragMode',
+        'darkOneGetVolumeDragInterval', 'darkOneGetVolumeWriteInterval',
+        'darkOneSetVolumeDragMode', 'darkOnePickBottomAreaColour',
+        'darkOneBottomOpaque', 'darkOneVolumeKnobIndicatorMode',
+        'darkOneVolumeKnobIndicatorCustomColour',
+        'DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY',
+        'DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY',
+        'DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT',
+        'DARKONE_VOLUME_KNOB_INDICATOR_MODE_DEFAULT',
+        'DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM',
+        'vknbOpt', 'MF_STRING', 'ui_btntxtcol', 'darkOneFillEllipse',
+        'darkOneDrawEllipse', source + '\nreturn VolumeKnob;'
+    );
+    const VolumeKnob = factory(
+        windowMock, fbMock, performance, cadence, () => 0, () => 8, () => 16, () => {},
+        () => 0xff123456, colour => 0xff000000 + ((Number(colour) >>> 0) & 0xffffff),
+        () => indicatorMode, () => indicatorCustom,
+        'DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE',
+        'DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR',
+        0xff404040, 0, 1, knobOptions, 0, 0xffffffff,
+        (gr, x, y, w, h, colour) => fills.push(colour >>> 0), () => {}
+    );
+    const knob = new VolumeKnob(0, 0, 40, 40, {
+        line_width: 1, line_normal: 0xff101010,
+        inactive_colour: knobOptions.inactive_colour, active_colour: 0xff298fcc
+    });
+    knob.on_mouse_rbtn_up(10, 10);
+    for (const label of ['Knob indicator colour', 'Default', 'Custom', 'Set custom colour...']) {
+        if (menuLabels.indexOf(label) === -1)
+            throw new Error('Volume knob indicator menu is missing ' + label);
+    }
+    if (indicatorMode !== 1 || indicatorCustom !== 0xff123456 ||
+        knobOptions.inactive_colour !== 0xff123456 ||
+        knob.inactive_colour !== 0xff123456 || repaints !== 1)
+        throw new Error('Volume knob indicator colour was not persisted and applied immediately');
+    knob.draw({DrawLine() {}});
+    if (fills.indexOf(0xff123456) === -1)
+        throw new Error('Volume knob indicator paint does not use the configured colour');
+
+    menuCommand = 25;
+    knob.on_mouse_rbtn_up(10, 10);
+    if (indicatorMode !== 0 || knob.inactive_colour !== 0xff404040 ||
+        indicatorCustom !== 0xff123456)
+        throw new Error('Volume knob Default did not restore #404040 while preserving Custom');
+
+    menuCommand = 26;
+    knob.on_mouse_rbtn_up(10, 10);
+    if (indicatorMode !== 1 || knob.inactive_colour !== 0xff123456 || repaints !== 3)
+        throw new Error('Volume knob Custom did not restore the remembered custom colour');
 });
 
 suite("generic panel menu dispatch", function () {
     const fs = require('fs');
     const source = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/js/panel.js"), 'utf8');
     function property(name, fallback) { this.name = name; this.value = fallback; }
+    let menuCreations = 0;
     function menuFactory() {
+        menuCreations++;
         return {
             AppendMenuItem() {}, AppendMenuSeparator() {}, CheckMenuRadioItem() {},
             AppendTo() {}, Dispose() {}, TrackPopupMenu() { return 1001; }
@@ -776,6 +935,8 @@ suite("generic panel menu dispatch", function () {
     const object = { rbtn_up() {}, rbtn_up_done(id) { if (id === 1001) dispatched++; } };
     panel.rbtn_up(0, 0, object);
     if (dispatched !== 1) throw new Error('Generic object menu command was not dispatched');
+    if (menuCreations !== 10)
+        throw new Error('Generic panel menu created inactive enhanced-colour submenus: ' + menuCreations);
 });
 
 suite("bottom-area cross-host state", function () {

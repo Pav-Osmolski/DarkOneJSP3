@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.20
+DarkOneJSP3 v1.0.21
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -111,6 +111,9 @@ Current highlights
   a blur-using layout actually paints.
 - Configurable InfoStack tabs, titles, responsive font scaling, background and
   inactive-tab colour, including an explicit Columns UI global background mode.
+- Biography, Last.fm, Album Notes, Queue and Properties expose a consistent
+  Colours menu with optional artwork-derived Dynamic colours plus independent
+  page-background and text choices. Queue also exposes Selected background.
 - Shared customisable colour for the two upper Album Art/Spectrum divider
   strips, including both DarkOne greys and the Columns UI global background,
   with Black preserved as the default and lower dividers unchanged.
@@ -131,6 +134,8 @@ Current highlights
   surfaces use matching gradient coordinates, so the colour remains continuous.
 - Default, Columns UI selected-item or custom display accent shared by Plain
   Font and Dot Matrix modes.
+- The volume knob's inactive indicator fill is independently configurable from
+  its fixed blue drag and red mute feedback colours.
 - Root-owned startup transition defaults to Off, with optional Black reveal
   and Staged reveal modes controlled from TOOLS > Startup.
 - Consolidated Album Notes with configurable providers, caching, diagnostics,

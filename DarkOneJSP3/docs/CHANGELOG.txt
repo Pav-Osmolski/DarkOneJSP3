@@ -1,6 +1,40 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.21 - Dynamic InfoStack page colours
+----------------------------------------
+
+- Consolidated Biography, Last.fm, Album Notes, Queue and Properties under a
+  consistent Colours menu containing Enable Dynamic, Page background and Text.
+  Each JScript Panel instance retains independent fixed choices.
+- Added artwork-derived Dynamic palettes to every participating information
+  page. Playback and artwork changes refresh background/text colours without
+  overwriting the remembered fixed values, which return when Dynamic is off.
+- Added Queue Viewer > Colours > Selected background. Default preserves the
+  previous translucent highlight; Custom uses the chosen opaque fill with
+  automatic contrasting text, while Dynamic follows the artwork selection pair.
+  Existing FCL-stored Queue wrappers are recognised through the project bridge,
+  so upgraded layouts expose the submenu without an FCL replacement.
+- Fixed a pre-existing page-background menu-ID collision that could route Set
+  custom colour... to Transparent instead of opening the picker.
+- Added Knob indicator colour to the volume knob context menu, with remembered
+  Default and Custom modes plus Set custom colour.... Default restores the
+  inactive #404040 moving indicator without discarding Custom; the fixed blue
+  drag and red mute feedback states remain independent.
+- Added persistent/reset defaults and regression coverage for dynamic palette
+  restoration, menu hierarchy and unique commands, Queue selected-row painting,
+  legacy selection fallback, volume indicator persistence and direct painting.
+- Made a normal left-click in empty Queue Viewer list space clear the current
+  selection without changing row-click or scrollbar-button behaviour.
+- Hardened page-colour contrast so Transparent backgrounds derive highlights
+  from the inherited Columns UI colour rather than literal transparent black.
+- Avoided inactive enhanced-colour submenu allocations in generic panels,
+  reused the resolved Queue selection colour during paint and suppressed
+  redundant Dynamic palette refreshes during intermediate playback stops.
+- Advanced Control Right to 3.0.39, Queue Viewer to 0.8.5, Album Notes to 0.6.9,
+  the page-colour helper to 0.1.7, sample defaults to 0.1.1 and the release
+  validator to 0.10.30.
+
 v1.0.20 - Configurable Quick Search border colour
 -------------------------------------------------
 
@@ -1383,6 +1417,14 @@ v0.9.0 - Rendering and playlist performance optimisation
 - Advanced JS Playlist and Smooth Playlist Manager to 0.5.0, control panels to
   3.0.13, Display to 3.0.12 and the release validator to 0.3.0.
 - Preserved existing saved properties, visual behaviour and refresh choices.
+
+v0.8.5 - Queue Viewer empty-space deselection
+---------------------------------------------
+
+- Made an unmodified left-click in empty Queue Viewer list space clear the
+  current selection.
+- Preserved row selection, scrollbar-button handling and outside-panel clicks.
+- Added geometry-level behavioural coverage for each click target.
 
 v0.8.4 - Configuration Guide formatting hardening
 -------------------------------------------------

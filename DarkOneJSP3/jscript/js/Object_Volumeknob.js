@@ -88,6 +88,13 @@ function VolumeKnob(x, y, w, h, options) {
 		window.RepaintRect(this.left, this.top, this.w, this.h);
 	}
 
+	this.apply_indicator_colour = function(colour) {
+		colour = darkOneBottomOpaque(colour);
+		vknbOpt.inactive_colour = colour;
+		this.inactive_colour = colour;
+		this.Repaint();
+	}
+
 	this.on_mouse_move = function(x, y) {
 		if (this.traceMouse(x, y)) {
 			if (v_drag) {
@@ -161,6 +168,7 @@ function VolumeKnob(x, y, w, h, options) {
 	this.on_mouse_rbtn_up = function(x, y) {
 		var m = window.CreatePopupMenu();
 		var cadence = window.CreatePopupMenu();
+		var indicator = window.CreatePopupMenu();
 		var q;
 
 		m.AppendMenuItem(fb.Volume == 0 ? 1 : 0, 1, "Up");
@@ -176,6 +184,17 @@ function VolumeKnob(x, y, w, h, options) {
 			MF_STRING
 		);
 		cadence.AppendTo(m, MF_STRING, "Volume drag refresh rate");
+		m.AppendMenuSeparator();
+		indicator.AppendMenuItem(MF_STRING, 25, "Default");
+		indicator.AppendMenuItem(MF_STRING, 26, "Custom");
+		indicator.CheckMenuRadioItem(
+			25,
+			26,
+			darkOneVolumeKnobIndicatorMode() === DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM ? 26 : 25
+		);
+		indicator.AppendMenuSeparator();
+		indicator.AppendMenuItem(MF_STRING, 27, "Set custom colour...");
+		indicator.AppendTo(m, MF_STRING, "Knob indicator colour");
 
 		q = m.TrackPopupMenu(x, y);
 
@@ -201,8 +220,37 @@ function VolumeKnob(x, y, w, h, options) {
 				var cadence_mode = DarkOneUiCadence.volumeModeForMenuId(q);
 				if (cadence_mode !== null) darkOneSetVolumeDragMode(cadence_mode);
 				break;
+
+			case q == 25:
+			case q == 26:
+				var mode = q == 26
+					? DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+					: DARKONE_VOLUME_KNOB_INDICATOR_MODE_DEFAULT;
+				window.SetProperty(DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY, mode);
+				this.apply_indicator_colour(
+					mode === DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+						? darkOneVolumeKnobIndicatorCustomColour()
+						: DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT
+				);
+				break;
+
+			case q == 27:
+				var chosen = darkOnePickBottomAreaColour(
+					darkOneVolumeKnobIndicatorCustomColour(),
+					'Volume knob indicator colour'
+				);
+				if (chosen === null) break;
+				chosen = darkOneBottomOpaque(chosen);
+				window.SetProperty(DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY, chosen);
+				window.SetProperty(
+					DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY,
+					DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+				);
+				this.apply_indicator_colour(chosen);
+				break;
 		}
 
+		indicator.Dispose();
 		cadence.Dispose();
 		m.Dispose();
 	}

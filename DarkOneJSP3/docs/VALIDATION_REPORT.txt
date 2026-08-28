@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.20 Validation Report
+DarkOneJSP3 v1.0.21 Validation Report
 =====================================
 
 Scope
@@ -136,6 +136,19 @@ Checks
   queue-state writes use bounded publication retries without falsely advancing
   the published generation, and the Queue Viewer waits for an acknowledged
   generation instead of accepting older bridge state.
+- Shared information-page colour tests exercise the complete Colours hierarchy,
+  unique command IDs, remembered page/text choices, Dynamic artwork palette
+  activation and restoration after Dynamic is disabled. Queue Viewer tests add
+  custom selected-row background/text painting and preserve the former
+  translucent highlight when Selected background remains Default. The stored
+  pre-feature Queue wrapper shape is also exercised with project-bridge
+  detection, ensuring upgraded FCL layouts expose the selection submenu. Mouse
+  geometry tests also require empty list space to clear selection while row,
+  scrollbar and outside-panel clicks retain their existing behaviour.
+  Transparent page mode must derive highlight contrast from the inherited
+  Columns UI background, selected Queue colours are resolved once per paint,
+  generic panels do not allocate inactive enhanced-colour submenus and
+  intermediate playback stops cannot trigger a transient Dynamic repaint.
 - The standalone/fallback Queue Viewer retains constant-time selection lookup,
   5 ms work slices with 1 ms yields, no full-playlist handle-list allocation,
   progressive publishing and targeted removal/playback-advance refreshes.
@@ -237,6 +250,10 @@ Checks
 - The volume knob uses the mouse-held drag state for its active highlight and
   clears that highlight immediately on button release; the Centre Display retains
   its independent three-second volume readout.
+- The inactive volume-knob indicator colour is persisted independently, applied
+  immediately to the existing knob and restored to #404040 by appearance reset;
+  tests verify the Default/Custom radio modes, remembered Custom restoration,
+  picker dispatch and the colour used by direct paint.
 - Every scripted JSplitter and panel source declared by the layout manifest
   resolves to a distributed file; native-component entries are identified
   explicitly.
@@ -258,7 +275,7 @@ Checks
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 32 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 33 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -314,9 +331,9 @@ Checks
   published root state and forwards selected set, preview and restore commands
   through the established view bridge while preserving reveal timing and
   first-layout safeguards.
-- Biography, Last.fm, Album Notes, Properties and the scripted Queue
-  Viewer use the shared Page background colour implementation and coordinated
-  reset defaults.
+- Biography, Last.fm, Album Notes, Properties and the scripted Queue Viewer use
+  the shared Dynamic/Page background/Text implementation and coordinated reset
+  defaults. Queue alone opts into the additional Selected background control.
 - InfoStack, page, side-divider and waveform palettes preserve their documented
   defaults, saved mode values and Columns UI global-background behaviour.
 - Shared colour conversion, parsing and Columns UI lookup are used by the

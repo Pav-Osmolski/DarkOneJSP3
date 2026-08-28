@@ -65,8 +65,8 @@ def run(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.8.2"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.2')
+        if '// @version "0.8.5"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.5')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
@@ -74,14 +74,15 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             '@import "%fb2k_profile_path%DarkOneJSP3\\shared\\queue_bridge.js"',
             'var DARKONEJSP3_QUEUE_BRIDGE_ENABLED = true;',
+            'enhanced_selected_background : true',
             'function on_playlists_changed() { queue.source_topology_changed(); }',
         ]:
             if token not in body:
                 errors.append('DarkOneJSP3 Queue Viewer direct bridge wrapper is incomplete: ' + token)
 
     generic_queue_entry = samples / 'Queue Viewer.txt'
-    if generic_queue_entry.exists() and '// @version "0.8.2"' not in text(generic_queue_entry):
-        errors.append('Generic enhanced Queue Viewer entry version is not 0.8.2')
+    if generic_queue_entry.exists() and '// @version "0.8.3"' not in text(generic_queue_entry):
+        errors.append('Generic enhanced Queue Viewer entry version is not 0.8.3')
 
     queue_source = project / 'jscript' / 'js' / 'Queue_Viewer.js'
     if queue_source.exists():
@@ -110,6 +111,11 @@ def run(ctx: ValidationContext) -> None:
             'this.bridge_min_generation = 0',
             'stateGeneration >= this.bridge_min_generation',
             'acknowledgedGeneration',
+            "typeof panel.selected_background_colour == 'function'",
+            'configuredSelectedBackground === null',
+            'panel.selected_text_colour(configuredSelectedBackground)',
+            'if (this.up_btn.lbtn_up(x, y) || this.down_btn.lbtn_up(x, y)) return true;',
+            'if (row < 0) {\n            this.clear_selection();',
         ]:
             if token not in body:
                 errors.append('Queue Viewer navigation/command support is missing: ' + token)
@@ -164,16 +170,34 @@ def run(ctx: ValidationContext) -> None:
             'options.darkonejsp3_page_background === true',
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.MODE', 3)",
             "new _p('DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR', RGB(24, 24, 24))",
+            "new _p('DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED', false)",
+            "new _p('DARKONEJSP3.PAGE.TEXT.MODE', DARKONE_PAGE_TEXT_DEFAULT)",
+            "new _p('DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR', RGB(220, 220, 220))",
+            "new _p('DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE', DARKONE_PAGE_SELECTED_DEFAULT)",
+            "new _p('DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR', RGB(48, 48, 48))",
+            "typeof DARKONEJSP3_QUEUE_BRIDGE_ENABLED != 'undefined'",
+            'DARKONEJSP3_QUEUE_BRIDGE_ENABLED === true',
             "'DarkOne grey'",
             "'DarkOne dark grey'",
             "'Columns UI global background'",
-            "'Page background colour'",
+            "'Enable Dynamic'",
+            "'Page background'",
+            "'Text'",
+            "'Selected background'",
+            "'Colours'",
+            'GetNowPlayingColours()',
+            'this.playback_colours_changed = function',
+            'this.page_contrast_background_colour = function',
             'gr.Clear(this.page_background_colour())',
             "typeof DarkOneColour !== 'undefined'",
             'case Boolean(background_option):',
         ]:
             if token not in body:
                 errors.append('Page-background helper is missing: ' + token)
+        if "AppendMenuItem(MF_STRING, 130, 'Set custom colour...')" in body:
+            errors.append('Page-background custom picker collides with the Dynamic menu command')
+        if 'this.s15 = window.CreatePopupMenu();\n\t\tthis.s16 = window.CreatePopupMenu();' in body:
+            errors.append('Generic panels eagerly allocate inactive enhanced-colour submenus')
 
     page_background_entries = {
         samples / 'Last.fm Bio.txt': 'lastfm-bio',
@@ -182,14 +206,37 @@ def run(ctx: ValidationContext) -> None:
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': 'queue-viewer',
         samples / 'Properties.txt': 'properties',
     }
+    page_background_versions = {
+        samples / 'Last.fm Bio.txt': '0.1.2',
+        samples / 'Last.fm Artist Info + User Info.txt': '0.1.2',
+        samples / 'Album Notes.txt': '0.6.9',
+        project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.5',
+        samples / 'Properties.txt': '0.1.2',
+    }
     for entry, role in page_background_entries.items():
         if not entry.exists():
             continue
         body = text(entry)
-        if 'new _panel({ enhanced_page_background : true })' not in body:
+        if 'enhanced_page_background : true' not in body:
             errors.append(rel(entry) + ' does not opt in to page backgrounds')
         if role not in body:
             errors.append(rel(entry) + ' does not identify its reset role: ' + role)
+        if 'panel.playback_colours_changed();' not in body:
+            errors.append(rel(entry) + ' does not refresh dynamic colours on playback changes')
+        stop_callback = re.search(
+            r'function on_playback_stop\(reason\)\s*\{.*?\}',
+            body,
+            re.DOTALL,
+        )
+        if stop_callback:
+            stop_body = stop_callback.group(0)
+            guard_position = stop_body.find('if (reason != 2)')
+            refresh_position = stop_body.find('panel.playback_colours_changed();')
+            if guard_position < 0 or refresh_position < guard_position:
+                errors.append(rel(entry) + ' refreshes dynamic colours during intermediate playback stop')
+        expected_version = page_background_versions[entry]
+        if '// @version "' + expected_version + '"' not in body:
+            errors.append(rel(entry) + ' has the wrong page-colour wrapper version')
 
     standalone_performance_helper = samples / 'shared' / 'performance_utils.js'
     standalone_cadence_helper = samples / 'shared' / 'ui_cadence.js'
@@ -363,9 +410,18 @@ def run(ctx: ValidationContext) -> None:
             block = role_match.group(1)
             for token in [
                     '"DARKONEJSP3.PAGE.BACKGROUND.MODE": 3',
-                    '"DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818']:
+                    '"DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818',
+                    '"DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false',
+                    '"DARKONEJSP3.PAGE.TEXT.MODE": 0',
+                    '"DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc']:
                 if token not in block:
                     errors.append('Standalone sample reset registry page-background default is missing for ' + role + ': ' + token)
+            if role == 'queue-viewer':
+                for token in [
+                        '"DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE": 0',
+                        '"DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR": 0xff303030']:
+                    if token not in block:
+                        errors.append('Queue Viewer selected-background reset default is missing: ' + token)
 
     album_notes = samples / 'Album Notes.txt'
     if album_notes.exists():
@@ -373,8 +429,8 @@ def run(ctx: ValidationContext) -> None:
         token = 'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
         if token not in album_notes_entry_body:
             errors.append('Album Notes does not reset embedded MusicBrainz settings')
-        if '// @version "0.6.8"' not in album_notes_entry_body:
-            errors.append('Album Notes entry version is not 0.6.8')
+        if '// @version "0.6.9"' not in album_notes_entry_body:
+            errors.append('Album Notes entry version is not 0.6.9')
 
     album_art_entry = samples / 'Album Art.txt'
     if album_art_entry.exists():
@@ -1736,6 +1792,12 @@ def run(ctx: ValidationContext) -> None:
             if forbidden in body:
                 errors.append('Bottom-area custom-colour picker retains obsolete or duplicate dispatch code: ' + forbidden)
         for token in [
+            "var DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY = 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR';",
+            "var DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY = 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE';",
+            'var DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT = 0xff404040;',
+            'function darkOneVolumeKnobIndicatorCustomColour()',
+            'function darkOneVolumeKnobIndicatorMode()',
+            'function darkOneVolumeKnobIndicatorColour()',
             "chosen = darkOnePickBottomAreaColour(",
             "state.backgroundCustomColour = chosen;",
             "state.dividerCustomColour = chosen;",
@@ -1868,9 +1930,30 @@ def run(ctx: ValidationContext) -> None:
             'DarkOneUiCadence.volumeModeForMenuId(q)',
             'volume_writer.reschedule();',
             'preview_repaint.reschedule();',
+            'Knob indicator colour',
+            'indicator.AppendMenuItem(MF_STRING, 25, "Default");',
+            'indicator.AppendMenuItem(MF_STRING, 26, "Custom");',
+            'indicator.AppendMenuItem(MF_STRING, 27, "Set custom colour...");',
+            'window.SetProperty(DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY, mode);',
+            'window.SetProperty(DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY, chosen);',
+            'this.apply_indicator_colour(chosen);',
         ]:
             if token not in body:
                 errors.append('Adaptive volume-knob cadence is missing: ' + token)
+
+    button_options = project / 'jscript' / 'js' / 'Buttons_CommonButtonOptions.js'
+    if button_options.exists() and \
+            'vknbOpt.inactive_colour = darkOneVolumeKnobIndicatorColour();' not in text(button_options):
+        errors.append('Volume knob does not initialise its indicator from the persistent colour')
+
+    reset_defaults = project / 'shared' / 'reset_defaults.js'
+    if reset_defaults.exists():
+        body = text(reset_defaults)
+        for token in [
+                '"DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE": 0',
+                '"DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR": 0xff404040']:
+            if token not in body:
+                errors.append('Control Right appearance reset lacks the volume knob indicator default: ' + token)
 
     control_right_panel = project / 'jscript' / 'js' / 'Panel_Control_Right.js'
     if control_right_panel.exists():
@@ -1912,7 +1995,7 @@ def run(ctx: ValidationContext) -> None:
 
     control_entries = {
         project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.32-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.37-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.39-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():

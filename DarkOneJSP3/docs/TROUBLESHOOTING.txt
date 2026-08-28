@@ -119,12 +119,15 @@ font is Arial Black with DirectWrite Black/900 weight.
 Information page background does not match the tab strip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Right-click inside Biography, Last.fm, Album Notes, Properties or the
-scripted Queue Viewer and open Page background colour. Choose Transparent /
+scripted Queue Viewer and open Colours > Page background. Choose Transparent /
 inherit parent to reveal the InfoStack backing colour, Columns UI global
 background to follow the active Columns UI background colour, or select an
 explicit colour for that page. Each JScript Panel page remembers its own value.
 The Playlists page and other non-JScript child panels use their own appearance
 settings.
+
+If Enable Dynamic is checked, the artwork-derived palette temporarily overrides
+the saved Page background and Text choices. Uncheck it to restore those values.
 
 InfoStack labels sit too high or low
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -460,16 +463,17 @@ Double Track Line.
 Biography, Last.fm or Properties menu cannot be found
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Right-click empty content space inside the page. Panel-specific commands appear
-first, followed by the shared Font size, Page background colour, Selection mode
-and Configure... controls. Clicking directly on selectable text or a link can
+first, followed by the shared Font size, Colours, Selection mode and
+Configure... controls. Clicking directly on selectable text or a link can
 invoke that object's action instead.
 
-Page background colour is missing from Queue
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Colours is missing from Queue
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The recommended scripted Queue Viewer is a JScript Panel and should expose the
-shared Page background colour menu. If it does not, confirm that DOJSP3.Queue is
-loading `DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt` rather than the
-generic standalone sample.
+shared Colours menu, including Selected background. If it does not, confirm
+that DOJSP3.Queue is loading
+`DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt` rather than the generic
+standalone sample.
 
 Waveform host settings do not appear
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

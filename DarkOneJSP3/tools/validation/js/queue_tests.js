@@ -55,8 +55,19 @@ suite("Queue Viewer interaction", function () {
         SetClipboardText(value) { clipboard = value; },
         IsFile(path) { return !!path; }, InputBox() { return ''; }
     };
-    function ScrollButton() {
-        this.lbtn_up = function() {};
+    function ScrollButton(ch, x, y, w, h, visible, fn) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.visible = visible;
+        this.fn = fn;
+        this.lbtn_up = function(mx, my) {
+            if (!(mx > this.x && mx < this.x + this.w &&
+                my > this.y && my < this.y + this.h && this.visible())) return false;
+            this.fn(mx, my);
+            return true;
+        };
         this.move = function() { return false; };
         this.paint = function() {};
     }
@@ -106,6 +117,21 @@ suite("Queue Viewer interaction", function () {
     queue.key_down(0x26);
     pressed = {};
     assert(queue.selected_indices.join(',') === '1,2', 'Queue Shift+Up range failed');
+    queue.lbtn_up(10, 12 + (3 * panel.row_height) + 1);
+    assert(queue.selected_indices.join(',') === '3',
+        'Queue row click did not retain single-row selection behaviour');
+    queue.lbtn_up(10, 120);
+    assert(queue.selected_indices.length === 0 && queue.selected_index === -1 && queue.anchor_index === -1,
+        'Queue empty-space click did not clear selection');
+    queue.select_only(1);
+    queue.offset = 1;
+    queue.lbtn_up(queue.up_btn.x + 1, queue.up_btn.y + 1);
+    assert(queue.selected_indices.join(',') === '1',
+        'Queue scrollbar click unexpectedly cleared selection');
+    queue.offset = 0;
+    assert(queue.lbtn_up(210, 120) === false && queue.selected_indices.join(',') === '1',
+        'Queue click outside the list unexpectedly cleared selection');
+    queue.select_range(2, false);
     queue.copy_titles();
     assert(clipboard === 'B\r\nC', 'Queue title copying failed');
     queue.copy_paths();
@@ -126,6 +152,30 @@ suite("Queue Viewer interaction", function () {
     queue.selected_index = -1;
     queue.restore_selection(snapshot);
     assert(queue.selected_indices.join(',') === '1,2', 'Queue selection restore failed');
+
+    panel.selected_background_colour = () => 0xff304050;
+    panel.selected_text_colour = () => 0xfff0e0d0;
+    queue.select_only(1);
+    const fills = [];
+    const writes = [];
+    queue.paint({
+        FillRectangle(x, y, w, h, colour) { fills.push(colour >>> 0); },
+        WriteTextSimple(text, font, colour) { writes.push([text, colour >>> 0]); }
+    });
+    assert(fills.indexOf(0xff304050) !== -1,
+        'Queue Viewer selected rows do not use the configured background');
+    assert(writes.some(item => item[0] === '2.  B' && item[1] === 0xfff0e0d0),
+        'Queue Viewer selected rows do not use the configured text contrast');
+
+    panel.selected_background_colour = () => null;
+    panel.selected_text_colour = () => panel.colours.highlight;
+    fills.length = 0;
+    queue.paint({
+        FillRectangle(x, y, w, h, colour) { fills.push(colour >>> 0); },
+        WriteTextSimple() {}
+    });
+    assert(fills.indexOf(panel.colours.highlight) !== -1,
+        'Queue Viewer default selection appearance no longer uses the legacy highlight');
 });
 
 suite("Queue Viewer fallback scan", function () {

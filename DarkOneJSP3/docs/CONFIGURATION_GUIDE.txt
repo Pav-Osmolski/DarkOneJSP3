@@ -58,11 +58,23 @@ Available when the panel contains text, list or display objects:
 - 14
 - 16
 
-Page background colour
-~~~~~~~~~~~~~~~~~~~~~~
+Colours
+~~~~~~~
 
 Available on Biography, Last.fm, Album Notes, Properties and the recommended
 scripted Queue Viewer. Each panel instance stores its choice independently.
+
+Enable Dynamic
+^^^^^^^^^^^^^^
+
+When enabled, the current artwork supplies the page background, text and
+selection palette. Artwork changes, playback changes and playback stopping
+refresh the palette automatically. Disabling Dynamic restores the page's saved
+background, text and selected-background choices; those values are not
+discarded while Dynamic is active.
+
+Page background
+^^^^^^^^^^^^^^^
 
 Choices:
 - Transparent / inherit parent
@@ -78,6 +90,28 @@ Set custom colour... to edit that stored value with the native picker.
 
 Transparent / inherit parent reveals the InfoStack backing colour. Columns UI
 global background follows the active Columns UI background colour.
+
+Text
+^^^^
+
+Choices:
+- Default: follows the active Columns UI or Default UI text colour
+- Custom: reapplies the remembered custom value
+- Set custom colour...
+
+Selected background
+^^^^^^^^^^^^^^^^^^^
+
+Available only in the recommended scripted Queue Viewer.
+
+Choices:
+- Default: preserves the original translucent selection highlight
+- Custom: uses the remembered opaque selection colour
+- Set custom colour...
+
+Custom selected backgrounds automatically receive a contrasting text colour.
+With Dynamic enabled, both selected background and selected text instead follow
+the current artwork palette.
 
 Selection mode
 ~~~~~~~~~~~~~~
@@ -203,6 +237,17 @@ Right-click the volume knob for:
 - Set to -15 db
 - Set to -18 db
 - Set to -21 db
+- Knob indicator colour
+
+Knob indicator colour provides:
+- Default: restores the original #404040 indicator
+- Custom: reapplies the remembered custom colour
+- Set custom colour...
+
+The setting changes the normally grey moving dot inside the knob. Selecting
+Default does not discard the remembered Custom value. The blue colour shown
+while dragging and red mute state remain fixed feedback colours and are not
+changed by this setting.
 
 The mouse wheel adjusts volume when the pointer is over the knob.
 
@@ -882,7 +927,7 @@ Panel-specific commands:
 - Show extra info
 - Open containing folder
 
-The panel then appends Font size, Page background colour, Selection mode and
+The panel then appends Font size, Colours, Selection mode and
 Configure... from the shared page controls in section 1.
 
 Last.fm
@@ -919,7 +964,7 @@ Account and file commands:
 - Last.fm API key...
 - Open containing folder
 
-The panel then appends Font size, Page background colour, Selection mode and
+The panel then appends Font size, Colours, Selection mode and
 Configure... from the shared page controls in section 1.
 
 Properties
@@ -934,7 +979,7 @@ Panel-specific commands:
 - Open containing folder
 
 Metadata, Location and Tech Info independently show or hide those sections.
-The panel then appends Font size, Page background colour, Selection mode and
+The panel then appends Font size, Colours, Selection mode and
 Configure... from the shared page controls in section 1.
 
 8. Queue Viewer
@@ -982,6 +1027,7 @@ live handles.
 
 Selection and navigation:
 - Click: select one row
+- Click empty list space: clear selection
 - Ctrl+click: toggle rows
 - Shift+click: select a range
 - Ctrl+Shift+click: add a range
@@ -1013,9 +1059,14 @@ double-click action. Play source item now instead launches the source playlist
 item directly and can clear the playback queue; use it only when that behaviour
 is intended.
 
-The script also appends Font size, Page background colour and Configure... from
-the shared page controls. It has no Selection mode submenu because queue rows
-already represent explicit source playlist items.
+The script also appends Font size, Colours and Configure... from the shared page
+controls. Its Colours menu additionally includes Selected background. It has no
+Selection mode submenu because queue rows already represent explicit source
+playlist items.
+
+Existing DarkOneJSP3 layouts whose Queue wrapper was saved inside the FCL are
+recognised through the project queue bridge, so Selected background appears
+without replacing the layout or manually reloading the current wrapper.
 
 Standalone Enhanced Sample Library behaviour
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1344,7 +1395,7 @@ Local state files
   js_data\darkonejsp3.network-state.json
   js_data\musicbrainz.artist-map.json
 
-The panel then appends Font size, Page background colour, Selection mode and
+The panel then appends Font size, Colours, Selection mode and
 Configure... from the shared page controls in section 1.
 
 11. Standalone metadata panels

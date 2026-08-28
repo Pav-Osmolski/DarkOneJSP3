@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Queue Viewer"
-// @version "0.8.2"
+// @version "0.8.5"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -15,7 +15,10 @@
 
 var DARKONEJSP3_QUEUE_BRIDGE_ENABLED = true;
 
-var panel = new _panel({ enhanced_page_background : true });
+var panel = new _panel({
+    enhanced_page_background : true,
+    enhanced_selected_background : true
+});
 var queue = new _queue_viewer(LM, TM, 0, 0);
 
 function on_colours_changed() { panel.colours_changed(); window.Repaint(); }
@@ -34,6 +37,9 @@ function on_paint(gr) {
     queue.paint(gr);
 }
 function on_playback_queue_changed(origin) { queue.playback_queue_changed(origin); }
+function on_playback_dynamic_info_track() { panel.playback_colours_changed(); }
+function on_playback_new_track() { panel.playback_colours_changed(); }
+function on_playback_stop(reason) { if (reason != 2) panel.playback_colours_changed(); }
 function on_playlists_changed() { queue.source_topology_changed(); }
 function on_playlist_items_added(playlistIndex) { queue.source_topology_changed(); }
 function on_playlist_items_removed(playlistIndex, newCount) { queue.source_topology_changed(); }

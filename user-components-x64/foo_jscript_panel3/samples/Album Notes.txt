@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Album Notes - Enhanced"
-// @version "0.6.8"
+// @version "0.6.9"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -31,9 +31,9 @@ function on_notify_data(name, info) {
 function on_mouse_rbtn_up(x, y) { return panel.rbtn_up(x, y, album_notes); }
 function on_mouse_wheel(s) { album_notes.wheel(s); }
 function on_paint(gr) { panel.paint(gr); panel.draw_header(gr, album_notes.header_text()); album_notes.paint(gr); }
-function on_playback_dynamic_info_track(type) { if (type == 0) window.Repaint(); }
-function on_playback_new_track() { panel.item_focus_change(); }
-function on_playback_stop(reason) { if (reason != 2) panel.item_focus_change(); }
+function on_playback_dynamic_info_track(type) { panel.playback_colours_changed(); if (type == 0) window.Repaint(); }
+function on_playback_new_track() { panel.playback_colours_changed(); panel.item_focus_change(); }
+function on_playback_stop(reason) { if (reason != 2) { panel.playback_colours_changed(); panel.item_focus_change(); } }
 function on_playlist_switch() { on_item_focus_change(); }
 function on_script_unload() { album_notes.dispose(); }
 function on_size() { panel.size(); album_notes.w = panel.w - (LM * 2); album_notes.h = panel.h - TM; album_notes.size(); }

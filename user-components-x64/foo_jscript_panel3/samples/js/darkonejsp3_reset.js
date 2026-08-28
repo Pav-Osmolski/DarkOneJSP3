@@ -12,28 +12,42 @@ var JSP3_ENHANCED_RESET_REGISTRY = {
     "lastfm-bio": {
         appearance: {
             "DARKONEJSP3.PAGE.BACKGROUND.MODE": 3,
-            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818
+            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818,
+            "DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false,
+            "DARKONEJSP3.PAGE.TEXT.MODE": 0,
+            "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc
         },
         behaviour: {}
     },
     "lastfm-info": {
         appearance: {
             "DARKONEJSP3.PAGE.BACKGROUND.MODE": 3,
-            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818
+            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818,
+            "DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false,
+            "DARKONEJSP3.PAGE.TEXT.MODE": 0,
+            "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc
         },
         behaviour: {}
     },
     "properties": {
         appearance: {
             "DARKONEJSP3.PAGE.BACKGROUND.MODE": 3,
-            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818
+            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818,
+            "DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false,
+            "DARKONEJSP3.PAGE.TEXT.MODE": 0,
+            "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc
         },
         behaviour: {}
     },
     "queue-viewer": {
         appearance: {
             "DARKONEJSP3.PAGE.BACKGROUND.MODE": 3,
-            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818
+            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818,
+            "DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false,
+            "DARKONEJSP3.PAGE.TEXT.MODE": 0,
+            "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc,
+            "DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE": 0,
+            "DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR": 0xff303030
         },
         behaviour: { "DARKONEJSP3.QUEUE.TF": "%artist% - %title%" }
     },
@@ -92,7 +106,10 @@ var JSP3_ENHANCED_RESET_REGISTRY = {
     "album-notes": {
         appearance: {
             "DARKONEJSP3.PAGE.BACKGROUND.MODE": 3,
-            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818
+            "DARKONEJSP3.PAGE.BACKGROUND.CUSTOM.COLOUR": 0xff181818,
+            "DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED": false,
+            "DARKONEJSP3.PAGE.TEXT.MODE": 0,
+            "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc
         },
         behaviour: {
             "DARKONEJSP3.ALBUM.NOTES.APPLE.STOREFRONT": "gb",

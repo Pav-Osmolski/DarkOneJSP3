@@ -45,7 +45,7 @@ function buttonsColours() {
 
 	if (btn_panel == 2) {
 		vknbOpt.line_normal = btnsCol.line_normal;
-		vknbOpt.inactive_colour = RGB(64, 64, 64);
+		vknbOpt.inactive_colour = darkOneVolumeKnobIndicatorColour();
 		vknbOpt.active_colour = RGB(41, 143, 204);
 	}
 }

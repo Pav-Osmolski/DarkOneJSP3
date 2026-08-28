@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Last.fm Artist Info + User Info"
-// @version "0.1.1"
+// @version "0.1.2"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -81,17 +81,20 @@ function on_paint(gr) {
 }
 
 function on_playback_dynamic_info_track(type) {
+	panel.playback_colours_changed();
 	if (type == 0) {
 		lastfm_info.metadb_changed();
 	}
 }
 
 function on_playback_new_track() {
+	panel.playback_colours_changed();
 	lastfm_info.playback_new_track();
 }
 
 function on_playback_stop(reason) {
 	if (reason != 2) {
+		panel.playback_colours_changed();
 		panel.item_focus_change();
 	}
 }

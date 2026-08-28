@@ -40,6 +40,11 @@ Compatibility design
   saved entries created before the standalone-sample refactor.
 - enhanced_page_background is the neutral _panel option;
   darkonejsp3_page_background remains a supported alias.
+- Participating information pages expose a shared Colours menu with Dynamic,
+  Page background and Text controls. Dynamic uses the current artwork palette
+  without overwriting the saved fixed choices.
+- DarkOneJSP3's Queue wrapper additionally opts into Selected background; the
+  generic standalone Queue entry retains its original selection appearance.
 - The standalone Queue Viewer deliberately uses its JScript Panel
   `%queue_indexes%` discovery path and remains read-only. DarkOneJSP3's
   project-specific wrapper instead enables the direct, writable JSplitter

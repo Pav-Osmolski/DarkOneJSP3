@@ -178,9 +178,36 @@ suite("sample reset registry", function () {
     assert(properties['DarkOneJSP3.InfoStack.ActivePanel'] === 4,
         'InfoStack appearance reset changed active-panel behaviour');
 
+    reset({
+        'DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE': 1,
+        'DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR': 0xff123456
+    });
+    darkOneJsp3ApplyRoleReset('control-right', 'appearance');
+    assert(properties['DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE'] === 0 &&
+        properties['DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR'] === 0xff404040,
+        'Control Right appearance reset missed the volume knob indicator colour');
+
     vm.runInThisContext(fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/shared/sample_defaults.js"), 'utf8'));
     vm.runInThisContext(fs.readFileSync(
         __path("user-components-x64/foo_jscript_panel3/samples/js/jsp3_enhanced_reset.js"), 'utf8'));
+
+    reset({
+        'DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED': true,
+        'DARKONEJSP3.PAGE.TEXT.MODE': 1,
+        'DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR': 0xff123456,
+        'DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE': 1,
+        'DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR': 0xff654321
+    });
+    assert(jsp3EnhancedHandleSampleReset(
+        'JSP3Enhanced.Reset.Properties', {scope: 'appearance'}, 'queue-viewer'),
+        'Queue Viewer appearance reset notification was not handled');
+    assert(properties['DARKONEJSP3.PAGE.COLOURS.DYNAMIC.ENABLED'] === false &&
+        properties['DARKONEJSP3.PAGE.TEXT.MODE'] === 0 &&
+        properties['DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR'] === 0xffdcdcdc &&
+        properties['DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE'] === 0 &&
+        properties['DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR'] === 0xff303030,
+        'Queue Viewer page-colour defaults were not restored');
+    assert(reloads === 1, 'Queue Viewer appearance reset did not reload exactly once');
 
     reset({
         'JSPLAYLIST.Enable Smooth Scrolling': false,

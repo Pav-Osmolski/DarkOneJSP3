@@ -852,10 +852,12 @@ function _queue_viewer(x, y, w, h) {
 
     this.lbtn_up = function (x, y) {
         if (!this.containsXY(x, y)) return false;
-        this.up_btn.lbtn_up(x, y);
-        this.down_btn.lbtn_up(x, y);
+        if (this.up_btn.lbtn_up(x, y) || this.down_btn.lbtn_up(x, y)) return true;
         var row = this.row_at(x, y);
-        if (row < 0) return true;
+        if (row < 0) {
+            this.clear_selection();
+            return true;
+        }
         var ctrl = utils.IsKeyPressed(VK_CONTROL);
         var shift = utils.IsKeyPressed(VK_SHIFT);
         if (shift) this.select_range(row, ctrl);
@@ -902,19 +904,34 @@ function _queue_viewer(x, y, w, h) {
                 DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
         } else {
             var visible = Math.min(this.rows, this.count - this.offset);
+            var configuredSelectedBackground = typeof panel.selected_background_colour == 'function'
+                ? panel.selected_background_colour()
+                : null;
+			var configuredSelectedText = typeof panel.selected_text_colour == 'function'
+				? panel.selected_text_colour(configuredSelectedBackground)
+				: panel.colours.highlight;
             for (var i = 0; i < visible; i++) {
                 var index = i + this.offset;
                 var row = this.data[index];
                 var rowY = this.y + _scale(12) + (i * panel.row_height);
                 var selected = this.is_selected(index);
                 if (selected) {
-                    gr.FillRectangle(this.x, rowY, this.w, panel.row_height,
-                        setAlpha(panel.colours.highlight, index === this.selected_index ? 42 : 30));
+                    gr.FillRectangle(
+                        this.x,
+                        rowY,
+                        this.w,
+                        panel.row_height,
+                        configuredSelectedBackground === null
+                            ? setAlpha(panel.colours.highlight, index === this.selected_index ? 42 : 30)
+                            : configuredSelectedBackground
+                    );
                 } else if (index === this.hover_index) {
                     gr.FillRectangle(this.x, rowY, this.w, panel.row_height, setAlpha(panel.colours.highlight, 20));
                 }
                 gr.WriteTextSimple(row.queue_index + '.  ' + row.text, panel.fonts.normal,
-                    selected || index === this.hover_index ? panel.colours.highlight : panel.colours.text,
+                    selected
+                        ? configuredSelectedText
+                        : (index === this.hover_index ? panel.colours.highlight : panel.colours.text),
                     this.x, rowY, this.w, panel.row_height,
                     DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER,
                     DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.20",
+  "version": "1.0.21",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.14",
@@ -125,7 +125,7 @@
       "title": "DOJSP3.ControlsRight",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt",
-      "version": "3.0.37-jsp3-3.8.5"
+      "version": "3.0.39-jsp3-3.8.5"
     }
   ],
   "credits": "DarkOneJSP3/docs/CREDITS.txt",

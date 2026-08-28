@@ -230,7 +230,9 @@ def run(ctx: ValidationContext) -> None:
             'generic image panel rather than an InfoStack text page',
             'Transparent / inherit parent',
             'The lower control-panel dividers',
-            'Page background colour',
+            'Enable Dynamic',
+            'Page background',
+            'Selected background',
             'DarkOne dark grey: RGB 24, 24, 24 (default)',
             'Each panel instance stores its choice independently',
         ]:

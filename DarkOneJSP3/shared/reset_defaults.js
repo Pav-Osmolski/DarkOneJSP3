@@ -25,6 +25,8 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "DARKONEJSP3.BUTTON.ROUNDNESS": -1,
             "DARKONEJSP3.CONTROL.FONT.NAME": "Arial Black",
             "DARKONEJSP3.CONTROL.FONT.WEIGHT": 900,
+            "DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE": 0,
+            "DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR": 0xff404040,
             "Buttons appearance preset": 1,
             "Buttons depth preset": 0
         },

@@ -90,6 +90,11 @@ var DARKONE_BOTTOM_DEPTH_VALUES = [DARKONE_BOTTOM_DEPTH_FLAT, DARKONE_BOTTOM_DEP
 var DARKONE_BOTTOM_DEPTH_DEFAULT = DARKONE_BOTTOM_DEPTH_FLAT;
 var DARKONE_BOTTOM_DEPTH_FIRST_MENU_ID = 9829;
 var DARKONE_BOTTOM_DEPTH_LAST_MENU_ID = 9830;
+var DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY = 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.MODE';
+var DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY = 'DARKONEJSP3.VOLUME.KNOB.INDICATOR.COLOUR';
+var DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT = 0xff404040;
+var DARKONE_VOLUME_KNOB_INDICATOR_MODE_DEFAULT = 0;
+var DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM = 1;
 
 function darkOneBottomMenuOptions(baseId, transparentLabel) {
     return [
@@ -112,6 +117,25 @@ var DARKONE_BOTTOM_DIVIDER_MENU_OPTIONS = darkOneBottomMenuOptions(
 
 function darkOneBottomOpaque(colour) {
     return 0xff000000 + ((Number(colour) >>> 0) & 0x00ffffff);
+}
+function darkOneVolumeKnobIndicatorCustomColour() {
+    return darkOneBottomOpaque(window.GetProperty(
+        DARKONE_VOLUME_KNOB_INDICATOR_PROPERTY,
+        DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT
+    ));
+}
+function darkOneVolumeKnobIndicatorMode() {
+    return Number(window.GetProperty(
+        DARKONE_VOLUME_KNOB_INDICATOR_MODE_PROPERTY,
+        DARKONE_VOLUME_KNOB_INDICATOR_MODE_DEFAULT
+    )) === DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+        ? DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+        : DARKONE_VOLUME_KNOB_INDICATOR_MODE_DEFAULT;
+}
+function darkOneVolumeKnobIndicatorColour() {
+    return darkOneVolumeKnobIndicatorMode() === DARKONE_VOLUME_KNOB_INDICATOR_MODE_CUSTOM
+        ? darkOneVolumeKnobIndicatorCustomColour()
+        : DARKONE_VOLUME_KNOB_INDICATOR_DEFAULT;
 }
 function darkOneBottomHex(colour) {
     var value = ((Number(colour) >>> 0) & 0x00ffffff).toString(16).toUpperCase();
