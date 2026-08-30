@@ -1,6 +1,31 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.0.23 - Patched Waveform Minibar integration
+----------------------------------------------
+
+- Updated the required Waveform Minibar component to the public Windows x64
+  `1.2.69-patched` release and replaced the former foobar2000 component-page
+  reference with the maintained patched-release page.
+- Documented all seven playback-rate choices (25, 30, 50, 60, 100, 120 and
+  144 FPS), the persistent default-on Enable anti-aliasing command and the
+  performance trade-off between lower and high-refresh rates.
+- Documented the patched component's immediate event-driven ancestor repaint
+  handling for pseudo-transparent solid and gradient backgrounds. The normal
+  path requires no DarkOneJSP3-specific plugin communication or polling, with
+  an automatic guarded 100 ms refresh fallback when native subscription setup
+  is unavailable.
+- Documented the host-clipping and last-completed-composite safeguards that
+  prevent unrelated Playlist, Playlist Manager and InfoStack repaints from
+  briefly covering or blanking the waveform.
+- Added troubleshooting for stale backgrounds, click-triggered flashes,
+  anti-aliased colour-key fringes and high playback CPU usage, while preserving
+  the existing JSplitter `SupportPseudoTransparency` host opt-in.
+- Hardened release validation so current public documentation must name the
+  patched release URL, FPS set, anti-aliasing control and event-driven refresh,
+  and cannot restore the superseded foobar2000 component-page URL. Advanced the
+  release validator to 0.10.32.
+
 v1.0.22 - Shared InfoStack background wallpapers
 ------------------------------------------------
 

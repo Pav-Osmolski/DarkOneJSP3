@@ -1231,8 +1231,42 @@ For a continuous background, enable Waveform Minibar's Transparent background
 (requires Columns UI) option and disable Draw window border. DarkOneJSP3 enables
 JSplitter pseudo-transparency for DOJSP3.Waveform, allowing the native child to
 reveal the resolved DisplayStack backing, including Automatic Bottom-area colours.
-The component's played/unplayed waveform colours remain component-owned settings;
-see INSTALLATION.txt for the reference DarkOneJSP3 values.
+Waveform Minibar 1.2.69-patched observes native repaint events across the host
+ancestor chain and updates that backing immediately during playback. This
+event-driven path does not require a DarkOneJSP3-specific plugin notification
+or normal-operation polling; a guarded 100 ms fallback activates automatically
+only if native repaint subscription cannot be installed.
+
+Native Waveform Minibar menu
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Right-click inside the Waveform Minibar child, rather than the narrow host
+spacer, to open the component-owned menu:
+
+- Track to prefer when showing waveform
+- Switch to logarithmic scale
+- Use half wave mode
+- Enable anti-aliasing
+- Halt minibar processing
+- Configure
+
+Enable anti-aliasing is directly below Use half wave mode, is enabled by
+default and persists independently of the existing component preferences.
+Changing it immediately rebuilds the active cached waveform. Smoothing runs
+only during cached bitmap generation, not during ordinary playback-position
+paints at the selected FPS.
+
+Configure opens the component preferences containing the waveform colours,
+transparent background and playback frame rate. The patched component provides
+25, 30, 50, 60, 100, 120 and 144 FPS choices. Lower values reduce animation
+work; 60 FPS is a balanced starting point, while 100-144 FPS is intended for
+users who prefer smoother motion on high-refresh displays.
+
+The component's played/unplayed waveform colours remain component-owned
+settings; see INSTALLATION.txt for the reference DarkOneJSP3 values. Transparent
+mode uses an RGB colour key. On an unusually high-contrast backing, anti-aliased
+edges may therefore show a fine pre-blended fringe; disabling anti-aliasing
+restores the original hard-edged waveform.
 
 10. Album Notes and online sources
 ----------------------------------

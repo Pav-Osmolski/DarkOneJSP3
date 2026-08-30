@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.22 Validation Report
+DarkOneJSP3 v1.0.23 Validation Report
 =====================================
 
 Scope
@@ -214,6 +214,14 @@ Checks
   `SupportPseudoTransparency`, allowing the component's native Transparent
   background mode to reveal the resolved DisplayStack backing instead of an
   opaque black child-window fallback.
+- Public component guidance requires Waveform Minibar 1.2.69-patched, its
+  maintained GitHub release URL, the complete 25/30/50/60/100/120/144 FPS set
+  and the persistent default-on Enable anti-aliasing command. Documentation
+  also distinguishes cached waveform smoothing from playback-rate painting.
+- Current configuration and troubleshooting text describes event-driven native
+  ancestor repaint handling, the automatic guarded 100 ms fallback, host child
+  clipping and last-completed-composite retention. It rejects the superseded
+  foobar2000 component-page URL and obsolete click/resize refresh expectations.
 - A fresh JScript Panel instance is created after persisted colour changes and
   factory reset to verify restart persistence.
 - Cross-host factory reset is exercised through
@@ -417,9 +425,9 @@ Checks
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
   current package version outside CHANGELOG.txt.
-- Installation guidance retains the complete Enhanced Spectrum Analyser and
+- Installation guidance contains the complete Enhanced Spectrum Analyser and
   Waveform Minibar reference settings, including their processing, timing,
-  colour and transparency values.
+  colour, transparency, playback-rate and anti-aliasing values.
 - The Configuration Guide documents the principal user-facing menu surfaces
   in the supported layout, with selected labels checked against both source and
   guide so renamed or omitted menu entries fail validation.

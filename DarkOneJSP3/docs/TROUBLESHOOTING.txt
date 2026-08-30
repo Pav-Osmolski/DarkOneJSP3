@@ -314,10 +314,47 @@ Keep Host background set to Automatic to follow the shared Bottom area
 background, or choose a fixed colour from the narrow JSplitter spacer menu.
 In Waveform Minibar preferences, enable Transparent background (requires Columns
 UI) and disable Draw window border. DarkOneJSP3 opts the DOJSP3.Waveform child
-into JSplitter `SupportPseudoTransparency` so the host backing should show through
-instead of black. If the component still shows an opaque background, reload
-DOJSP3.DisplayStack or restart foobar2000 and confirm the supplied JSplitter 06
-controller is loaded.
+into JSplitter `SupportPseudoTransparency` so the host backing should show
+through instead of black. Confirm that Preferences > Components reports
+`1.2.69-patched`, reload DOJSP3.DisplayStack or restart foobar2000, and confirm
+the supplied JSplitter 06 controller is loaded.
+
+Waveform background changes only after a click or resize
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This is characteristic of the older component. Install Waveform Minibar
+1.2.69-patched from:
+
+  https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases
+
+The patched build observes native ancestor repaint events and invalidates the
+pseudo-transparent backing immediately during playback. It requires no
+DarkOneJSP3-specific plugin message or normal polling timer. If native repaint
+subscription is unavailable, its automatic guarded 100 ms fallback should
+still update without waveform interaction. If it does not, check for a second
+copy of foo_wave_minibar_mod.dll in another active profile/component directory.
+
+Entire waveform flashes when clicking a playlist or InfoStack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Confirm `1.2.69-patched` is the component version actually loaded. It applies
+host child clipping and retains the last completed waveform composite so
+unrelated Playlist, Playlist Manager and InfoStack repaints cannot briefly
+cover or blank the native waveform child. Restart foobar2000 after replacing
+the DLL and remove or rename duplicate older component copies.
+
+Waveform edges show a fine fringe on a transparent background
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Transparent mode uses an RGB colour key rather than per-pixel alpha. On a very
+high-contrast backing, pre-blended anti-aliased edge pixels can remain visible.
+Right-click inside Waveform Minibar and disable Enable anti-aliasing to restore
+the original hard-edged waveform.
+
+Waveform playback uses more CPU than desired
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Open the native component preferences through Waveform Minibar > Configure and
+select 25 or 30 FPS instead of 60-144 FPS. Enable anti-aliasing is not a
+per-frame playback filter: it runs only when the cached waveform bitmap is
+rebuilt, so lowering the playback frame rate is the relevant steady-state CPU
+control.
 
 The waveform host menu cannot be found
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

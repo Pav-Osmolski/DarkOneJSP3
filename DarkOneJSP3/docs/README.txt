@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.0.22
+DarkOneJSP3 v1.0.23
 ===================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -7,12 +7,12 @@ legacy Panel Stack Splitter architecture with JSplitter 4.x and JScript Panel 3.
 
 Supported environment
 ---------------------
-- foobar2000 v2 x64
-- Columns UI
-- JScript Panel 3.8.5
-- JSplitter 4.x, developed and tested with 4.1.14
-- Enhanced Spectrum Analyser
-- Waveform Minibar (mod)
+- foobar2000 v2 x64 (https://www.foobar2000.org/windows)
+- Columns UI (https://www.foobar2000.org/components/view/foo_ui_columns)
+- JScript Panel 3.8.5 (https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
+- JSplitter 4.x, tested with 4.1.14 (https://github.com/dima-lur/jsplitter/releases)
+- Enhanced Spectrum Analyser (https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
+- Waveform Minibar (mod) 1.2.69-patched (https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 Documentation map
 -----------------
@@ -120,9 +120,14 @@ Current highlights
 - Automatic waveform-host background follows the shared Bottom area background
   by default, with transparent, black, both DarkOne greys, Columns UI global
   and custom fixed choices still available.
-- Waveform Minibar native transparency is bridged through JSplitter pseudo-
-  transparency so the resolved DisplayStack backing shows through instead of
-  the component falling back to black.
+- Waveform Minibar 1.2.69-patched combines the existing JSplitter pseudo-
+  transparency host opt-in with immediate event-driven ancestor repaint
+  detection. Live solid and gradient background changes no longer require
+  waveform interaction, resizing or DarkOneJSP3-specific plugin messages.
+- The patched component also prevents unrelated host repaints from covering the
+  native waveform child, retains the last completed composite during temporary
+  renderer fallback and adds persistent cached-raster anti-aliasing plus
+  25, 30, 50, 60, 100, 120 and 144 FPS choices.
 - One synchronised bottom-area background setting controls the left controls,
   right controls, centre display and Bottom Controls backing; Transparent /
   inherit parent resolves uniformly to DarkOne dark grey (#181818), while a

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.0.22
+  <strong>Current release:</strong> v1.0.23
 </p>
 
 > [!IMPORTANT]
@@ -68,7 +68,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.22** is the current release.
+**DarkOneJSP3 v1.0.23** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -123,7 +123,7 @@ for standalone installation, compatibility guarantees and integration details.
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
 * [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
-* [Waveform Minibar (mod)](https://www.foobar2000.org/components/view/foo_wave_minibar_mod)
+* [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 Third-party component binaries are not included. Install compatible versions
 from their official project pages or trusted foobar2000 component sources

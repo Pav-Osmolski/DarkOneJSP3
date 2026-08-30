@@ -26,10 +26,22 @@ def run(ctx: ValidationContext) -> None:
     public_docs = [root / 'README.md'] + [
         path for path in docs.glob('*.txt') if path.name != 'CHANGELOG.txt'
     ]
+    waveform_release_url = (
+        'https://github.com/Pav-Osmolski/'
+        'foo_wave_minibar_mod-patched/releases'
+    )
+    obsolete_waveform_url = (
+        'https://www.foobar2000.org/components/view/foo_wave_minibar_mod'
+    )
     for path in public_docs:
         if not path.exists():
             continue
-        for documented_version in re.findall(r'\bv(\d+\.\d+\.\d+)\b', text(path)):
+        body = text(path)
+        if obsolete_waveform_url in body:
+            errors.append(
+                rel(path) + ' restores the superseded Waveform Minibar component URL'
+            )
+        for documented_version in re.findall(r'\bv(\d+\.\d+\.\d+)\b', body):
             if documented_version != version:
                 errors.append(
                     rel(path) + ' references an earlier package version outside CHANGELOG.txt: v' +
@@ -54,6 +66,8 @@ def run(ctx: ValidationContext) -> None:
     readme_path = root / 'README.md'
     if readme_path.exists():
         readme_body = text(readme_path)
+        if waveform_release_url not in readme_body:
+            errors.append('README.md is missing the patched Waveform Minibar release URL')
         enhanced_samples_target = 'DarkOneJSP3/docs/ENHANCED_SAMPLES.txt'
         if '## Enhanced Sample Library' not in readme_body:
             errors.append('README.md is missing the Enhanced Sample Library section')
@@ -95,8 +109,14 @@ def run(ctx: ValidationContext) -> None:
                     errors.append(label + ' does not preserve the current single-layout FCL description: ' + token)
         for token in [
             'Waveform Minibar component preferences',
+            'Waveform Minibar (mod) 1.2.69-patched',
+            waveform_release_url,
             'Transparent background (requires Columns UI): enabled',
             'Draw window border: disabled',
+            'Enable anti-aliasing: enabled (default',
+            '25, 30, 50, 60, 100, 120 and 144 FPS',
+            'native ancestor repaint events',
+            'guarded 100 ms fallback',
             'Waveform Minibar stores its own component preferences',
         ]:
             if token not in installation_body:
@@ -235,6 +255,11 @@ def run(ctx: ValidationContext) -> None:
             'Selected background',
             'DarkOne dark grey: RGB 24, 24, 24 (default)',
             'Each panel instance stores its choice independently',
+            'Native Waveform Minibar menu',
+            'Enable anti-aliasing',
+            '25, 30, 50, 60, 100, 120 and 144 FPS choices',
+            'event-driven path does not require a DarkOneJSP3-specific plugin notification',
+            'guarded 100 ms fallback',
         ]:
             if phrase not in body:
                 errors.append('Configuration guide playlist reset coverage is missing: ' + phrase)
@@ -278,6 +303,11 @@ def run(ctx: ValidationContext) -> None:
             'cross-component notification path is not reliable',
             'The supported Startup menu is under TOOLS',
             'explicitly reactivates an idle same-album lookup',
+            '1.2.69-patched',
+            waveform_release_url,
+            'native ancestor repaint events',
+            'Entire waveform flashes when clicking a playlist or InfoStack',
+            'Waveform playback uses more CPU than desired',
         ]:
             if phrase not in body:
                 errors.append('Troubleshooting current-state guidance is missing: ' + phrase)

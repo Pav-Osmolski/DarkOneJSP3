@@ -15,11 +15,12 @@ Contents
 ---------------
 Install these components before building or restoring the layout:
 
-- foobar2000 v2 x64 with Columns UI
-- JScript Panel 3.8.5
-- JSplitter 4.x
-- Enhanced Spectrum Analyser
-- Waveform Minibar (mod)
+- foobar2000 v2 x64 (https://www.foobar2000.org/windows)
+- Columns UI (https://www.foobar2000.org/components/view/foo_ui_columns)
+- JScript Panel 3.8.5 (https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
+- JSplitter 4.x, tested with 4.1.14 (https://github.com/dima-lur/jsplitter/releases)
+- Enhanced Spectrum Analyser (https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
+- Waveform Minibar (mod) 1.2.69-patched (https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 DarkOneJSP3 includes customised scripts and JScript Panel samples. It does not
 replace installed component DLLs.
@@ -183,7 +184,13 @@ Waveform Minibar component preferences
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Waveform Minibar stores its own component preferences and they are not restored by
 the bundled Columns UI FCL. Configure Preferences > Tools > Waveform Minibar (mod)
-locally after installing or importing the layout.
+locally after installing or importing the layout. Install the Windows x64
+`1.2.69-patched` release from:
+
+  https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases
+
+Confirm `1.2.69-patched` under Preferences > Components before relying on the
+background-refresh and anti-flicker behaviour described below.
 
 For the DarkOneJSP3 reference appearance, use:
 
@@ -197,10 +204,26 @@ For the DarkOneJSP3 reference appearance, use:
 - Track to prefer when showing waveform: Playing, blank when stopped
 - Draw window border: disabled
 - Transparent background (requires Columns UI): enabled
+- Enable anti-aliasing: enabled (default; Waveform Minibar right-click menu)
+
+The patched component provides 25, 30, 50, 60, 100, 120 and 144 FPS playback
+choices. 60 FPS is the recommended balanced starting point. Use 25 or 30 FPS to
+reduce animation CPU cost, or select 100, 120 or 144 only when the smoother
+cursor motion is worth the additional redraw work on a high-refresh display.
 
 With Transparent background enabled, DarkOneJSP3 opts DOJSP3.Waveform into
 JSplitter pseudo-transparency so the resolved DisplayStack/Bottom-area backing
-shows through instead of the component's opaque fallback colour.
+shows through instead of the component's opaque fallback colour. The patched
+component observes native ancestor repaint events and refreshes that backing
+immediately during playback, without a DarkOneJSP3-specific plugin message or
+polling timer in the normal path. A guarded 100 ms fallback is selected
+automatically if native repaint subscription cannot be installed.
+
+Enable anti-aliasing smooths the cached waveform bitmap when it is rebuilt; it
+does not run at the selected playback FPS. Because transparent mode uses an RGB
+colour key rather than per-pixel alpha, a very high-contrast background may
+show a fine pre-blended edge fringe. Disable anti-aliasing to restore the
+original hard-edged rasterizer output in that case.
 
 Required Album Notes title
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
