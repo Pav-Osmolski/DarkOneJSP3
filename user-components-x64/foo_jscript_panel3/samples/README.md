@@ -36,9 +36,9 @@ than one foobar2000 theme.
 
 - JS Playlist
 - Smooth Playlist Manager
-- Album Notes and its legacy AllMusic slot
+- Album Notes, including the optional `Album Notes + Album Art.txt` composition
 - MusicBrainz
-- Last.fm Biography and Artist/User Information
+- Last.fm Biography, its image-backed composition, and Artist/User Information
 - Properties
 - Queue Viewer — uses incremental `%queue_indexes%` discovery when run
   standalone; `%queue_total%` allows non-empty scans to stop once all queue
@@ -47,3 +47,43 @@ than one foobar2000 theme.
 DarkOneJSP3 adds coordinated layout, theme defaults and factory-reset controls
 on top of the same standalone sample implementations; it no longer owns their
 runtime dependencies.
+
+## Combined image layouts
+
+`Last.fm Bio + Images.txt` places downloaded Last.fm artist images beside the
+biography. When its visible playing-artist view needs artwork, automatic
+downloads start without relying on one exact playback second, avoid duplicate
+active requests and retry at a bounded cadence. Completed downloads appear
+immediately; the image-cycle timer pauses while the panel is hidden and is
+released with its Direct2D resources when the script unloads. The empty image
+region centres its downloading, retry/error or confirmed-unavailable state, and
+the JScript Panel console records each request, result, file and completion.
+Gallery extraction uses both the normal DOM path and a raw-markup fallback for
+current Last.fm pages. An unrecognised response remains an error/retry state and
+cannot be mistaken for a confirmed-empty artist gallery.
+
+`Album Notes + Album Art.txt` provides the same two-region presentation for the
+consolidated Album Notes providers and the current album artwork. It retains the
+Album Notes source, cache, MusicBrainz and diagnostics menus while reusing Album
+Art's lazy blur generation and artwork controls.
+
+For either combined sample, right-click the image region to switch between a
+left/right or top/bottom layout. Hold Ctrl while using the mouse wheel to adjust
+the image-to-text ratio; ordinary wheel input continues to scroll text or cycle
+artwork according to the region under the pointer.
+
+Both compositions expose Colours and Background Wallpaper. They also provide
+independent image controls before their download or content commands:
+
+- Display images or Display album art toggles the foreground image and collapses
+  its region completely when disabled. Right-click the text region to restore it.
+- Image background can use the displayed artwork behind the complete panel, with
+  optional blur and Light, Medium or Dark shading. Disable it to reveal the
+  selected page colour or generic Background Wallpaper instead.
+- Image border offers None, Solid or Sunken styles with the default grey or a
+  custom colour.
+
+Last.fm Bio + Images also places Hide if no images available below Download now.
+It collapses the region only after a successful Last.fm response confirms that
+no usable artist images exist. Network and parsing failures stay visible, and a
+manual retry reveals the region while it is active.

@@ -7,6 +7,12 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 // spectrum column, and right playlist column.
 //
 // Version history (newest first):
+// v0.7.41 publishes the real main-area width so an expanded InfoStack retains
+// the standard tab-strip font and height calculations.
+//
+// v0.7.40 adds an InfoStack-priority two-column layout as the fourth persistent
+// LAYOUT mode.
+//
 // v0.7.39 adds InfoStack | Playlist as a third persistent LAYOUT mode.
 //
 // v0.7.38 adds persistent standard/alternate main view modes, synchronised
@@ -33,7 +39,9 @@ var MAIN_LAYOUT_MODE_PROPERTY = 'DARKONEJSP3.MAIN.LAYOUT.MODE';
 var MAIN_LAYOUT_STANDARD = 0;
 var MAIN_LAYOUT_ART_PLAYLIST = 1;
 var MAIN_LAYOUT_INFO_PLAYLIST = 2;
+var MAIN_LAYOUT_INFO_PRIORITY = 3;
 
+var INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION = 'DarkOneJSP3.InfoStack.MainAreaWidth';
 var ART_SPECTRUM_PREPARE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.PrepareLayout';
 var ART_SPECTRUM_MODE_QUERY_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Mode.Query';
 var ART_SPECTRUM_MODE_STATE_NOTIFICATION = 'DarkOneJSP3.ArtSpectrum.Mode.State';
@@ -66,13 +74,15 @@ var MENU_POPUP = 0x00000010;
 
 function mainLayoutMode() {
     var mode = Math.round(Number(window.GetProperty(MAIN_LAYOUT_MODE_PROPERTY, MAIN_LAYOUT_STANDARD)));
-    return mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST
+    return mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST ||
+            mode === MAIN_LAYOUT_INFO_PRIORITY
         ? mode
         : MAIN_LAYOUT_STANDARD;
 }
 
 function setMainLayoutMode(mode) {
-    mode = mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST
+    mode = mode === MAIN_LAYOUT_ART_PLAYLIST || mode === MAIN_LAYOUT_INFO_PLAYLIST ||
+            mode === MAIN_LAYOUT_INFO_PRIORITY
         ? mode
         : MAIN_LAYOUT_STANDARD;
     if (mode === mainLayoutMode()) return;
@@ -88,7 +98,9 @@ function toggleMainLayoutMode() {
         ? MAIN_LAYOUT_ART_PLAYLIST
         : mode === MAIN_LAYOUT_ART_PLAYLIST
             ? MAIN_LAYOUT_INFO_PLAYLIST
-            : MAIN_LAYOUT_STANDARD);
+            : mode === MAIN_LAYOUT_INFO_PLAYLIST
+                ? MAIN_LAYOUT_INFO_PRIORITY
+                : MAIN_LAYOUT_STANDARD);
 }
 
 function dividerMode() {
@@ -176,6 +188,7 @@ function mainLayoutGeometry(modeOverride) {
 
     var layoutMode = modeOverride === MAIN_LAYOUT_ART_PLAYLIST ||
             modeOverride === MAIN_LAYOUT_INFO_PLAYLIST ||
+            modeOverride === MAIN_LAYOUT_INFO_PRIORITY ||
             modeOverride === MAIN_LAYOUT_STANDARD
         ? modeOverride
         : mainLayoutMode();
@@ -214,6 +227,25 @@ function mainLayoutGeometry(modeOverride) {
             playlistX: infoPlaylistLeft,
             playlistWidth: Math.max(1, ww - infoPlaylistLeft),
             dividerPositions: [leftWidth]
+        };
+    }
+
+    if (layoutMode === MAIN_LAYOUT_INFO_PRIORITY) {
+        var infoPriorityPlaylistLeft = DOJSP3.clamp(
+            ww - dividerCentre + px,
+            1,
+            Math.max(1, ww - 1)
+        );
+        var infoPriorityDivider = Math.max(1, infoPriorityPlaylistLeft - dividerWidth);
+        return {
+            mode: MAIN_LAYOUT_INFO_PRIORITY,
+            px: px,
+            dividerWidth: dividerWidth,
+            infoX: 0,
+            infoWidth: infoPriorityDivider,
+            playlistX: infoPriorityPlaylistLeft,
+            playlistWidth: Math.max(1, ww - infoPriorityPlaylistLeft),
+            dividerPositions: [infoPriorityDivider]
         };
     }
 
@@ -256,8 +288,14 @@ function layoutMainColumns(modeOverride, transition) {
     var art = DOJSP3.panel(DOJSP3.titles.artSpectrum);
     var playlist = DOJSP3.panel(DOJSP3.titles.playlist);
     var geometry = mainLayoutGeometry(modeOverride);
-    var layoutUsesArt = geometry.mode !== MAIN_LAYOUT_INFO_PLAYLIST;
+    var layoutUsesArt = geometry.mode !== MAIN_LAYOUT_INFO_PLAYLIST &&
+        geometry.mode !== MAIN_LAYOUT_INFO_PRIORITY;
     var hideArtDuringTransition = Boolean(transition && art && layoutUsesArt);
+
+    // InfoStack historically inferred the full main-area width from its fixed
+    // left-column width. Supply the real width before moving it so the expanded
+    // layout keeps exactly the same responsive tab font, padding and height.
+    window.NotifyOthers(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));
 
     // ArtSpectrum contains native child windows. Hide only this outer host while
     // changing layouts, pre-layout its grandchildren at the final target size,
@@ -272,7 +310,8 @@ function layoutMainColumns(modeOverride, transition) {
         DOJSP3.move(playlist, geometry.playlistX, 0, geometry.playlistWidth, wh);
         DOJSP3.show(info, false);
         DOJSP3.show(playlist, true);
-    } else if (geometry.mode === MAIN_LAYOUT_INFO_PLAYLIST) {
+    } else if (geometry.mode === MAIN_LAYOUT_INFO_PLAYLIST ||
+            geometry.mode === MAIN_LAYOUT_INFO_PRIORITY) {
         DOJSP3.move(info, geometry.infoX, 0, geometry.infoWidth, wh);
         DOJSP3.move(playlist, geometry.playlistX, 0, geometry.playlistWidth, wh);
         DOJSP3.show(info, true);

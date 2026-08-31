@@ -1,10 +1,15 @@
 // ==PREPROCESSOR==
-// @name "Last.fm Bio + Images"
-// @author "marc2003"
+// @name "Last.fm Bio + Images - Enhanced"
+// @version "0.1.7"
+// @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\combined_artwork.js"
 // @import "%fb2k_component_path%samples\js\lastfm.js"
 // @import "%fb2k_component_path%samples\js\images.js"
 // @import "%fb2k_component_path%samples\js\lastfm_bio.js"
@@ -12,24 +17,57 @@
 
 var margin = _scale(12);
 
-var panel = new _panel();
+var panel = new _panel({ enhanced_page_background : true });
 var lastfm = new _lastfm();
 var lastfm_bio = new _lastfm_bio(0, 0, 0, 0);
-var images = new _images();
-var white = RGB(255, 255, 255);
+var image_appearance = new _combined_artwork('2K3.LASTFM.BIO.IMAGES', 'Display images', {
+	layout_changed : function () { on_size(); },
+	background_changed : function () { images.update_image(); },
+});
+var images = new _images({
+	appearance : image_appearance,
+	status_changed : function () {
+		on_size();
+		window.Repaint();
+	},
+});
 
 lastfm_bio.paint = function (gr) {
-	var y = images.properties.layout.value == 0 ? margin : this.y - margin;
-	gr.WriteText2(this.header_text(), panel.fonts.title, white, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
+	var y = !images.region_visible()
+		? 0
+		: images.properties.layout.value == 0 ? margin : this.y - margin;
+	gr.WriteText2(this.header_text(), panel.fonts.title, panel.colours.highlight, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
 
 	if (lastfm.api_key.empty()) {
-		gr.WriteTextSimple('Use the right click menu to set your own Last.fm API key.', panel.fonts.normal, white, this.x, this.y + margin, this.w, this.ha);
+		gr.WriteTextSimple('Use the right click menu to set your own Last.fm API key.', panel.fonts.normal, panel.colours.text, this.x, this.y + margin, this.w, this.ha);
 	} else if (this.text_layout) {
-		gr.WriteTextLayout(this.text_layout, white, this.x, this.y + margin, this.w, this.ha, this.offset);
-		this.up_btn.paint(gr, white);
-		this.down_btn.paint(gr, white);
+		gr.WriteTextLayout(this.text_layout, panel.colours.text, this.x, this.y + margin, this.w, this.ha, this.offset);
+		this.up_btn.paint(gr, panel.colours.text);
+		this.down_btn.paint(gr, panel.colours.text);
 	}
 }
+
+var lastfm_bio_menu = {
+	rbtn_up : function (x, y) {
+		image_appearance.append_menu(panel.m);
+		panel.m.AppendMenuItem(EnableMenuIf(panel.metadb), 1003, 'Download now');
+		panel.m.AppendMenuItem(CheckMenuIf(images.properties.hide_if_no_images.enabled), 1005, 'Hide if no images available');
+		panel.m.AppendMenuItem(CheckMenuIf(images.properties.auto_download.enabled), 1004, 'Automatic downloads');
+		panel.m.AppendMenuSeparator();
+		lastfm_bio.rbtn_up(x, y);
+	},
+	rbtn_up_done : function (idx) {
+		if (image_appearance.handle_menu(idx)) {
+			images.maybe_auto_download();
+			return;
+		}
+		if (idx == 1003 || idx == 1004 || idx == 1005) {
+			images.rbtn_up_done(idx);
+			return;
+		}
+		lastfm_bio.rbtn_up_done(idx);
+	},
+};
 
 panel.item_focus_change();
 
@@ -39,6 +77,7 @@ function on_colours_changed() {
 }
 
 function on_download_file_done(path, success, error_text) {
+	images.download_file_done(path, success, error_text);
 	lastfm_bio.download_file_done(path, success, error_text);
 }
 
@@ -81,19 +120,25 @@ function on_mouse_move(x, y) {
 	images.move(x, y);
 }
 
+function on_mouse_leave() {
+	lastfm_bio.move(-1, -1);
+	images.move(-1, -1);
+	_tt('');
+}
+
 function on_mouse_lbtn_dblclk(x, y) {
 	images.lbtn_dblclk(x, y);
 }
 
 function on_mouse_rbtn_up(x, y) {
-	if (lastfm_bio.containsXY(x, y))
-		return panel.rbtn_up(x, y, lastfm_bio);
+	if (images.region_visible() && images.containsXY(x, y))
+		return panel.rbtn_up(x, y, images);
 
-	return panel.rbtn_up(x, y, images);
+	return panel.rbtn_up(x, y, lastfm_bio_menu);
 }
 
 function on_mouse_wheel(s) {
-	if (utils.IsKeyPressed(VK_CONTROL)) {
+	if (images.region_visible() && utils.IsKeyPressed(VK_CONTROL)) {
 		var value = _clamp(images.properties.ratio.value - (s * 0.05), 0.2, 0.8);
 		if (value != images.properties.ratio.value) {
 			images.properties.ratio.value = value;
@@ -107,6 +152,7 @@ function on_mouse_wheel(s) {
 }
 
 function on_notify_data(name, data) {
+	if (jsp3EnhancedHandleSampleReset(name, data, "lastfm-bio")) return;
 	lastfm.notify_data(name, data);
 }
 
@@ -117,6 +163,7 @@ function on_paint(gr) {
 }
 
 function on_playback_dynamic_info_track(type) {
+	panel.playback_colours_changed(type);
 	if (type == 0) {
 		lastfm_bio.metadb_changed();
 		images.playback_new_track();
@@ -124,12 +171,14 @@ function on_playback_dynamic_info_track(type) {
 }
 
 function on_playback_new_track() {
+	panel.playback_colours_changed();
 	panel.item_focus_change();
 	images.playback_new_track();
 }
 
 function on_playback_stop(reason) {
 	if (reason != 2) {
+		panel.playback_colours_changed();
 		panel.item_focus_change();
 	}
 }
@@ -142,30 +191,47 @@ function on_playlist_switch() {
 	on_item_focus_change();
 }
 
+function on_script_unload() {
+	images.dispose();
+	lastfm_bio.dispose();
+}
+
 function on_size() {
 	panel.size();
+	if (!images.region_visible()) {
+		images.x = images.y = images.w = images.h = 0;
+		lastfm_bio.x = LM;
+		lastfm_bio.y = TM;
+		lastfm_bio.w = Math.max(1, panel.w - (LM * 2));
+		lastfm_bio.h = Math.max(_scale(24), panel.h - TM);
+		lastfm_bio.size();
+		return;
+	}
 
 	images.x = margin;
 	images.y = margin;
+	var available_w = Math.max(1, panel.w - (margin * 3));
+	var available_h = Math.max(1, panel.h - (margin * 3));
+	var minimum_text_h = _scale(24);
 
 	switch (images.properties.layout.value) {
 	case 0: // Image left, Text right
-		images.w = panel.w * images.properties.ratio.value;
-		images.h = panel.h - (margin * 2);
+		images.w = Math.max(1, Math.min(Math.round(panel.w * images.properties.ratio.value), available_w));
+		images.h = Math.max(1, panel.h - (margin * 2));
 
 		lastfm_bio.x = images.w + (margin * 2);
-		lastfm_bio.y = margin * 2
-		lastfm_bio.w = panel.w - images.w - (margin * 3);
-		lastfm_bio.h = panel.h - lastfm_bio.y;
+		lastfm_bio.y = margin * 2;
+		lastfm_bio.w = Math.max(1, panel.w - images.w - (margin * 3));
+		lastfm_bio.h = Math.max(minimum_text_h, panel.h - lastfm_bio.y);
 		break;
 	case 1: // Image top, text bottom
-		images.w = panel.w - (margin * 2);
-		images.h = panel.h * images.properties.ratio.value;
+		images.w = Math.max(1, panel.w - (margin * 2));
+		images.h = Math.max(1, Math.min(Math.round(panel.h * images.properties.ratio.value), available_h));
 
 		lastfm_bio.x = margin;
 		lastfm_bio.y = images.h + (margin * 3);
-		lastfm_bio.w = panel.w - (margin * 2);
-		lastfm_bio.h = panel.h - images.h - (margin * 3);
+		lastfm_bio.w = Math.max(1, panel.w - (margin * 2));
+		lastfm_bio.h = Math.max(minimum_text_h, panel.h - images.h - (margin * 3));
 		break;
 	}
 

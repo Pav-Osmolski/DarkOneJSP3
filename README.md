@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.0.23
+  <strong>Current release:</strong> v1.1.0
 </p>
 
 > [!IMPORTANT]
@@ -49,8 +49,9 @@ workflow of the original theme.
 * JScript Panel 3 control, display, queue and information panels.
 * Direct2D-accelerated rendering for a smoother, more responsive interface.
 * Configurable InfoStack tabs, titles, dimensions, backgrounds and tab colours.
-* Default or custom display accent colour.
-* Consolidated Album Notes panel with configurable providers, source priority,
+* Four switchable upper layouts, including Playlist-priority and wide views.
+* Default or custom display panel accent colour.
+* Album Notes panel with configurable providers, source priority,
   caching, diagnostics and dedicated MusicBrainz Releases and Links views.
 * Improved JS Playlist, Playlist Manager filtering and queue handling.
 * Smooth scrolling for JS Playlist and Playlist Manager,
@@ -64,11 +65,11 @@ workflow of the original theme.
   visible rows, cached column geometry and Direct2D bitmap reuse.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
-* Synchronised, configurable bottom-area colours across JSP3 and JSplitter.
+* Configurable bottom-area colours and buttons across JSP3 and JSplitter.
 
 ## Current release
 
-**DarkOneJSP3 v1.0.23** is the current release.
+**DarkOneJSP3 v1.1.0** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -100,7 +101,8 @@ layout.
 Benefits for other themes include:
 
 * Drop-in access to the enhanced Album Notes, MusicBrainz, playlist, playlist
-  manager, queue, properties and Last.fm sample improvements.
+  manager, queue, properties and Last.fm sample improvements, including the
+  optional Last.fm Bio + Images and Album Notes + Album Art compositions.
 * Backwards compatibility for older entry scripts through guarded helper and
   reset adapters.
 * Neutral standalone reset and page-background integration, while retaining

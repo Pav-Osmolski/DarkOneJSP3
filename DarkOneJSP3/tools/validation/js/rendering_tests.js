@@ -1297,7 +1297,7 @@ suite("bottom-area cross-host state", function () {
         };
     }
 
-    files[GEOMETRY_STATE] = 'v1|300|27';
+    files[GEOMETRY_STATE] = 'v2|300|27|203';
 
     // Legacy state is migrated out of DarkOneJSP3/shared into js_data.
     files[LEGACY_STATE] = 'v1|1|4278190080|4|4278190080';
@@ -1741,7 +1741,7 @@ suite("bottom-area cross-host state", function () {
             Object.prototype.hasOwnProperty.call(files, LEGACY_STATE))
         throw new Error('Bottom Controls did not canonicalise v1 state and retire the legacy source');
     host.layout();
-    if (files[GEOMETRY_STATE] !== 'v1|300|27')
+    if (files[GEOMETRY_STATE] !== 'v2|300|27|203')
         throw new Error('Bottom Controls did not publish the owning gradient coordinate space');
     const quickSearchMove = hostMoves.find(item => item[0] === 'q');
     if (!quickSearchMove || quickSearchMove[1] !== 16 || quickSearchMove[2] !== 203 ||
@@ -2865,14 +2865,14 @@ suite("InfoStack automatic tab geometry", function () {
         throw new Error('automaticTabAreaHeight body was not found');
     const body = source.slice(bodyStart + 1, bodyEnd);
     const calculate = new Function(
-        'ww', 'tabHeight', 'DOJSP3', 'window', 'FONT_PROPERTY',
-        'automaticFontScale', body);
+        'tabHeight', 'DOJSP3', 'window', 'FONT_PROPERTY',
+        'automaticFontScale', 'automaticReferenceWidth', body);
     const DOJSP3 = { idiv(a, b) { return Math.trunc(a / b); } };
     function area(scale, fixedFontSize) {
         const window = { GetProperty() { return fixedFontSize; } };
         return calculate(
-            1200, 20, DOJSP3, window, 'DarkOneJSP3.InfoStack.FontSize',
-            function() { return scale; });
+            20, DOJSP3, window, 'DarkOneJSP3.InfoStack.FontSize',
+            function() { return scale; }, function() { return 1200; });
     }
     function assert(condition, message) {
         if (!condition) throw new Error(message);
@@ -3077,6 +3077,12 @@ suite("Album Art wheel debounce", function () {
         value => String(value).split('_'), lodash,
         () => 0, () => {}, () => {}, 0, 1, () => 0, () => 0
     );
+
+    const explicitReviewArt = new AlbumArt(0, 0, 100, 100, {review_panel: true});
+    assert(explicitReviewArt.is_review_panel && explicitReviewArt.properties.layout && explicitReviewArt.properties.ratio,
+           'Explicit combined-text Album Art mode did not expose layout controls');
+    explicitReviewArt.dispose();
+
     const albumart = new AlbumArt(0, 0, 100, 100);
     albumart.mx = 50;
     albumart.my = 50;
@@ -3161,4 +3167,287 @@ suite("Album Art wheel debounce", function () {
     runTimers();
     assert(blurCalls === blurBeforeCancel && cancelledBlur.blur_source === null,
            'Album Art unload did not cancel pending lazy blur work');
+});
+
+suite("Last.fm image lifecycle", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/js/images.js'), 'utf8');
+    function assert(condition, message) { if (!condition) throw new Error(message); }
+    let nextInterval = 1;
+    const intervals = new Map();
+    let bitmapDisposals = 0;
+    let updates = 0;
+    let now = 100000;
+    let nextRequest = 40;
+    const requests = [];
+    const downloadRequests = [];
+    const downloadedFiles = Object.create(null);
+    const logs = [];
+    const statusPaints = [];
+    let statusChanges = 0;
+    const windowMock = {
+        ID: 1,
+        IsVisible: true,
+        SetInterval(fn, delay) {
+            const id = nextInterval++;
+            intervals.set(id, {fn, delay});
+            return id;
+        },
+        ClearInterval(id) { intervals.delete(id); },
+        Repaint() {}
+    };
+    function Property(name, value) {
+        this.value = value;
+        Object.defineProperty(this, 'enabled', {get: () => !!this.value});
+        this.toggle = () => { this.value = !this.value; };
+    }
+    const panel = {
+        text_objects: [{name: 'lastfm_bio'}], selection: {value: 0}, metadb: {},
+        fonts: {normal: 'font'}, colours: {text: 0xffdcdcdc}, w: 500, h: 300
+    };
+    const utils = {
+        CreateFolder() {},
+        HTTPRequestAsync() { const id = nextRequest++; requests.push(id); return id; },
+        ReplaceIllegalChars(value) { return String(value); },
+        IsFile(path) { return !!downloadedFiles[String(path).toLowerCase()]; },
+        DownloadFileAsync(id, url, path) { downloadRequests.push({id, url, path}); },
+        LoadImage() {
+            return {
+                CreateBitmap() { return {Dispose() { bitmapDisposals++; }}; },
+                Dispose() {}
+            };
+        }
+    };
+    const lodash = {
+        bind(fn, context) { return fn.bind(context); },
+        includes(value, search) { return String(value).indexOf(search) >= 0; }
+    };
+    const factory = new Function(
+        'panel', 'window', 'utils', 'folders', '_', '_p', 'image', 'RGB', 'N', 'console',
+        'fb', 'Date', '_tagged', '_artistFolder', '_getElementsByTagName',
+        '_firstElement', '_getFiles', '_drawImage', '_drawOverlay',
+        'DWRITE_TEXT_ALIGNMENT_CENTER', 'DWRITE_PARAGRAPH_ALIGNMENT_CENTER',
+        'DWRITE_WORD_WRAPPING_NO_WRAP', 'DWRITE_TRIMMING_GRANULARITY_CHARACTER',
+        source + '\nreturn _images;'
+    );
+    const Images = factory(
+        panel, windowMock, utils, {artists: 'artists\\'}, lodash, Property,
+        {crop: 0, crop_top: 1, full: 3}, () => 0, 'Images', {log(...args) { logs.push(args.join(' ')); }},
+        {IsPlaying: true}, {now() { return now; }}, value => !!String(value || '').length,
+        artist => 'C:\\artists\\' + artist + '\\',
+        response => response === 'with-image'
+            ? [{className: 'image-list-item-wrapper', img: {src: 'https://lastfm.test/avatar170s/abc.jpg'}}]
+            : [],
+        item => item.img,
+        folder => Object.keys(downloadedFiles).filter(path => path.indexOf(String(folder).toLowerCase()) === 0),
+        function() {}, function() {}, 1, 1, 0, 0
+    );
+    const appearance = {
+        displayed() { return true; },
+        wants_artwork() { return true; },
+        wants_blur() { return false; },
+        paint_background() {},
+        paint_border() {}
+    };
+    const emptyGallery = '<html><ul class="image-list"></ul></html>';
+    const currentGallery = '<html><ul class="image-list"><li class="image-list-item-wrapper">' +
+        '<a href="/music/Test+Artist/+images/f6f582b9b72b77d53eeb94481a8fcf66" class="image-list-item">' +
+        '<img src="https://lastfm-img.freetls.fastly.net/i/u/avatar170s/f6f582b9b72b77d53eeb94481a8fcf66">' +
+        '</a></li></ul></html>';
+    const images = new Images({appearance, status_changed() { statusChanges++; }});
+    assert(intervals.size === 1 && intervals.get(images.interval_id).delay === 1000,
+           'Images did not retain its one-second interval handle');
+
+    const interval = intervals.get(images.interval_id).fn;
+    const timeBeforeHiddenTick = images.time;
+    windowMock.IsVisible = false;
+    interval();
+    assert(images.time === timeBeforeHiddenTick,
+           'Hidden Images panel continued periodic work');
+    windowMock.IsVisible = true;
+
+    images.artist = 'Test Artist';
+    images.folder = 'C:\\artists\\Test Artist\\';
+    assert(images.status_text() === 'No images downloaded',
+           'Empty Last.fm image region did not explain its initial local state');
+    assert(images.maybe_auto_download() && requests.length === 1,
+           'Visible Last.fm Images panel did not start its automatic download');
+    assert(!images.maybe_auto_download() && requests.length === 1,
+           'In-flight Last.fm image request was duplicated');
+    images.http_request_done(requests[0], false, 'offline');
+    assert(!Object.prototype.hasOwnProperty.call(images.artists, requests[0]),
+           'Completed Images request retained stale artist bookkeeping');
+    images.properties.hide_if_no_images.value = true;
+    assert(images.region_visible(),
+           'Hide-if-unavailable collapsed a temporary Last.fm request failure');
+    images.properties.hide_if_no_images.value = false;
+    now += 29999;
+    assert(!images.maybe_auto_download(),
+           'Automatic Last.fm image retry ignored its cooldown');
+    now++;
+    assert(images.maybe_auto_download() && requests.length === 2,
+           'Automatic Last.fm image retry did not resume after its cooldown');
+    images.http_request_done(requests[1], true, '<html><title>Verification required</title></html>');
+    assert(images.status_text() === 'Last.fm page could not be read - retrying...' &&
+           !images.current_state().unavailable,
+           'Unrecognised successful Last.fm response was misclassified as an empty gallery');
+
+    now += 30000;
+    assert(images.maybe_auto_download() && requests.length === 3,
+           'Automatic Last.fm image acquisition did not make its final bounded attempt');
+    images.http_request_done(requests[2], true, emptyGallery);
+    assert(images.status_text() === 'No images available',
+           'Exhausted successful Last.fm lookup did not report unavailable images');
+    images.x = 10; images.y = 20; images.w = 200; images.h = 100;
+    images.paint({WriteTextSimple(...args) { statusPaints.push(args); }});
+    assert(statusPaints.length === 1 && statusPaints[0][0] === 'No images available' &&
+           statusPaints[0][7] === 1 && statusPaints[0][8] === 1,
+           'Unavailable Last.fm status was not horizontally and vertically centred');
+    images.properties.hide_if_no_images.value = true;
+    assert(!images.region_visible(),
+           'Hide-if-unavailable did not collapse the confirmed-empty image region');
+
+    assert(images.download(false) && requests.length === 4 && images.region_visible() &&
+           images.status_text() === 'Downloading images...',
+           'Manual Download now did not reveal and label the active image region');
+    assert(!images.download(false) && requests.length === 4,
+           'Repeated Download now duplicated an in-flight Last.fm request');
+    statusPaints.length = 0;
+    images.paint({WriteTextSimple(...args) { statusPaints.push(args); }});
+    assert(statusPaints.length === 1 && statusPaints[0][0] === 'Downloading images...',
+           'Active Last.fm request did not paint the required progress message');
+    images.http_request_done(requests[3], true, currentGallery);
+    assert(downloadRequests.length === 1 && images.current_state().pending_files === 1,
+           'Raw current Last.fm gallery markup did not queue its image file');
+    const downloadedPath = downloadRequests[0].path;
+    downloadedFiles[downloadedPath.toLowerCase()] = true;
+    images.download_file_done(downloadedPath, true, '');
+    assert(images.image_paths.length === 1 && images.current_state().phase === 'available' &&
+           images.region_visible(),
+           'Completed Last.fm image file did not refresh and restore the image region');
+    assert(logs.some(line => line.indexOf('Manual request started for "Test Artist"') !== -1) &&
+           logs.some(line => line.indexOf('already in progress') !== -1) &&
+           logs.some(line => line.indexOf('unrecognised image page') !== -1) &&
+           logs.some(line => line.indexOf('raw-markup fallback recovered 1') !== -1) &&
+           logs.some(line => line.indexOf('Download completed for "Test Artist": 1 saved, 0 failed.') !== -1),
+           'Last.fm image lifecycle did not emit parser, request and completion diagnostics');
+    assert(statusChanges > 0, 'Last.fm image state changes did not notify the combined layout');
+
+    images.update = function () { updates++; };
+    images.download_file_done('c:\\artists\\test artist\\new.jpg', true, '');
+    images.download_file_done('c:\\artists\\another artist\\new.jpg', true, '');
+    assert(updates === 1,
+           'Images download completion did not refresh only the active artist folder');
+
+    images.reset_image();
+    const disposalBase = bitmapDisposals;
+    images.bitmap.normal = {Dispose() { bitmapDisposals++; }};
+    images.bitmap.blur = {Dispose() { bitmapDisposals++; }};
+    images.dispose();
+    images.dispose();
+    assert(intervals.size === 0 && images.interval_id === 0,
+           'Images dispose did not clear its interval');
+    assert(bitmapDisposals === disposalBase + 2 && images.bitmap.normal === null && images.bitmap.blur === null,
+           'Images dispose did not release both active bitmaps exactly once');
+});
+
+suite("Combined artwork appearance", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/js/combined_artwork.js'), 'utf8');
+    function assert(condition, message) { if (!condition) throw new Error(message); }
+    const properties = new Map();
+    let repaints = 0;
+    let layoutChanges = 0;
+    let backgroundChanges = 0;
+    let ensuredBlur = 0;
+    const draws = [];
+    const overlays = [];
+    function Property(name, fallback) {
+        this.name = name;
+        this.val = properties.has(name) ? properties.get(name) : fallback;
+        const key = typeof fallback === 'boolean' ? 'enabled' : 'value';
+        Object.defineProperty(this, key, {
+            get: () => this.val,
+            set: value => { this.val = value; properties.set(name, value); }
+        });
+        this.toggle = () => { this.val = !this.val; properties.set(name, this.val); };
+    }
+    function popup() {
+        return {
+            items: [],
+            AppendMenuItem(flags, id, label) { this.items.push({flags, id, label}); },
+            AppendMenuSeparator() { this.items.push({separator: true}); },
+            CheckMenuRadioItem() {},
+            AppendTo(parent, flags, label) { parent.items.push({flags, label, submenu: this}); }
+        };
+    }
+    const windowMock = {
+        Name: 'Combined artwork test',
+        CreatePopupMenu: popup,
+        GetProperty(name, fallback) { return properties.has(name) ? properties.get(name) : fallback; },
+        SetProperty(name, value) { properties.set(name, value); },
+        Repaint() { repaints++; }
+    };
+    const colour = {
+        opaque(value) { return (0xff000000 | (Number(value) & 0xffffff)) >>> 0; },
+        scaleBrightness(value) { return (0xff000000 | ((Number(value) & 0xffffff) >>> 1)) >>> 0; },
+        pickJscript() { return 0xff123456; }
+    };
+    const factory = new Function(
+        '_p', '_clamp', 'RGB', 'DarkOneColour', 'window', 'panel', 'image',
+        '_drawImage', '_drawOverlay', 'MF_STRING', 'CheckMenuIf', 'GetMenuFlags',
+        source + '\nreturn _combined_artwork;'
+    );
+    const CombinedArtwork = factory(
+        Property,
+        (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)),
+        (r, g, b) => (0xff000000 | r * 0x10000 | g * 0x100 | b) >>> 0,
+        colour, windowMock, {w: 300, h: 200}, {crop: 0},
+        (gr, bitmap, x, y, w, h, mode) => { draws.push({bitmap, x, y, w, h, mode}); return [x, y, w, h]; },
+        (gr, x, y, w, h, alpha) => overlays.push({x, y, w, h, alpha}),
+        0, checked => checked ? 1 : 0, (enabled, checked) => enabled && checked ? 1 : 0
+    );
+    const appearance = new CombinedArtwork('TEST.ART', 'Display artwork', {
+        layout_changed() { layoutChanges++; },
+        background_changed() { backgroundChanges++; }
+    });
+    assert(appearance.displayed() && appearance.wants_artwork() && appearance.wants_blur(),
+           'Combined artwork defaults are incomplete');
+
+    const menu = popup();
+    appearance.append_menu(menu);
+    assert(menu.items[0].id === 1700 && menu.items[0].label === 'Display artwork' &&
+           menu.items.some(item => item.label === 'Image background' && item.submenu) &&
+           menu.items.some(item => item.label === 'Image border' && item.submenu),
+           'Combined artwork appearance menu hierarchy is incomplete');
+
+    const normal = {name: 'normal'};
+    const blur = {name: 'blur'};
+    appearance.paint_background({}, normal, blur, () => { ensuredBlur++; });
+    assert(ensuredBlur === 1 && draws.length === 1 && draws[0].bitmap === blur &&
+           overlays.length === 1 && overlays[0].alpha === 180,
+           'Combined artwork did not paint its default blurred medium-dark background');
+
+    const fills = [];
+    appearance.paint_border({FillRectangle(x, y, w, h, colourValue) {
+        fills.push([x, y, w, h, colourValue >>> 0]);
+    }}, [10, 20, 100, 80]);
+    assert(fills.length === 4,
+           'Combined artwork solid border did not paint a complete in-bounds ring');
+
+    appearance.handle_menu(1700);
+    assert(!appearance.displayed() && layoutChanges === 1 && repaints > 0,
+           'Display artwork toggle did not collapse its layout');
+    appearance.handle_menu(1714);
+    assert(appearance.properties.background_darkness.value === 2,
+           'Combined artwork darkness selection was not persisted');
+    appearance.handle_menu(1710);
+    assert(!appearance.properties.background.enabled && backgroundChanges === 1,
+           'Combined artwork background toggle did not refresh its image resources');
+    appearance.handle_menu(1722);
+    appearance.handle_menu(1725);
+    assert(appearance.properties.border_style.value === 2 &&
+           appearance.properties.border_colour_mode.value === 1 &&
+           (appearance.properties.border_custom.value >>> 0) === 0xff123456,
+           'Combined artwork Sunken/custom border settings were not persisted');
 });

@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Quick Search"
-// @version "0.1.20"
+// @version "0.1.21"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
@@ -27,6 +27,7 @@ function quickSearchInputCommit() {
 }
 
 quickSearch = new DarkOneQuickSearch();
+quickSearch.requestParentGeometry();
 
 function on_char(code) { quickSearch.character(code); }
 function on_colours_changed() { quickSearch.coloursChanged(); window.Repaint(); }
@@ -52,6 +53,10 @@ function on_script_unload() { quickSearch.dispose(); }
 function on_size() { quickSearch.size(window.Width, window.Height); }
 
 function on_notify_data(name, info) {
+    if (name === DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_STATE) {
+        quickSearch.parentGeometryChanged(info);
+        return;
+    }
     if (name === DarkOneProtocol.bottomArea.notifications.commit) {
         quickSearch.parentBackgroundCommit(info);
         return;

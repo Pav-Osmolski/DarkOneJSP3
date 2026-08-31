@@ -299,8 +299,11 @@ Quick Search inherited background does not follow Bottom area colour
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Set Normal background or Error background to Transparent / inherit parent. The
 panel reads the shared Bottom-area state on initialisation and follows live
-updates without its own poller. Reload DOJSP3.QuickSearch together with the
-current control scripts if files from different builds were mixed.
+updates without its own poller. With Background linear gradient enabled, the
+panel and input field should continue the surrounding gradient rather than show
+one flat colour. Reload DOJSP3.QuickSearch together with the current Bottom
+Controls script if files from different builds were mixed; the current pair
+uses the extended bottom-area geometry message to align that gradient.
 
 Custom PNG is unavailable
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -515,6 +518,51 @@ foobar2000 profile directory; use a complete path when the image is elsewhere.
 The image is deliberately subtle: it is cover-cropped below the page header and
 painted at 10% opacity over the current page background. Selecting None,
 stopping playback normally or resetting page appearance removes it.
+
+Combined sample wallpaper or page colour is hidden
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Last.fm Bio + Images and Album Notes + Album Art can draw the displayed artwork
+as their own full-panel backing above the generic page background. Right-click
+either region, open Image background and disable Use displayed image as
+background to reveal the selected Colours > Page background or Background
+Wallpaper. Blur and Light/Medium/Dark affect only the displayed-image backing.
+
+Last.fm combined sample does not download images automatically
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Confirm playback is active, Selection mode is Prefer now playing, Automatic
+downloads is enabled and either the foreground image or Image background is
+enabled. A visible panel requests the playing artist when its local image folder
+is empty. An active request is not duplicated; a failed or empty request can be
+retried up to three times with at least 30 seconds between attempts. Download
+now remains available for an immediate manual attempt.
+
+No images downloaded means the local artist folder is empty and acquisition is
+not currently active. The image region centres Downloading images... while
+either the Last.fm page or its image files are still being retrieved. No images
+found - retrying... means a successful empty result will be tried again
+automatically; Image download failed - retrying... or Image download failed
+identifies a request, parsing or file failure rather than a confirmed empty
+artist page. Open the JScript Panel console for request starts, returned image
+counts, queued/saved paths, errors and the final saved/failed summary.
+
+If the console reports `unrecognised image page`, Last.fm returned a response
+that did not contain a readable gallery—commonly a temporary verification,
+consent or truncated page. This is not treated as proof that the artist has no
+images. The downloader retries automatically when attempts remain and also uses
+a raw-markup fallback when the gallery is present but DOM conversion failed.
+
+Repeated Download now clicks do not queue duplicate work while the same artist
+request is active. If Last.fm successfully returns no usable images, the panel
+shows No images available. Enable Hide if no images available to give that
+region back to the biography; the setting does not hide temporary failures, and
+Download now reveals the region during another manual attempt.
+
+Combined sample image area is missing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Display images and Display album art intentionally collapse the foreground
+image region instead of leaving blank space. Right-click the remaining text
+region and enable the corresponding Display command. Image border offers None,
+Solid and Sunken styles plus Default or Custom colour.
 
 Colours is missing from Queue
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,9 +1,69 @@
 DarkOneJSP3 Changelog
 =====================
 
-v1.0.23 - Patched Waveform Minibar integration
-----------------------------------------------
+v1.1.0 - Combined information, artwork and waveform integration
+---------------------------------------------------------------
 
+- Added `Album Notes + Album Art.txt`, combining the consolidated multi-provider
+  Album Notes panel with current album artwork and the existing left/right or
+  top/bottom ratio controls.
+- Modernised `Last.fm Bio + Images.txt` to the current Biography baseline with
+  complete version/author metadata, neutral and legacy reset handling, bounded
+  small-panel geometry and deterministic script-unload cleanup.
+- Added the enhanced Colours and Background Wallpaper menus to both combined
+  entries. Their displayed artwork remains available as an independent
+  full-panel background layer with enable, blur and Light/Medium/Dark controls;
+  disabling that layer reveals the selected page colour or generic wallpaper.
+- Added Display images/Display album art commands that collapse the foreground
+  image region completely, plus None, Solid or Sunken foreground borders with
+  Default or user-selected colours. The text-region menu retains these controls
+  while the foreground image is hidden.
+- Made Last.fm automatic image acquisition start when the visible playing-artist
+  view needs artwork instead of depending on one exact playback second.
+  Requests are de-duplicated while active and may retry up to three times at a
+  bounded 30-second cadence; manual Download now remains immediately available.
+- Made completed Last.fm artist-image downloads refresh the active view
+  immediately instead of waiting for the periodic folder scan.
+- Added explicit Last.fm image acquisition states to the combined sample. The
+  image region now centres `Downloading images...` while a page or file request
+  is active, distinguishes retryable request/file failures from a confirmed
+  `No images available` result and records request, parse, queue, save, failure
+  and completion details in the JScript Panel console.
+- Hardened Last.fm gallery extraction against JScript Panel DOM-conversion
+  failures by recovering image URLs from the raw current gallery markup. A
+  successful transport response with no recognised gallery is now reported as
+  an unreadable page and remains retryable; only a recognisable, genuinely empty
+  gallery can produce `No images available` or trigger automatic hiding.
+- Added `Hide if no images available` directly below Download now. It collapses
+  the image region only after Last.fm has returned successfully without usable
+  images; transient request failures remain visible, and a manual retry reveals
+  the region immediately. Repeated Download now clicks for the same artist are
+  ignored while the existing request is active.
+- Suspended periodic image work while its panel is hidden, retained and cleared
+  the interval handle explicitly, released normal/blurred Direct2D bitmaps and
+  removed completed asynchronous request bookkeeping.
+- Added a backward-compatible explicit combined-text option to Album Art so the
+  new Album Notes composition reuses its deferred blur generation without
+  pretending to be an AllMusic review panel. Existing Album Art and AllMusic
+  entries retain their automatic behaviour.
+- Documented the two combined samples and their region-aware right-click,
+  Ctrl+wheel ratio and ordinary wheel controls for standalone theme use.
+- Expanded the optional LAYOUT command to four persistent modes by adding an
+  InfoStack-priority two-column view. The earlier InfoStack | Playlist view
+  gives Playlist the remaining width; the new view keeps Playlist at the
+  standard right-column width and expands InfoStack across the remaining area.
+- Kept InfoStack's automatic tab font, padding and total tab-area height
+  identical when entering the expanded layout. Main Columns now supplies the
+  real main-area width instead of letting the wider InfoStack be mistaken for a
+  larger application window; standalone InfoStack use retains the old fallback.
+- Fixed Quick Search's Normal and Error `Transparent / inherit parent`
+  backgrounds so they reproduce the exact Bottom-area surface instead of
+  flattening it to one resolved colour. Solid backgrounds remain solid; the
+  optional linear gradient now continues through the complete Quick Search
+  panel and its input field at the correct parent-space offset.
+- Extended the shared bottom-area geometry message with Quick Search's vertical
+  offset, retained backward parsing for the earlier geometry shape and made
+  gradient-only state changes invalidate the inherited background immediately.
 - Updated the required Waveform Minibar component to the public Windows x64
   `1.2.69-patched` release and replaced the former foobar2000 component-page
   reference with the maintained patched-release page.
@@ -21,10 +81,15 @@ v1.0.23 - Patched Waveform Minibar integration
 - Added troubleshooting for stale backgrounds, click-triggered flashes,
   anti-aliased colour-key fringes and high playback CPU usage, while preserving
   the existing JSplitter `SupportPseudoTransparency` host opt-in.
-- Hardened release validation so current public documentation must name the
-  patched release URL, FPS set, anti-aliasing control and event-driven refresh,
-  and cannot restore the superseded foobar2000 component-page URL. Advanced the
-  release validator to 0.10.32.
+- Expanded required-file, documentation, entry-contract, lifecycle and runtime
+  validation for the patched Waveform Minibar contract, combined appearance
+  controls, Last.fm acquisition and raw-gallery recovery, explicit Album Art
+  composition mode, all four main layouts and aligned Quick Search gradient
+  inheritance. Advanced `Last.fm Bio + Images.txt` to 0.1.7,
+  `Album Notes + Album Art.txt` to 0.6.11, Album Art to 0.1.4, Main Columns to
+  0.7.41, InfoStack to 0.6.33, Quick Search to 0.1.21, sample defaults to 0.1.4,
+  the combined-artwork helper to 0.1.0, shared bottom-area appearance to 0.3.1
+  and the release validator to 0.10.38.
 
 v1.0.22 - Shared InfoStack background wallpapers
 ------------------------------------------------

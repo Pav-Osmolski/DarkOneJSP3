@@ -5,6 +5,9 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // Replaces Panel Stack Splitter 06.
 //
 // Version history (newest first):
+// v0.3.15 accepts the extended Bottom-area geometry message used to align
+// Quick Search gradients while preserving the earlier three-field shape.
+//
 // v0.3.14 preserves the shared Soft-depth edge when extreme vertical resizing
 // moves this opaque host into the parent's four-row in-place depth stack.
 //
@@ -55,7 +58,7 @@ var REVEAL_DELAY_PROPERTY = 'DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay';
 var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt';
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
-var BOTTOM_AREA_GEOMETRY_VERSION = 'v1';
+var BOTTOM_AREA_GEOMETRY_VERSION = 'v2';
 var BOTTOM_AREA_GEOMETRY_QUERY = 'DarkOneJSP3.BottomArea.Geometry.Query';
 var BOTTOM_AREA_GEOMETRY_STATE = 'DarkOneJSP3.BottomArea.Geometry.State';
 
@@ -224,7 +227,10 @@ function sharedSoftDepth(mode) {
 
 function parseBottomAreaGeometry(data) {
     var parts = String(data || '').split('|');
-    if (parts.length !== 3 || parts[0] !== BOTTOM_AREA_GEOMETRY_VERSION) return null;
+    var currentGeometry = parts.length === 4 &&
+        parts[0] === BOTTOM_AREA_GEOMETRY_VERSION;
+    var legacyGeometry = parts.length === 3 && parts[0] === 'v1';
+    if (!currentGeometry && !legacyGeometry) return null;
     var height = Math.round(Number(parts[1]));
     var displayTop = Math.round(Number(parts[2]));
     if (!isFinite(height) || height < 1 || !isFinite(displayTop)) return null;

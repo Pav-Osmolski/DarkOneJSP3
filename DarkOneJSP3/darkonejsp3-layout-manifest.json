@@ -1,5 +1,5 @@
 {
-  "version": "1.0.23",
+  "version": "1.1.0",
   "target": {
     "jscript_panel": "3.8.5",
     "jsplitter": "4.1.14",
@@ -105,7 +105,7 @@
       "title": "DOJSP3.QuickSearch",
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt",
-      "version": "0.1.20"
+      "version": "0.1.21"
     },
     {
       "number": 12,

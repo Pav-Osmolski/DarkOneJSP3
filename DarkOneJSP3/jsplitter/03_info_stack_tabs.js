@@ -9,6 +9,9 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // the six real panels.
 //
 // Version history (newest first):
+// v0.6.33 keeps automatic tab font and area geometry fixed across standard and
+// expanded InfoStack widths by using the main controller's reference width.
+//
 // v0.6.32 removes Startup configuration from both InfoStack menu surfaces;
 // TOOLS now owns its presentation through a dedicated root-state bridge.
 //
@@ -129,6 +132,7 @@ var TAB_STRIP_VISIBLE_PROPERTY = 'DarkOneJSP3.InfoStack.TabStripVisible';
 var LABEL_DEFAULTS_VERSION_PROPERTY = 'DarkOneJSP3.InfoStack.LabelDefaultsVersion';
 var TAB_COLOUR_MODE_PROPERTY = 'DarkOneJSP3.InfoStack.TabColourMode';
 var TAB_CUSTOM_COLOUR_PROPERTY = 'DarkOneJSP3.InfoStack.TabCustomColour';
+var INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION = 'DarkOneJSP3.InfoStack.MainAreaWidth';
 
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_colours.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_bridges.js');
@@ -138,6 +142,7 @@ var activeIndex = DOJSP3.clamp(Number(window.GetProperty(ACTIVE_PROPERTY, 0)) ||
 var hoverIndex = -1;
 var ww = 0;
 var wh = 0;
+var mainAreaWidth = 0;
 var tabHeight = 18;
 var tabY = 0;
 var tabAreaHeight = 18;
@@ -295,8 +300,23 @@ function ensureActiveTab() {
     window.SetProperty(ACTIVE_PROPERTY, activeIndex);
 }
 
+function automaticReferenceWidth() {
+    if (mainAreaWidth <= 0) return ww;
+
+    // Recreate the normal three-column InfoStack width. Automatic sizing was
+    // designed around that width, so widening only the panel must not enlarge
+    // its tab strip.
+    var px = Math.max(1, DOJSP3.idiv(mainAreaWidth, 640));
+    return DOJSP3.clamp(
+        DOJSP3.idiv(mainAreaWidth, 3) - px,
+        1,
+        Math.max(1, mainAreaWidth - 2)
+    );
+}
+
 function inferredRootWidth() {
-    return ww > 0 ? (ww * 64 / 21) : 0;
+    var referenceWidth = automaticReferenceWidth();
+    return referenceWidth > 0 ? (referenceWidth * 64 / 21) : 0;
 }
 
 function automaticFontScale() {
@@ -331,7 +351,7 @@ function automaticTabAreaHeight() {
     // Preserve the original 100% PSS geometry, but let automatic font scaling
     // enlarge or reduce the surrounding tab-area padding proportionally. A
     // fixed font size is independent of the automatic base-scale property.
-    var baseGap = DOJSP3.idiv(ww, 40);
+    var baseGap = DOJSP3.idiv(automaticReferenceWidth(), 40);
     var fixedFontSize = Number(window.GetProperty(FONT_PROPERTY, 0)) || 0;
     var gapScale = fixedFontSize > 0 ? 100 : automaticFontScale();
     var scaledGap = Math.max(0, Math.round(baseGap * gapScale / 100));
@@ -744,6 +764,17 @@ function on_mouse_rbtn_up(x, y) {
 }
 
 function on_notify_data(name, data) {
+    if (name === INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION) {
+        var width = Number(data);
+        if (!isFinite(width) || width <= 0) return;
+        width = Math.round(width);
+        if (width === mainAreaWidth) return;
+
+        mainAreaWidth = width;
+        layoutInfoStack();
+        window.Repaint();
+        return;
+    }
     if (name === DarkOneViewBridge.notification) {
         var viewCommand = DarkOneViewBridge.parseNotificationData(data);
         if (!viewCommand) return;

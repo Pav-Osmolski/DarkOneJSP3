@@ -52,6 +52,10 @@ var QS_BACKGROUND_PALETTE_VERSION = 1;
 var DARKONE_QUICKSEARCH_BACKGROUND_PALETTE_VERSION_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.COLOUR.BACKGROUND.PALETTE.VERSION';
 var DARKONE_QUICKSEARCH_BOTTOM_AREA_STATE_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt';
 var DARKONE_QUICKSEARCH_BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-geometry.txt';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_VERSION = 'v2';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_QUERY = 'DarkOneJSP3.BottomArea.Geometry.Query';
+var DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_STATE = 'DarkOneJSP3.BottomArea.Geometry.State';
 
 var QS_DEFAULT_TAGS = [
     { name: 'All', value: '%artist%|%album artist%|%album%|%title%|%genre%|%date%|%composer%', context: false },
@@ -205,6 +209,45 @@ function quickSearchReadBottomAreaState() {
         );
 }
 
+function quickSearchParseBottomAreaGeometry(data, panelHeight) {
+    var parts = String(data || '').split('|');
+    var currentGeometry = parts.length === 4 &&
+        parts[0] === DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_VERSION;
+    var legacyGeometry = parts.length === 3 && parts[0] === 'v1';
+    if (!currentGeometry && !legacyGeometry) return null;
+
+    var height = Math.round(Number(parts[1]));
+    var displayTop = Math.round(Number(parts[2]));
+    if (!isFinite(height) || height < 1 || !isFinite(displayTop)) return null;
+
+    panelHeight = Math.max(1, Math.round(Number(panelHeight)) || 1);
+    var quickSearchTop = currentGeometry
+        ? Math.round(Number(parts[3]))
+        : height - Math.max(2, Math.floor(height / 8)) - panelHeight;
+    if (!isFinite(quickSearchTop)) return null;
+
+    return {
+        height: height,
+        displayTop: Math.round(quickSearchClamp(displayTop, 0, height - 1)),
+        quickSearchTop: Math.round(quickSearchClamp(quickSearchTop, 0, height - 1))
+    };
+}
+
+function quickSearchReadBottomAreaGeometry(panelHeight) {
+    try {
+        var geometry = quickSearchParseBottomAreaGeometry(
+            utils.ReadTextFile(DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_FILE, 65001),
+            panelHeight
+        );
+        if (geometry) return geometry;
+    } catch (e) {}
+    return {
+        height: Math.max(1, Math.round(Number(panelHeight)) || 1),
+        displayTop: 0,
+        quickSearchTop: 0
+    };
+}
+
 function DarkOneQuickSearch() {
     var self = this;
 
@@ -255,8 +298,11 @@ function DarkOneQuickSearch() {
     };
 
     this.parentBackgroundState = quickSearchReadBottomAreaState();
+    this.parentBackgroundGeometry = quickSearchReadBottomAreaGeometry(window.Height);
     this.parentBackgroundCommitTimer = 0;
     this.parentBackgroundCommitId = '';
+    this.inheritedBackgroundBrushKey = '';
+    this.inheritedBackgroundBrush = '';
 
     this.previousMatchBeforeExtended = this.properties.match === QS_MATCH_EXTENDED ? QS_MATCH_ALL : this.properties.match;
     this.autoExtendedActive = false;
@@ -475,6 +521,111 @@ function DarkOneQuickSearch() {
         );
     };
 
+    this.backgroundModeIsTransparent = function (mode) {
+        return mode === QS_BACKGROUND_MODES.transparent;
+    };
+
+    this.normalBackgroundIsTransparent = function () {
+        return this.backgroundModeIsTransparent(this.properties.normalBackgroundMode);
+    };
+
+    this.inputBackgroundIsTransparent = function () {
+        return this.backgroundModeIsTransparent(
+            this.lastSuccess
+                ? this.properties.normalBackgroundMode
+                : this.properties.errorBackgroundMode
+        );
+    };
+
+    this.inheritedBackgroundColourAt = function (localY) {
+        var colour = this.colours && typeof this.colours.parentBackground !== 'undefined'
+            ? this.colours.parentBackground
+            : this.parentBackgroundColour(RGB(30, 30, 30));
+        var state = this.parentBackgroundState || quickSearchReadBottomAreaState();
+        if (!state.backgroundLinearGradient) return DarkOneColour.opaque(colour);
+
+        var geometry = this.parentBackgroundGeometry || quickSearchReadBottomAreaGeometry(this.h);
+        var denominator = Math.max(1, geometry.height - 1);
+        var position = geometry.quickSearchTop + Math.max(0, Number(localY) || 0);
+        var amount = quickSearchClamp(position / denominator, 0, 1);
+        return DarkOneColour.blend(
+            colour,
+            DarkOneColour.scaleBrightness(colour, 0.7),
+            amount
+        );
+    };
+
+    this.inheritedBackgroundFill = function (y, height) {
+        y = Math.max(0, Number(y) || 0);
+        height = Math.max(1, Number(height) || 1);
+        var state = this.parentBackgroundState || quickSearchReadBottomAreaState();
+        if (!state.backgroundLinearGradient) return this.inheritedBackgroundColourAt(y);
+
+        var geometry = this.parentBackgroundGeometry || quickSearchReadBottomAreaGeometry(this.h);
+        var colour = this.colours && typeof this.colours.parentBackground !== 'undefined'
+            ? this.colours.parentBackground
+            : this.parentBackgroundColour(RGB(30, 30, 30));
+        var key = String(colour >>> 0) + '|' + String(geometry.height) + '|' +
+            String(geometry.quickSearchTop) + '|' + String(y) + '|' + String(height);
+        if (key === this.inheritedBackgroundBrushKey && this.inheritedBackgroundBrush) {
+            return this.inheritedBackgroundBrush;
+        }
+
+        this.inheritedBackgroundBrushKey = key;
+        this.inheritedBackgroundBrush = JSON.stringify({
+            Start: [0, y],
+            End: [0, y + Math.max(1, height)],
+            Stops: [
+                [0, this.inheritedBackgroundColourAt(y)],
+                [1, this.inheritedBackgroundColourAt(y + Math.max(0, height - 1))]
+            ]
+        });
+        return this.inheritedBackgroundBrush;
+    };
+
+    this.paintInheritedBackground = function (gr, x, y, width, height) {
+        if (width <= 0 || height <= 0) return;
+        gr.FillRectangle(x, y, width, height, this.inheritedBackgroundFill(y, height));
+    };
+
+    this.paintPanelBackground = function (gr) {
+        if (this.normalBackgroundIsTransparent()) {
+            this.paintInheritedBackground(gr, 0, 0, this.w, this.h);
+        } else {
+            gr.FillRectangle(0, 0, this.w, this.h, this.colours.background);
+        }
+    };
+
+    this.paintInputBackground = function (gr, x, y, width, height) {
+        if (this.inputBackgroundIsTransparent()) {
+            this.paintInheritedBackground(gr, x, y, width, height);
+        } else {
+            gr.FillRectangle(x, y, width, height, this.input.backcolor);
+        }
+    };
+
+    this.parentGeometryChanged = function (data) {
+        var geometry = quickSearchParseBottomAreaGeometry(data, this.h);
+        if (!geometry) return false;
+        var current = this.parentBackgroundGeometry;
+        var changed = !current || current.height !== geometry.height ||
+            current.quickSearchTop !== geometry.quickSearchTop;
+        this.parentBackgroundGeometry = geometry;
+        if (changed) {
+            this.inheritedBackgroundBrushKey = '';
+            this.inheritedBackgroundBrush = '';
+            if (this.normalBackgroundIsTransparent() || this.inputBackgroundIsTransparent()) {
+                this.applyInputColours();
+                window.Repaint();
+            }
+        }
+        return changed;
+    };
+
+    this.requestParentGeometry = function () {
+        try { window.NotifyOthers(DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_QUERY, true); } catch (e) {}
+    };
+
     this.parentBackgroundChanged = function (data) {
         var state = QS_BACKGROUND_PROTOCOL.parseState(data);
         if (!state) return false;
@@ -484,8 +635,13 @@ function DarkOneQuickSearch() {
         var current = this.parentBackgroundState;
         var changed = !current ||
             current.backgroundMode !== state.backgroundMode ||
-            (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0);
+            (current.backgroundCustomColour >>> 0) !== (state.backgroundCustomColour >>> 0) ||
+            current.backgroundLinearGradient !== state.backgroundLinearGradient;
         this.parentBackgroundState = state;
+        if (changed) {
+            this.inheritedBackgroundBrushKey = '';
+            this.inheritedBackgroundBrush = '';
+        }
         if (changed && (
                 this.properties.normalBackgroundMode === QS_BACKGROUND_MODES.transparent ||
                 this.properties.errorBackgroundMode === QS_BACKGROUND_MODES.transparent)) {
@@ -679,7 +835,9 @@ function DarkOneQuickSearch() {
     this.applyInputColours = function () {
         if (!this.input || !this.colours) return;
         this.input.textcolor = this.lastSuccess ? this.colours.text : this.colours.errorText;
-        this.input.backcolor = this.lastSuccess ? this.colours.background : this.colours.errorBackground;
+        this.input.backcolor = this.inputBackgroundIsTransparent()
+            ? this.inheritedBackgroundColourAt(this.inputY + this.inputH / 2)
+            : (this.lastSuccess ? this.colours.background : this.colours.errorBackground);
         this.input.bordercolor = 0;
         this.input.backselectioncolor = setAlpha(this.colours.accent, 130);
     };
@@ -719,7 +877,7 @@ function DarkOneQuickSearch() {
         if (this.bordercolor) {
             gr.DrawRectangle(x - 2, y, (this.w + 4) - 1, this.h - 1, 1, this.bordercolor);
         }
-        gr.FillRectangle(x - 1, y + 1, this.w + 2, this.h - 2, this.backcolor);
+        self.paintInputBackground(gr, x - 1, y + 1, this.w + 2, this.h - 2);
 
         if (!this.drag && !this.select) {
             this.Cx = this.text.substr(this.offset, this.Cpos - this.offset).calc_width2(g_font_12);
@@ -1009,7 +1167,7 @@ function DarkOneQuickSearch() {
         // surface with the configured Normal background first so there is no
         // visually separate icon cell. The input box can still paint its Error
         // background over its own rectangle after a failed search.
-        gr.FillRectangle(0, 0, this.w, this.h, this.colours.background);
+        this.paintPanelBackground(gr);
 
         this.paintFrame(gr);
 
@@ -1029,7 +1187,7 @@ function DarkOneQuickSearch() {
                 gr.WriteTextSimple(
                     suffix,
                     g_font_12,
-                    blendColours(this.colours.text, this.colours.background, 0.65),
+                    blendColours(this.colours.text, this.input.backcolor, 0.65),
                     this.inputX + typedWidth,
                     this.inputY,
                     Math.max(1, this.inputW - typedWidth),

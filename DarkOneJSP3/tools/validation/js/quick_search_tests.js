@@ -273,11 +273,29 @@ suite("scripted Quick Search state", function () {
     ));
     assert((qs.colours.background >>> 0) === 0xff123456,
         'Quick Search Transparent normal background did not inherit the live Bottom-area custom colour');
+    qs.parentGeometryChanged('v2|600|30|203');
+    qs.parentBackgroundChanged(quickApi.Protocol.bottomArea.serialiseState(
+        quickApi.Protocol.bottomArea.state(
+            3, 0xff123456, true, 4, 0xff000000, true, 0
+        )
+    ));
+    const inheritedFills = [];
+    qs.paintInheritedBackground({FillRectangle(...args) { inheritedFills.push(args); }}, 0, 0, 504, 64);
+    assert(inheritedFills.length === 1 && typeof inheritedFills[0][4] === 'string',
+        'Quick Search Transparent background did not use an aligned gradient brush');
+    const inheritedBrush = JSON.parse(inheritedFills[0][4]);
+    assert((inheritedBrush.Stops[0][1] >>> 0) === 0xff102f4d &&
+            (inheritedBrush.Stops[1][1] >>> 0) === 0xff102d4a,
+        'Quick Search Transparent gradient did not continue at its parent-space offset');
     qs.setBackgroundColourMode('errorBackgroundMode', quickApi.Protocol.bottomArea.modes.transparent, true);
     qs.lastSuccess = false;
     qs.applyInputColours();
     assert((qs.colours.errorBackground >>> 0) === 0xff123456,
         'Quick Search Transparent error background did not inherit the live Bottom-area custom colour');
+    inheritedFills.length = 0;
+    qs.paintInputBackground({FillRectangle(...args) { inheritedFills.push(args); }}, 45, 7, 454, 50);
+    assert(inheritedFills.length === 1 && typeof inheritedFills[0][4] === 'string',
+        'Quick Search Transparent error field flattened the inherited gradient');
     const qsCommit = quickApi.Protocol.bottomArea.commit(
         'quick-sync', Date.now(), Date.now() + 50,
         quickApi.Protocol.bottomArea.state(

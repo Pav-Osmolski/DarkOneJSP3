@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Last.fm Bio"
-// @version "0.1.3"
+// @version "0.1.4"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -105,6 +105,10 @@ function on_playback_stop(reason) {
 
 function on_playlist_switch() {
 	on_item_focus_change();
+}
+
+function on_script_unload() {
+	lastfm_bio.dispose();
 }
 
 function on_size() {

@@ -1,5 +1,5 @@
-DarkOneJSP3 v1.0.23 Validation Report
-=====================================
+DarkOneJSP3 v1.1.0 Validation Report
+====================================
 
 Scope
 -----
@@ -87,10 +87,12 @@ Checks
 - Control-panel resize callbacks update existing button and volume-knob geometry
   rather than recreating interaction objects, while unchanged control and
   InfoStack fonts are retained by effective-key caches.
-- Quick Search 0.1.20 colour tests verify the shared six-mode DarkOne
+- Quick Search 0.1.21 colour tests verify the shared six-mode DarkOne
   palette, one-time migration from the previous Default/Custom background model and live
   Transparent / inherit parent resolution against Bottom-area state for both
-  Normal and Error backgrounds. The dedicated dark-red Error Default is retained.
+  Normal and Error backgrounds. They also require the full panel and input field
+  to paint the correct parent-space gradient slice and reject a return to the
+  former flat inherited-colour fill. The dedicated dark-red Error Default is retained.
   Border tests verify menu exposure, persistent Custom selection, genuinely
   borderless None painting, integer-aligned edge-strip coordinates for exact
   Enabled and Sunken edges/corners, unchanged Default shades and the derived
@@ -157,6 +159,11 @@ Checks
   native image/bitmap disposal during replacement, disabling and script unload.
   Hidden pages defer image loading and blur until their next visible paint, and
   generic panels do not allocate the inactive wallpaper submenu.
+- Combined-artwork tests exercise foreground Display toggles with collapsed
+  geometry, independent displayed-image backing, optional blur and all three
+  darkness levels, None/Solid/Sunken borders, default/custom border colours and
+  restoration of the generic page colour or wallpaper when the image backing is
+  disabled.
 - The standalone/fallback Queue Viewer retains constant-time selection lookup,
   5 ms work slices with 1 ms yields, no full-playlist handle-list allocation,
   progressive publishing and targeted removal/playback-advance refreshes.
@@ -168,9 +175,12 @@ Checks
 - InfoStack optional-button menu-state publication is change-driven: unchanged
   resizes, cancelled menus and action paths that already published their new
   state do not rewrite the runtime snapshot.
-- Main-column validation exercises all three persistent LAYOUT modes, including
-  the InfoStack | Playlist geometry, single divider, ArtSpectrum visibility and
-  the complete three-step cycle back to the standard layout.
+- Main-column validation exercises all four persistent LAYOUT modes, including
+  both Playlist-priority and InfoStack-priority InfoStack | Playlist geometries,
+  their single divider, ArtSpectrum visibility and the complete four-step cycle
+  back to the standard layout. A main-area reference-width bridge additionally
+  proves that widening InfoStack cannot change its automatic tab font or
+  tab-area height.
 - Album Art blur work is deferred until a blur-using layout paints, generated
   once per source and cancelled/disposed safely on metadata changes or unload.
 - Bottom-area state is shared through js_data\darkonejsp3.bottom-area-state.txt
@@ -291,7 +301,7 @@ Checks
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 33 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 35 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -376,16 +386,33 @@ Checks
 - Upper-divider colour controls retain established geometry and remain
   independent from the lower control-divider settings.
 - LAYOUT/SPECTRUM view-mode tests cover the standard three-column,
-  ArtSpectrum/Playlist and InfoStack/Playlist upper geometries, persistent
-  Spectrum visibility, square-leading art-only allocation, the correct
-  two-divider or one-divider painting for each mode, and synchronous
-  hide/prepare/move/show ordering that prevents intermediate native-child frames.
+  ArtSpectrum/Playlist, Playlist-priority InfoStack/Playlist and expanded
+  InfoStack/Playlist upper geometries, persistent Spectrum visibility,
+  square-leading art-only allocation, the correct two-divider or one-divider
+  painting for each mode, and synchronous hide/prepare/move/show ordering that
+  prevents intermediate native-child frames.
 - View-command bridge tests reject and acknowledge stale/malformed command files
   so the 100 ms runtime bridge cannot reread one invalid payload indefinitely.
 - Reset, Quick Search and bottom-area command tests apply the same one-observation
   retirement rule, and Quick Search accepts only its current v3 transient shape.
-- Album Art 0.1.2 tests require both Panel sizing modes and the full-height square
-  crop geometry while preserving the existing image-aspect controls.
+- Album Art 0.1.4 tests require both Panel sizing modes and the full-height square
+  crop geometry while preserving the existing image-aspect controls. Explicit
+  combined-text mode is runtime-tested without changing legacy automatic
+  AllMusic composition detection.
+- Last.fm image lifecycle tests require visible-view automatic acquisition,
+  in-flight request de-duplication, bounded 30-second retry cadence, immediate
+  active-folder refresh after a completed download, centred downloading and
+  confirmed-unavailable states, console lifecycle diagnostics and conditional
+  region collapse only for a recognisable successful empty result. Current raw
+  gallery markup must recover images when DOM conversion yields no nodes, while
+  an unrecognised successful response remains retryable and cannot be marked
+  unavailable. Tests also require hidden-panel timer suspension,
+  completed-request map cleanup and idempotent interval/Direct2D resource
+  disposal.
+- Combined Last.fm Biography and Album Notes entry contracts require complete
+  metadata, enhanced page backgrounds, reset routing, collapsible bounded layout
+  geometry, shared appearance menus and disposal of both their text and artwork
+  objects.
 - Bottom-area runtime tests isolate the JScript Panel and JSplitter notification
   domains, verify file-backed synchronisation for all three child panels and the
   host, cover every palette mode, transparent painting, full-host geometry,

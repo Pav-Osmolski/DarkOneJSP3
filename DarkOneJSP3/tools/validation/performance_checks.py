@@ -191,7 +191,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.20"',
+            '// @version "0.1.21"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',
@@ -219,6 +219,8 @@ def run(ctx: ValidationContext) -> None:
             'Tag definitions, history and favourites are user data',
             'var QS_BACKGROUND_PROTOCOL = DarkOneProtocol.bottomArea;',
             'this.parentBackgroundChanged = function (data)',
+            'this.parentGeometryChanged = function (data)',
+            'this.paintInheritedBackground = function (gr, x, y, width, height)',
             'this.resolveSharedBackground = function (mode, customColour, columnsUiBackground, inheritedBackground, allowErrorDefault)',
             'QS_ERROR_BACKGROUND_DEFAULT',
             "borderMode: Math.round(quickSearchClamp(window.GetProperty('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE'",
@@ -300,7 +302,7 @@ def run(ctx: ValidationContext) -> None:
         body = text(albumart_source)
         for token in [
             'this.ensure_blur = function ()',
-            'if (this.is_review_panel)\n\t\t\tthis.ensure_blur();',
+            'if (this.is_review_panel && (!this.appearance || this.appearance.wants_blur()))\n\t\t\tthis.ensure_blur();',
             'this.cancel_blur_generation = function ()',
             'this.blur_source = img;',
             'source.StackBlur(120);',

@@ -18,9 +18,21 @@ var JSP3_ENHANCED_RESET_REGISTRY = {
             "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc,
             "DARKONEJSP3.PAGE.WALLPAPER.MODE": 0,
             "DARKONEJSP3.PAGE.WALLPAPER.PATH": "",
-            "DARKONEJSP3.PAGE.WALLPAPER.BLURRED": false
+            "DARKONEJSP3.PAGE.WALLPAPER.BLURRED": false,
+            "2K3.LASTFM.BIO.IMAGES.DISPLAY": true,
+            "2K3.LASTFM.BIO.IMAGES.BACKGROUND.ENABLED": true,
+            "2K3.LASTFM.BIO.IMAGES.BACKGROUND.BLURRED": true,
+            "2K3.LASTFM.BIO.IMAGES.BACKGROUND.DARKNESS": 1,
+            "2K3.LASTFM.BIO.IMAGES.BORDER.STYLE": 1,
+            "2K3.LASTFM.BIO.IMAGES.BORDER.COLOUR.MODE": 0,
+            "2K3.LASTFM.BIO.IMAGES.BORDER.COLOUR.CUSTOM": 0xff969696,
+            "2K3.LASTFM.BIO.IMAGES.HIDE.IF.NO.IMAGES": false,
+            "2K3.IMAGES.LAYOUT": 0,
+            "2K3.IMAGES.RATIO": 0.5
         },
-        behaviour: {}
+        behaviour: {
+            "2K3.IMAGES.AUTO.DOWNLOAD": true
+        }
     },
     "lastfm-info": {
         appearance: {
@@ -124,7 +136,16 @@ var JSP3_ENHANCED_RESET_REGISTRY = {
             "DARKONEJSP3.PAGE.TEXT.CUSTOM.COLOUR": 0xffdcdcdc,
             "DARKONEJSP3.PAGE.WALLPAPER.MODE": 0,
             "DARKONEJSP3.PAGE.WALLPAPER.PATH": "",
-            "DARKONEJSP3.PAGE.WALLPAPER.BLURRED": false
+            "DARKONEJSP3.PAGE.WALLPAPER.BLURRED": false,
+            "2K3.ALBUM.NOTES.ART.DISPLAY": true,
+            "2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED": true,
+            "2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED": true,
+            "2K3.ALBUM.NOTES.ART.BACKGROUND.DARKNESS": 1,
+            "2K3.ALBUM.NOTES.ART.BORDER.STYLE": 1,
+            "2K3.ALBUM.NOTES.ART.BORDER.COLOUR.MODE": 0,
+            "2K3.ALBUM.NOTES.ART.BORDER.COLOUR.CUSTOM": 0xff969696,
+            "2K3.ARTREADER.LAYOUT": 0,
+            "2K3.ARTREADER.RATIO": 0.5
         },
         behaviour: {
             "DARKONEJSP3.ALBUM.NOTES.APPLE.STOREFRONT": "gb",

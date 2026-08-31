@@ -69,8 +69,9 @@ JSplitter loader and controller assignments
 Optional control-panel commands
 -------------------------------
 - DarkOneJSP3/Layout/Toggle, normally labelled LAYOUT, cycles through
-  InfoStack | ArtSpectrum | Playlist, ArtSpectrum | Playlist and
-  InfoStack | Playlist. The selected layout persists.
+  InfoStack | ArtSpectrum | Playlist, ArtSpectrum | Playlist,
+  InfoStack | Playlist (Playlist priority) and Expanded InfoStack | Playlist
+  (InfoStack priority). The selected layout persists.
 - DarkOneJSP3/Visualiser/Toggle, normally labelled SPECTRUM, toggles the
   spectrum panel.
 - DarkOneJSP3/InfoStack/Menu, normally labelled INFOSTACK, opens the locally

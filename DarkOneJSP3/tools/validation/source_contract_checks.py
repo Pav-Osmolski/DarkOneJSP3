@@ -27,8 +27,10 @@ def run(ctx: ValidationContext) -> None:
             if (sample_defaults_import in body) != (sample_bridge_import in body):
                 errors.append(rel(entry) + ' imports only half of the standalone reset bridge')
     expected_reset_entries = {
+        'Album Notes + Album Art.txt',
         'Album Notes.txt',
         'Last.fm Artist Info + User Info.txt',
+        'Last.fm Bio + Images.txt',
         'Last.fm Bio.txt',
         'MusicBrainz.txt',
         'JS Playlist.txt',
@@ -218,15 +220,19 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Generic panels eagerly allocate the inactive wallpaper submenu')
 
     page_background_entries = {
+        samples / 'Last.fm Bio + Images.txt': 'lastfm-bio',
         samples / 'Last.fm Bio.txt': 'lastfm-bio',
         samples / 'Last.fm Artist Info + User Info.txt': 'lastfm-info',
+        samples / 'Album Notes + Album Art.txt': 'album-notes',
         samples / 'Album Notes.txt': 'album-notes',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': 'queue-viewer',
         samples / 'Properties.txt': 'properties',
     }
     page_background_versions = {
-        samples / 'Last.fm Bio.txt': '0.1.3',
+        samples / 'Last.fm Bio + Images.txt': '0.1.7',
+        samples / 'Last.fm Bio.txt': '0.1.4',
         samples / 'Last.fm Artist Info + User Info.txt': '0.1.3',
+        samples / 'Album Notes + Album Art.txt': '0.6.11',
         samples / 'Album Notes.txt': '0.6.10',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.6',
         samples / 'Properties.txt': '0.1.3',
@@ -301,6 +307,7 @@ def run(ctx: ValidationContext) -> None:
 
     redundant_network_import = '%fb2k_component_path%samples\\js\\darkone_network.js'
     for entry in [
+        samples / 'Album Notes + Album Art.txt',
         samples / 'Album Notes.txt',
         samples / 'MusicBrainz.txt',
         samples / 'Allmusic Review.txt',
@@ -442,6 +449,24 @@ def run(ctx: ValidationContext) -> None:
                         '"DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR": 0xff303030']:
                     if token not in block:
                         errors.append('Queue Viewer selected-background reset default is missing: ' + token)
+            if role == 'lastfm-bio':
+                for token in [
+                        '"2K3.LASTFM.BIO.IMAGES.DISPLAY": true',
+                        '"2K3.LASTFM.BIO.IMAGES.BACKGROUND.ENABLED": true',
+                        '"2K3.LASTFM.BIO.IMAGES.BACKGROUND.BLURRED": true',
+                        '"2K3.LASTFM.BIO.IMAGES.BORDER.STYLE": 1',
+                        '"2K3.LASTFM.BIO.IMAGES.HIDE.IF.NO.IMAGES": false',
+                        '"2K3.IMAGES.AUTO.DOWNLOAD": true']:
+                    if token not in block:
+                        errors.append('Last.fm Bio + Images reset default is missing: ' + token)
+            if role == 'album-notes':
+                for token in [
+                        '"2K3.ALBUM.NOTES.ART.DISPLAY": true',
+                        '"2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED": true',
+                        '"2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED": true',
+                        '"2K3.ALBUM.NOTES.ART.BORDER.STYLE": 1']:
+                    if token not in block:
+                        errors.append('Album Notes + Album Art reset default is missing: ' + token)
 
     album_notes = samples / 'Album Notes.txt'
     if album_notes.exists():
@@ -457,7 +482,7 @@ def run(ctx: ValidationContext) -> None:
         album_art_body = text(album_art_entry)
         for token in [
             '// @name "Album Art - Enhanced"',
-            '// @version "0.1.2"',
+            '// @version "0.1.4"',
             '// @author "marc2003 / DeViLhoOD"',
             'albumart.dispose();',
         ]:
@@ -494,6 +519,103 @@ def run(ctx: ValidationContext) -> None:
     allmusic_art_entry = samples / 'Allmusic Review + Album Art.txt'
     if allmusic_art_entry.exists() and '// @version "0.6.4"' not in text(allmusic_art_entry):
         errors.append('AllMusic + Album Art entry version is not 0.6.4')
+
+    album_notes_art_entry = samples / 'Album Notes + Album Art.txt'
+    if album_notes_art_entry.exists():
+        album_notes_art_body = text(album_notes_art_entry)
+        for token in [
+            '// @name "Album Notes + Album Art - Enhanced"',
+            '// @version "0.6.11"',
+            '// @author "marc2003 / DeViLhoOD"',
+            "new _combined_artwork('2K3.ALBUM.NOTES.ART', 'Display album art'",
+            'appearance : albumart_appearance',
+            'enhanced_page_background : true',
+            'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])',
+            'albumart.paint_background(gr);',
+            'albumart.dispose();',
+            'album_notes.dispose();',
+            'if (!albumart_appearance.displayed())',
+            'Math.max(1, Math.min(Math.round(panel.w * albumart.properties.ratio.value), available_w))',
+        ]:
+            if token not in album_notes_art_body:
+                errors.append('Album Notes + Album Art entry is missing: ' + token)
+
+    lastfm_bio_images_entry = samples / 'Last.fm Bio + Images.txt'
+    if lastfm_bio_images_entry.exists():
+        lastfm_bio_images_body = text(lastfm_bio_images_entry)
+        for token in [
+            '// @name "Last.fm Bio + Images - Enhanced"',
+            '// @version "0.1.7"',
+            '// @author "marc2003 / DeViLhoOD"',
+            "new _combined_artwork('2K3.LASTFM.BIO.IMAGES', 'Display images'",
+            'enhanced_page_background : true',
+            'images.download_file_done(path, success, error_text);',
+            'jsp3EnhancedHandleSampleReset(name, data, "lastfm-bio")',
+            'images.dispose();',
+            'lastfm_bio.dispose();',
+            'if (!images.region_visible())',
+            "'Hide if no images available'",
+            'Math.max(1, Math.min(Math.round(panel.w * images.properties.ratio.value), available_w))',
+        ]:
+            if token not in lastfm_bio_images_body:
+                errors.append('Last.fm Bio + Images entry is missing: ' + token)
+
+    images_impl = samples / 'js' / 'images.js'
+    if images_impl.exists():
+        images_body = text(images_impl)
+        for token in [
+            'this.interval_id = window.SetInterval(this.interval_func, 1000);',
+            'window.ClearInterval(this.interval_id);',
+            'this.disposed = true;',
+            'delete this.artists[id];',
+            'this.download_file_done = function (path, success, error_text)',
+            'window.IsVisible === false',
+            'this.maybe_auto_download = function ()',
+            'this.auto_download_retry_ms = 30000;',
+            'this.auto_download_attempt_limit = 3;',
+            'this.automatic_tasks[task_id] = artist;',
+            "return 'Downloading images...';",
+            "return 'No images available';",
+            "'Last.fm page could not be read - retrying...'",
+            'this.extract_image_urls = function (response_text)',
+            "state.last_error = 'unreadable-page';",
+            "' (raw-markup fallback recovered '",
+            'this.region_visible = function ()',
+            "hide_if_no_images : new _p('2K3.LASTFM.BIO.IMAGES.HIDE.IF.NO.IMAGES', false)",
+            "'[Last.fm images] '",
+            'this.reset_image();',
+        ]:
+            if token not in images_body:
+                errors.append('Images lifecycle hardening is missing: ' + token)
+
+    combined_artwork_impl = samples / 'js' / 'combined_artwork.js'
+    if combined_artwork_impl.exists():
+        combined_artwork_body = text(combined_artwork_impl)
+        for token in [
+            "var COMBINED_ARTWORK_VERSION = '0.1.0';",
+            "'Use displayed image as background'",
+            "'Blur image background'",
+            "'Image border'",
+            "'Sunken'",
+            'this.paint_background = function (gr, normal, blur, ensure_blur)',
+            'this.paint_border = function (gr, rect)',
+            "DarkOneColour.pickJscript(",
+            "display : new _p(property_prefix + '.DISPLAY', true)",
+        ]:
+            if token not in combined_artwork_body:
+                errors.append('Combined-artwork appearance helper is missing: ' + token)
+
+    lastfm_bio_impl = samples / 'js' / 'lastfm_bio.js'
+    if lastfm_bio_impl.exists():
+        lastfm_bio_body = text(lastfm_bio_impl)
+        for token in [
+            'if (this.disposed || !path || path.toLowerCase() != this.filename.toLowerCase())',
+            'delete this.filenames[id];',
+            'this.dispose = function ()',
+            'this.clear_layout();',
+        ]:
+            if token not in lastfm_bio_body:
+                errors.append('Last.fm Biography lifecycle hardening is missing: ' + token)
 
     allmusic_impl = samples / 'js' / 'allmusic.js'
     album_notes_impl = samples / 'js' / 'album_notes.js'
@@ -1221,7 +1343,11 @@ def run(ctx: ValidationContext) -> None:
             'function automaticFontScale()',
             'DOJSP3.clamp(value, 50, 200)',
             'baseSize * automaticFontScale() / 100',
-            'var baseGap = DOJSP3.idiv(ww, 40);',
+            "var INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION = 'DarkOneJSP3.InfoStack.MainAreaWidth';",
+            'function automaticReferenceWidth()',
+            'DOJSP3.idiv(mainAreaWidth, 3) - px',
+            'var baseGap = DOJSP3.idiv(automaticReferenceWidth(), 40);',
+            'if (name === INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION)',
             'var gapScale = fixedFontSize > 0 ? 100 : automaticFontScale();',
             'baseGap * gapScale / 100',
             "'Set automatic base scale... (' + automaticFontScale() + '%)'",
@@ -1303,8 +1429,14 @@ def run(ctx: ValidationContext) -> None:
             "var MAIN_LAYOUT_MODE_PROPERTY = 'DARKONEJSP3.MAIN.LAYOUT.MODE';",
             'MAIN_LAYOUT_ART_PLAYLIST',
             'MAIN_LAYOUT_INFO_PLAYLIST',
+            'MAIN_LAYOUT_INFO_PRIORITY',
+            "var INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION = 'DarkOneJSP3.InfoStack.MainAreaWidth';",
+            'window.NotifyOthers(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));',
             'dividerPositions: [artWidth]',
             'mode: MAIN_LAYOUT_INFO_PLAYLIST',
+            'mode: MAIN_LAYOUT_INFO_PRIORITY',
+            'geometry.mode !== MAIN_LAYOUT_INFO_PRIORITY',
+            '? MAIN_LAYOUT_INFO_PRIORITY',
             'positions: geometry.dividerPositions',
             'gr.FillSolidRect(metrics.positions[i], 0, metrics.width, wh, colour);',
             'DarkOneViewBridge.commands.layoutToggle',
@@ -1462,8 +1594,9 @@ def run(ctx: ValidationContext) -> None:
             'gr.FillSolidRect(0, 0, ww, 1, 0xff000000);',
             'gr.FillSolidRect(0, 1, ww, 1, 0xff0f0f0f);',
             'Math.min(2, Math.max(0, wh - 2))',
-            'function publishBottomAreaGeometry(height, displayTop)',
-            'publishBottomAreaGeometry(wh, displayTop);',
+            "var BOTTOM_AREA_GEOMETRY_VERSION = 'v2';",
+            'function publishBottomAreaGeometry(height, displayTop, quickSearchTop)',
+            'publishBottomAreaGeometry(wh, displayTop, qsY);',
             'DOJSP3.colours.separator',
             'if (state.sideDividersVisible &&',
             'state.dividerMode !== BOTTOM_AREA_PROTOCOL.modes.transparent)',
@@ -1908,8 +2041,10 @@ def run(ctx: ValidationContext) -> None:
                 errors.append(rel(path) + ' retains duplicate JSplitter protocol code: ' + duplicate)
 
     standalone_colour_entries = [
+        samples / 'Last.fm Bio + Images.txt',
         samples / 'Last.fm Bio.txt',
         samples / 'Last.fm Artist Info + User Info.txt',
+        samples / 'Album Notes + Album Art.txt',
         samples / 'Album Notes.txt',
         samples / 'Properties.txt',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt',

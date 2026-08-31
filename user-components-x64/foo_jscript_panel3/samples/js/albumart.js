@@ -1,10 +1,12 @@
-function _albumart(x, y, w, h) {
+function _albumart(x, y, w, h, options) {
+	options = options || {};
+	this.appearance = options.appearance || null;
 	this.want_blur = function () {
 		if (panel.display_objects.length) {
 			var properties = panel.display_objects[0].properties;
 			return properties.albumart.enabled && properties.albumart_blur.enabled;
 		} else {
-			return this.is_review_panel;
+			return this.is_review_panel && (!this.appearance || this.appearance.wants_blur());
 		}
 	}
 
@@ -265,18 +267,33 @@ function _albumart(x, y, w, h) {
 		// Legacy saved AllMusic review entries call albumart.paint() but do not
 		// explicitly request the deferred blur introduced in v0.1.1. Keep that
 		// path compatible by treating review-panel painting as blur demand.
-		if (this.is_review_panel)
+		if (this.is_review_panel && (!this.appearance || this.appearance.wants_blur()))
 			this.ensure_blur();
 
 		if (!this.bitmap.normal)
 			return;
 
 		if (this.is_review_panel) {
-			_drawImage(gr, this.bitmap.normal, this.x, this.y, this.w, this.h, this.properties.aspect.value == image.full ? image.full_top_align : this.properties.aspect.value, 1.0, RGB(150, 150, 150));
+			if (this.appearance && !this.appearance.displayed())
+				return;
+			var rect = _drawImage(gr, this.bitmap.normal, this.x, this.y, this.w, this.h, this.properties.aspect.value == image.full ? image.full_top_align : this.properties.aspect.value, 1.0, this.appearance ? null : RGB(150, 150, 150));
+			if (this.appearance)
+				this.appearance.paint_border(gr, rect);
 		} else {
 			var rect = this.square_rect();
 			_drawImage(gr, this.bitmap.normal, rect.x, rect.y, rect.w, rect.h, this.properties.aspect.value);
 		}
+	}
+
+	this.paint_background = function (gr) {
+		if (!this.appearance)
+			return false;
+		return this.appearance.paint_background(
+			gr,
+			this.bitmap.normal,
+			this.bitmap.blur,
+			_.bind(this.ensure_blur, this)
+		);
 	}
 
 	this.reset_images = function () {
@@ -305,6 +322,8 @@ function _albumart(x, y, w, h) {
 			panel.m.AppendMenuItem(MF_STRING, 1001, 'Album Art top, Text bottom');
 			panel.m.CheckMenuRadioItem(1000, 1001, this.properties.layout.value + 1000);
 			panel.m.AppendMenuSeparator();
+			if (this.appearance)
+				this.appearance.append_menu(panel.m);
 		}
 
 		panel.m.AppendMenuItem(MF_STRING, 1002, 'Refresh');
@@ -354,6 +373,9 @@ function _albumart(x, y, w, h) {
 	}
 
 	this.rbtn_up_done = function (idx) {
+		if (this.appearance && this.appearance.handle_menu(idx))
+			return;
+
 		switch (idx) {
 		case 1000:
 		case 1001:
@@ -420,7 +442,7 @@ function _albumart(x, y, w, h) {
 		return this.cycle_artwork(s, true);
 	}
 
-	this.is_review_panel = panel.text_objects.length == 1 && panel.text_objects[0].name == 'allmusic';
+	this.is_review_panel = options.review_panel === true || (panel.text_objects.length == 1 && panel.text_objects[0].name == 'allmusic');
 
 	this.x = x;
 	this.y = y;

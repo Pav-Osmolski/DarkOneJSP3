@@ -35,7 +35,7 @@ var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
 var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
 var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
 var BOTTOM_AREA_GEOMETRY_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-geometry.txt';
-var BOTTOM_AREA_GEOMETRY_VERSION = 'v1';
+var BOTTOM_AREA_GEOMETRY_VERSION = 'v2';
 var BOTTOM_AREA_GEOMETRY_QUERY = 'DarkOneJSP3.BottomArea.Geometry.Query';
 var BOTTOM_AREA_GEOMETRY_STATE = 'DarkOneJSP3.BottomArea.Geometry.State';
 var BOTTOM_AREA_COMMIT_POLL_MS = 25;
@@ -62,6 +62,7 @@ var QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.LI
 var bottomAreaGeometrySnapshot = '';
 var bottomAreaGeometryHeight = 1;
 var bottomAreaGeometryDisplayTop = 0;
+var bottomAreaGeometryQuickSearchTop = 0;
 
 function bottomAreaState() {
     return BOTTOM_AREA_PROTOCOL.state(
@@ -184,10 +185,16 @@ function removeRuntimeCommandFile(path, label) {
     return false;
 }
 
-function serialiseBottomAreaGeometry(height, displayTop) {
+function serialiseBottomAreaGeometry(height, displayTop, quickSearchTop) {
     height = Math.max(1, Math.round(Number(height)) || 1);
     displayTop = DOJSP3.clamp(Math.round(Number(displayTop)) || 0, 0, height - 1);
-    return BOTTOM_AREA_GEOMETRY_VERSION + '|' + String(height) + '|' + String(displayTop);
+    quickSearchTop = DOJSP3.clamp(
+        Math.round(Number(quickSearchTop)) || 0,
+        0,
+        height - 1
+    );
+    return BOTTOM_AREA_GEOMETRY_VERSION + '|' + String(height) + '|' +
+        String(displayTop) + '|' + String(quickSearchTop);
 }
 
 function broadcastBottomAreaGeometry() {
@@ -196,17 +203,19 @@ function broadcastBottomAreaGeometry() {
             BOTTOM_AREA_GEOMETRY_STATE,
             serialiseBottomAreaGeometry(
                 bottomAreaGeometryHeight,
-                bottomAreaGeometryDisplayTop
+                bottomAreaGeometryDisplayTop,
+                bottomAreaGeometryQuickSearchTop
             )
         );
     } catch (e) {}
 }
 
-function publishBottomAreaGeometry(height, displayTop) {
-    var serialised = serialiseBottomAreaGeometry(height, displayTop);
+function publishBottomAreaGeometry(height, displayTop, quickSearchTop) {
+    var serialised = serialiseBottomAreaGeometry(height, displayTop, quickSearchTop);
     var parts = serialised.split('|');
     bottomAreaGeometryHeight = Number(parts[1]);
     bottomAreaGeometryDisplayTop = Number(parts[2]);
+    bottomAreaGeometryQuickSearchTop = Number(parts[3]);
     if (serialised !== bottomAreaGeometrySnapshot) {
         if (tryWriteRuntimeFile(
                 BOTTOM_AREA_GEOMETRY_FILE,
@@ -706,10 +715,6 @@ function layoutBottomControls() {
         0,
         Math.max(0, wh - displayHeight)
     );
-    // Publish the owning host's coordinate space before moving any nested
-    // child. Each opaque child then paints only its matching slice of this
-    // single gradient instead of restarting a second gradient locally.
-    publishBottomAreaGeometry(wh, displayTop);
     var displayLeft = DOJSP3.clamp(
         DOJSP3.idiv(ww - panelWidth, 2),
         0,
@@ -720,6 +725,11 @@ function layoutBottomControls() {
     qsY = quickSearchTop;
     qsW = Math.min(Math.max(1, quickSearchOuterWidth), Math.max(1, ww - qsX));
     qsH = Math.min(Math.max(1, quickSearchHeight), Math.max(1, wh - qsY));
+
+    // Publish the owning host's coordinate space before moving any nested
+    // child. Each opaque child then paints only its matching slice of this
+    // single gradient instead of restarting a second gradient locally.
+    publishBottomAreaGeometry(wh, displayTop, qsY);
 
     DOJSP3.move(left, 0, 0, sideWidth, leftHeight);
     DOJSP3.move(quickSearch,

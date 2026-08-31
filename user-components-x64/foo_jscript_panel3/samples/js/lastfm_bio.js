@@ -11,6 +11,9 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.download_file_done = function (path, success, error_text) {
+		if (this.disposed || !path || path.toLowerCase() != this.filename.toLowerCase())
+			return;
+
 		if (success) {
 			this.reset();
 			this.metadb_changed();
@@ -20,12 +23,15 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.font_changed = function () {
+		if (this.disposed)
+			return;
+
 		this.reset();
 		this.metadb_changed();
 	}
 
 	this.get = function () {
-		if (lastfm.api_key.empty() || !_tagged(this.artist))
+		if (this.disposed || lastfm.api_key.empty() || !_tagged(this.artist))
 			return;
 
 		var url = lastfm.base_url() + '&method=artist.getInfo&autocorrect=1&lang=' + this.langs[this.properties.lang.value] + '&artist=' + encodeURIComponent(this.artist);
@@ -33,7 +39,7 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.get_extra = function () {
-		if (!_tagged(this.artist))
+		if (this.disposed || !_tagged(this.artist))
 			return;
 
 		var url = 'https://www.last.fm/music/' + encodeURIComponent(this.artist);
@@ -52,6 +58,11 @@ function _lastfm_bio(x, y, w, h) {
 		var filename = this.filenames[id];
 
 		if (!filename)
+			return;
+
+		delete this.filenames[id];
+
+		if (this.disposed)
 			return;
 
 		if (!success) {
@@ -138,6 +149,9 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.metadb_changed = function () {
+		if (this.disposed)
+			return;
+
 		if (panel.metadb) {
 			var str = '';
 
@@ -335,6 +349,15 @@ function _lastfm_bio(x, y, w, h) {
 		this.text = this.artist = this.filename = '';
 	}
 
+	this.dispose = function () {
+		if (this.disposed)
+			return;
+
+		this.disposed = true;
+		this.clear_layout();
+		this.filenames = {};
+	}
+
 	this.size = function () {
 		this.ha = this.h - _scale(24);
 		this.up_btn.x = this.x + Math.round((this.w - _scale(12)) / 2);
@@ -393,6 +416,7 @@ function _lastfm_bio(x, y, w, h) {
 	this.my = 0;
 	this.offset = 0;
 	this.text = '';
+	this.disposed = false;
 
 	this.artist = '';
 	this.filename = '';

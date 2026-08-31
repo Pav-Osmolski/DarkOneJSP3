@@ -116,8 +116,9 @@ the current artwork palette.
 Background Wallpaper
 ~~~~~~~~~~~~~~~~~~~~
 
-Available on Biography, Last.fm, Album Notes, Properties and the recommended
-scripted Queue Viewer. Each panel instance stores its wallpaper independently.
+Available on Biography, Last.fm Biography, Album Notes, Properties, the two
+combined image layouts and the recommended scripted Queue Viewer. Each panel
+instance stores its wallpaper independently.
 
 Choices:
 - None (default)
@@ -137,6 +138,53 @@ during the intermediate stop between tracks and are released when playback
 fully stops, the wallpaper is disabled, the source is replaced or the panel is
 unloaded. Hidden InfoStack pages defer image loading and blur until they next
 become visible.
+
+Combined image layouts
+~~~~~~~~~~~~~~~~~~~~~~
+
+Last.fm Bio + Images and Album Notes + Album Art add controls for their displayed
+artwork before the content-specific commands:
+
+- Display images / Display album art shows or hides the foreground image. When
+  hidden, its complete region is returned to the text rather than left empty.
+- Image background > Use displayed image as background independently draws the
+  current artist or album image across the panel. Disable it to reveal the
+  selected page colour or Background Wallpaper.
+- Image background > Blur image background controls blur; Light, Medium and Dark
+  select the backing-image shade.
+- Image border selects None, Solid or Sunken. Default colour uses grey; Custom
+  colour reapplies the remembered choice; Set custom colour... opens the picker.
+
+Right-click the text region to restore a hidden foreground image. Right-click
+the image region for layout/orientation and image-specific commands. Ctrl+wheel
+over either region changes the image-to-text ratio.
+
+Last.fm Bio + Images also provides Download now and Automatic downloads. With
+Automatic downloads enabled, a visible panel using Prefer now playing requests
+the playing artist when its local folder is empty. One request may be active at
+a time, and failed or empty attempts use a maximum of three tries separated by
+at least 30 seconds. Download now bypasses that waiting period; clicking it
+again while the same artist request is active does not start a duplicate.
+
+Before acquisition begins, an empty local folder is labelled `No images
+downloaded`. While a Last.fm page or image-file request is active, the empty
+image region centres `Downloading images...`. A temporary request or file
+failure remains visible with a retry/error message, while a successful Last.fm
+response with no usable images is reported as `No images available`. The
+JScript Panel console records request starts, returned image counts, queued and
+saved files, failures and the completion summary.
+
+The downloader reads the normal Last.fm gallery structure first and can recover
+current gallery URLs directly from the raw page markup if JScript Panel's DOM
+conversion returns no usable nodes. A successful request that contains neither
+a recognised gallery nor a confirmed-empty marker is labelled `Last.fm page
+could not be read` and remains distinct from `No images available`.
+
+Hide if no images available appears immediately below Download now. When
+enabled, it returns the image region to the biography only after Last.fm has
+successfully confirmed that no usable artist images are present. It does not
+collapse the region for a network or parsing failure. Download now reveals the
+region again while the manual retry is active.
 
 Selection mode
 ~~~~~~~~~~~~~~
@@ -197,7 +245,13 @@ limited to ten characters so they remain within the intended button area.
 DarkOneJSP3 internal view commands:
 - LAYOUT: `DarkOneJSP3/Layout/Toggle`
   Cycles the upper main area through InfoStack | ArtSpectrum | Playlist,
-  ArtSpectrum | Playlist and InfoStack | Playlist. The selected mode persists.
+  ArtSpectrum | Playlist, InfoStack | Playlist (Playlist priority) and
+  Expanded InfoStack | Playlist (InfoStack priority). In the first two-column
+  InfoStack mode, InfoStack keeps its standard left-column width and Playlist
+  consumes the remainder. In the second, Playlist keeps its standard right-
+  column width and InfoStack consumes the remainder. Only horizontal allocation
+  changes: InfoStack retains the same tab font, tab-area height and content
+  height. The selected mode persists.
 - SPECTRUM: `DarkOneJSP3/Visualiser/Toggle`
   Toggles DOJSP3.Spectrum. When hidden, Album Art receives the complete
   ArtSpectrum host. The selected mode persists.
@@ -363,8 +417,10 @@ from its chosen colour at the top to a colour 30% less bright at the bottom.
 Nested JScript and JSplitter surfaces sample the same full-height gradient
 coordinates instead of restarting the gradient within their own bounds, so
 their edges remain visually seamless. The effect does not alter Bottom area
-depth, the Bottom area side divider colour or Quick Search's independent frame
-and background settings.
+depth, the Bottom area side divider colour or Quick Search's independent frame.
+Quick Search backgrounds remain independent when an explicit colour is chosen;
+either Quick Search background set to Transparent / inherit parent reproduces
+the matching slice of this gradient.
 
 Bottom side dividers
 - Enabled (default)
@@ -575,11 +631,10 @@ Choices:
 
 Custom colour reapplies the remembered value immediately; Set custom colour...
 opens the native picker. The three-column layout uses both upper dividers,
-including when Spectrum is hidden. ArtSpectrum | Playlist and InfoStack |
-Playlist each use one divider between their two visible panels. Transparent
-removes explicit divider fill while preserving the reserved alignment. The
-lower control-panel dividers are unaffected. The lower control-panel dividers
-remain independently configured.
+including when Spectrum is hidden. ArtSpectrum | Playlist and both InfoStack |
+Playlist width priorities use one divider between their two visible panels.
+Transparent removes explicit divider fill while preserving the reserved
+alignment. The lower control-panel dividers remain independently configured.
 
 Enhanced Spectrum Analyser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1171,8 +1226,11 @@ quicksearch.png in the theme images folder, then reopen the context menu.
 
 Transparent / inherit parent for either Quick Search background follows the
 effective shared Bottom area background, including live Black, DarkOne grey,
-DarkOne dark grey, Columns UI and Custom changes. Error background keeps its
-dedicated dark-red Default as a separate option.
+DarkOne dark grey, Columns UI and Custom changes. When Background linear
+gradient is enabled, Quick Search paints its exact parent-space slice through
+both the full panel and the input field instead of reducing the inherited
+surface to a flat colour. Error background keeps its dedicated dark-red Default
+as a separate option.
 
 The Border colour applies when Frame is Enabled or Sunken. Default preserves
 the original grey Enabled and two-tone Sunken shades. Custom uses the chosen
@@ -1539,6 +1597,30 @@ Information-page controls (stored independently by each panel instance)
   DARKONEJSP3.PAGE.WALLPAPER.BLURRED
   2K3.PANEL.FONTS.SIZE
   2K3.PANEL.SELECTION
+
+Last.fm Bio + Images
+  2K3.LASTFM.BIO.IMAGES.DISPLAY
+  2K3.LASTFM.BIO.IMAGES.BACKGROUND.ENABLED
+  2K3.LASTFM.BIO.IMAGES.BACKGROUND.BLURRED
+  2K3.LASTFM.BIO.IMAGES.BACKGROUND.DARKNESS
+  2K3.LASTFM.BIO.IMAGES.BORDER.STYLE
+  2K3.LASTFM.BIO.IMAGES.BORDER.COLOUR.MODE
+  2K3.LASTFM.BIO.IMAGES.BORDER.COLOUR.CUSTOM
+  2K3.LASTFM.BIO.IMAGES.HIDE.IF.NO.IMAGES
+  2K3.IMAGES.AUTO.DOWNLOAD
+  2K3.IMAGES.LAYOUT
+  2K3.IMAGES.RATIO
+
+Album Notes + Album Art
+  2K3.ALBUM.NOTES.ART.DISPLAY
+  2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED
+  2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED
+  2K3.ALBUM.NOTES.ART.BACKGROUND.DARKNESS
+  2K3.ALBUM.NOTES.ART.BORDER.STYLE
+  2K3.ALBUM.NOTES.ART.BORDER.COLOUR.MODE
+  2K3.ALBUM.NOTES.ART.BORDER.COLOUR.CUSTOM
+  2K3.ARTREADER.LAYOUT
+  2K3.ARTREADER.RATIO
 
 Playlist scrolling
   JSPLAYLIST.Enable Smooth Scrolling

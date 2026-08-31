@@ -54,6 +54,47 @@ Compatibility design
   queue bridge, while the component sample retains no project-folder runtime
   dependency.
 
+Combined image layouts
+----------------------
+Last.fm Bio + Images.txt combines the hardened Last.fm Biography with downloaded
+artist imagery. Its visible playing-artist view starts automatic acquisition
+whenever artwork is needed, de-duplicates an active request and retries at a
+bounded cadence. Successful downloads refresh the active artist immediately;
+hidden panels skip periodic image work, and unload releases the image-cycle
+timer, pending request maps and Direct2D bitmaps. Until an image is available,
+the image region reports downloading, retry/error or confirmed-unavailable
+status at its centre. Request, result, queue, file and completion diagnostics are
+written to the JScript Panel console.
+
+Gallery extraction supports the normal DOM path plus a raw-markup fallback for
+current Last.fm image pages. An unrecognised response, such as a verification or
+truncated page, is reported as unreadable and remains retryable rather than being
+misclassified as an artist with no images.
+
+Album Notes + Album Art.txt combines the consolidated Album Notes providers with
+the current album artwork. It preserves Album Notes source selection, caching,
+MusicBrainz views and diagnostics while reusing Album Art's deferred blur and
+resource-lifecycle implementation.
+
+In both entries, right-click the image region to select a left/right or
+top/bottom layout. Ctrl+wheel changes the image-to-text ratio. Ordinary wheel
+input scrolls the text or cycles images when the pointer is over the relevant
+region.
+
+Both entries expose the enhanced Colours and Background Wallpaper menus. Their
+Image background submenu independently enables the displayed artwork as the
+full-panel backing, selects blur and Light/Medium/Dark shading, or disables it
+to reveal the configured page colour or generic wallpaper. Display images or
+Display album art hides the foreground image and collapses its region instead
+of leaving empty space; right-clicking the text region still exposes the control
+when it is hidden. Image border selects None, Solid or Sunken treatment and a
+default or custom colour.
+
+Last.fm Bio + Images places Hide if no images available directly below Download
+now. When enabled, it collapses the image region only after a successful Last.fm
+response confirms there are no usable images; network and parsing failures stay
+visible, and a manual retry restores the region while it is in progress.
+
 DarkOneJSP3 integration
 -----------------------
 DarkOneJSP3 uses these same standalone samples. Its project-specific code adds

@@ -1,5 +1,5 @@
-DarkOneJSP3 v1.0.23
-===================
+DarkOneJSP3 v1.1.0
+==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
 JScript Panel 2.8.8 build. It preserves the DarkOne layout and visual identity while replacing the
@@ -96,8 +96,9 @@ Current highlights
   history/favourites, multiple search/result modes, protected reusable Standard
   results playlists and configurable text, background and border colours.
 - Optional LAYOUT and SPECTRUM buttons can cycle between the three-column,
-  ArtSpectrum/Playlist and InfoStack/Playlist views and toggle the Spectrum
-  panel without rebuilding the Columns UI hierarchy.
+  ArtSpectrum/Playlist, Playlist-priority InfoStack/Playlist and expanded
+  InfoStack/Playlist views and toggle the Spectrum panel without rebuilding the
+  Columns UI hierarchy.
 - An optional TOOLS button is the sole DarkOne Tools launcher. It owns the
   popup locally in the invoking control panel and exposes the shared Button
   style, depth and roundness controls for both left and right panels.
@@ -114,6 +115,9 @@ Current highlights
 - Biography, Last.fm, Album Notes, Queue and Properties expose a consistent
   Colours menu with optional artwork-derived Dynamic colours plus independent
   page-background and text choices. Queue also exposes Selected background.
+- Optional Last.fm Bio + Images and Album Notes + Album Art compositions add
+  collapsible foreground artwork, independent blurred image backgrounds and
+  configurable solid or sunken borders while retaining the shared page controls.
 - Shared customisable colour for the two upper Album Art/Spectrum divider
   strips, including both DarkOne greys and the Columns UI global background,
   with Black preserved as the default and lower dividers unchanged.

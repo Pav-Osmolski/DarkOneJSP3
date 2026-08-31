@@ -343,12 +343,19 @@ suite("InfoStack button menu", function () {
         colourSource+'\n'+protocolSource+'\n'+viewBridgeSource+'\n'+infoColourSource+'\n'+infoBridgeSource+'\n'+source+
         '\nreturn {on_size,on_notify_data,showInfoStackMenu,isTabStripVisible,setTabStripVisible,bridge:DarkOneViewBridge,getLayout:function(){return [tabY,tabAreaHeight,contentHeight];}};');
     const utilsMock = {InputBox(){return '0';},CreateFolder(){},WriteTextFile(path,data){if(path.indexOf('infostack-menu-state')>=0)stateWrites++;return true;}};
-    const c = factory(windowMock,{ProfilePath:'',ShowPopupMessage(){}},function(){},{Font(){return {Height:16};}},DOJSP3Mock,utilsMock,function(){return false;});
+    const c = factory(windowMock,{ProfilePath:'',ShowPopupMessage(){}},function(){},{Font(name,size){return {Height:size+2};}},DOJSP3Mock,utilsMock,function(){return false;});
     c.on_size(600,300);
     if (stateWrites !== 1) throw new Error('Initial InfoStack menu-state snapshot was not published exactly once');
     c.on_size(600,300);
     if (stateWrites !== 1) throw new Error('Unchanged InfoStack resize republished menu state');
     if (!c.isTabStripVisible() || c.getLayout()[1] <= 0 || c.getLayout()[2] >= 300) throw new Error('InfoStack tab strip default/layout is invalid');
+    c.on_notify_data('DarkOneJSP3.InfoStack.MainAreaWidth','1806');
+    c.on_size(600,300);
+    const standardTabAreaHeight = c.getLayout()[1];
+    c.on_size(1202,300);
+    if (c.getLayout()[1] !== standardTabAreaHeight)
+        throw new Error('Expanded InfoStack width changed automatic tab font or area height');
+    c.on_size(600,300);
     c.setTabStripVisible(false);
     if (stateWrites !== 2) throw new Error('InfoStack state change did not publish exactly once');
     if (c.isTabStripVisible() || c.getLayout().join(',') !== '300,0,300') throw new Error('Hidden InfoStack tab strip did not give content the full host height');
@@ -606,7 +613,7 @@ suite("Waveform background modes", function () {
 
     controller.on_notify_data(
         'DarkOneJSP3.BottomArea.Geometry.State',
-        'v1|600|30'
+        'v2|600|30|203'
     );
     controller.on_notify_data(
         'DarkOneJSP3.BottomArea.State',
@@ -633,7 +640,7 @@ suite("Waveform background modes", function () {
     softDepthSegments.forEach(function(entry) {
         controller.on_notify_data(
             'DarkOneJSP3.BottomArea.Geometry.State',
-            'v1|600|' + entry[0]
+            'v2|600|' + entry[0] + '|203'
         );
         fills.length = 0;
         controller.on_paint({ FillSolidRect(x,y,w,h,colour) {
@@ -824,11 +831,35 @@ suite("upper-divider state", function () {
     if (operations.some(item => item[0] === 'prepare'))
         throw new Error('InfoStack | Playlist unnecessarily prepared hidden ArtSpectrum children');
 
+    // The fourth layout keeps Playlist at the established right-column width
+    // and lets InfoStack consume the former centre column.
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 3);
+    fills.length = 0;
+    controller.on_paint(gr);
+    if (fills.length !== 2 || fills[1][0] !== 1277)
+        throw new Error('InfoStack-priority layout did not paint exactly its shared divider');
+
+    properties.set('DARKONEJSP3.MAIN.LAYOUT.MODE', 2);
+    operations.length = 0;
+    controller.setMainLayoutMode(3);
+    if (panels.Info.visible !== true || panels.Art.visible !== false ||
+            panels.Playlist.visible !== true || panels.Info.Width !== 1277 ||
+            panels.Playlist.Width !== 637)
+        throw new Error('InfoStack-priority panel visibility or geometry is incorrect');
+    if (operations.some(item => item[0] === 'prepare'))
+        throw new Error('InfoStack-priority layout unnecessarily prepared hidden ArtSpectrum children');
+    const infoWidthEvents = notifications.filter(item =>
+        item[0] === 'DarkOneJSP3.InfoStack.MainAreaWidth');
+    if (!infoWidthEvents.length || infoWidthEvents[infoWidthEvents.length - 1][1] !== '1920')
+        throw new Error('Main Columns did not publish the real width for stable InfoStack tab sizing');
+
     controller.setMainLayoutMode(0);
     controller.toggleMainLayoutMode();
     if (controller.mainLayoutMode() !== 1) throw new Error('LAYOUT cycle did not reach ArtSpectrum | Playlist');
     controller.toggleMainLayoutMode();
     if (controller.mainLayoutMode() !== 2) throw new Error('LAYOUT cycle did not reach InfoStack | Playlist');
+    controller.toggleMainLayoutMode();
+    if (controller.mainLayoutMode() !== 3) throw new Error('LAYOUT cycle did not reach InfoStack-priority | Playlist');
     controller.toggleMainLayoutMode();
     if (controller.mainLayoutMode() !== 0) throw new Error('LAYOUT cycle did not return to the three-column layout');
 

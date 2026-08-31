@@ -34,7 +34,7 @@ var DARKONE_BOTTOM_AREA_PROTOCOL_VERSION = 'v5';
 var DARKONE_BOTTOM_AREA_STATE_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
 var DARKONE_BOTTOM_AREA_COMMIT_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
 var DARKONE_BOTTOM_AREA_GEOMETRY_FILE = DARKONE_RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-geometry.txt';
-var DARKONE_BOTTOM_AREA_GEOMETRY_VERSION = 'v1';
+var DARKONE_BOTTOM_AREA_GEOMETRY_VERSION = 'v2';
 var DARKONE_BOTTOM_AREA_COMMIT_VERSION = 'v5';
 var DARKONE_BOTTOM_AREA_COMMIT_DELAY = 50;
 var DARKONE_BOTTOM_AREA_COMMIT_MAX_AGE = 5000;
@@ -422,7 +422,10 @@ function darkOneReadBottomAreaGeometry() {
             DARKONE_BOTTOM_AREA_GEOMETRY_FILE,
             65001
         ) || '').split('|');
-        if (parts.length === 3 && parts[0] === DARKONE_BOTTOM_AREA_GEOMETRY_VERSION) {
+        var currentGeometry = parts.length === 4 &&
+            parts[0] === DARKONE_BOTTOM_AREA_GEOMETRY_VERSION;
+        var legacyGeometry = parts.length === 3 && parts[0] === 'v1';
+        if (currentGeometry || legacyGeometry) {
             var parsedHeight = Math.round(Number(parts[1]));
             var parsedDisplayTop = Math.round(Number(parts[2]));
             if (isFinite(parsedHeight) && parsedHeight >= 1 && isFinite(parsedDisplayTop)) {
