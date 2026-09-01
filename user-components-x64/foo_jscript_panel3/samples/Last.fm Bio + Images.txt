@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Last.fm Bio + Images - Enhanced"
-// @version "0.1.7"
+// @version "0.1.10"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -16,6 +16,8 @@
 // ==/PREPROCESSOR==
 
 var margin = _scale(12);
+var header_gap = _scale(0);
+var scroll_button_top_inset = _scale(2);
 
 var panel = new _panel({ enhanced_page_background : true });
 var lastfm = new _lastfm();
@@ -33,9 +35,7 @@ var images = new _images({
 });
 
 lastfm_bio.paint = function (gr) {
-	var y = !images.region_visible()
-		? 0
-		: images.properties.layout.value == 0 ? margin : this.y - margin;
+	var y = Math.max(0, this.y - TM - header_gap + scroll_button_top_inset);
 	gr.WriteText2(this.header_text(), panel.fonts.title, panel.colours.highlight, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
 
 	if (lastfm.api_key.empty()) {
@@ -201,9 +201,9 @@ function on_size() {
 	if (!images.region_visible()) {
 		images.x = images.y = images.w = images.h = 0;
 		lastfm_bio.x = LM;
-		lastfm_bio.y = TM;
+		lastfm_bio.y = TM + header_gap - scroll_button_top_inset;
 		lastfm_bio.w = Math.max(1, panel.w - (LM * 2));
-		lastfm_bio.h = Math.max(_scale(24), panel.h - TM);
+		lastfm_bio.h = Math.max(_scale(24), panel.h - lastfm_bio.y);
 		lastfm_bio.size();
 		return;
 	}
@@ -220,7 +220,7 @@ function on_size() {
 		images.h = Math.max(1, panel.h - (margin * 2));
 
 		lastfm_bio.x = images.w + (margin * 2);
-		lastfm_bio.y = margin * 2;
+		lastfm_bio.y = margin + TM + header_gap - scroll_button_top_inset;
 		lastfm_bio.w = Math.max(1, panel.w - images.w - (margin * 3));
 		lastfm_bio.h = Math.max(minimum_text_h, panel.h - lastfm_bio.y);
 		break;
@@ -229,9 +229,9 @@ function on_size() {
 		images.h = Math.max(1, Math.min(Math.round(panel.h * images.properties.ratio.value), available_h));
 
 		lastfm_bio.x = margin;
-		lastfm_bio.y = images.h + (margin * 3);
+		lastfm_bio.y = images.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;
 		lastfm_bio.w = Math.max(1, panel.w - (margin * 2));
-		lastfm_bio.h = Math.max(minimum_text_h, panel.h - images.h - (margin * 3));
+		lastfm_bio.h = Math.max(minimum_text_h, panel.h - lastfm_bio.y);
 		break;
 	}
 

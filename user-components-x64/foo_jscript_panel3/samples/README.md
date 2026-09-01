@@ -72,6 +72,11 @@ left/right or top/bottom layout. Hold Ctrl while using the mouse wheel to adjust
 the image-to-text ratio; ordinary wheel input continues to scroll text or cycle
 artwork according to the region under the pointer.
 
+Both combined entries use `header_gap = _scale(0)` as the visually aligned
+baseline between the title and upper scroll arrow. Increase the value near the
+top of the entry script to add display-scaled spacing. The separate two-pixel
+scroll-button inset compensates for the arrow glyph's built-in top padding.
+
 Both compositions expose Colours and Background Wallpaper. They also provide
 independent image controls before their download or content commands:
 

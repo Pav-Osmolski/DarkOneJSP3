@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.1.0 Validation Report
+DarkOneJSP3 v1.1.1 Validation Report
 ====================================
 
 Scope
@@ -425,6 +425,17 @@ Checks
   settings are included in coordinated reset coverage.
 - Managed AllMusic activation completes or fails closed without leaving a
   provider request indefinitely pending.
+- AllMusic parser regression tests preserve permissive bare-fragment handling
+  for the dedicated review endpoint while requiring a semantic or recognised
+  editorial-review container on a full album page. Exact page-shell account and
+  navigation text is rejected, prior cached shells are recognised, user reviews
+  are excluded and valid semantic/legacy editorial bodies remain accepted.
+- Combined Album Notes and Last.fm Biography source contracts reserve the
+  complete title height before the upper scroll arrow in both artwork
+  orientations, use zero as the visually aligned configurable-gap baseline and
+  account explicitly for the arrow control's two-pixel top inset. Last.fm's
+  bottom control is required to paint, and its text height is bounded from the
+  final header-aware Y position so the down arrow cannot fall outside the panel.
 - JS Playlist scrollbar dragging uses a dedicated demand-driven latest-target
   frame loop with time-based interpolation. Runtime tests simulate 16 ms mouse
   callbacks and verify that 8 ms renders two distinct intermediate frames while

@@ -229,11 +229,11 @@ def run(ctx: ValidationContext) -> None:
         samples / 'Properties.txt': 'properties',
     }
     page_background_versions = {
-        samples / 'Last.fm Bio + Images.txt': '0.1.7',
+        samples / 'Last.fm Bio + Images.txt': '0.1.10',
         samples / 'Last.fm Bio.txt': '0.1.4',
         samples / 'Last.fm Artist Info + User Info.txt': '0.1.3',
-        samples / 'Album Notes + Album Art.txt': '0.6.11',
-        samples / 'Album Notes.txt': '0.6.10',
+        samples / 'Album Notes + Album Art.txt': '0.6.13',
+        samples / 'Album Notes.txt': '0.6.11',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.6',
         samples / 'Properties.txt': '0.1.3',
     }
@@ -474,8 +474,8 @@ def run(ctx: ValidationContext) -> None:
         token = 'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
         if token not in album_notes_entry_body:
             errors.append('Album Notes does not reset embedded MusicBrainz settings')
-        if '// @version "0.6.10"' not in album_notes_entry_body:
-            errors.append('Album Notes entry version is not 0.6.10')
+        if '// @version "0.6.11"' not in album_notes_entry_body:
+            errors.append('Album Notes entry version is not 0.6.11')
 
     album_art_entry = samples / 'Album Art.txt'
     if album_art_entry.exists():
@@ -514,18 +514,28 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Album Art wheel hardening is missing: ' + token)
 
     legacy_allmusic_entry = samples / 'Allmusic Review.txt'
-    if legacy_allmusic_entry.exists() and '// @version "0.6.6"' not in text(legacy_allmusic_entry):
-        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.6')
+    if legacy_allmusic_entry.exists() and '// @version "0.6.7"' not in text(legacy_allmusic_entry):
+        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.7')
     allmusic_art_entry = samples / 'Allmusic Review + Album Art.txt'
-    if allmusic_art_entry.exists() and '// @version "0.6.4"' not in text(allmusic_art_entry):
-        errors.append('AllMusic + Album Art entry version is not 0.6.4')
+    if allmusic_art_entry.exists():
+        allmusic_art_body = text(allmusic_art_entry)
+        for token in [
+            '// @version "0.6.6"',
+            'var header_gap = _scale(0);',
+            'var scroll_button_top_inset = _scale(2);',
+            'Math.max(0, this.y - TM - header_gap + scroll_button_top_inset)',
+            'allmusic.y = margin + TM + header_gap - scroll_button_top_inset;',
+            'allmusic.y = albumart.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;',
+        ]:
+            if token not in allmusic_art_body:
+                errors.append('AllMusic + Album Art entry is missing: ' + token)
 
     album_notes_art_entry = samples / 'Album Notes + Album Art.txt'
     if album_notes_art_entry.exists():
         album_notes_art_body = text(album_notes_art_entry)
         for token in [
             '// @name "Album Notes + Album Art - Enhanced"',
-            '// @version "0.6.11"',
+            '// @version "0.6.13"',
             '// @author "marc2003 / DeViLhoOD"',
             "new _combined_artwork('2K3.ALBUM.NOTES.ART', 'Display album art'",
             'appearance : albumart_appearance',
@@ -536,6 +546,11 @@ def run(ctx: ValidationContext) -> None:
             'album_notes.dispose();',
             'if (!albumart_appearance.displayed())',
             'Math.max(1, Math.min(Math.round(panel.w * albumart.properties.ratio.value), available_w))',
+            'var header_gap = _scale(0);',
+            'var scroll_button_top_inset = _scale(2);',
+            'Math.max(0, this.y - TM - header_gap + scroll_button_top_inset)',
+            'album_notes.y = margin + TM + header_gap - scroll_button_top_inset;',
+            'album_notes.y = albumart.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;',
         ]:
             if token not in album_notes_art_body:
                 errors.append('Album Notes + Album Art entry is missing: ' + token)
@@ -545,7 +560,7 @@ def run(ctx: ValidationContext) -> None:
         lastfm_bio_images_body = text(lastfm_bio_images_entry)
         for token in [
             '// @name "Last.fm Bio + Images - Enhanced"',
-            '// @version "0.1.7"',
+            '// @version "0.1.10"',
             '// @author "marc2003 / DeViLhoOD"',
             "new _combined_artwork('2K3.LASTFM.BIO.IMAGES', 'Display images'",
             'enhanced_page_background : true',
@@ -556,9 +571,18 @@ def run(ctx: ValidationContext) -> None:
             'if (!images.region_visible())',
             "'Hide if no images available'",
             'Math.max(1, Math.min(Math.round(panel.w * images.properties.ratio.value), available_w))',
+            'var header_gap = _scale(0);',
+            'var scroll_button_top_inset = _scale(2);',
+            'Math.max(0, this.y - TM - header_gap + scroll_button_top_inset)',
+            'lastfm_bio.y = margin + TM + header_gap - scroll_button_top_inset;',
+            'lastfm_bio.y = images.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;',
+            'this.down_btn.paint(gr, panel.colours.text);',
+            'lastfm_bio.h = Math.max(minimum_text_h, panel.h - lastfm_bio.y);',
         ]:
             if token not in lastfm_bio_images_body:
                 errors.append('Last.fm Bio + Images entry is missing: ' + token)
+        if 'lastfm_bio.h = Math.max(minimum_text_h, panel.h - images.h - (margin * 3));' in lastfm_bio_images_body:
+            errors.append('Last.fm Bio + Images still uses pre-header top-layout height geometry')
 
     images_impl = samples / 'js' / 'images.js'
     if images_impl.exists():
@@ -630,6 +654,11 @@ def run(ctx: ValidationContext) -> None:
             "this.notify_terminal(false, 'request could not be started');",
             "this.notify_terminal(false, 'artist or album tags are missing');",
             "this.notify_terminal(false, 'could not resolve the full AllMusic album page');",
+            "this.parse_review(response_text, kind == 'allmusic-review-page');",
+            'this.is_allmusic_page_chrome = function (value)',
+            'is_editorial_review_context(item)',
+            "No editorial review was found on the full AllMusic album page; page navigation and account text were ignored.",
+            'Removed a cached AllMusic page shell that did not contain an editorial review:',
         ]:
             if token not in allmusic_body:
                 errors.append('AllMusic state-machine hardening is missing: ' + token)

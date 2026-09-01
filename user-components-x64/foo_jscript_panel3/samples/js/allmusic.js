@@ -519,7 +519,15 @@ function _allmusic(x, y, w, h, options) {
 	}
 
 	this.handle_review_response = function (response_text, filename, kind, request_url) {
-		var content = this.parse_review(response_text);
+		// The dedicated endpoint may return a bare fragment. The full album page
+		// must contain a recognised editorial-review container; otherwise generic
+		// account, navigation and footer paragraphs could be mistaken for a review.
+		var content = this.parse_review(response_text, kind == 'allmusic-review-page');
+
+		if (content.length && this.is_allmusic_page_chrome(content)) {
+			console.log(N, 'Ignored AllMusic page navigation/account text because it did not contain an editorial review.');
+			content = '';
+		}
 
 		if (content.length) {
 			this.cache_album_url(request_url);
@@ -537,7 +545,7 @@ function _allmusic(x, y, w, h, options) {
 		} else {
 			this.review_url = '';
 			this.set_status('No review was found on the AllMusic page for this album.');
-			console.log(N, 'No review was found on the page for this album.');
+			console.log(N, 'No editorial review was found on the full AllMusic album page; page navigation and account text were ignored.');
 			this.notify_terminal(false, 'no review body');
 		}
 	}
@@ -635,6 +643,10 @@ function _allmusic(x, y, w, h, options) {
 				if (str.empty()) {
 					// empty files left by previous version can be removed
 					utils.RemovePath(this.filename);
+				} else if (this.is_allmusic_page_chrome(str)) {
+					console.log(N, 'Removed a cached AllMusic page shell that did not contain an editorial review: ' + this.filename);
+					utils.RemovePath(this.filename);
+					str = '';
 				}
 			}
 
@@ -683,7 +695,29 @@ function _allmusic(x, y, w, h, options) {
 		this.down_btn.paint(gr, panel.colours.text);
 	}
 
-	this.parse_review = function (response_text) {
+	this.is_allmusic_page_chrome = function (value) {
+		var text = String(value || '').toLowerCase().replace(/\s+/g, ' ');
+		var account_markers = [
+			'to set your preferred streaming service, log in to your allmusic account',
+			'to submit streaming links, log in to your allmusic account',
+			"don't have an account?"
+		];
+		var page_markers = [
+			'user reviews', 'track listing', 'credits', 'releases', 'similar albums',
+			'what is allmusic?', 'privacy policy', 'terms of service', 'account settings'
+		];
+		var account_hits = 0;
+		var page_hits = 0;
+
+		for (var i = 0; i < account_markers.length; i++)
+			if (text.indexOf(account_markers[i]) > -1) account_hits++;
+		for (var j = 0; j < page_markers.length; j++)
+			if (text.indexOf(page_markers[j]) > -1) page_hits++;
+
+		return account_hits > 0 && page_hits >= 4;
+	}
+
+	this.parse_review = function (response_text, require_review_container) {
 		if (response_text.empty())
 			return '';
 
@@ -719,6 +753,35 @@ function _allmusic(x, y, w, h, options) {
 			}
 		}
 
+		function class_tokens(item) {
+			return ' ' + String(item && item.className || '').toLowerCase().replace(/\s+/g, ' ') + ' ';
+		}
+
+		function has_class(item, name) {
+			return class_tokens(item).indexOf(' ' + name + ' ') > -1;
+		}
+
+		function is_editorial_review_context(item) {
+			var node = item;
+
+			for (var depth = 0; depth < 6 && node; depth++) {
+				var cls = class_tokens(node);
+				var prop = String(node.getAttribute ? node.getAttribute('itemprop') || '' : '').toLowerCase();
+
+				if (cls.indexOf(' user-review ') > -1 || cls.indexOf(' user-reviews ') > -1)
+					return false;
+				if (prop == 'review' || prop == 'reviewbody' ||
+					cls.indexOf(' review ') > -1 || cls.indexOf(' album-review ') > -1 ||
+					cls.indexOf(' editorial-review ') > -1 || cls.indexOf(' review-section ') > -1 ||
+					cls.indexOf(' review-content ') > -1)
+					return true;
+
+				node = node.parentNode;
+			}
+
+			return false;
+		}
+
 		var divs = _getElementsByTagName(response_text, 'div');
 		var review_bodies = [];
 		var text_bodies = [];
@@ -728,9 +791,12 @@ function _allmusic(x, y, w, h, options) {
 			var cls = String(item.className || '').toLowerCase();
 			var prop = String(item.getAttribute ? item.getAttribute('itemprop') || '' : '').toLowerCase();
 
-			if (prop == 'reviewbody') {
+			if (prop == 'reviewbody' || has_class(item, 'review-body') || has_class(item, 'review_body')) {
 				review_bodies.push(item);
-			} else if (cls.indexOf('text') > -1 || cls.indexOf('review-body') > -1 || cls.indexOf('review_body') > -1) {
+			} else if ((!require_review_container && cls.indexOf('text') > -1) ||
+				(require_review_container && is_editorial_review_context(item) &&
+					(has_class(item, 'text') || has_class(item, 'review') || has_class(item, 'album-review') ||
+						has_class(item, 'editorial-review') || has_class(item, 'review-content')))) {
 				text_bodies.push(item);
 			}
 		}
@@ -758,7 +824,7 @@ function _allmusic(x, y, w, h, options) {
 		if (review_bodies.length) {
 			for (var k = 0; k < review_bodies.length; k++)
 				append_paragraphs(paragraphs, review_bodies[k]);
-		} else {
+		} else if (!require_review_container) {
 			append_paragraphs(paragraphs, null);
 		}
 

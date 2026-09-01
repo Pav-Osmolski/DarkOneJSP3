@@ -1,6 +1,30 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.1.1 - Album-review and combined-header corrections
+-----------------------------------------------------
+
+- Hardened the AllMusic full-album-page fallback so it accepts only a semantic
+  or recognised editorial-review container. Generic streaming/account prompts,
+  section labels, navigation and footer text can no longer be saved as an album
+  review when the dedicated review endpoint returns no body.
+- Added conservative detection and automatic removal of page-shell text cached
+  by earlier builds. Bare review-endpoint fragments remain supported, and the
+  console now distinguishes a genuine missing review from ignored page chrome.
+- Reserved the complete title-line height before the upper scroll control in
+  Album Notes + Album Art, Last.fm Bio + Images and the legacy AllMusic + Album
+  Art composition. The visually aligned `header_gap = _scale(0)` baseline now
+  accounts separately for the arrow glyph's two-pixel top inset, preventing the
+  up arrow from crossing long headers without requiring a negative gap value.
+- Corrected Last.fm Bio + Images text-region height after the header was
+  reserved. In the top/bottom layout its lower scroll button now remains inside
+  the visible panel and the down arrow appears whenever more biography text is
+  available.
+- Expanded parser, cache-rejection and combined-panel title-clearance validation.
+  Advanced Last.fm Bio + Images to 0.1.10, AllMusic to 0.6.5, AllMusic + Album
+  Art to 0.6.6, Album Notes to 0.6.11, Album Notes + Album Art to 0.6.13, the
+  legacy AllMusic-slot entry to 0.6.7 and the release validator to 0.10.43.
+
 v1.1.0 - Combined information, artwork and waveform integration
 ---------------------------------------------------------------
 

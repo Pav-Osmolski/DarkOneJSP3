@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Allmusic Review + Album Art - Enhanced"
-// @version "0.6.4"
+// @version "0.6.6"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -11,6 +11,8 @@
 // ==/PREPROCESSOR==
 
 var margin = _scale(12);
+var header_gap = _scale(0);
+var scroll_button_top_inset = _scale(2);
 
 var panel = new _panel();
 var allmusic = new _allmusic(0, 0, 0, 0);
@@ -22,7 +24,7 @@ allmusic.paint = function (gr) {
 	_drawImage(gr, albumart.bitmap.blur, 0, 0, panel.w, panel.h, image.crop);
 	_drawOverlay(gr, 0, 0, panel.w, panel.h, 180);
 
-	var y = albumart.properties.layout.value == 0 ? margin : this.y - margin;
+	var y = Math.max(0, this.y - TM - header_gap + scroll_button_top_inset);
 	gr.WriteTextSimple(this.header_text(), panel.fonts.title, white, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
 
 	if (this.text_layout) {
@@ -150,7 +152,7 @@ function on_size() {
 		albumart.h = panel.h - (margin * 2);
 
 		allmusic.x = albumart.w + (margin * 2);
-		allmusic.y = margin * 2
+		allmusic.y = margin + TM + header_gap - scroll_button_top_inset;
 		allmusic.w = panel.w - albumart.w - (margin * 3);
 		allmusic.h = panel.h - allmusic.y;
 		break;
@@ -159,9 +161,9 @@ function on_size() {
 		albumart.h = panel.h * albumart.properties.ratio.value;
 
 		allmusic.x = margin;
-		allmusic.y = albumart.h + (margin * 3);
+		allmusic.y = albumart.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;
 		allmusic.w = panel.w - (margin * 2);
-		allmusic.h = panel.h - albumart.h - (margin * 3);
+		allmusic.h = panel.h - allmusic.y;
 		break;
 	}
 

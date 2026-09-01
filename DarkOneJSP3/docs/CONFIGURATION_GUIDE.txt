@@ -1455,6 +1455,13 @@ When AllMusic is the active note source, its additional actions include:
 These tools provide manual recovery when automatic page lookup is blocked or a
 specific edition URL is required.
 
+Automatic retrieval first checks AllMusic's dedicated review response. If that
+response contains no review body, the full album page is tried only as a strict
+fallback: it must expose a semantic or recognised editorial-review container.
+Streaming/account prompts, navigation, section labels and footer text are
+ignored. Page-shell text cached by an earlier test build is removed
+automatically when that album is next loaded.
+
 MusicBrainz Releases and Links views
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

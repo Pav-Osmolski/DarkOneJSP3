@@ -2984,6 +2984,65 @@ suite("AllMusic managed activation", function () {
     state = activate.call(p, false);
     assert(state === 'failure' && p.callbacks[0].reason === 'provider did not start a request',
         'Idle provider activation did not fail closed');
+
+    const parseReview = new Function(
+        'response_text', 'require_review_container', '_getElementsByTagName',
+        methodBody('this.parse_review = function (response_text, require_review_container)'));
+    const detectsPageChrome = new Function(
+        'value', methodBody('this.is_allmusic_page_chrome = function (value)'));
+    function paragraph(text) { return {innerText: text}; }
+    function element(className, text, paragraphs, itemprop, parentNode) {
+        return {
+            className: className || '',
+            innerText: text || '',
+            parentNode: parentNode || null,
+            getAttribute(name) { return name === 'itemprop' ? (itemprop || '') : ''; },
+            getElementsByTagName(name) { return name === 'p' ? (paragraphs || []) : []; }
+        };
+    }
+    function response(divs, paragraphs) {
+        return {
+            empty() { return false; },
+            nodes: {div: divs || [], p: paragraphs || []}
+        };
+    }
+    function getElements(value, name) { return value.nodes[name] || []; }
+
+    const boilerplateParagraphs = [
+        'To Set Your Preferred Streaming Service, Log In to Your AllMusic Account',
+        'To Submit Streaming Links, Log In to Your AllMusic Account',
+        "Don't have an Account?", 'User Reviews', 'Track Listing', 'Credits',
+        'Releases', 'Similar Albums', 'What is AllMusic?', 'Privacy Policy',
+        'Terms of Service', 'Account Settings'
+    ].map(paragraph);
+    const boilerplate = response([
+        element('page-content text-block', boilerplateParagraphs.map(item => item.innerText).join('\n'), boilerplateParagraphs)
+    ], boilerplateParagraphs);
+    assert(parseReview(boilerplate, true, getElements) === '',
+        'Full AllMusic page chrome was accepted as an editorial review');
+    assert(parseReview(boilerplate, false, getElements).indexOf('Track Listing') !== -1,
+        'Review-endpoint fragment parsing was unintentionally made strict');
+    assert(detectsPageChrome(boilerplateParagraphs.map(item => item.innerText).join('\r\n')),
+        'Previously cached AllMusic page chrome was not recognised');
+
+    const reviewParagraphs = [
+        paragraph('The opening performance is taut and immediate.'),
+        paragraph('Its closing improvisation gives the set a convincing arc.')
+    ];
+    const semanticReview = element('review-body', reviewParagraphs.map(item => item.innerText).join('\n'), reviewParagraphs, 'reviewBody');
+    const parsedSemantic = parseReview(response([semanticReview], []), true, getElements);
+    assert(parsedSemantic.indexOf('opening performance') !== -1 && parsedSemantic.indexOf('closing improvisation') !== -1,
+        'A semantic AllMusic review body was rejected by strict full-page parsing');
+
+    const editorialContainer = element('review', '', [], '');
+    const editorialText = element('text', 'A valid editorial review.', [paragraph('A valid editorial review.')], '', editorialContainer);
+    assert(parseReview(response([editorialContainer, editorialText], []), true, getElements) === 'A valid editorial review.',
+        'Recognised legacy AllMusic review/text markup was rejected');
+
+    const userContainer = element('user-reviews', '', [], '');
+    const userText = element('text', 'A user comment.', [paragraph('A user comment.')], '', userContainer);
+    assert(parseReview(response([userContainer, userText], []), true, getElements) === '',
+        'AllMusic user-review text was accepted as an editorial review');
 });
 
 suite("Album Art wheel debounce", function () {

@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Album Notes + Album Art - Enhanced"
-// @version "0.6.11"
+// @version "0.6.13"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -17,6 +17,8 @@
 // ==/PREPROCESSOR==
 
 var margin = _scale(12);
+var header_gap = _scale(0);
+var scroll_button_top_inset = _scale(2);
 
 var panel = new _panel({ enhanced_page_background : true });
 var album_notes = new _album_notes(0, 0, 0, 0);
@@ -33,9 +35,7 @@ var album_notes_paint = _.bind(album_notes.paint, album_notes);
 album_notes.paint = function (gr) {
 	albumart.paint_background(gr);
 
-	var y = !albumart_appearance.displayed()
-		? 0
-		: albumart.properties.layout.value == 0 ? margin : this.y - margin;
+	var y = Math.max(0, this.y - TM - header_gap + scroll_button_top_inset);
 	gr.WriteTextSimple(this.header_text(), panel.fonts.title, panel.colours.highlight, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
 	album_notes_paint(gr);
 }
@@ -173,9 +173,9 @@ function on_size() {
 	if (!albumart_appearance.displayed()) {
 		albumart.x = albumart.y = albumart.w = albumart.h = 0;
 		album_notes.x = LM;
-		album_notes.y = TM;
+		album_notes.y = TM + header_gap - scroll_button_top_inset;
 		album_notes.w = Math.max(1, panel.w - (LM * 2));
-		album_notes.h = Math.max(_scale(24), panel.h - TM);
+		album_notes.h = Math.max(_scale(24), panel.h - album_notes.y);
 		album_notes.size();
 		return;
 	}
@@ -192,7 +192,7 @@ function on_size() {
 		albumart.h = Math.max(1, panel.h - (margin * 2));
 
 		album_notes.x = albumart.w + (margin * 2);
-		album_notes.y = margin * 2;
+		album_notes.y = margin + TM + header_gap - scroll_button_top_inset;
 		album_notes.w = Math.max(1, panel.w - albumart.w - (margin * 3));
 		album_notes.h = Math.max(minimum_text_h, panel.h - album_notes.y);
 		break;
@@ -201,9 +201,9 @@ function on_size() {
 		albumart.h = Math.max(1, Math.min(Math.round(panel.h * albumart.properties.ratio.value), available_h));
 
 		album_notes.x = margin;
-		album_notes.y = albumart.h + (margin * 3);
+		album_notes.y = albumart.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;
 		album_notes.w = Math.max(1, panel.w - (margin * 2));
-		album_notes.h = Math.max(minimum_text_h, panel.h - albumart.h - (margin * 3));
+		album_notes.h = Math.max(minimum_text_h, panel.h - album_notes.y);
 		break;
 	}
 

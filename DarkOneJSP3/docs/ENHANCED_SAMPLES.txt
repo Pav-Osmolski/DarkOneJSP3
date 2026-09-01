@@ -79,7 +79,13 @@ resource-lifecycle implementation.
 In both entries, right-click the image region to select a left/right or
 top/bottom layout. Ctrl+wheel changes the image-to-text ratio. Ordinary wheel
 input scrolls the text or cycles images when the pointer is over the relevant
-region.
+region. Both combined titles reserve their full font height before the upper
+scroll arrow, including at larger fonts and DPI. `header_gap = _scale(0)` is the
+visually aligned baseline; increase it near the top of either combined entry to
+add display-scaled spacing. A separate two-pixel control inset compensates for
+the arrow glyph's built-in top padding. The Biography text region is bounded to
+the visible panel in both orientations, keeping its lower scroll arrow visible
+whenever additional text is available.
 
 Both entries expose the enhanced Colours and Background Wallpaper menus. Their
 Image background submenu independently enables the displayed artwork as the

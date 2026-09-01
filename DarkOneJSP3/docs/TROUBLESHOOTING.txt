@@ -412,6 +412,19 @@ the source itself contains no paragraph breaks.
 For the standalone AllMusic sample, use its own Delete cached review and Refresh
 from AllMusic commands.
 
+AllMusic review contains account prompts or section names
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+An earlier test build could treat generic text from the full AllMusic album page
+as a review after the dedicated review endpoint returned no body. Current builds
+require a recognised editorial-review container on the full page and ignore
+streaming/account prompts, navigation, section labels and footer text.
+
+Known page-shell caches are removed automatically the next time the album is
+loaded. If a manually edited or differently formatted stale cache remains, make
+AllMusic the active source and choose Clear current source cache, then Refresh
+enabled sources. The standalone AllMusic sample provides Delete cached review
+and Refresh from AllMusic instead.
+
 AllMusic cannot match an album that exists in a browser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 AllMusic may serve a normal browser while rejecting script requests. DarkOneJSP3

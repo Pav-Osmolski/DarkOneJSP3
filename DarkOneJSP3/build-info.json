@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -11,12 +11,12 @@
     "control_right": "3.0.39-jsp3-3.8.5",
     "display": "3.0.36-jsp3-3.8.5",
     "queue_viewer": "0.8.6",
-    "allmusic": "0.6.4",
+    "allmusic": "0.6.5",
     "musicbrainz": "0.6.4",
     "js_playlist": "0.6.4",
     "playlist_manager": "0.5.7",
     "network_headers": "0.6.2",
-    "album_notes": "0.6.10",
+    "album_notes": "0.6.11",
     "info_stack_controller": "0.6.33",
     "startup_controller": "0.7.40",
     "main_columns_controller": "0.7.41",
@@ -27,7 +27,7 @@
     "tools_menu": "0.2.3",
     "info_stack_colours": "0.1.1",
     "info_stack_bridges": "0.2.0",
-    "release_validator": "0.10.38",
+    "release_validator": "0.10.43",
     "performance_helpers": "0.1.5",
     "playlist_render_cache": "0.1.1",
     "ui_cadence": "0.1.1",
@@ -42,5 +42,5 @@
     "view_bridge": "0.2.0"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.1.0"
+  "release": "DarkOneJSP3 v1.1.1"
 }
