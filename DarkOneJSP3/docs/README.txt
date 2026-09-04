@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.1.1
+DarkOneJSP3 v1.1.2
 ==================
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
@@ -118,6 +118,9 @@ Current highlights
 - Optional Last.fm Bio + Images and Album Notes + Album Art compositions add
   collapsible foreground artwork, independent blurred image backgrounds and
   configurable solid or sunken borders while retaining the shared page controls.
+- Scrollable text panels apply a small linear alpha fade only at edges with an
+  active up/down arrow, preventing hard-cut partial lines while leaving the
+  scroll controls themselves fully opaque.
 - Shared customisable colour for the two upper Album Art/Spectrum divider
   strips, including both DarkOne greys and the Columns UI global background,
   with Black preserved as the default and lower dividers unchanged.

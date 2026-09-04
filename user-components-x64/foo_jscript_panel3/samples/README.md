@@ -60,7 +60,11 @@ region centres its downloading, retry/error or confirmed-unavailable state, and
 the JScript Panel console records each request, result, file and completion.
 Gallery extraction uses both the normal DOM path and a raw-markup fallback for
 current Last.fm pages. An unrecognised response remains an error/retry state and
-cannot be mistaken for a confirmed-empty artist gallery.
+cannot be mistaken for a confirmed-empty artist gallery. HTTP status and headers
+are retained so non-2xx responses are classified before parsing. Transient
+transport, 408/425/429 and 5xx failures stay retryable; diagnostics include the
+HTTP reason, response length, selected safe headers and a short sanitised body
+preview rather than dumping an arbitrary page to the console.
 
 `Album Notes + Album Art.txt` provides the same two-region presentation for the
 consolidated Album Notes providers and the current album artwork. It retains the

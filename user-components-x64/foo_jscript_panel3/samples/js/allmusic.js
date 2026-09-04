@@ -690,7 +690,7 @@ function _allmusic(x, y, w, h, options) {
 		if (!this.text_layout)
 			return;
 
-		gr.WriteTextLayout(this.text_layout, panel.colours.text, this.x, this.y + _scale(12), this.w, this.ha, this.offset);
+		_writeTextLayoutWithScrollFade(gr, this.text_layout, panel.colours.text, this.x, this.y + _scale(12), this.w, this.ha, this.offset, this.up_btn.v(), this.down_btn.v());
 		this.up_btn.paint(gr, panel.colours.text);
 		this.down_btn.paint(gr, panel.colours.text);
 	}

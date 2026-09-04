@@ -324,6 +324,7 @@ suite("InfoStack button menu", function () {
     const properties = new Map();
     let stateWrites = 0;
     let popupTracks = 0;
+    const repaintArgs = [];
     const createdMenus = [];
     const panels = Array.from({length: 6}, () => ({visible:false, bounds:null, Show(v){this.visible=!!v;}, Move(x,y,w,h){this.bounds=[x,y,w,h];}}));
     const popup = { items:[], separators:0, checks:[], radio:null, children:[],
@@ -333,7 +334,7 @@ suite("InfoStack button menu", function () {
     const windowMock = { Name:'DOJSP3.InfoStack', Width:600, Height:300,
         GetProperty(name,fallback){return properties.has(name)?properties.get(name):fallback;},
         SetProperty(name,value){properties.set(name,value);}, GetPanel(title){const i=['a','b','c','d','e','f'].indexOf(title); return i>=0?panels[i]:null;},
-        NotifyOthers(){}, Repaint(){}, RepaintRect(){}, SetCursor(){}, GetColourCUI(){return 0xff202020;},
+        NotifyOthers(){}, Repaint(force){repaintArgs.push(force);}, RepaintRect(){}, SetCursor(){}, GetColourCUI(){return 0xff202020;},
         CreatePopupMenu(){const m=Object.create(popup); m.items=[];m.checks=[];m.children=[];m.separators=0;createdMenus.push(m);return m;} };
     const DOJSP3Mock = {titles:{playlistManager:'a',lastfmBio:'b',lastfmInfo:'c',albumNotes:'d',queue:'e',properties:'f'},
         colours:{bar:0xff202020,separator:0xff181818,buttonNormal:0xff298fcc,buttonActive:0xffffffff,buttonHover:0xff888888},
@@ -356,10 +357,16 @@ suite("InfoStack button menu", function () {
     if (c.getLayout()[1] !== standardTabAreaHeight)
         throw new Error('Expanded InfoStack width changed automatic tab font or area height');
     c.on_size(600,300);
+    const repaintsBeforeHide = repaintArgs.length;
     c.setTabStripVisible(false);
+    if (repaintArgs.slice(repaintsBeforeHide).some(function(force){ return force === true; }))
+        throw new Error('Hiding the InfoStack tab strip introduced an unnecessary child-inclusive repaint');
     if (stateWrites !== 2) throw new Error('InfoStack state change did not publish exactly once');
     if (c.isTabStripVisible() || c.getLayout().join(',') !== '300,0,300') throw new Error('Hidden InfoStack tab strip did not give content the full host height');
+    const repaintsBeforeShow = repaintArgs.length;
     global.popupId=250; c.showInfoStackMenu(100,299,0);
+    if (repaintArgs.slice(repaintsBeforeShow).some(function(force){ return force === true; }))
+        throw new Error('Restoring the InfoStack tab strip introduced an unnecessary child-inclusive repaint');
     if (stateWrites !== 3) throw new Error('InfoStack menu action did not publish exactly one changed snapshot');
     if (!c.isTabStripVisible()) throw new Error('Show tab strip menu command did not restore the strip');
     if (createdMenus[0].children.join(',') !== 'Tab settings,Appearance')

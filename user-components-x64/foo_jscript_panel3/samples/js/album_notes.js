@@ -879,7 +879,7 @@ function _album_notes(x, y, w, h) {
         if (this.active_source == 'allmusic' && (this.allmusic.text.length || this.allmusic.status_text.length)) { this.allmusic.paint(gr); return; }
         if (!this.text_layout) return;
         var colour = this.error ? RGB(220, 110, 110) : panel.colours.text;
-        gr.WriteTextLayout(this.text_layout, colour, this.x, this.y + _scale(12), this.w, this.ha, this.offset);
+        _writeTextLayoutWithScrollFade(gr, this.text_layout, colour, this.x, this.y + _scale(12), this.w, this.ha, this.offset, this.up_btn.v(), this.down_btn.v());
         this.up_btn.paint(gr, panel.colours.text);
         this.down_btn.paint(gr, panel.colours.text);
     };

@@ -229,11 +229,11 @@ def run(ctx: ValidationContext) -> None:
         samples / 'Properties.txt': 'properties',
     }
     page_background_versions = {
-        samples / 'Last.fm Bio + Images.txt': '0.1.10',
-        samples / 'Last.fm Bio.txt': '0.1.4',
+        samples / 'Last.fm Bio + Images.txt': '0.1.12',
+        samples / 'Last.fm Bio.txt': '0.1.5',
         samples / 'Last.fm Artist Info + User Info.txt': '0.1.3',
-        samples / 'Album Notes + Album Art.txt': '0.6.13',
-        samples / 'Album Notes.txt': '0.6.11',
+        samples / 'Album Notes + Album Art.txt': '0.6.14',
+        samples / 'Album Notes.txt': '0.6.12',
         project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.6',
         samples / 'Properties.txt': '0.1.3',
     }
@@ -474,8 +474,8 @@ def run(ctx: ValidationContext) -> None:
         token = 'jsp3EnhancedHandleSampleReset(name, info, ["album-notes", "musicbrainz"])'
         if token not in album_notes_entry_body:
             errors.append('Album Notes does not reset embedded MusicBrainz settings')
-        if '// @version "0.6.11"' not in album_notes_entry_body:
-            errors.append('Album Notes entry version is not 0.6.11')
+        if '// @version "0.6.12"' not in album_notes_entry_body:
+            errors.append('Album Notes entry version is not 0.6.12')
 
     album_art_entry = samples / 'Album Art.txt'
     if album_art_entry.exists():
@@ -514,13 +514,13 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Album Art wheel hardening is missing: ' + token)
 
     legacy_allmusic_entry = samples / 'Allmusic Review.txt'
-    if legacy_allmusic_entry.exists() and '// @version "0.6.7"' not in text(legacy_allmusic_entry):
-        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.7')
+    if legacy_allmusic_entry.exists() and '// @version "0.6.8"' not in text(legacy_allmusic_entry):
+        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.8')
     allmusic_art_entry = samples / 'Allmusic Review + Album Art.txt'
     if allmusic_art_entry.exists():
         allmusic_art_body = text(allmusic_art_entry)
         for token in [
-            '// @version "0.6.6"',
+            '// @version "0.6.7"',
             'var header_gap = _scale(0);',
             'var scroll_button_top_inset = _scale(2);',
             'Math.max(0, this.y - TM - header_gap + scroll_button_top_inset)',
@@ -535,7 +535,7 @@ def run(ctx: ValidationContext) -> None:
         album_notes_art_body = text(album_notes_art_entry)
         for token in [
             '// @name "Album Notes + Album Art - Enhanced"',
-            '// @version "0.6.13"',
+            '// @version "0.6.14"',
             '// @author "marc2003 / DeViLhoOD"',
             "new _combined_artwork('2K3.ALBUM.NOTES.ART', 'Display album art'",
             'appearance : albumart_appearance',
@@ -560,11 +560,13 @@ def run(ctx: ValidationContext) -> None:
         lastfm_bio_images_body = text(lastfm_bio_images_entry)
         for token in [
             '// @name "Last.fm Bio + Images - Enhanced"',
-            '// @version "0.1.10"',
+            '// @version "0.1.12"',
             '// @author "marc2003 / DeViLhoOD"',
             "new _combined_artwork('2K3.LASTFM.BIO.IMAGES', 'Display images'",
             'enhanced_page_background : true',
             'images.download_file_done(path, success, error_text);',
+            'function on_http_request_done(task_id, success, response_text, status, response_headers)',
+            'images.http_request_done(task_id, success, response_text, status, response_headers);',
             'jsp3EnhancedHandleSampleReset(name, data, "lastfm-bio")',
             'images.dispose();',
             'lastfm_bio.dispose();',
@@ -584,6 +586,50 @@ def run(ctx: ValidationContext) -> None:
         if 'lastfm_bio.h = Math.max(minimum_text_h, panel.h - images.h - (margin * 3));' in lastfm_bio_images_body:
             errors.append('Last.fm Bio + Images still uses pre-header top-layout height geometry')
 
+    common_impl = samples / 'js' / 'common.js'
+    if common_impl.exists():
+        common_body = text(common_impl)
+        for token in [
+            'function _writeTextLayoutWithScrollFade(',
+            'function _scrollFadeSurface(',
+            'function _scrollFadeMask(',
+            'utils.CreateImage(w, h);',
+            'utils.CreateImage(1, h);',
+            'surface_gr.WriteTextLayout(text_layout, colour, 0, 0, render_w, render_h, vertical_offset);',
+            'Stops : [[0, transparent], [1, opaque]]',
+            'Stops : [[0, opaque], [1, transparent]]',
+            'gr.DrawImageWithMask(surface, mask, x, y, w, h);',
+        ]:
+            if token not in common_body:
+                errors.append('Shared scroll-text fade helper is missing: ' + token)
+        for forbidden in [
+            'var band_height = 1;',
+            'var band_height = Math.max(1, _scale(1));',
+            'gr.PushLayer(x, band_y, w, band_h);',
+            '_scrollFadeColour(colour, opacity)',
+        ]:
+            if forbidden in common_body:
+                errors.append('Shared scroll-text fade still uses the per-band TextLayout redraw path: ' + forbidden)
+
+    scroll_fade_sources = [
+        samples / 'js' / 'album_notes.js',
+        samples / 'js' / 'allmusic.js',
+        samples / 'js' / 'lastfm_bio.js',
+        samples / 'js' / 'play_log.js',
+        samples / 'js' / 'console.js',
+        samples / 'js' / 'text_reader.js',
+        samples / 'Allmusic Review + Album Art.txt',
+        samples / 'Last.fm Bio + Images.txt',
+    ]
+    for fade_source in scroll_fade_sources:
+        if not fade_source.exists():
+            continue
+        fade_body = text(fade_source)
+        if '_writeTextLayoutWithScrollFade(' not in fade_body:
+            errors.append(rel(fade_source) + ' does not use the shared scroll-text edge fade')
+        if 'this.up_btn.v(), this.down_btn.v()' not in fade_body:
+            errors.append(rel(fade_source) + ' does not bind text fading to visible scroll arrows')
+
     images_impl = samples / 'js' / 'images.js'
     if images_impl.exists():
         images_body = text(images_impl)
@@ -597,6 +643,13 @@ def run(ctx: ValidationContext) -> None:
             'this.maybe_auto_download = function ()',
             'this.auto_download_retry_ms = 30000;',
             'this.auto_download_attempt_limit = 3;',
+            'this.http_request_done = function (id, success, response_text, status, response_headers)',
+            'this.is_transient_http_failure = function (success, status)',
+            'this.log_http_failure = function (artist, success, status, response_text, response_headers, will_retry)',
+            "'Response preview: \"'",
+            "'Last.fm is temporarily unavailable - retrying...'",
+            'state.retryable === false',
+            "this.header_value(response_headers, 'Retry-After')",
             'this.automatic_tasks[task_id] = artist;',
             "return 'Downloading images...';",
             "return 'No images available';",
@@ -611,6 +664,16 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in images_body:
                 errors.append('Images lifecycle hardening is missing: ' + token)
+
+    images_entry = samples / 'Images.txt'
+    if images_entry.exists():
+        images_entry_body = text(images_entry)
+        for token in [
+            'function on_http_request_done(task_id, success, response_text, status, response_headers)',
+            'images.http_request_done(task_id, success, response_text, status, response_headers);',
+        ]:
+            if token not in images_entry_body:
+                errors.append('Standalone Images entry is missing status/header forwarding: ' + token)
 
     combined_artwork_impl = samples / 'js' / 'combined_artwork.js'
     if combined_artwork_impl.exists():
@@ -1805,6 +1868,8 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token not in info_body:
                 errors.append('InfoStack button/tab-strip integration is missing: ' + token)
+        if 'panel.Move(x, y, width, height, true);' in info_body or 'window.Repaint(true);' in info_body:
+            errors.append('InfoStack geometry uses a forced parent/child repaint instead of the lightweight resize path')
         if "selectMenu.AppendTo(menu, MENU_POPUP, 'Select tab');" in info_body:
             errors.append('InfoStack menu still nests tab selection under the obsolete Select tab submenu')
         for obsolete in [

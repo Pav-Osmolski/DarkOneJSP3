@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Last.fm Bio"
-// @version "0.1.4"
+// @version "0.1.5"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"

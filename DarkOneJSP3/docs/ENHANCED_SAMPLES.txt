@@ -64,12 +64,17 @@ hidden panels skip periodic image work, and unload releases the image-cycle
 timer, pending request maps and Direct2D bitmaps. Until an image is available,
 the image region reports downloading, retry/error or confirmed-unavailable
 status at its centre. Request, result, queue, file and completion diagnostics are
-written to the JScript Panel console.
+written to the JScript Panel console. HTTP failures include their status and
+reason, response length, selected content/CDN headers and a short sanitised body
+preview, making Last.fm's minimal 502 page distinguishable from gallery markup.
+Transport failures, HTTP 408/425/429 and 5xx responses remain eligible for the
+bounded retry cadence; permanent HTTP errors require Download now.
 
 Gallery extraction supports the normal DOM path plus a raw-markup fallback for
 current Last.fm image pages. An unrecognised response, such as a verification or
 truncated page, is reported as unreadable and remains retryable rather than being
-misclassified as an artist with no images.
+misclassified as an artist with no images. Non-2xx responses never enter the
+gallery parser.
 
 Album Notes + Album Art.txt combines the consolidated Album Notes providers with
 the current album artwork. It preserves Album Notes source selection, caching,
@@ -85,7 +90,16 @@ visually aligned baseline; increase it near the top of either combined entry to
 add display-scaled spacing. A separate two-pixel control inset compensates for
 the arrow glyph's built-in top padding. The Biography text region is bounded to
 the visible panel in both orientations, keeping its lower scroll arrow visible
-whenever additional text is available.
+whenever additional text is available. Scrollable DirectWrite text now fades
+linearly over a small display-scaled band at each edge where a scroll arrow is
+visible. The scrolled layout is rendered once into a reusable transparent image
+and composited through a cached continuous vertical alpha-gradient mask, keeping
+high-DPI clipping smooth without repeatedly redrawing the full TextLayout for
+every fade pixel. The fade changes only text alpha; the up/down arrow glyphs are
+painted afterwards at full opacity. The same shared treatment is used by Album
+Notes, its AllMusic provider, Last.fm Biography, Play Log, Console and Text
+Reader, and styled Console colour ranges preserve their individual colours while
+fading.
 
 Both entries expose the enhanced Colours and Background Wallpaper menus. Their
 Image background submenu independently enables the displayed artwork as the

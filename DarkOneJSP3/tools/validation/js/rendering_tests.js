@@ -3309,6 +3309,9 @@ suite("Last.fm image lifecycle", function () {
         paint_border() {}
     };
     const emptyGallery = '<html><ul class="image-list"></ul></html>';
+    const badGateway = '<!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>502</title>502 Bad Gateway';
+    const badGatewayHeaders = 'content-type: text/html; charset=UTF-8\r\n' +
+        'x-lfm-upstream-type: MISS\r\nx-cache: MISS, MISS\r\nfastly-restarts: 1\r\n';
     const currentGallery = '<html><ul class="image-list"><li class="image-list-item-wrapper">' +
         '<a href="/music/Test+Artist/+images/f6f582b9b72b77d53eeb94481a8fcf66" class="image-list-item">' +
         '<img src="https://lastfm-img.freetls.fastly.net/i/u/avatar170s/f6f582b9b72b77d53eeb94481a8fcf66">' +
@@ -3333,9 +3336,19 @@ suite("Last.fm image lifecycle", function () {
            'Visible Last.fm Images panel did not start its automatic download');
     assert(!images.maybe_auto_download() && requests.length === 1,
            'In-flight Last.fm image request was duplicated');
-    images.http_request_done(requests[0], false, 'offline');
+    assert(badGateway.length === 136, 'Last.fm 502 regression fixture no longer matches the observed response');
+    images.http_request_done(requests[0], true, badGateway, 502, badGatewayHeaders);
     assert(!Object.prototype.hasOwnProperty.call(images.artists, requests[0]),
            'Completed Images request retained stale artist bookkeeping');
+    assert(images.status_text() === 'Last.fm is temporarily unavailable - retrying...' &&
+           images.current_state().last_http_status === 502 && images.current_state().retryable,
+           'HTTP 502 was not retained as a visible retryable Last.fm failure');
+    assert(logs.some(line => line.indexOf('HTTP 502 Bad Gateway') !== -1 &&
+                            line.indexOf('136-character response') !== -1 &&
+                            line.indexOf('Content-Type: text/html; charset=UTF-8') !== -1 &&
+                            line.indexOf('X-Lfm-Upstream-Type: MISS') !== -1) &&
+           logs.some(line => line.indexOf('Response preview: "502 Bad Gateway".') !== -1),
+           'Last.fm 502 diagnostics omitted the status, safe headers or capped body preview');
     images.properties.hide_if_no_images.value = true;
     assert(images.region_visible(),
            'Hide-if-unavailable collapsed a temporary Last.fm request failure');
@@ -3346,7 +3359,7 @@ suite("Last.fm image lifecycle", function () {
     now++;
     assert(images.maybe_auto_download() && requests.length === 2,
            'Automatic Last.fm image retry did not resume after its cooldown');
-    images.http_request_done(requests[1], true, '<html><title>Verification required</title></html>');
+    images.http_request_done(requests[1], true, '<html><title>Verification required</title></html>', 200, 'content-type: text/html');
     assert(images.status_text() === 'Last.fm page could not be read - retrying...' &&
            !images.current_state().unavailable,
            'Unrecognised successful Last.fm response was misclassified as an empty gallery');
@@ -3354,7 +3367,7 @@ suite("Last.fm image lifecycle", function () {
     now += 30000;
     assert(images.maybe_auto_download() && requests.length === 3,
            'Automatic Last.fm image acquisition did not make its final bounded attempt');
-    images.http_request_done(requests[2], true, emptyGallery);
+    images.http_request_done(requests[2], true, emptyGallery, 200, 'content-type: text/html');
     assert(images.status_text() === 'No images available',
            'Exhausted successful Last.fm lookup did not report unavailable images');
     images.x = 10; images.y = 20; images.w = 200; images.h = 100;
@@ -3375,7 +3388,7 @@ suite("Last.fm image lifecycle", function () {
     images.paint({WriteTextSimple(...args) { statusPaints.push(args); }});
     assert(statusPaints.length === 1 && statusPaints[0][0] === 'Downloading images...',
            'Active Last.fm request did not paint the required progress message');
-    images.http_request_done(requests[3], true, currentGallery);
+    images.http_request_done(requests[3], true, currentGallery, 200, 'content-type: text/html');
     assert(downloadRequests.length === 1 && images.current_state().pending_files === 1,
            'Raw current Last.fm gallery markup did not queue its image file');
     const downloadedPath = downloadRequests[0].path;
@@ -3397,6 +3410,28 @@ suite("Last.fm image lifecycle", function () {
     images.download_file_done('c:\\artists\\another artist\\new.jpg', true, '');
     assert(updates === 1,
            'Images download completion did not refresh only the active artist folder');
+
+    images.artist = 'Blocked Artist';
+    images.folder = 'C:\\artists\\Blocked Artist\\';
+    images.image_paths = [];
+    images.reset_image();
+    assert(images.maybe_auto_download(),
+           'Images did not start the permanent-status regression request');
+    const blockedRequest = requests[requests.length - 1];
+    images.http_request_done(blockedRequest, false, '<html><title>404</title>404 Not Found', 404, 'content-type: text/html');
+    assert(images.status_text() === 'Last.fm request failed' &&
+           images.current_state().last_http_status === 404 && !images.current_state().retryable,
+           'Permanent Last.fm HTTP failure remained eligible for automatic retry');
+    now += 60000;
+    assert(!images.maybe_auto_download(),
+           'Permanent Last.fm HTTP failure was automatically retried');
+    assert(images.download(false),
+           'Manual Download now could not override a permanent automatic HTTP failure');
+    const manualTransportRequest = requests[requests.length - 1];
+    images.http_request_done(manualTransportRequest, false, 'offline', 0, '');
+    assert(images.current_state().retryable &&
+           logs.some(line => line.indexOf('transport failure: offline') !== -1),
+           'Transport failure was not retained as retryable or diagnosed');
 
     images.reset_image();
     const disposalBase = bitmapDisposals;

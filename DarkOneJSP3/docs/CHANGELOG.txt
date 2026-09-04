@@ -1,6 +1,45 @@
 DarkOneJSP3 Changelog
 =====================
 
+v1.1.2 - Last.fm diagnostics and scroll-edge text fading
+--------------------------------------------------------
+
+- Forwarded HTTP status and response headers through both Last.fm image entry
+  points. Non-2xx responses are classified before gallery parsing, so Last.fm's
+  136-character `502 Bad Gateway` page is identified as an upstream failure
+  rather than reported as an unrecognised image gallery.
+- Added bounded response diagnostics containing the HTTP reason, response
+  length, selected non-sensitive CDN/content headers and a sanitised
+  160-character text preview. Transient transport, 408/425/429 and 5xx failures
+  remain retryable and honour a longer `Retry-After`; permanent HTTP errors stop
+  automatic retries but can still be overridden by Download now.
+- Added a shared display-scaled linear alpha fade at scrollable text edges. The
+  fade is active only where an up or down scroll arrow is currently visible,
+  applies to the text itself through an alpha-masked DirectWrite surface and
+  leaves the arrow glyphs fully opaque, avoiding hard-cut partial lines while
+  scrolling.
+- Applied the shared fade to Album Notes and its AllMusic provider, Last.fm
+  Biography, Play Log, Console and Text Reader, plus the Last.fm Bio + Images
+  and legacy AllMusic + Album Art paint overrides. Styled Console ranges retain
+  their individual colours while their existing alpha is multiplied by the
+  edge fade.
+- Fixed high-DPI fade banding exposed by InfoStack tab-strip height changes.
+  The fade keeps its small display-scaled depth but now uses a native continuous
+  alpha-gradient mask instead of display-scaled opacity bands, so a partially
+  clipped line retains a smooth transition regardless of page-height alignment.
+- Removed the expensive per-pixel DirectWrite redraw loop from the fade path.
+  Scrollable text is rendered once into a reusable transparent surface and then
+  composited through a cached one-pixel-wide vertical gradient mask. This keeps
+  the verified smooth fade while preventing rapid wheel input in the combined
+  text/artwork panels from monopolising foobar2000's UI thread.
+- Expanded source-contract validation for the masked single-render fade path,
+  arrow-visibility binding and styled-colour alpha preservation, and rejects the
+  former per-band TextLayout redraw implementation. Advanced Last.fm Bio +
+  Images to 0.1.12, Last.fm Bio to 0.1.5, AllMusic to 0.6.6, AllMusic + Album Art
+  to 0.6.7, Album Notes to 0.6.12, Album Notes + Album Art to 0.6.14, the legacy
+  AllMusic-slot entry to 0.6.8, the InfoStack controller to 0.6.34 and the
+  release validator to 0.10.48.
+
 v1.1.1 - Album-review and combined-header corrections
 -----------------------------------------------------
 
@@ -20,10 +59,9 @@ v1.1.1 - Album-review and combined-header corrections
   reserved. In the top/bottom layout its lower scroll button now remains inside
   the visible panel and the down arrow appears whenever more biography text is
   available.
-- Expanded parser, cache-rejection and combined-panel title-clearance validation.
-  Advanced Last.fm Bio + Images to 0.1.10, AllMusic to 0.6.5, AllMusic + Album
-  Art to 0.6.6, Album Notes to 0.6.11, Album Notes + Album Art to 0.6.13, the
-  legacy AllMusic-slot entry to 0.6.7 and the release validator to 0.10.43.
+- Advanced AllMusic to 0.6.5, AllMusic + Album Art to 0.6.6, Album Notes to
+  0.6.11, Album Notes + Album Art to 0.6.13, the legacy AllMusic-slot entry to
+  0.6.7 and Last.fm Bio + Images through the v1.1.1 combined-header revisions.
 
 v1.1.0 - Combined information, artwork and waveform integration
 ---------------------------------------------------------------

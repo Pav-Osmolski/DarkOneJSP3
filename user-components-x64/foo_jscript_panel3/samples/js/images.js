@@ -13,6 +13,138 @@ function _images(options) {
 		console.log(N, '[Last.fm images] ' + String(message || ''));
 	}
 
+	this.http_status_name = function (status) {
+		switch (Number(status) || 0) {
+		case 400: return 'Bad Request';
+		case 401: return 'Unauthorized';
+		case 403: return 'Forbidden';
+		case 404: return 'Not Found';
+		case 408: return 'Request Timeout';
+		case 425: return 'Too Early';
+		case 429: return 'Too Many Requests';
+		case 500: return 'Internal Server Error';
+		case 501: return 'Not Implemented';
+		case 502: return 'Bad Gateway';
+		case 503: return 'Service Unavailable';
+		case 504: return 'Gateway Timeout';
+		default: return '';
+		}
+	}
+
+	this.header_value = function (response_headers, name) {
+		if (!response_headers || !name)
+			return '';
+
+		var wanted = String(name).toLowerCase();
+		if (typeof response_headers == 'object') {
+			for (var object_key in response_headers) {
+				if (Object.prototype.hasOwnProperty.call(response_headers, object_key) && String(object_key).toLowerCase() == wanted)
+					return String(response_headers[object_key] || '');
+			}
+		}
+
+		var raw = String(response_headers || '');
+		try {
+			var parsed = JSON.parse(raw);
+			if (parsed && typeof parsed == 'object') {
+				for (var json_key in parsed) {
+					if (Object.prototype.hasOwnProperty.call(parsed, json_key) && String(json_key).toLowerCase() == wanted)
+						return String(parsed[json_key] || '');
+				}
+			}
+		} catch (e) {}
+
+		var escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		var match = new RegExp('(?:^|\\r?\\n)\\s*' + escaped + '\\s*:\\s*([^\\r\\n]+)', 'i').exec(raw);
+		return match ? String(match[1] || '').replace(/^\s+|\s+$/g, '') : '';
+	}
+
+	this.clean_diagnostic_value = function (value, limit) {
+		var text = String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').replace(/^\s+|\s+$/g, '');
+		limit = Number(limit) || 120;
+		return text.length > limit ? text.substring(0, limit) + '...' : text;
+	}
+
+	this.response_preview = function (response_text, status) {
+		var text = String(response_text || '');
+		if (!text.length)
+			return '';
+
+		text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/ig, ' ')
+			.replace(/<style\b[^>]*>[\s\S]*?<\/style>/ig, ' ')
+			.replace(/<[^>]+>/g, ' ')
+			.replace(/&nbsp;/ig, ' ')
+			.replace(/&amp;/ig, '&')
+			.replace(/&lt;/ig, '<')
+			.replace(/&gt;/ig, '>')
+			.replace(/&quot;/ig, '"')
+			.replace(/&#(?:39|x27);/ig, "'");
+		text = this.clean_diagnostic_value(text, this.response_preview_limit);
+
+		var status_text = String(Number(status) || '');
+		if (status_text.length && text.indexOf(status_text + ' ' + status_text + ' ') == 0)
+			text = text.substring(status_text.length + 1);
+		return text;
+	}
+
+	this.is_transient_http_failure = function (success, status) {
+		status = Number(status) || 0;
+		if (!success && status < 400)
+			return true;
+		return status == 0 || status == 408 || status == 425 || status == 429 || (status >= 500 && status < 600);
+	}
+
+	this.retry_after_ms = function (response_headers) {
+		var value = this.header_value(response_headers, 'Retry-After');
+		if (!value.length)
+			return 0;
+
+		var seconds = Number(value);
+		if (!isNaN(seconds))
+			return Math.max(0, seconds * 1000);
+
+		var date_value = Date.parse(value);
+		return isNaN(date_value) ? 0 : Math.max(0, date_value - Date.now());
+	}
+
+	this.log_http_failure = function (artist, success, status, response_text, response_headers, will_retry) {
+		status = Number(status) || 0;
+		var body_length = String(response_text || '').length;
+		var reason = status
+			? 'HTTP ' + status + (this.http_status_name(status).length ? ' ' + this.http_status_name(status) : '')
+			: 'transport failure';
+		var details = [];
+		if (body_length)
+			details.push(body_length + '-character response');
+
+		var diagnostic_headers = [
+			['Content-Type', 'Content-Type'],
+			['Retry-After', 'Retry-After'],
+			['X-Lfm-Upstream-Type', 'X-Lfm-Upstream-Type'],
+			['X-Cache', 'X-Cache'],
+			['Fastly-Restarts', 'Fastly-Restarts'],
+		];
+		for (var i = 0; i < diagnostic_headers.length; i++) {
+			var value = this.clean_diagnostic_value(this.header_value(response_headers, diagnostic_headers[i][0]), 120);
+			if (value.length)
+				details.push(diagnostic_headers[i][1] + ': ' + value);
+		}
+
+		var message = 'Request for "' + artist + '" failed: ' + reason;
+		if (!status && body_length)
+			message += ': ' + this.clean_diagnostic_value(response_text, this.response_preview_limit);
+		if (details.length)
+			message += ' (' + details.join('; ') + ')';
+		message += '.' + (will_retry ? ' Another automatic attempt will follow.' : '');
+		this.log(message);
+
+		if (status) {
+			var preview = this.response_preview(response_text, status);
+			if (preview.length)
+				this.log('Response preview: "' + preview + '".');
+		}
+	}
+
 	this.artist_state = function (artist) {
 		artist = String(artist || '');
 		if (!this.history[artist]) {
@@ -26,6 +158,9 @@ function _images(options) {
 				phase : 'idle',
 				unavailable : false,
 				last_error : '',
+				last_http_status : 0,
+				retryable : true,
+				retry_after_until : 0,
 			};
 		}
 		return this.history[artist];
@@ -56,12 +191,18 @@ function _images(options) {
 				? 'No images found - retrying...'
 				: state.last_error == 'unreadable-page'
 					? 'Last.fm page could not be read - retrying...'
+					: state.last_error == 'http-transient'
+						? 'Last.fm is temporarily unavailable - retrying...'
 					: 'Image download failed - retrying...';
 		if (state.unavailable)
 			return 'No images available';
 		if (state.phase == 'error')
 			return state.last_error == 'unreadable-page'
 				? 'Last.fm page could not be read'
+				: state.last_error == 'http-transient'
+					? 'Last.fm is temporarily unavailable'
+					: state.last_error == 'http-error'
+						? 'Last.fm request failed'
 				: 'Image download failed';
 		return 'No images downloaded';
 	}
@@ -165,6 +306,9 @@ function _images(options) {
 			state.phase = 'requesting';
 			state.unavailable = false;
 			state.last_error = '';
+			state.last_http_status = 0;
+			state.retryable = true;
+			state.retry_after_until = 0;
 			state.last_attempt = Date.now();
 			if (automatic)
 				state.attempts++;
@@ -192,6 +336,7 @@ function _images(options) {
 		var now = Date.now();
 		var state = this.artist_state(this.artist);
 		if (state.pending || state.attempts >= this.auto_download_attempt_limit ||
+				state.retryable === false || now < state.retry_after_until ||
 				state.unavailable ||
 				now - state.last_attempt < this.auto_download_retry_ms)
 			return false;
@@ -246,6 +391,9 @@ function _images(options) {
 			state.phase = 'available';
 			state.unavailable = false;
 			state.last_error = '';
+			state.last_http_status = 0;
+			state.retryable = true;
+			state.retry_after_until = 0;
 			this.log('Download completed for "' + artist + '": ' + state.succeeded +
 				' saved, ' + state.failed + ' failed.');
 		} else {
@@ -259,7 +407,7 @@ function _images(options) {
 		this.notify_status_changed();
 	}
 
-	this.http_request_done = function (id, success, response_text) {
+	this.http_request_done = function (id, success, response_text, status, response_headers) {
 		var artist = this.artists[id];
 
 		if (!artist)
@@ -274,13 +422,22 @@ function _images(options) {
 		if (this.disposed)
 			return;
 
-		if (!success) {
+		status = Number(status) || 0;
+		var http_ok = success && (!status || (status >= 200 && status < 300));
+		if (!http_ok) {
+			var retryable = this.is_transient_http_failure(success, status);
+			var will_retry = automatic && retryable && state.attempts < this.auto_download_attempt_limit;
 			state.pending = false;
-			state.last_error = String(response_text || 'request failed');
-			state.phase = automatic && state.attempts < this.auto_download_attempt_limit
+			state.last_error = status ? (retryable ? 'http-transient' : 'http-error') : String(response_text || 'request failed');
+			state.last_http_status = status;
+			state.retryable = retryable;
+			state.retry_after_until = retryable
+				? Date.now() + Math.max(this.auto_download_retry_ms, this.retry_after_ms(response_headers))
+				: 0;
+			state.phase = will_retry
 				? 'retrying'
 				: 'error';
-			this.log('Request failed for "' + artist + '": ' + state.last_error);
+			this.log_http_failure(artist, success, status, response_text, response_headers, will_retry);
 			this.notify_status_changed();
 			return;
 		}
@@ -300,12 +457,16 @@ function _images(options) {
 			state.pending = false;
 			if (extracted.confirmed_empty) {
 				state.last_error = 'no-images';
+				state.last_http_status = 0;
+				state.retryable = true;
 				state.unavailable = !automatic || state.attempts >= this.auto_download_attempt_limit;
 				state.phase = state.unavailable ? 'unavailable' : 'retrying';
 				this.log('Last.fm confirmed an empty image gallery for "' + artist + '"' +
 					(state.unavailable ? '.' : '; another automatic attempt will follow.'));
 			} else {
 				state.last_error = 'unreadable-page';
+				state.last_http_status = 0;
+				state.retryable = true;
 				state.unavailable = false;
 				state.phase = automatic && state.attempts < this.auto_download_attempt_limit
 					? 'retrying'
@@ -340,6 +501,9 @@ function _images(options) {
 		state.phase = queued > 0 ? 'downloading' : 'available';
 		state.unavailable = false;
 		state.last_error = '';
+		state.last_http_status = 0;
+		state.retryable = true;
+		state.retry_after_until = 0;
 		this.log('Last.fm returned ' + candidates.length + ' image' +
 			(candidates.length == 1 ? '' : 's') + ' for "' + artist + '"; ' + queued + ' queued' +
 			(extracted.raw_count ? ' (raw-markup fallback recovered ' + extracted.raw_count + ')' : '') + '.');
@@ -689,6 +853,9 @@ function _images(options) {
 			state.phase = 'available';
 			state.unavailable = false;
 			state.last_error = '';
+			state.last_http_status = 0;
+			state.retryable = true;
+			state.retry_after_until = 0;
 		}
 		this.update_image();
 		this.notify_status_changed();
@@ -798,6 +965,7 @@ function _images(options) {
 	this.counter = 0;
 	this.auto_download_attempt_limit = 3;
 	this.auto_download_retry_ms = 30000;
+	this.response_preview_limit = 160;
 	this.disposed = false;
 	this.interval_id = 0;
 	this.is_bio_panel = panel.text_objects.length == 1 && panel.text_objects[0].name == 'lastfm_bio';

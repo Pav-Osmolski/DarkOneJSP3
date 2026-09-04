@@ -178,7 +178,11 @@ The downloader reads the normal Last.fm gallery structure first and can recover
 current gallery URLs directly from the raw page markup if JScript Panel's DOM
 conversion returns no usable nodes. A successful request that contains neither
 a recognised gallery nor a confirmed-empty marker is labelled `Last.fm page
-could not be read` and remains distinct from `No images available`.
+could not be read` and remains distinct from `No images available`. HTTP errors
+are classified before parsing: transport failures, 408/425/429 and 5xx responses
+remain retryable, while permanent errors stop automatic retries until Download
+now is used. The console records the HTTP reason, response length, selected
+content/CDN headers and a short sanitised response preview.
 
 Hide if no images available appears immediately below Download now. When
 enabled, it returns the image region to the biography only after Last.fm has

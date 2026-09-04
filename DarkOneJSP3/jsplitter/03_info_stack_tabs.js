@@ -9,6 +9,10 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // the six real panels.
 //
 // Version history (newest first):
+// v0.6.34 keeps discrete InfoStack geometry changes on the normal lightweight
+// resize/repaint path. Scroll-edge fade smoothness is resolved inside the shared
+// DirectWrite fade helper, so tab-strip changes require no forced child repaint.
+//
 // v0.6.33 keeps automatic tab font and area geometry fixed across standard and
 // expanded InfoStack widths by using the main controller's reference width.
 //
@@ -358,11 +362,11 @@ function automaticTabAreaHeight() {
     return tabHeight + scaledGap;
 }
 
+
 function setTabAreaHeight(value) {
     value = Math.round(Number(value) || 0);
     window.SetProperty(TAB_AREA_HEIGHT_PROPERTY, value <= 0 ? 0 : DOJSP3.clamp(value, 18, 240));
     layoutInfoStack();
-    window.Repaint();
     publishInfoStackMenuState();
 }
 
@@ -526,7 +530,6 @@ function setTabStripVisible(visible) {
     window.SetProperty(TAB_STRIP_VISIBLE_PROPERTY, visible);
     hoverIndex = -1;
     layoutInfoStack();
-    window.Repaint();
     publishInfoStackMenuState();
 }
 
@@ -603,8 +606,7 @@ function handleInfoStackMenuAction(id, targetIndex) {
     } else if (id === 200) {
         window.SetProperty(FONT_PROPERTY, 0);
         layoutInfoStack();
-        window.Repaint();
-    } else if (id === 201) {
+        } else if (id === 201) {
         try {
             var current = Number(window.GetProperty(FONT_PROPERTY, 0)) || automaticFontSize();
             var entered = Number(utils.InputBox(
@@ -618,8 +620,7 @@ function handleInfoStackMenuAction(id, targetIndex) {
                     entered <= 0 ? 0 : DOJSP3.clamp(Math.round(entered), 8, 48)
                 );
                 layoutInfoStack();
-                window.Repaint();
-            }
+                        }
         } catch (e) {}
     } else if (id === 202) {
         try {
@@ -635,14 +636,12 @@ function handleInfoStackMenuAction(id, targetIndex) {
                     DOJSP3.clamp(Math.round(enteredScale), 50, 200)
                 );
                 layoutInfoStack();
-                window.Repaint();
-            }
+                        }
         } catch (e2) {}
     } else if (id === 203) {
         window.SetProperty(AUTO_FONT_SCALE_PROPERTY, 100);
         layoutInfoStack();
-        window.Repaint();
-    } else if (handleInfoStackColourMenu(id)) {
+        } else if (handleInfoStackColourMenu(id)) {
     } else if (id >= 300 && id < 300 + INFO_PANELS.length) {
         var visibilityIndex = id - 300;
         setTabVisible(visibilityIndex, !isTabVisible(visibilityIndex));

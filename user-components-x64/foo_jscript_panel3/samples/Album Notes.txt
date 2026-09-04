@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Album Notes - Enhanced"
-// @version "0.6.11"
+// @version "0.6.12"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"

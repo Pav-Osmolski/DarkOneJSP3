@@ -1,4 +1,4 @@
-DarkOneJSP3 v1.1.1 Validation Report
+DarkOneJSP3 v1.1.2 Validation Report
 ====================================
 
 Scope
@@ -74,10 +74,14 @@ Checks
   the optional `DarkOneJSP3/InfoStack/Menu` command. The button-opened popup is
   runtime-tested as locally owned by the invoking JScript Panel; live menu state
   is mirrored through a runtime-only snapshot and only the selected action is
-  forwarded to InfoStack after popup dismissal. The obsolete direct
-  `infostack-menu` notification payload is deliberately ignored so it cannot
-  recreate cross-panel popup ownership; selected-action payloads and existing
-  LAYOUT/SPECTRUM view-command semantics remain supported.
+  forwarded to InfoStack after popup dismissal. Tab-strip and tab-area/font
+  geometry changes remain on the lightweight child-resize path without a forced
+  child-inclusive repaint; scroll-fade smoothness is validated independently
+  through the shared continuous alpha-mask renderer. The obsolete direct
+  `infostack-menu`
+  notification payload is deliberately ignored so it cannot recreate cross-panel
+  popup ownership; selected-action payloads and existing LAYOUT/SPECTRUM
+  view-command semantics remain supported.
 - JS Playlist visible rows cache selection state and the current playback
   location outside paint/mouse hot paths; sequential viewport changes reuse
   surviving row objects and pre-resolved column geometry.
@@ -406,13 +410,24 @@ Checks
   region collapse only for a recognisable successful empty result. Current raw
   gallery markup must recover images when DOM conversion yields no nodes, while
   an unrecognised successful response remains retryable and cannot be marked
-  unavailable. Tests also require hidden-panel timer suspension,
+  unavailable. The observed 136-character HTTP 502 response is regression-tested
+  for status-aware transient classification, selected safe-header reporting and
+  sanitised preview output; permanent HTTP errors must suppress automatic retry
+  while preserving manual Download now. Tests also require hidden-panel timer suspension,
   completed-request map cleanup and idempotent interval/Direct2D resource
   disposal.
 - Combined Last.fm Biography and Album Notes entry contracts require complete
   metadata, enhanced page backgrounds, reset routing, collapsible bounded layout
   geometry, shared appearance menus and disposal of both their text and artwork
   objects.
+- Scrollable DirectWrite text contracts require the shared display-scaled edge
+  fade to render the TextLayout once into a reusable transparent surface and
+  composite it with JSP3 3.8.5 `DrawImageWithMask`. The cached mask is one pixel
+  wide because the fade varies only vertically, uses continuous alpha-gradient
+  stops, preserves existing/styled text alpha through compositing and activates
+  the upper/lower edge independently only when the matching scroll arrow is
+  visible. Static validation rejects the former per-pixel TextLayout redraw loop,
+  and arrow glyphs remain outside the faded drawing path.
 - Bottom-area runtime tests isolate the JScript Panel and JSplitter notification
   domains, verify file-backed synchronisation for all three child panels and the
   host, cover every palette mode, transparent painting, full-host geometry,

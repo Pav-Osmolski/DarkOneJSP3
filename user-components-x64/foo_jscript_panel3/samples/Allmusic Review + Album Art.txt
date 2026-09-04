@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "Allmusic Review + Album Art - Enhanced"
-// @version "0.6.6"
+// @version "0.6.7"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
@@ -28,7 +28,7 @@ allmusic.paint = function (gr) {
 	gr.WriteTextSimple(this.header_text(), panel.fonts.title, white, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
 
 	if (this.text_layout) {
-		gr.WriteTextLayout(this.text_layout, white, this.x, this.y + margin, this.w, this.ha, this.offset);
+		_writeTextLayoutWithScrollFade(gr, this.text_layout, white, this.x, this.y + margin, this.w, this.ha, this.offset, this.up_btn.v(), this.down_btn.v());
 		this.up_btn.paint(gr, white);
 		this.down_btn.paint(gr, white);
 	}

@@ -97,7 +97,7 @@ function _text_reader(x, y, w, h) {
 
 	this.paint = function (gr) {
 		if (this.text_layout) {
-			gr.WriteTextLayout(this.text_layout, panel.colours.text, this.x, this.y + _scale(12), this.w, this.ha, this.offset);
+			_writeTextLayoutWithScrollFade(gr, this.text_layout, panel.colours.text, this.x, this.y + _scale(12), this.w, this.ha, this.offset, this.up_btn.v(), this.down_btn.v());
 			this.up_btn.paint(gr, panel.colours.text);
 			this.down_btn.paint(gr, panel.colours.text);
 		}

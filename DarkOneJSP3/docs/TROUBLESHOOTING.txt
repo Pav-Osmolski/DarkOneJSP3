@@ -556,13 +556,24 @@ found - retrying... means a successful empty result will be tried again
 automatically; Image download failed - retrying... or Image download failed
 identifies a request, parsing or file failure rather than a confirmed empty
 artist page. Open the JScript Panel console for request starts, returned image
-counts, queued/saved paths, errors and the final saved/failed summary.
+counts, queued/saved paths, errors and the final saved/failed summary. Last.fm is
+temporarily unavailable - retrying... identifies a transport, 408/425/429 or 5xx
+failure before gallery parsing.
+
+An HTTP 502 response with a 136-character body is Last.fm's minimal `502 Bad
+Gateway` page. It means the CDN could not obtain the artist gallery from the
+upstream service; it does not mean the artist has no images. The console reports
+the HTTP reason, response length, selected Content-Type/Last.fm/CDN headers and a
+short sanitised preview such as `502 Bad Gateway`. It remains eligible for the
+bounded automatic retry cadence.
 
 If the console reports `unrecognised image page`, Last.fm returned a response
-that did not contain a readable gallery—commonly a temporary verification,
-consent or truncated page. This is not treated as proof that the artist has no
-images. The downloader retries automatically when attempts remain and also uses
-a raw-markup fallback when the gallery is present but DOM conversion failed.
+with a successful HTTP status that did not contain a readable gallery—commonly a
+temporary verification, consent or truncated page. Non-2xx responses are
+reported separately and never enter the gallery parser. Neither result is
+treated as proof that the artist has no images. The downloader retries eligible
+failures automatically when attempts remain and also uses a raw-markup fallback
+when the gallery is present but DOM conversion failed.
 
 Repeated Download now clicks do not queue duplicate work while the same artist
 request is active. If Last.fm successfully returns no usable images, the panel

@@ -380,6 +380,96 @@ function _save(file, value) {
 	return false;
 }
 
+var _scroll_fade_surface = null;
+var _scroll_fade_surface_w = 0;
+var _scroll_fade_surface_h = 0;
+var _scroll_fade_mask = null;
+var _scroll_fade_mask_key = '';
+
+function _scrollFadeSurface(w, h) {
+	w = Math.max(1, Math.ceil(w));
+	h = Math.max(1, Math.ceil(h));
+	if (!_scroll_fade_surface || _scroll_fade_surface_w != w || _scroll_fade_surface_h != h) {
+		_scroll_fade_surface = utils.CreateImage(w, h);
+		_scroll_fade_surface_w = w;
+		_scroll_fade_surface_h = h;
+	}
+	return _scroll_fade_surface;
+}
+
+function _scrollFadeMask(h, fade_height, fade_top, fade_bottom) {
+	h = Math.max(1, Math.ceil(h));
+	fade_height = Math.max(1, Math.min(Math.ceil(fade_height), Math.floor(h * 0.5)));
+	var key = h + '|' + fade_height + '|' + (fade_top ? 1 : 0) + '|' + (fade_bottom ? 1 : 0);
+	if (_scroll_fade_mask && _scroll_fade_mask_key == key)
+		return _scroll_fade_mask;
+
+	// The fade varies only vertically, so a one-pixel-wide mask is enough.
+	// DrawImageWithMask scales it across the text surface and avoids allocating
+	// another full-size image for every panel viewport.
+	var mask = utils.CreateImage(1, h);
+	var mask_gr = mask.GetGraphics();
+	mask_gr.Clear(RGBA(0, 0, 0, 0));
+	var opaque = RGBA(0, 0, 0, 255);
+	var transparent = RGBA(0, 0, 0, 0);
+
+	var top_end = fade_top ? fade_height : 0;
+	var bottom_start = fade_bottom ? h - fade_height : h;
+	if (bottom_start > top_end)
+		mask_gr.FillRectangle(0, top_end, 1, bottom_start - top_end, opaque);
+
+	if (fade_top) {
+		mask_gr.FillRectangle(0, 0, 1, fade_height, JSON.stringify({
+			Start : [0, 0],
+			End : [0, fade_height],
+			Stops : [[0, transparent], [1, opaque]],
+		}));
+	} else if (top_end > 0) {
+		mask_gr.FillRectangle(0, 0, 1, top_end, opaque);
+	}
+
+	if (fade_bottom) {
+		mask_gr.FillRectangle(0, h - fade_height, 1, fade_height, JSON.stringify({
+			Start : [0, 0],
+			End : [0, fade_height],
+			Stops : [[0, opaque], [1, transparent]],
+		}));
+	} else if (bottom_start < h) {
+		mask_gr.FillRectangle(0, bottom_start, 1, h - bottom_start, opaque);
+	}
+
+	mask.ReleaseGraphics();
+	_scroll_fade_mask = mask;
+	_scroll_fade_mask_key = key;
+	return mask;
+}
+
+function _writeTextLayoutWithScrollFade(gr, text_layout, colour, x, y, w, h, vertical_offset, fade_top, fade_bottom) {
+	if (!text_layout || w <= 0 || h <= 0)
+		return;
+
+	if (!fade_top && !fade_bottom) {
+		gr.WriteTextLayout(text_layout, colour, x, y, w, h, vertical_offset);
+		return;
+	}
+
+	var render_w = Math.max(1, Math.ceil(w));
+	var render_h = Math.max(1, Math.ceil(h));
+	var fade_height = Math.max(1, Math.min(_scale(8), Math.floor(render_h * 0.5)));
+	var surface = _scrollFadeSurface(render_w, render_h);
+	var surface_gr = surface.GetGraphics();
+	surface_gr.Clear(RGBA(0, 0, 0, 0));
+	// Render the scrolled DirectWrite layout once, then apply a cached alpha
+	// mask. The former per-pixel band path redrew the entire TextLayout for
+	// every fade pixel and could monopolise the UI thread during fast wheel
+	// scrolling, especially in the combined text + artwork panels.
+	surface_gr.WriteTextLayout(text_layout, colour, 0, 0, render_w, render_h, vertical_offset);
+	surface.ReleaseGraphics();
+
+	var mask = _scrollFadeMask(render_h, fade_height, fade_top, fade_bottom);
+	gr.DrawImageWithMask(surface, mask, x, y, w, h);
+}
+
 function _sb(ch, x, y, w, h, v, fn) {
 	this.paint = function (gr, colour) {
 		if (this.v()) {
