@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.1.2
+  <strong>Current release:</strong> v1.1.3
 </p>
 
 > [!IMPORTANT]
@@ -69,7 +69,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.1.2** is the current release.
+**DarkOneJSP3 v1.1.3** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -115,7 +115,7 @@ before replacing them, particularly when another theme includes its own local
 modifications. Individual top-level sample files can then be loaded normally
 inside JScript Panel 3.
 
-See the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt)
+See the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.md)
 for standalone installation, compatibility guarantees and integration details.
 
 ## Requirements
@@ -143,7 +143,7 @@ The package contains two top-level directories: `DarkOneJSP3` and
 foobar2000 profile.
 
 The supplied JScript Panel sample tree can also be installed independently for
-other themes; see the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt).
+other themes; see the [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.md).
 DarkOneJSP3 itself still requires both top-level directories.
 
 ### Standard installation (non-portable)
@@ -211,21 +211,21 @@ the documented panel titles and scripts.
 
 See:
 
-* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
-* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
+* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.md)
+* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.md)
 
 ## Documentation
 
 * [DarkOneJSP3 Wiki](https://github.com/Pav-Osmolski/DarkOneJSP3/wiki)
-* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.txt)
-* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.txt)
-* [Configuration Guide](DarkOneJSP3/docs/CONFIGURATION_GUIDE.txt)
-* [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.txt)
-* [Troubleshooting](DarkOneJSP3/docs/TROUBLESHOOTING.txt)
-* [Migration Reference](DarkOneJSP3/docs/MIGRATION_REFERENCE.txt)
-* [Changelog](DarkOneJSP3/docs/CHANGELOG.txt)
-* [Credits](DarkOneJSP3/docs/CREDITS.txt)
-* [Validation Report](DarkOneJSP3/docs/VALIDATION_REPORT.txt)
+* [Installation Guide](DarkOneJSP3/docs/INSTALLATION.md)
+* [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.md)
+* [Configuration Guide](DarkOneJSP3/docs/CONFIGURATION_GUIDE.md)
+* [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.md)
+* [Troubleshooting](DarkOneJSP3/docs/TROUBLESHOOTING.md)
+* [Migration Reference](DarkOneJSP3/docs/MIGRATION_REFERENCE.md)
+* [Changelog](DarkOneJSP3/docs/CHANGELOG.md)
+* [Credits](DarkOneJSP3/docs/CREDITS.md)
+* [Validation Report](DarkOneJSP3/docs/VALIDATION_REPORT.md)
 
 ## Repository layout
 
@@ -288,7 +288,7 @@ Preserve all existing author headers, credits and third-party licence notices.
 
 No blanket licence is asserted over inherited DarkOne artwork or third-party
 component or sample code. Do not redistribute foobar2000 binaries. See the
-[Credits](DarkOneJSP3/docs/CREDITS.txt) for detailed attribution.
+[Credits](DarkOneJSP3/docs/CREDITS.md) for detailed attribution.
 
 ## Disclaimer
 

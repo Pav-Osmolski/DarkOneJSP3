@@ -6,6 +6,8 @@ from . import (
     package_checks,
     performance_checks,
     source_contract_checks,
+    markdown_checks,
+    inventory_checks,
 )
 
 
@@ -13,6 +15,8 @@ def run(ctx: ValidationContext) -> None:
     """Run the focused static validation modules in dependency order."""
 
     package_checks.run(ctx)
+    inventory_checks.run(ctx)
     source_contract_checks.run(ctx)
     documentation_checks.run(ctx)
+    markdown_checks.run(ctx)
     performance_checks.run(ctx)

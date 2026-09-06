@@ -1,77 +1,56 @@
-DarkOneJSP3 v1.1.2
-==================
+# DarkOneJSP3 v1.1.3
 
 DarkOneJSP3 is an unofficial x64 continuation of the final DarkOne2021
 JScript Panel 2.8.8 build. It preserves the DarkOne layout and visual identity while replacing the
 legacy Panel Stack Splitter architecture with JSplitter 4.x and JScript Panel 3.
 
-Supported environment
----------------------
-- foobar2000 v2 x64 (https://www.foobar2000.org/windows)
-- Columns UI (https://www.foobar2000.org/components/view/foo_ui_columns)
-- JScript Panel 3.8.5 (https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-- JSplitter 4.x, tested with 4.1.14 (https://github.com/dima-lur/jsplitter/releases)
-- Enhanced Spectrum Analyser (https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
-- Waveform Minibar (mod) 1.2.69-patched (https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
+## Supported environment
 
-Documentation map
------------------
-README.txt
-  Project overview, supported environment and documentation index.
+- [foobar2000 v2 x64](https://www.foobar2000.org/windows)
+- [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
+- [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
+- [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
+- [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
+- [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
-INSTALLATION.txt
-  Fresh installation, upgrades, manual layout setup, checks and rollback.
+## Documentation map
 
-LAYOUT_AND_PANEL_MAP.txt
-  Exact Columns UI hierarchy, DOJSP3.* titles and script assignments.
+- [README.md](README.md) — Project overview, supported environment and documentation index.
+- [INSTALLATION.md](INSTALLATION.md) — Fresh installation, upgrades, manual layout setup, checks and rollback.
+- [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md) — Exact Columns UI hierarchy, `DOJSP3.*` titles and script assignments.
+- [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) — Complete context-menu map, panel settings, defaults and persistent properties.
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Topic-based fixes for startup, layout, display, waveform, playlists, queue and online metadata providers.
+- [MIGRATION_REFERENCE.md](MIGRATION_REFERENCE.md) — Architectural reference for moving from DarkOne2021/PSS to DarkOneJSP3.
+- [CHANGELOG.md](CHANGELOG.md) — Complete release history. Release notes are maintained here only.
+- [CREDITS.md](CREDITS.md) — Project attribution and third-party acknowledgements.
+- [VALIDATION_REPORT.md](VALIDATION_REPORT.md) — Scope and reproducible checks for the current release.
+- [ENHANCED_SAMPLES.md](ENHANCED_SAMPLES.md) — Standalone use, compatibility guarantees and integration details for the upgraded JScript Panel sample tree.
 
-CONFIGURATION_GUIDE.txt
-  Complete context-menu map, panel settings, defaults and persistent properties.
+## Quick start
 
-TROUBLESHOOTING.txt
-  Topic-based fixes for startup, layout, display, waveform, playlists, queue
-  and online metadata providers.
-
-MIGRATION_REFERENCE.txt
-  Architectural reference for moving from DarkOne2021/PSS to DarkOneJSP3.
-
-CHANGELOG.txt
-  Complete release history. Release notes are maintained here only.
-
-CREDITS.txt
-  Project attribution and third-party acknowledgements.
-
-VALIDATION_REPORT.txt
-  Scope and reproducible checks for the current release.
-
-ENHANCED_SAMPLES.txt
-  Standalone use, compatibility guarantees and integration details for the
-  upgraded JScript Panel sample tree.
-
-Quick start
------------
 1. Back up the foobar2000 profile and Columns UI layout.
-2. Follow INSTALLATION.txt.
-3. Verify every custom title against LAYOUT_AND_PANEL_MAP.txt.
-4. Open CONFIGURATION_GUIDE.txt for theme and panel options.
+2. Follow [INSTALLATION.md](INSTALLATION.md).
+3. Verify every custom title against [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md).
+4. Open [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) for theme and panel options.
 5. Configure an optional TOOLS button with the internal command
    DarkOneJSP3/Tools/Menu for the shared DarkOne Tools popup.
-6. Check the foobar2000 console and TROUBLESHOOTING.txt if anything is missing.
+6. Check the foobar2000 console and [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if anything is missing.
 
-Important project policies
---------------------------
+## Important project policies
+
 - DOJSP3.AlbumNotes is the required fourth InfoStack child title.
-- Manual construction from LAYOUT_AND_PANEL_MAP.txt is the recommended setup.
+- Manual construction from [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md) is the recommended setup.
   An optional maintainer-exported FCL is supplied in DarkOneJSP3\fcl, but it
   is never required, patched or generated by project tooling. It contains one
   `DarkOneJSP3` layout with the scripted Queue Viewer and scripted Quick Search.
 - Hotfix archives include every changed documentation file together with the
   relevant runtime, metadata and validation files.
-- CHANGELOG.txt is the sole release-history document. README.txt intentionally
+- [CHANGELOG.md](CHANGELOG.md) is the sole release-history document. [README.md](README.md) intentionally
   contains no version-by-version changelog.
 
-Project folders
----------------
+## Project folders
+
+```text
 DarkOneJSP3\
   docs\                  User documentation, changelog and credits
   fcl\                   Optional maintainer-exported Columns UI layout
@@ -84,9 +63,10 @@ DarkOneJSP3\
 
 user-components-x64\foo_jscript_panel3\samples\
   Standalone enhanced JScript Panel 3 sample tree used by DarkOneJSP3.
+```
 
-Current highlights
-------------------
+## Current highlights
+
 - JS Playlist caches visible-row selection and playback state, reuses row objects
   during sequential scrolling and caches resolved column geometry.
 - Dot Matrix values render directly from cached sprite bitmaps; control-panel
@@ -168,7 +148,7 @@ Current highlights
 - Focused InfoStack colour and bridge helpers keep layout, painting and tab
   interaction in the controller while isolating menu state and protocol plumbing.
 
-Recovery
---------
+## Recovery
+
 Use DarkOne Tools > Reset DarkOneJSP3 to restore one panel or the complete theme
 to its built-in property defaults without deleting provider caches.

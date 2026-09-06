@@ -674,12 +674,17 @@ function _panel(options) {
 	this.font_changed();
 	this.update_wallpaper();
 
-	if (this.enhanced_page_background) {
+	// Every text panel can allocate shared scroll-fade resources.
+	{
 		var previous_unload = typeof on_script_unload == 'function' ? on_script_unload : null;
 		var self = this;
 		on_script_unload = function () {
-			self.dispose();
-			if (previous_unload) previous_unload();
+			try {
+				try { self.dispose(); }
+				finally { if (previous_unload) previous_unload(); }
+			} finally {
+				if (typeof _disposeScrollFadeResources == 'function') _disposeScrollFadeResources();
+			}
 		};
 	}
 }

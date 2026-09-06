@@ -3433,6 +3433,35 @@ suite("Last.fm image lifecycle", function () {
            logs.some(line => line.indexOf('transport failure: offline') !== -1),
            'Transport failure was not retained as retryable or diagnosed');
 
+    images.artist = 'Timeout Artist';
+    assert(images.download(true), 'Could not start timeout fixture');
+    const lateRequest = requests[requests.length - 1];
+    now += images.request_timeout_ms;
+    windowMock.IsVisible = false;
+    interval();
+    assert(!images.current_state().pending && images.current_state().last_error === 'download-timeout',
+           'Missing HTTP callback was not expired while hidden');
+    images.http_request_done(lateRequest, true, currentGallery, 200, '');
+    assert(!images.current_state().pending, 'Late HTTP callback revived an expired request');
+    windowMock.IsVisible = true;
+    assert(images.download(false), 'Manual retry after timeout was blocked');
+    images.http_request_done(requests[requests.length - 1], true, currentGallery, 200, '');
+    const timedOutFile = downloadRequests[downloadRequests.length - 1].path;
+    now += images.download_timeout_ms;
+    images.check_download_deadlines();
+    assert(!images.current_state().pending && images.download_tasks[timedOutFile.toLowerCase()].timed_out,
+           'Missing file callback was not safely quarantined');
+    assert(images.download(false), 'Could not start newer request');
+    images.download_file_done(timedOutFile, true, '');
+    assert(images.current_state().pending && images.current_state().phase === 'requesting',
+           'Late file callback completed a newer request');
+    const retained = images.current_state();
+    for (let i = 0; i < 2000; i++) images.artist_state('History ' + i);
+    assert(Object.keys(images.history).length <= images.history_limit && images.current_state() === retained,
+           'History grew unbounded or evicted the pending/current artist');
+    assert(images.artist_state('__proto__').attempts === 0 && images.artist_state('constructor').attempts === 0,
+           'Artist names collided with object prototype properties');
+
     images.reset_image();
     const disposalBase = bitmapDisposals;
     images.bitmap.normal = {Dispose() { bitmapDisposals++; }};

@@ -1,16 +1,15 @@
-DarkOneJSP3 v1.1.2 Validation Report
-====================================
+# DarkOneJSP3 v1.1.3 Validation Report
 
-Scope
------
+## Scope
+
 This report covers the files evaluated by the bundled release validator. Its
 scope includes package structure, runtime scripts, configuration and reset
 behaviour, metadata, documentation and intentional compatibility mirrors. The
 maintainer-managed DarkOneJSP3.fcl is deliberately excluded from inspection,
 validation and the audited-file count.
 
-Checks
-------
+## Checks
+
 - JSP3 3.8.5 API validation scans every DarkOneJSP3/JSP3 sample script and
   rejects known host/API mix-ups including legacy `fb.GetQueryItems()`, the
   JSplitter/SMP-only `plman.PlaylistItemCount()`, JSP3 `FillSolidRect()` use,
@@ -228,6 +227,9 @@ Checks
   `SupportPseudoTransparency`, allowing the component's native Transparent
   background mode to reveal the resolved DisplayStack backing instead of an
   opaque black child-window fallback.
+- Display/Waveform geometry validation requires the proportional waveform
+  inset (`lowerHeight / 4`) and rejects the retired fixed 20 px spacer, keeping
+  the visible Waveform Minibar vertically balanced as the host height changes.
 - Public component guidance requires Waveform Minibar 1.2.69-patched, its
   maintained GitHub release URL, the complete 25/30/50/60/100/120/144 FPS set
   and the persistent default-on Enable anti-aliasing command. Documentation
@@ -256,7 +258,7 @@ Checks
   script unload. Script unload also explicitly disposes active normal and blurred
   Direct2D bitmaps.
 - The repository README contains a dedicated Enhanced Sample Library section
-  and a direct link to the distributed ENHANCED_SAMPLES.txt guide. Requirements
+  and a direct link to the distributed ENHANCED_SAMPLES.md guide. Requirements
   and panel-map documentation retain the intended component set and identify the
   current scripted Queue Viewer and Quick Search implementations.
 - The complete user-components-x64 tree is staged without a DarkOneJSP3
@@ -305,7 +307,7 @@ Checks
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 35 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 36 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -477,7 +479,7 @@ Checks
   explicitly excluded.
 - Playlist Manager clears all tracked timers during script unload.
 - Public documentation uses current project identifiers and contains only the
-  current package version outside CHANGELOG.txt.
+  current package version outside CHANGELOG.md.
 - Installation guidance contains the complete Enhanced Spectrum Analyser and
   Waveform Minibar reference settings, including their processing, timing,
   colour, transparency, playback-rate and anti-aliasing values.
@@ -487,7 +489,9 @@ Checks
 - Native component-owned menus are identified explicitly rather than presented
   as DarkOneJSP3-owned settings.
 - Documentation headings, numbered sections and README links are internally
-  consistent; Configuration Guide headings require blank-line separation, and
+  consistent. Installation, Configuration Guide and Troubleshooting Contents
+  entries must be clickable and resolve to the matching GitHub-style heading
+  anchors; Configuration Guide headings require blank-line separation, and
   repository artwork is checked whenever an assets folder is present.
 - Installation guidance distinguishes the default standard-install profile at
   %APPDATA%\foobar2000-v2\profile from both supported portable-profile
@@ -495,11 +499,74 @@ Checks
   explicit.
 - Troubleshooting guidance describes current behaviour without development
   upgrade instructions.
-- CHANGELOG.txt contains one document title and a correctly formatted entry for
+- CHANGELOG.md contains one document title and a correctly formatted entry for
   the current release.
 
-Result
-------
+- The maintained `DarkOneJSP3/docs` set is Markdown-only. Validation rejects
+  reintroduced `.txt` documentation, stale references to retired documentation
+  filenames, malformed document-level heading structure, broken local/heading
+  links and loss of the fenced fixed-width structures used by layout trees, path
+  lists and the persistent-property reference.
+
+## Release and validator regression checks
+
+- The shared scroll-fade cache retains only the current surface and mask, reuses
+  unchanged resources and disposes replacements and unload resources exactly once.
+- The actual Waveform `on_size` path is exercised at tiny, odd, even and normal
+  heights, including the 394 px host / 49 px inset / 148 px child case.
+- Every nested `samples/basic` entry participates in syntax and component-only
+  staging checks. Manifest entries require the complete title/source/type/number
+  contract and source-header versions for all scripted panels.
+- Last.fm image history uses a 256-entry least-recently-used limit with current
+  and pending artists retained. Concurrent artist downloads are capped at 32.
+  HTTP requests expire after 45 seconds and file batches after 120 seconds using
+  the existing interval, including while hidden. Expired file paths are retained
+  until their native callback arrives so they cannot be confused with a newer
+  request; at most 256 paths are tracked. If that safety limit is reached, reload
+  the panel after the outstanding native downloads have finished.
+- Node processes have a 60-second deadline, isolated suite timers are cleared,
+  and console diagnostics cannot corrupt structured failure output.
+- `release-inventory.json` rejects unexpected or missing files. Bitmap checks
+  validate headers, dimensions and uncompressed payload bounds; they are not a
+  substitute for visual asset review. Source checks are grouped into six focused
+  functions, and deliberate compatibility mirrors remain independently checked.
+- Shared Markdown checks cover named component links, headings, local links and
+  anchors, fenced examples, Wiki inventory and configuration menu coverage.
+  Migration/layout examples are compared between the full docs and Wiki.
+- Eleven offline validator tests exercise broken geometry, missing fade disposal,
+  invalid nested syntax, malformed metadata, incorrect manifests, extra files,
+  Markdown failures, timer leakage, console noise and archive-member rejection.
+
+To validate both source trees and run the validator's own mutation tests:
+
+```text
+python DarkOneJSP3/tools/validate_release.py . --wiki ../wiki
+python DarkOneJSP3/tools/test_validation.py
+```
+
+To produce the full and Wiki ZIPs plus a per-file SHA-256 report:
+
+```text
+python DarkOneJSP3/tools/build_release.py . --wiki ../wiki --output ../release-output
+```
+
+The output directory must be outside both source trees and must not already
+contain these output files. The builder validates both trees and the actual ZIP
+members, copying the optional FCL unchanged. Ordering, timestamps and permissions
+are normalised; byte-identical builds assume the same Python/zlib toolchain.
+Update the reviewed inventory explicitly when adding or removing release files.
+
+These are offline static and mocked-host tests. Native Windows/foobar2000 visual
+rendering, rapid resize behaviour and live provider requests still require a
+manual smoke test before public release.
+
+## Result
+
 Run the bundled validator from the package root to reproduce these checks:
 
-  python DarkOneJSP3\tools\validate_release.py .
+```text
+python DarkOneJSP3\tools\validate_release.py .
+```
+
+The hardened v1.1.3 package (release validator 0.10.52) passes with **224 audited files and zero warnings**;
+the bundled FCL is excluded from the audited-file count and remains unchanged.

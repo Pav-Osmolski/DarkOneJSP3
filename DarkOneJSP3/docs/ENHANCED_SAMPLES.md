@@ -1,14 +1,13 @@
-Enhanced JScript Panel 3 Samples
-================================
+# Enhanced JScript Panel 3 Samples
 
-Purpose
--------
+## Purpose
+
 The user-components-x64 tree supplied with DarkOneJSP3 is now a standalone,
 upgraded JScript Panel 3 sample suite. The enhanced samples no longer require
 the DarkOneJSP3 project directory and can be used by other foobar2000 themes.
 
-Installation outside DarkOneJSP3
---------------------------------
+## Installation outside DarkOneJSP3
+
 1. Close foobar2000.
 2. Back up the installed foo_jscript_panel3\samples directory and helpers.txt.
 3. Merge the supplied user-components-x64\foo_jscript_panel3 tree into the
@@ -18,8 +17,8 @@ Installation outside DarkOneJSP3
 The DarkOneJSP3 folder and its Columns UI layout are not required for standalone
 sample use.
 
-Compatibility design
---------------------
+## Compatibility design
+
 - Existing sample filenames, module filenames, constructors and import paths are
   retained.
 - helpers.txt carries guarded performance and UI-cadence fallbacks so themes
@@ -54,8 +53,8 @@ Compatibility design
   queue bridge, while the component sample retains no project-folder runtime
   dependency.
 
-Combined image layouts
-----------------------
+## Combined image layouts
+
 Last.fm Bio + Images.txt combines the hardened Last.fm Biography with downloaded
 artist imagery. Its visible playing-artist view starts automatic acquisition
 whenever artwork is needed, de-duplicates an active request and retries at a
@@ -115,15 +114,15 @@ now. When enabled, it collapses the image region only after a successful Last.fm
 response confirms there are no usable images; network and parsing failures stay
 visible, and a manual retry restores the region while it is in progress.
 
-DarkOneJSP3 integration
------------------------
+## DarkOneJSP3 integration
+
 DarkOneJSP3 uses these same standalone samples. Its project-specific code adds
 layout coordination, InfoStack integration and coordinated factory-reset
 commands, but the sample implementations and their shared runtime utilities
 are owned by the JScript Panel component tree.
 
-Validation
-----------
+## Validation
+
 The release validator stages user-components-x64 by itself, with no DarkOneJSP3
 directory, and resolves every distributed sample entry import. It also checks
 legacy helpers.txt fallbacks, neutral and legacy reset notifications, property

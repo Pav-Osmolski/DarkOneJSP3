@@ -33,6 +33,7 @@ if (tests.length !== expectedCount) {
     });
 }
 for (const test of failures.length ? [] : tests) {
+    const timers = new Set();
     let context;
     const localRequire = function (name) {
         if (name !== "vm") return require(name);
@@ -44,13 +45,21 @@ for (const test of failures.length ? [] : tests) {
     };
     context = vm.createContext({
         Buffer,
-        console,
+        console: new (require('console').Console)(process.stderr, process.stderr),
         process,
         require: localRequire,
-        setInterval,
-        clearInterval,
-        setTimeout,
-        clearTimeout,
+        setInterval(fn, delay, ...args) {
+            const id = setInterval(fn, delay, ...args);
+            timers.add(id);
+            return id;
+        },
+        clearInterval(id) { clearInterval(id); timers.delete(id); },
+        setTimeout(fn, delay, ...args) {
+            const id = setTimeout(fn, delay, ...args);
+            timers.add(id);
+            return id;
+        },
+        clearTimeout(id) { clearTimeout(id); timers.delete(id); },
         __path(relative) {
             return path.join(root, String(relative));
         },
@@ -68,6 +77,9 @@ for (const test of failures.length ? [] : tests) {
             name: test.name,
             message: String(error && error.stack || error),
         });
+    } finally {
+        for (const id of timers) { clearTimeout(id); clearInterval(id); }
+        timers.clear();
     }
 }
 

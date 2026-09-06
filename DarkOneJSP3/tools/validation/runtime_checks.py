@@ -42,6 +42,7 @@ RUNTIME_SUITE_FILES = (
     'quick_search_tests.js',
     'rendering_tests.js',
     'reset_tests.js',
+    'hardening_tests.js',
 )
 
 
@@ -226,7 +227,7 @@ def _run_syntax_checks(ctx: ValidationContext, node: str,
     rel = ctx.rel
     text = ctx.text
     import_re = re.compile(r'^//\s*@import\s+"([^"]+)"', re.M)
-    combined_entries = sorted(samples.glob('*.txt')) + sorted(
+    combined_entries = sorted(samples.rglob('*.txt')) + sorted(
         (project / 'jscript').glob('*.txt'))
     loader_entries = sorted((project / 'jsplitter' / 'loaders').glob('*.txt'))
 
@@ -282,7 +283,7 @@ def _run_syntax_checks(ctx: ValidationContext, node: str,
     syntax_manifest.write_text(json.dumps(syntax_targets), encoding='utf-8')
     result = subprocess.run(
         [node, '-e', NODE_SYNTAX_RUNNER, str(syntax_manifest)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, timeout=60)
     if not result.returncode:
         return
     try:
@@ -305,8 +306,8 @@ def _run_behaviour_suites(ctx: ValidationContext, node: str,
         return
     harness = ctx.project / 'tools' / 'validation' / 'js' / 'harness.js'
     result = subprocess.run(
-        [node, str(harness), str(ctx.root), str(bundle), '15000', '35'],
-        capture_output=True, text=True)
+        [node, str(harness), str(ctx.root), str(bundle), '15000', '36'],
+        capture_output=True, text=True, timeout=60)
     if not result.returncode:
         return
     try:
@@ -349,7 +350,7 @@ def run(ctx: ValidationContext) -> None:
         staged_component = (
             staged_root / 'user-components-x64' / 'foo_jscript_panel3')
         staged_samples = staged_component / 'samples'
-        for entry in sorted(staged_samples.glob('*.txt')):
+        for entry in sorted(staged_samples.rglob('*.txt')):
             for value in import_re.findall(text(entry)):
                 if value.startswith('%fb2k_profile_path%DarkOneJSP3\\'):
                     errors.append(
@@ -377,7 +378,10 @@ def run(ctx: ValidationContext) -> None:
     else:
         with tempfile.TemporaryDirectory() as temp:
             temp_dir = Path(temp)
-            _run_syntax_checks(ctx, node, temp_dir)
-            _run_behaviour_suites(ctx, node, temp_dir)
+            try:
+                _run_syntax_checks(ctx, node, temp_dir)
+                _run_behaviour_suites(ctx, node, temp_dir)
+            except subprocess.TimeoutExpired:
+                errors.append('Node validation exceeded its 60-second process deadline')
 
     _check_python_syntax(ctx)

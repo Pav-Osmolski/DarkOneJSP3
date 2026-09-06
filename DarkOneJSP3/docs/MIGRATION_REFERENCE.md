@@ -1,14 +1,14 @@
-DarkOne2021 to DarkOneJSP3 Migration Reference
-==============================================
+# DarkOne2021 to DarkOneJSP3 Migration Reference
 
-Scope
------
+## Scope
+
 This document explains the architectural relationship between the final
 DarkOne2021 JScript Panel 2.8.8 layout and DarkOneJSP3. For installation steps,
-use INSTALLATION.txt. For exact current titles, use LAYOUT_AND_PANEL_MAP.txt.
+use INSTALLATION.md. For exact current titles, use LAYOUT_AND_PANEL_MAP.md.
 
-Original DarkOne2021 structure
-------------------------------
+## Original DarkOne2021 structure
+
+```text
 Panel Stack Splitter 01
   Panel Stack Splitter 02
     Panel Stack Splitter 03
@@ -24,25 +24,26 @@ Panel Stack Splitter 01
       Display
       Waveform Minibar
     Right Controls
+```
 
 DarkOneJSP3 replaces each numbered Panel Stack Splitter with the corresponding
 numbered JSplitter controller.
 
-Architectural changes
----------------------
+## Architectural changes
+
 - PSS title-format scripts became ordinary JavaScript controllers.
-- Numeric child indexes became stable DOJSP3.* custom-title identifiers.
+- Numeric child indexes became stable `DOJSP3.*` custom-title identifiers.
 - PSS global variables became persistent JSplitter/JScript Panel properties.
-- $movepanel/$showpanel operations became PanelObject.Move/Show calls.
+- `$movepanel`/`$showpanel` operations became `PanelObject.Move`/`Show` calls.
 - GDI resources were migrated to JScript Panel 3 DirectWrite/Direct2D handling.
 - ActiveX and WScript dependencies were removed.
 - State owned by a panel remains with that panel instead of being duplicated in
   the root layout script.
 - Deliberate compatibility mirrors have one canonical source and are checked
-  by tools\sync_mirrors.py and the release validator.
+  by `tools/sync_mirrors.py` and the release validator.
 
-Preserved behaviour
--------------------
+## Preserved behaviour
+
 - Width-scaled root and bottom control strip.
 - Three-column main area.
 - Six-panel information stack.
@@ -52,18 +53,20 @@ Preserved behaviour
 - DarkOne control, display, playback and volume behaviour.
 - DarkOne2021 playlist, metadata and scrolling refinements.
 
-Important migration rules
--------------------------
-- The fourth InfoStack child is DOJSP3.AlbumNotes and loads Album Notes.txt.
+## Important migration rules
+
+- The fourth InfoStack child is `DOJSP3.AlbumNotes` and loads `Album Notes.txt`.
 - Rebuild migrated layouts against the exact current hierarchy and titles.
 - Visible InfoStack labels can be customised independently from custom titles.
-- Hotfixes do not update DarkOneJSP3.fcl. Verify any imported file against the
+- Hotfixes do not update `DarkOneJSP3.fcl`. Verify any imported file against the
   current panel map and export a fresh local backup after migration.
 - Existing persistent settings are generally retained. Where property names
   changed, DarkOneJSP3 performs targeted migration when supported.
 
-Reference source
-----------------
+## Reference source
+
 The original PSS source and panel map are retained at:
 
-  DarkOneJSP3\reference\Original DarkOne2021 PSS and panel map.txt
+```text
+DarkOneJSP3\reference\Original DarkOne2021 PSS and panel map.txt
+```

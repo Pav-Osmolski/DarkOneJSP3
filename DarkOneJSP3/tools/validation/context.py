@@ -34,5 +34,5 @@ class ValidationContext:
         return self._text_cache[resolved]
 
     def require(self, path: Path) -> None:
-        if not path.exists():
+        if not path.is_file():
             self.errors.append("Missing: " + self.rel(path))

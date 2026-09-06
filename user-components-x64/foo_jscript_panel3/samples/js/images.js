@@ -148,6 +148,7 @@ function _images(options) {
 	this.artist_state = function (artist) {
 		artist = String(artist || '');
 		if (!this.history[artist]) {
+			this.history_size++;
 			this.history[artist] = {
 				attempts : 0,
 				last_attempt : 0,
@@ -163,7 +164,52 @@ function _images(options) {
 				retry_after_until : 0,
 			};
 		}
-		return this.history[artist];
+		var state = this.history[artist];
+		state.last_used = ++this.history_clock;
+		if (this.history_size > this.history_limit) {
+			var keys = Object.keys(this.history);
+			var oldest = null;
+			for (var i = 0; i < keys.length; i++) {
+				var key = keys[i];
+				if (key != artist && key != this.artist && !this.history[key].pending &&
+						(oldest === null || this.history[key].last_used < this.history[oldest].last_used))
+					oldest = key;
+			}
+			if (oldest !== null) {
+				delete this.history[oldest];
+				this.history_size--;
+			}
+		}
+		return state;
+	}
+
+	// Use the existing one-second interval: deadlines also advance while hidden.
+	this.check_download_deadlines = function () {
+		var now = Date.now();
+		var changed = false;
+		for (var artist in this.history) {
+			var state = this.history[artist];
+			if (!state.pending || !state.deadline || now < state.deadline) continue;
+			for (var id in this.artists) {
+				if (this.artists[id] != artist) continue;
+				delete this.artists[id];
+				delete this.automatic_tasks[id];
+			}
+			for (var path in this.download_tasks) {
+				if (this.download_tasks[path].artist == artist)
+					this.download_tasks[path].timed_out = true;
+			}
+			state.pending = false;
+			state.pending_files = 0;
+			state.deadline = 0;
+			state.last_error = 'download-timeout';
+			state.retryable = true;
+			state.retry_after_until = now + this.auto_download_retry_ms;
+			state.phase = state.attempts > 0 && state.attempts < this.auto_download_attempt_limit ? 'retrying' : 'error';
+			this.log('Download timed out for "' + artist + '"; late callbacks will not complete a newer request.');
+			changed = true;
+		}
+		if (changed) this.notify_status_changed();
 	}
 
 	this.current_state = function () {
@@ -293,6 +339,11 @@ function _images(options) {
 			return false;
 		}
 
+		// Bound active requests even during rapid track changes/manual requests.
+		var pending_count = 0;
+		for (var key in this.history) if (this.history[key].pending) pending_count++;
+		if (pending_count >= this.request_limit) return false;
+
 		try {
 			var url = 'https://www.last.fm/music/' + encodeURIComponent(artist) + '/+images';
 			var task_id = utils.HTTPRequestAsync(window.ID, 0, url, this.headers);
@@ -304,6 +355,7 @@ function _images(options) {
 			state.succeeded = 0;
 			state.failed = 0;
 			state.phase = 'requesting';
+			state.deadline = Date.now() + this.request_timeout_ms;
 			state.unavailable = false;
 			state.last_error = '';
 			state.last_http_status = 0;
@@ -374,6 +426,8 @@ function _images(options) {
 
 		if (!task)
 			return;
+		if (task.timed_out)
+			return; // callback carries a path, not a generation ID
 
 		var state = this.artist_state(task.artist);
 		if (success)
@@ -387,6 +441,7 @@ function _images(options) {
 
 	this.complete_download = function (artist, state) {
 		state.pending = false;
+		state.deadline = 0;
 		if (state.succeeded > 0) {
 			state.phase = 'available';
 			state.unavailable = false;
@@ -418,6 +473,7 @@ function _images(options) {
 		delete this.automatic_tasks[id];
 		var automatic = !!automatic_artist;
 		var state = this.artist_state(artist);
+		state.deadline = 0;
 
 		if (this.disposed)
 			return;
@@ -485,6 +541,11 @@ function _images(options) {
 			var item = candidates[j];
 			if (utils.IsFile(item.filename))
 				continue;
+			// Keep timed-out paths quarantined until their callback arrives. The
+			// native API cannot distinguish two generations writing the same path.
+			if (this.download_tasks[item.filename.toLowerCase()] ||
+					Object.keys(this.download_tasks).length >= this.download_task_limit)
+				continue;
 			try {
 				this.download_tasks[item.filename.toLowerCase()] = { artist : artist };
 				utils.DownloadFileAsync(window.ID, item.url, item.filename, true);
@@ -498,6 +559,7 @@ function _images(options) {
 
 		state.pending_files = queued;
 		state.pending = queued > 0;
+		state.deadline = queued > 0 ? Date.now() + this.download_timeout_ms : 0;
 		state.phase = queued > 0 ? 'downloading' : 'available';
 		state.unavailable = false;
 		state.last_error = '';
@@ -521,7 +583,10 @@ function _images(options) {
 	}
 
 	this.interval_func = _.bind(function () {
-		if (this.disposed || window.IsVisible === false)
+		if (this.disposed)
+			return;
+		this.check_download_deadlines();
+		if (window.IsVisible === false)
 			return;
 
 		this.time++;
@@ -840,7 +905,8 @@ function _images(options) {
 		this.artists = {};
 		this.automatic_tasks = {};
 		this.download_tasks = {};
-		this.history = {};
+		this.history = Object.create(null);
+		this.history_size = 0;
 	}
 
 	this.update = function () {
@@ -950,7 +1016,14 @@ function _images(options) {
 	this.mx = 0;
 	this.my = 0;
 	this.image_paths = [];
-	this.history = {}; // bounded automatic-download state keyed by artist
+	this.history = Object.create(null); // bounded automatic-download state keyed by artist
+	this.history_clock = 0;
+	this.history_size = 0;
+	this.history_limit = 256;
+	this.request_limit = 32;
+	this.download_task_limit = 256;
+	this.request_timeout_ms = 45000;
+	this.download_timeout_ms = 120000;
 	this.limits = [1, 3, 5, 10, 15, 20];
 	this.modes = ['grid', 'left', 'right', 'top', 'bottom', 'off'];
 	this.exts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'heif', 'heic', 'avif', 'jxl'];

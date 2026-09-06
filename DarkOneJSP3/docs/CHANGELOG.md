@@ -1,8 +1,54 @@
-DarkOneJSP3 Changelog
-=====================
+# DarkOneJSP3 Changelog
 
-v1.1.2 - Last.fm diagnostics and scroll-edge text fading
---------------------------------------------------------
+## v1.1.3 - Markdown documentation and release hardening
+
+- Rebalanced `DOJSP3.Waveform` vertically inside `DOJSP3.DisplayStack`.
+  Waveform Minibar renders its visible waveform through roughly the upper
+  two-thirds of its child surface, so the host now uses a proportional
+  quarter-of-lower-region top inset instead of the legacy fixed 20 px spacer.
+  This gives the visible waveform matching apparent breathing room above and
+  below and scales naturally when the bottom area is resized.
+- Converted every maintained document under `DarkOneJSP3/docs` from the legacy
+  `.txt` format to native Markdown (`.md`) while preserving the existing
+  documentation hierarchy and content. Legacy underline-style headings were
+  normalised to ATX Markdown headings for consistent rendering on GitHub and in
+  Markdown-aware editors.
+- Updated repository README links, documentation cross-references, layout
+  manifest metadata and validation expectations to use the new Markdown
+  filenames. The package no longer contains or depends on retired `.txt`
+  documentation paths.
+- Corrected whitespace-sensitive structures exposed by GitHub rendering after the
+  conversion. Layout trees, script/controller assignments, folder maps, profile
+  paths, persistent-property groups and other fixed-width examples now use
+  explicit fenced `text` blocks instead of relying on TXT-era spacing.
+- Made the Contents sections in `INSTALLATION.md`, `CONFIGURATION_GUIDE.md` and
+  `TROUBLESHOOTING.md` fully clickable with links to their matching numbered
+  headings. The equivalent Installation and Troubleshooting Wiki pages now expose
+  the same high-level navigation.
+- Hardened release validation so `DarkOneJSP3/docs` must contain the canonical
+  Markdown document set, rejects any reintroduced `.txt` documentation or stale
+  references to the retired filenames, validates local files and GitHub-style
+  heading anchors, requires clickable numbered Contents entries and protects the
+  fixed-width fenced structures from collapsing back into ordinary paragraphs.
+- Added explicit replacement and unload disposal for cached scroll-fade images,
+  preserving the single-render alpha-mask path and unchanged-cache reuse.
+- Bounded Last.fm artist-image history to 256 entries and concurrent artist
+  downloads to 32. Missing HTTP callbacks expire after 45 seconds and image
+  batches after 120 seconds, including while hidden. Late file callbacks cannot
+  complete a newer request; timed-out file paths remain quarantined until their
+  native callback arrives, with at most 256 tracked file paths.
+- Added real Waveform geometry and fade-resource lifecycle regression tests,
+  recursive basic-sample syntax/staging coverage, complete manifest contracts,
+  structured malformed-JSON errors and process deadlines with timer cleanup.
+- Split source contracts by subsystem, added an explicit release file inventory,
+  shared documentation/Wiki checks and a reproducible archive builder with
+  per-file SHA-256 reports. Added offline mutation tests for the validator itself.
+- Corrected component links, the Wiki migration-tree fence and a misplaced Wiki
+  validation bullet. Advanced the release validator to 0.10.52. The bundled FCL
+  remains byte-for-byte unchanged; shared enhanced-sample helpers now include
+  the lifecycle and download hardening described above.
+
+## v1.1.2 - Last.fm diagnostics and scroll-edge text fading
 
 - Forwarded HTTP status and response headers through both Last.fm image entry
   points. Non-2xx responses are classified before gallery parsing, so Last.fm's
@@ -40,8 +86,7 @@ v1.1.2 - Last.fm diagnostics and scroll-edge text fading
   AllMusic-slot entry to 0.6.8, the InfoStack controller to 0.6.34 and the
   release validator to 0.10.48.
 
-v1.1.1 - Album-review and combined-header corrections
------------------------------------------------------
+## v1.1.1 - Album-review and combined-header corrections
 
 - Hardened the AllMusic full-album-page fallback so it accepts only a semantic
   or recognised editorial-review container. Generic streaming/account prompts,
@@ -63,8 +108,7 @@ v1.1.1 - Album-review and combined-header corrections
   0.6.11, Album Notes + Album Art to 0.6.13, the legacy AllMusic-slot entry to
   0.6.7 and Last.fm Bio + Images through the v1.1.1 combined-header revisions.
 
-v1.1.0 - Combined information, artwork and waveform integration
----------------------------------------------------------------
+## v1.1.0 - Combined information, artwork and waveform integration
 
 - Added `Album Notes + Album Art.txt`, combining the consolidated multi-provider
   Album Notes panel with current album artwork and the existing left/right or
@@ -153,8 +197,7 @@ v1.1.0 - Combined information, artwork and waveform integration
   the combined-artwork helper to 0.1.0, shared bottom-area appearance to 0.3.1
   and the release validator to 0.10.38.
 
-v1.0.22 - Shared InfoStack background wallpapers
-------------------------------------------------
+## v1.0.22 - Shared InfoStack background wallpapers
 
 - Ported Playlist Manager's Background Wallpaper controls to Biography,
   Last.fm, Album Notes, Queue and Properties. Each page independently remembers
@@ -177,8 +220,7 @@ v1.0.22 - Shared InfoStack background wallpapers
   Queue Viewer to 0.8.6, the shared page-background module to 0.2.0, sample
   defaults to 0.1.2 and the release validator to 0.10.31.
 
-v1.0.21 - Dynamic InfoStack page colours
-----------------------------------------
+## v1.0.21 - Dynamic InfoStack page colours
 
 - Consolidated Biography, Last.fm, Album Notes, Queue and Properties under a
   consistent Colours menu containing Enable Dynamic, Page background and Text.
@@ -211,8 +253,7 @@ v1.0.21 - Dynamic InfoStack page colours
   the page-colour helper to 0.1.7, sample defaults to 0.1.1 and the release
   validator to 0.10.30.
 
-v1.0.20 - Configurable Quick Search border colour
--------------------------------------------------
+## v1.0.20 - Configurable Quick Search border colour
 
 - Added Appearance > Colours > Border to the scripted Quick Search, with
   Default and Custom colour choices plus the native colour picker.
@@ -236,8 +277,7 @@ v1.0.20 - Configurable Quick Search border colour
   parent-owned frame.
 - Advanced Quick Search to 0.1.20 and the release validator to 0.10.26.
 
-v1.0.19 - Queue-aware skip-to-track playback
---------------------------------------------
+## v1.0.19 - Queue-aware skip-to-track playback
 
 - Added Skip to this track to the scripted Queue Viewer context menu and made
   it the default double-click action in the DarkOneJSP3 project wrapper.
@@ -257,8 +297,7 @@ v1.0.19 - Queue-aware skip-to-track playback
   queue bridge to 0.2.5 and the release validator to 0.10.23.
 - Updated the developed-and-tested JSplitter target to 4.1.14.
 
-v1.0.18 - Third main layout and bottom-area appearance
-------------------------------------------------------
+## v1.0.18 - Third main layout and bottom-area appearance
 
 - Expanded the optional LAYOUT button to cycle through three persistent main
   views: InfoStack | ArtSpectrum | Playlist, ArtSpectrum | Playlist and the new
@@ -342,8 +381,7 @@ v1.0.18 - Third main layout and bottom-area appearance
   appearance to 0.3.0, the direct queue bridge to 0.2.4 and the release
   validator to 0.10.22.
 
-v1.0.17 - Enhanced Spectrum Analyser reference preferences
-----------------------------------------------------------
+## v1.0.17 - Enhanced Spectrum Analyser reference preferences
 
 - Added the maintainer's complete Enhanced Spectrum Analyser reference setup
   to both installation guides, including the Peak gradient, RMS and Peak Max
@@ -353,8 +391,7 @@ v1.0.17 - Enhanced Spectrum Analyser reference preferences
 - Added permanent validation for the package installation guidance and advanced
   the release validator to 0.10.15.
 
-v1.0.16 - TOOLS Startup and Utilities consolidation
----------------------------------------------------
+## v1.0.16 - TOOLS Startup and Utilities consolidation
 
 - Moved Startup from both InfoStack menu surfaces into the top-level TOOLS
   menu immediately below High-DPI / scaling. Root remains the sole property
@@ -370,8 +407,7 @@ v1.0.16 - TOOLS Startup and Utilities consolidation
   bridge helper to 0.2.0, the view bridge to 0.2.0 and the release validator to
   0.10.14.
 
-v1.0.15 - Release validation and manifest streamlining
-------------------------------------------------------
+## v1.0.15 - Release validation and manifest streamlining
 
 - Reduced the layout manifest to durable release contracts instead of using it
   as a second inventory of validator implementation details and test-presence
@@ -388,8 +424,7 @@ v1.0.15 - Release validation and manifest streamlining
   retaining the complete regression suite and existing release safeguards.
 - Advanced the release validator to 0.10.13.
 
-v1.0.14 - TOOLS launcher and shared button appearance consolidation
--------------------------------------------------------------------
+## v1.0.14 - TOOLS launcher and shared button appearance consolidation
 
 - Added the optional `DarkOneJSP3/Tools/Menu` command, normally labelled TOOLS.
   Its popup is owned locally by the invoking left or right JScript control panel
@@ -422,8 +457,7 @@ v1.0.14 - TOOLS launcher and shared button appearance consolidation
   3.0.29, the right control panel and Display to 3.0.34, optional-button menu
   integration to 0.1.2 and the release validator to 0.10.11.
 
-v1.0.13 - Second-pass hardening and source-history cleanup
-----------------------------------------------------------
+## v1.0.13 - Second-pass hardening and source-history cleanup
 
 - Removed the obsolete notification-triggered `infostack-menu` popup fallback.
   Button-opened InfoStack popups remain locally owned by the invoking JScript
@@ -444,8 +478,7 @@ v1.0.13 - Second-pass hardening and source-history cleanup
   InfoStack to 0.6.31, the InfoStack bridge helper to 0.1.2 and the release
   validator to 0.10.9.
 
-v1.0.12 - InfoStack optional-button popup ownership fix
--------------------------------------------------------
+## v1.0.12 - InfoStack optional-button popup ownership fix
 
 - Fixed the INFOSTACK optional button causing brief Waveform Minibar flicker
   and Enhanced Spectrum Analyser pauses when its popup/submenus were dismissed.
@@ -464,8 +497,7 @@ v1.0.12 - InfoStack optional-button popup ownership fix
   state serialisation. Advanced InfoStack to 0.6.30, the view bridge to 0.1.2
   and the release validator to 0.10.8.
 
-v1.0.11 - InfoStack navigation button and optional tab strip
-------------------------------------------------------------
+## v1.0.11 - InfoStack navigation button and optional tab strip
 
 - Added the internal optional-button command `DarkOneJSP3/InfoStack/Menu`. A
   left-control button can be labelled INFOSTACK and left at command style 0;
@@ -487,8 +519,7 @@ v1.0.11 - InfoStack navigation button and optional tab strip
   detection and anchor propagation. Advanced InfoStack to 0.6.29, the view
   bridge to 0.1.1 and the release validator to 0.10.7.
 
-v1.0.10 - JS Playlist fractional viewport culling fix
------------------------------------------------------
+## v1.0.10 - JS Playlist fractional viewport culling fix
 
 - Fixed JS Playlist demand-driven row culling when free/smooth scrolling leaves
   the viewport at a fractional row offset. At certain panel heights the loader
@@ -502,8 +533,7 @@ v1.0.10 - JS Playlist fractional viewport culling fix
   boundaries, and advanced JS Playlist to 0.6.4 and the release validator to
   0.10.6.
 
-v1.0.9 - JScript Panel 3 API and resource hardening
----------------------------------------------------
+## v1.0.9 - JScript Panel 3 API and resource hardening
 
 - Audited the DarkOneJSP3 JScript Panel 3 tree against the supplied JSP3 3.8.5
   documentation and API reference, then added permanent validator guards for
@@ -534,8 +564,7 @@ v1.0.9 - JScript Panel 3 API and resource hardening
   to 0.1.17, performance helpers to 0.1.5, playlist render cache to 0.1.1,
   optional-button menu integration to 0.1.1 and the release validator to 0.10.5.
 
-v1.0.8 - Waveform Minibar pseudo-transparency integration
----------------------------------------------------------
+## v1.0.8 - Waveform Minibar pseudo-transparency integration
 
 - Enabled JSplitter `SupportPseudoTransparency` for the native DOJSP3.Waveform
   child so Waveform Minibar's own Transparent background option correctly reveals
@@ -551,8 +580,7 @@ v1.0.8 - Waveform Minibar pseudo-transparency integration
 - Added runtime/static regression coverage for the Waveform child pseudo-
   transparency opt-in and advanced the release validator to 0.10.4.
 
-v1.0.7 - Synchronised Bottom-area colour commits
-------------------------------------------------
+## v1.0.7 - Synchronised Bottom-area colour commits
 
 - Reworked Bottom area background and side-divider updates into one coordinated
   visual commit so the participating JSP3 and JSplitter hosts switch colour in
@@ -576,8 +604,7 @@ v1.0.7 - Synchronised Bottom-area colour commits
 - Advanced Quick Search to 0.1.16, the shared JSplitter protocol module to 0.2.2,
   Bottom area appearance to 0.2.14 and the release validator to 0.10.3.
 
-v1.0.6 - Layout/Spectrum view controls and shared Quick Search backgrounds
---------------------------------------------------------------------------
+## v1.0.6 - Layout/Spectrum view controls and shared Quick Search backgrounds
 
 - Added persistent DarkOneJSP3 internal optional-button commands
   `DarkOneJSP3/Layout/Toggle` and `DarkOneJSP3/Visualiser/Toggle`. The supplied
@@ -617,11 +644,10 @@ v1.0.6 - Layout/Spectrum view controls and shared Quick Search backgrounds
   background inheritance and stale view-command cleanup.
 - Advanced Main Columns to 0.7.38 and the release validator to 0.10.2.
 
-v1.0.5 - Scripted Quick Search and release hardening
-----------------------------------------------------
+## v1.0.5 - Scripted Quick Search and release hardening
 
-Quick Search v0.1.14
-~~~~~~~~~~~~~~~~~~~~
+### Quick Search v0.1.14
+
 - Added `DarkOneJSP3 - Quick Search`, a JScript Panel 3 replacement for the
   Quick Search Toolbar used by the recommended manual layout. Search execution,
   history, favourites, custom tags, result playlists and inline selection are handled
@@ -677,8 +703,8 @@ Quick Search v0.1.14
   responsive defaults, the fixed-file PNG implementation and the JS Playlist
   Search-for-same bridge.
 
-Release integration
-~~~~~~~~~~~~~~~~~~~
+### Release integration
+
 - Promoted `DOJSP3.QuickSearch` in the documented panel map and layout manifest
   to JScript Panel 3 using `DarkOneJSP3 - Quick Search.txt`.
 - Updated layout documentation for the current maintainer-exported FCL presets:
@@ -695,8 +721,7 @@ Release integration
 - Advanced the release validator to 0.10.1 and added Quick Search 0.1.14 to
   build metadata and required-path validation.
 
-v1.0.4 - Remembered Custom colour selection and picker separation
------------------------------------------------------------------
+## v1.0.4 - Remembered Custom colour selection and picker separation
 
 - Separated selecting a remembered Custom colour from editing that colour with
   the native picker across bottom-area backgrounds/dividers, Display accent,
@@ -712,8 +737,7 @@ v1.0.4 - Remembered Custom colour selection and picker separation
 - Updated the bundled maintainer-exported FCL and refreshed current configuration,
   troubleshooting, validation and Wiki documentation for the new menu behaviour.
 
-v1.0.3 - Queue bridge and release hardening
--------------------------------------------
+## v1.0.3 - Queue bridge and release hardening
 
 - Acknowledged and removed processed Queue Viewer command files so the 25 ms
   JSplitter command poll no longer rereads and reparses an already-consumed
@@ -740,8 +764,7 @@ v1.0.3 - Queue bridge and release hardening
 - Advanced Queue Viewer to 0.8.1, direct queue bridge to 0.2.3 and release
   validator to 0.9.3.
 
-v1.0.2 - Queue reorder playlist-source API correction
------------------------------------------------------
+## v1.0.2 - Queue reorder playlist-source API correction
 
 - Fixed the remaining Queue Viewer Move regression that caused title formatting
   to fall back to literal filenames and cleared JS Playlist `%queue_index%`
@@ -760,8 +783,7 @@ v1.0.2 - Queue reorder playlist-source API correction
   the playlist-source restore check.
 - Advanced the direct queue bridge to 0.2.2 and release validator to 0.9.1.
 
-v1.0.1 - Queue reorder source-association hotfix
-------------------------------------------------
+## v1.0.1 - Queue reorder source-association hotfix
 
 - Attempted to fix Move up, Move down, Move to top and Move to bottom rebuilding the
   playback queue from live `FbPlaybackQueueItem` wrappers after they had been
@@ -777,8 +799,7 @@ v1.0.1 - Queue reorder source-association hotfix
   during the flush and verifies source coordinates survive the reorder.
 - Advanced the direct queue-bridge module to 0.2.1.
 
-v1.0.0 - Writable scripted Queue Viewer milestone
--------------------------------------------------
+## v1.0.0 - Writable scripted Queue Viewer milestone
 
 - Promoted the DarkOneJSP3 scripted Queue Viewer to the recommended DOJSP3.Queue
   implementation and moved the separate native Queue Viewer component to an
@@ -810,8 +831,7 @@ v1.0.0 - Writable scripted Queue Viewer milestone
 - Advanced Queue Viewer to 0.8.0, queue bridge to 0.2.0 and the release validator
   to 0.9.0.
 
-v0.9.40 - Direct scripted Queue Viewer bridge
----------------------------------------------
+## v0.9.40 - Direct scripted Queue Viewer bridge
 
 - Added a project-only file-backed queue bridge owned by DOJSP3.Root. JSplitter
   now enumerates the playback queue directly with `plman.GetPlaybackQueueContents()`
@@ -837,8 +857,7 @@ v0.9.40 - Direct scripted Queue Viewer bridge
 - Advanced Queue Viewer to 0.7.0, startup controller to 0.7.37 and the release
   validator to 0.8.0.
 
-v0.9.39 - Scripted Queue Viewer scan optimisation
--------------------------------------------------
+## v0.9.39 - Scripted Queue Viewer scan optimisation
 
 - Added targeted queue refreshes for user removals and playback advance. These
   common callbacks now reevaluate only the unique source locations already
@@ -862,8 +881,7 @@ v0.9.39 - Scripted Queue Viewer scan optimisation
   publishing, stale-source fallback and absence of full-scan handle lists.
 - Advanced Queue Viewer to 0.6.3 and the release validator to 0.7.9.
 
-v0.9.38 - Stopped-volume display label fix
-------------------------------------------
+## v0.9.38 - Stopped-volume display label fix
 
 - Fixed TIME or TIME REMAINING lighting up alongside VOLUME when the
   volume changed while playback was stopped.
@@ -875,8 +893,7 @@ v0.9.38 - Stopped-volume display label fix
   the shared highlight expression.
 - Advanced Display to 3.0.32 and the release validator to 0.7.8.
 
-v0.9.37 - Custom colour release hardening
------------------------------------------
+## v0.9.37 - Custom colour release hardening
 
 - Wrapped the complete DarkOne Tools popup lifecycle in `try/finally`, ensuring
   every native menu is disposed exactly once after selection, cancellation or
@@ -901,8 +918,7 @@ v0.9.37 - Custom colour release hardening
   shared colour helpers to 0.1.4, bottom-area appearance to 0.2.12 and the
   release validator to 0.7.7.
 
-v0.9.36 - Signed native colour-picker hotfix
---------------------------------------------
+## v0.9.36 - Signed native colour-picker hotfix
 
 - Fixed Bottom area background and Bottom area side divider Custom colour
   commands reaching the native picker but failing with `Overflow`.
@@ -920,8 +936,7 @@ v0.9.36 - Signed native colour-picker hotfix
   shared colour helpers to 0.1.3, bottom-area appearance to 0.2.11 and the
   release validator to 0.7.6.
 
-v0.9.32-v0.9.35 - Custom colour picker investigation
-----------------------------------------------------
+## v0.9.32-v0.9.35 - Custom colour picker investigation
 
 Status: superseded test builds.
 
@@ -931,8 +946,7 @@ Status: superseded test builds.
 - These interim builds did not resolve the live failure and are superseded by
   the signed 32-bit picker-boundary correction in v0.9.36.
 
-v0.9.31 - Display startup regression hotfix
--------------------------------------------
+## v0.9.31 - Display startup regression hotfix
 
 - Fixed the Display panel failing during bottom-area appearance initialisation
   because Config_Global_Script.js still called the removed
@@ -946,8 +960,7 @@ v0.9.31 - Display startup regression hotfix
 - Advanced Display to 3.0.25, shared bottom-area appearance to 0.2.6 and the
   release validator to 0.7.1.
 
-v0.9.30 - Rendering performance and allocation optimisation
------------------------------------------------------------
+## v0.9.30 - Rendering performance and allocation optimisation
 
 - Cached JS Playlist selection and playback state outside the row paint path,
   removing native playlist-manager calls from every visible-row draw and mouse
@@ -983,8 +996,7 @@ v0.9.30 - Rendering performance and allocation optimisation
   Art to 0.1.1, InfoStack controller to 0.6.26 and the release validator to
   0.7.0.
 
-v0.9.29 - Release hardening and runtime efficiency
---------------------------------------------------
+## v0.9.29 - Release hardening and runtime efficiency
 
 - Fixed saved non-default bottom backgrounds being dependent on a later
   `on_colours_changed()` callback. Each JScript panel now resolves and applies
@@ -1012,8 +1024,7 @@ v0.9.29 - Release hardening and runtime efficiency
 - Advanced Control Left to 3.0.20, Control Right to 3.0.25, Display to 3.0.23,
   shared bottom-area appearance to 0.2.5 and the release validator to 0.6.5.
 
-v0.9.28 - Bottom-area fixed-mode regression correction
-------------------------------------------------------
+## v0.9.28 - Bottom-area fixed-mode regression correction
 
 - Fixed DarkOne grey in the three bottom JScript panels resolving to the
   inherited `#181818` fallback instead of its intended `#202020` colour.
@@ -1029,8 +1040,7 @@ v0.9.28 - Bottom-area fixed-mode regression correction
 - Advanced Control Left to 3.0.19, Control Right to 3.0.24, Display to 3.0.22,
   shared bottom-area appearance to 0.2.4 and the release validator to 0.6.4.
 
-v0.9.27 - Uniform bottom-area inherited background
---------------------------------------------------
+## v0.9.27 - Uniform bottom-area inherited background
 
 - Changed Bottom area background > Transparent / inherit parent from literal
   no-paint behaviour to a resolved DarkOne dark grey parent tone (`#181818`,
@@ -1051,8 +1061,7 @@ v0.9.27 - Uniform bottom-area inherited background
 - Advanced Control Left to 3.0.18, Control Right to 3.0.23, Display to 3.0.21,
   shared bottom-area appearance to 0.2.3 and the release validator to 0.6.3.
 
-v0.9.26 - Automatic Display/Waveform host background
-----------------------------------------------------
+## v0.9.26 - Automatic Display/Waveform host background
 
 - Added `Automatic - Bottom area background` to the Display/Waveform Host
   background menu and made it the default for new properties and appearance
@@ -1072,8 +1081,7 @@ v0.9.26 - Automatic Display/Waveform host background
 - Advanced shared bottom-area appearance to 0.2.2 and the release validator to
   0.6.2.
 
-v0.9.25 - Faster bottom-area appearance synchronisation
--------------------------------------------------------
+## v0.9.25 - Faster bottom-area appearance synchronisation
 
 - Reduced the sole Bottom Controls runtime-state poll interval from 500 ms to
   100 ms, making background and side-divider colour changes appear effectively
@@ -1085,8 +1093,7 @@ v0.9.25 - Faster bottom-area appearance synchronisation
   the slower value from being reintroduced.
 - Advanced bottom-area appearance to 0.2.1 and the release validator to 0.6.1.
 
-v0.9.24 - Cross-host reset and runtime-state hardening
-------------------------------------------------------
+## v0.9.24 - Cross-host reset and runtime-state hardening
 
 - Added a short-lived factory-reset command bridge at
   `js_data\darkonejsp3.reset-command.txt`. The Bottom Controls JSplitter
@@ -1121,8 +1128,7 @@ v0.9.24 - Cross-host reset and runtime-state hardening
   shared JSplitter protocols to 0.2.1, bottom-area appearance to 0.2.0 and the
   release validator to 0.6.0.
 
-v0.9.23 - Bottom-area state persistence correction
---------------------------------------------------
+## v0.9.23 - Bottom-area state persistence correction
 
 - Fixed the JScript Panel bottom-area menu writer using a three-argument
   `utils.WriteTextFile` call that did not update the state file in the tested
@@ -1141,8 +1147,7 @@ v0.9.23 - Bottom-area state persistence correction
 - Advanced Control Left to 3.0.16, Control Right to 3.0.21, Display to 3.0.19,
   bottom-area appearance to 0.1.2 and the release validator to 0.5.2.
 
-v0.9.22 - Bottom-area synchronisation hotfix
---------------------------------------------
+## v0.9.22 - Bottom-area synchronisation hotfix
 
 - Fixed the v0.9.21 bottom-area settings only changing the JScript panel where
   the menu was opened.
@@ -1165,8 +1170,7 @@ v0.9.22 - Bottom-area synchronisation hotfix
 - Advanced Control Left to 3.0.15, Control Right to 3.0.20, Display to 3.0.18,
   bottom-area appearance to 0.1.1 and the release validator to 0.5.1.
 
-v0.9.21 - Shared bottom-area appearance
----------------------------------------
+## v0.9.21 - Shared bottom-area appearance
 
 - Added one shared Bottom area background menu under DarkOne Tools >
   Appearance for the left controls, right controls, centre display and Bottom
@@ -1186,8 +1190,7 @@ v0.9.21 - Shared bottom-area appearance
 - Advanced Control Left to 3.0.14, Control Right to 3.0.19, Display to 3.0.17,
   shared JSplitter protocols to 0.2.0 and the release validator to 0.5.0.
 
-v0.9.20 - Album Art wheel responsiveness
-----------------------------------------
+## v0.9.20 - Album Art wheel responsiveness
 
 - Added an 80 ms trailing debounce when cycling default Album Art types with
   the mouse wheel, so rapid wheel bursts decode and convert only the final
@@ -1207,20 +1210,18 @@ v0.9.20 - Album Art wheel responsiveness
 - Identified the upgraded entry as Album Art - Enhanced v0.1.0 and advanced the
   release validator to 0.4.9.
 
-v0.9.19 - Enhanced Sample Library documentation
------------------------------------------------
+## v0.9.19 - Enhanced Sample Library documentation
 
 - Added a dedicated Enhanced Sample Library section to the repository README.
 - Explained the standalone sample architecture, preserved compatibility contract
   and benefits for other foobar2000 themes.
-- Added direct README links to `DarkOneJSP3/docs/ENHANCED_SAMPLES.txt` from the
+- Added direct README links to `DarkOneJSP3/docs/ENHANCED_SAMPLES.md` from the
   new section, installation guidance and documentation index.
 - Added release validation requiring the README section and documentation link
   to remain present and point to the distributed guide.
 - Advanced the release validator to 0.4.8.
 
-v0.9.18 - Standalone compatibility hardening
---------------------------------------------
+## v0.9.18 - Standalone compatibility hardening
 
 - Fixed factory reset for saved pre-v0.9.17 sample entries. The legacy
   `darkonejsp3_reset.js` filename is now a generated, self-contained adapter
@@ -1243,8 +1244,7 @@ v0.9.18 - Standalone compatibility hardening
 - Advanced performance helpers to 0.1.4, the sample reset bridge and legacy
   compatibility layer to 0.1.1, and the release validator to 0.4.7.
 
-v0.9.17 - Standalone enhanced-sample compatibility
---------------------------------------------------
+## v0.9.17 - Standalone enhanced-sample compatibility
 
 - Removed every hard `%fb2k_profile_path%DarkOneJSP3` dependency from the
   enhanced top-level JScript Panel sample entries.
@@ -1274,8 +1274,7 @@ v0.9.17 - Standalone enhanced-sample compatibility
   JS Playlist to 0.6.0, Playlist Manager to 0.5.5, page-background support to
   0.1.3 and the release validator to 0.4.6.
 
-v0.9.16 - JS Playlist inline-rating viewport preservation
----------------------------------------------------------
+## v0.9.16 - JS Playlist inline-rating viewport preservation
 
 - Fixed JS Playlist jumping back to the previously focused or selected track
   immediately after clicking a rating star on another visible row.
@@ -1288,8 +1287,7 @@ v0.9.16 - JS Playlist inline-rating viewport preservation
   viewport-preserving path and rejecting the previous recentering call.
 - Advanced JS Playlist to 0.5.9 and validator to 0.4.5.
 
-v0.9.15 - Immediate volume-knob release state
----------------------------------------------
+## v0.9.15 - Immediate volume-knob release state
 
 - Decoupled the volume knob's active indicator from the trailing three-second
   volume-change display state.
@@ -1302,8 +1300,7 @@ v0.9.15 - Immediate volume-knob release state
 - Added validation preventing the delayed knob-selection state from returning.
 - Advanced Control Right to 3.0.18-jsp3-3.8.5 and validator to 0.4.4.
 
-v0.9.14 - Dot Matrix image inheritance hotfix
----------------------------------------------
+## v0.9.14 - Dot Matrix image inheritance hotfix
 
 - Fixed a Display runtime error where NumImage, TimeImage and BitrateImage
   initialised BaseImage state but did not inherit its prototype methods.
@@ -1313,8 +1310,7 @@ v0.9.14 - Dot Matrix image inheritance hotfix
   class and exercises its inherited lifecycle and digit-comparison behaviour.
 - Advanced Display to 3.0.16-jsp3-3.8.5 and validator to 0.4.3.
 
-v0.9.13 - Volume scheduler cleanup hotfix
------------------------------------------
+## v0.9.13 - Volume scheduler cleanup hotfix
 
 - Fixed a Control Right runtime error caused by calling unsupported `stop()`
   methods on the shared repaint scheduler.
@@ -1324,8 +1320,7 @@ v0.9.13 - Volume scheduler cleanup hotfix
   confirming both repaint and volume-write schedulers are cancelled on disposal.
 - Advanced Control Right to 3.0.17-jsp3-3.8.5 and validator to 0.4.2.
 
-v0.9.12 - Manual scroll cadence and protected volume writes
------------------------------------------------------------
+## v0.9.12 - Manual scroll cadence and protected volume writes
 
 - Removed best-effort screen-refresh detection from JS Playlist and Smooth
   Playlist Manager because Windows/JScript Panel does not provide a reliable
@@ -1345,8 +1340,7 @@ v0.9.12 - Manual scroll cadence and protected volume writes
 - Advanced Control Right to 3.0.16-jsp3-3.8.5, JS Playlist to 0.5.8, Playlist
   Manager to 0.5.4, UI cadence helper to 0.1.1 and validator to 0.4.1.
 
-v0.9.11 - Automatic display-aware smooth scrolling
---------------------------------------------------
+## v0.9.11 - Automatic display-aware smooth scrolling
 
 - Added Automatic refresh modes to JS Playlist and Smooth Playlist Manager.
 - Automatic performs best-effort Windows refresh-rate detection through
@@ -1368,8 +1362,7 @@ v0.9.11 - Automatic display-aware smooth scrolling
 - Advanced JS Playlist to 0.5.7, Playlist Manager to 0.5.3 and the release
   validator to 0.4.0.
 
-v0.9.10 - Adaptive volume-drag refresh cadence
-----------------------------------------------
+## v0.9.10 - Adaptive volume-drag refresh cadence
 
 - Added a shared UI-cadence protocol through which JS Playlist and Smooth
   Playlist Manager announce their current live refresh intervals.
@@ -1390,8 +1383,7 @@ v0.9.10 - Adaptive volume-drag refresh cadence
   Playlist Manager to 0.5.2, performance helpers to 0.1.3 and the release
   validator to 0.3.9.
 
-v0.9.9 - Volume-drag visualiser responsiveness
-----------------------------------------------
+## v0.9.9 - Volume-drag visualiser responsiveness
 
 - Coalesced volume-knob writes to a maximum 16 ms cadence instead of assigning
   a new floating-point volume value for every raw mouse-move callback.
@@ -1413,8 +1405,7 @@ v0.9.9 - Volume-drag visualiser responsiveness
 - Advanced Control Right and Display to 3.0.14-jsp3-3.8.5, the performance
   helper to 0.1.2 and the release validator to 0.3.8.
 
-v0.9.8 - Standard-installation path documentation
--------------------------------------------------
+## v0.9.8 - Standard-installation path documentation
 
 - Added explicit installation guidance for standard, non-portable foobar2000
   v2 installations using %APPDATA%\foobar2000-v2\profile.
@@ -1425,11 +1416,10 @@ v0.9.8 - Standard-installation path documentation
   setup.
 - Retained the two supported portable layouts: installation-root profiles and
   installations using a profile subfolder.
-- Updated README.md and INSTALLATION.txt without changing runtime scripts or
+- Updated README.md and INSTALLATION.md without changing runtime scripts or
   the maintainer-managed DarkOneJSP3.fcl.
 
-v0.9.7 - Dot Matrix display-style rendering hotfix
---------------------------------------------------
+## v0.9.7 - Dot Matrix display-style rendering hotfix
 
 - Fixed switching the Centre Display from Plain Font to Dot Matrix leaving the
   dot-matrix values unchanged or blank after the Direct2D bitmap optimisation.
@@ -1447,8 +1437,7 @@ v0.9.7 - Dot Matrix display-style rendering hotfix
 - Advanced the Display Panel to 3.0.13-jsp3-3.8.5 and the release validator to
   0.3.7.
 
-v0.9.6 - JS Playlist scrollbar-drag interpolation correction
-------------------------------------------------------------
+## v0.9.6 - JS Playlist scrollbar-drag interpolation correction
 
 - Replaced the input-driven one-shot scrollbar-drag throttle with a dedicated
   demand-driven frame loop that follows the latest cursor-derived target.
@@ -1467,8 +1456,7 @@ v0.9.6 - JS Playlist scrollbar-drag interpolation correction
   exact final snapping and the direct non-smooth path.
 - Advanced JS Playlist to 0.5.5 and the release validator to 0.3.6.
 
-v0.9.5 - JS Playlist scrollbar-drag cadence hotfix
---------------------------------------------------
+## v0.9.5 - JS Playlist scrollbar-drag cadence hotfix
 
 - Fixed row-snapped scrollbar dragging applying the selected refresh interval
   twice: once before rebuilding visible rows and again through full_repaint().
@@ -1486,8 +1474,7 @@ v0.9.5 - JS Playlist scrollbar-drag cadence hotfix
   flushing, selected-delay use and removal of the old double-delay path.
 - Advanced JS Playlist to 0.5.4 and the release validator to 0.3.5.
 
-v0.9.4 - JS Playlist frame-loop timing correction
--------------------------------------------------
+## v0.9.4 - JS Playlist frame-loop timing correction
 
 - Replaced JS Playlist's remaining raw SetInterval smooth-scroll timers with
   the same demand-driven recursive frame-loop helper used by Smooth Playlist
@@ -1507,8 +1494,7 @@ v0.9.4 - JS Playlist frame-loop timing correction
   paths.
 - Advanced JS Playlist to 0.5.3 and the release validator to 0.3.4.
 
-v0.9.3 - JS Playlist repaint-cadence hotfix
--------------------------------------------
+## v0.9.3 - JS Playlist repaint-cadence hotfix
 
 - Fixed JS Playlist smooth-scroll refresh choices being visually bypassed by
   the demand-driven repaint scheduler requesting every repaint after a fixed
@@ -1526,8 +1512,7 @@ v0.9.3 - JS Playlist repaint-cadence hotfix
   rejects any fixed-delay repaint bypass.
 - Advanced JS Playlist to 0.5.2 and the release validator to 0.3.3.
 
-v0.9.2 - Smooth-scroll refresh-rate hotfix
-------------------------------------------
+## v0.9.2 - Smooth-scroll refresh-rate hotfix
 
 - Fixed Smooth Playlist Manager refresh-rate choices so the live
   ppt.refreshRate value is updated immediately instead of relying on a panel
@@ -1545,8 +1530,7 @@ v0.9.2 - Smooth-scroll refresh-rate hotfix
 - Advanced JS Playlist and Smooth Playlist Manager to 0.5.1 and the release
   validator to 0.3.2.
 
-v0.9.1 - JScript native-method compatibility hotfix
----------------------------------------------------
+## v0.9.1 - JScript native-method compatibility hotfix
 
 - Fixed immediate Type mismatch errors in JS Playlist cover rendering and the
   centre Display status-icon renderer introduced by the v0.9.0 bitmap path.
@@ -1562,8 +1546,7 @@ v0.9.1 - JScript native-method compatibility hotfix
 - Preserved all optimisation settings, render-cache behaviour and saved
   properties from v0.9.0.
 
-v0.9.0 - Rendering and playlist performance optimisation
---------------------------------------------------------
+## v0.9.0 - Rendering and playlist performance optimisation
 
 - Replaced the permanent 8 ms repaint loops in JS Playlist and Smooth Playlist
   Manager with demand-driven schedulers that stop completely while idle and
@@ -1594,27 +1577,24 @@ v0.9.0 - Rendering and playlist performance optimisation
   3.0.13, Display to 3.0.12 and the release validator to 0.3.0.
 - Preserved existing saved properties, visual behaviour and refresh choices.
 
-v0.8.5 - Queue Viewer empty-space deselection
----------------------------------------------
+## v0.8.5 - Queue Viewer empty-space deselection
 
 - Made an unmodified left-click in empty Queue Viewer list space clear the
   current selection.
 - Preserved row selection, scrollbar-button handling and outside-panel clicks.
 - Added geometry-level behavioural coverage for each click target.
 
-v0.8.4 - Configuration Guide formatting hardening
--------------------------------------------------
+## v0.8.4 - Configuration Guide formatting hardening
 
 - Corrected missing blank lines around section and subsection headings in
-  CONFIGURATION_GUIDE.txt.
+  CONFIGURATION_GUIDE.md.
 - Applied consistent heading spacing throughout the complete guide rather than
   patching only the two reported locations.
 - Added validator coverage so Configuration Guide headings must remain separated
   from surrounding paragraphs and lists.
 - Made no foobar2000 runtime changes and left DarkOneJSP3.fcl untouched.
 
-v0.8.3 - Complete configuration-menu documentation audit
---------------------------------------------------------
+## v0.8.3 - Complete configuration-menu documentation audit
 
 - Audited every user-facing menu and settings surface in the supported layout
   against the current source implementation.
@@ -1632,8 +1612,7 @@ v0.8.3 - Complete configuration-menu documentation audit
   that keep principal source menu labels represented in the guide.
 - Made no foobar2000 runtime changes and left DarkOneJSP3.fcl untouched.
 
-v0.8.2 - Queue navigation and native-editor prioritisation
-----------------------------------------------------------
+## v0.8.2 - Queue navigation and native-editor prioritisation
 
 - Made the native Queue Viewer component the recommended DOJSP3.Queue panel and
   restored it to the documented requirements for the complete editing
@@ -1652,8 +1631,7 @@ v0.8.2 - Queue navigation and native-editor prioritisation
 - Expanded queue-viewer runtime validation and updated package metadata,
   manifest guidance and current-facing documentation.
 
-v0.8.1 - Post-consolidation release hardening
----------------------------------------------
+## v0.8.1 - Post-consolidation release hardening
 
 - Added manifest-driven validation for every scripted JSplitter controller and
   panel source, preventing incomplete layouts from passing release checks.
@@ -1669,8 +1647,7 @@ v0.8.1 - Post-consolidation release hardening
   native Queue Viewer component is an optional alternative.
 - Kept all foobar2000 runtime scripts and saved-setting contracts unchanged.
 
-v0.8.0 - Modular release-validator consolidation
-------------------------------------------------
+## v0.8.0 - Modular release-validator consolidation
 
 - Reorganised the release validator into a thin command-line entry point and
   focused static/runtime validation modules.
@@ -1683,8 +1660,7 @@ v0.8.0 - Modular release-validator consolidation
 - Kept all foobar2000 runtime scripts and saved-setting contracts unchanged.
 - Adopted the revised repository README as the maintained public baseline.
 
-v0.7.38 - InfoStack controller decomposition
---------------------------------------------
+## v0.7.38 - InfoStack controller decomposition
 
 - Split InfoStack-only colour state and menu handling into
   `jsplitter/info_stack_colours.js`.
@@ -1698,8 +1674,7 @@ v0.7.38 - InfoStack controller decomposition
   roughly six hundred and expanded static/runtime validation for the helper
   boundaries and existing colour/protocol behaviour.
 
-v0.7.37 - Shared optional-button menu consolidation
----------------------------------------------------
+## v0.7.37 - Shared optional-button menu consolidation
 
 - Added a shared menu helper for the left and right control panels.
 - Centralised optional-button toggling, first-time command/name setup, command
@@ -1713,8 +1688,7 @@ v0.7.37 - Shared optional-button menu consolidation
   validation for menu construction, edit IDs, setup cancellation and refresh
   behaviour.
 
-v0.7.36 - Shared JSplitter protocol consolidation
--------------------------------------------------
+## v0.7.36 - Shared JSplitter protocol consolidation
 
 - Added a shared JSplitter protocol helper for versioned startup-control and
   upper-divider communication.
@@ -1729,8 +1703,7 @@ v0.7.36 - Shared JSplitter protocol consolidation
 - Expanded static and runtime validation for malformed messages, clamping,
   menu mappings, state round-trips and readiness re-notification.
 
-v0.7.35 - Shared colour-menu consolidation
-------------------------------------------
+## v0.7.35 - Shared colour-menu consolidation
 
 - Added a shared colour utility for opaque conversion, hexadecimal formatting,
   text parsing, Columns UI colour lookup and saved-mode validation.
@@ -1747,8 +1720,7 @@ v0.7.35 - Shared colour-menu consolidation
 - Expanded static and runtime validation for shared helpers, sparse mode maps,
   menu selection, picker signatures, cancellation and fallback behaviour.
 
-v0.7.34 - Columns UI selected-item accent colours
--------------------------------------------------
+## v0.7.34 - Columns UI selected-item accent colours
 
 - Added Columns UI selected-item background to the InfoStack Tab font colour
   menu while preserving Default as mode 0 and Custom as mode 1.
@@ -1760,8 +1732,7 @@ v0.7.34 - Columns UI selected-item accent colours
   runtime validation for colour-slot resolution, menu integration and mode
   compatibility.
 
-v0.7.33 - Public-release documentation hardening
-------------------------------------------------
+## v0.7.33 - Public-release documentation hardening
 
 - Replaced the abbreviated repository README with a fuller project overview,
   installation guide, repository map, attribution summary and contribution
@@ -1773,8 +1744,7 @@ v0.7.33 - Public-release documentation hardening
 - Narrowed the release-validator scope to package structure, runtime scripts,
   documentation, metadata and intentional compatibility mirrors.
 
-v0.7.32 - Waveform background palette and documentation cleanup
----------------------------------------------------------------
+## v0.7.32 - Waveform background palette and documentation cleanup
 
 - Expanded the waveform Host background menu with DarkOne dark grey and
   Columns UI global background.
@@ -1786,8 +1756,7 @@ v0.7.32 - Waveform background palette and documentation cleanup
   to earlier DarkOneJSP3 package versions outside this changelog.
 - Left DarkOneJSP3\fcl\DarkOneJSP3.fcl untouched.
 
-v0.7.31 - Columns UI global background modes
---------------------------------------------
+## v0.7.31 - Columns UI global background modes
 
 - Added Columns UI global background to the InfoStack backing, Page background
   colour and Side divider colour menus.
@@ -1801,8 +1770,7 @@ v0.7.31 - Columns UI global background modes
   colour-control implementations.
 - Left DarkOneJSP3\fcl\DarkOneJSP3.fcl untouched.
 
-v0.7.30 - DarkOne dark-grey side dividers
------------------------------------------
+## v0.7.30 - DarkOne dark-grey side dividers
 
 - Added DarkOne dark grey (RGB 24, 24, 24) to the Side divider colour menu
   exposed by both the InfoStack tab strip and the upper divider strips.
@@ -1813,8 +1781,7 @@ v0.7.30 - DarkOne dark-grey side dividers
   divider painting while retaining established geometry and lower dividers.
 - Left DarkOneJSP3\fcl\DarkOneJSP3.fcl untouched.
 
-v0.7.29 - InfoStack dark-grey backing hotfix
---------------------------------------------
+## v0.7.29 - InfoStack dark-grey backing hotfix
 
 - Fixed InfoStack backing mode 4 being clamped to the legacy custom-colour mode
   3, which made DarkOne dark grey resolve to the stored custom colour.
@@ -1823,8 +1790,7 @@ v0.7.29 - InfoStack dark-grey backing hotfix
 - Left the five per-page background controls and their persistence unchanged.
 - Left DarkOneJSP3\fcl\DarkOneJSP3.fcl untouched.
 
-v0.7.28 - Configurable information-page backgrounds
----------------------------------------------------
+## v0.7.28 - Configurable information-page backgrounds
 
 - Added Page background colour menus to Biography, Last.fm, Album Notes, Queue
   and Properties.
@@ -1839,8 +1805,7 @@ v0.7.28 - Configurable information-page backgrounds
   reset ownership and documentation.
 - Left DarkOneJSP3\fcl\DarkOneJSP3.fcl untouched.
 
-v0.7.27 - Final public-release hardening
-----------------------------------------
+## v0.7.27 - Final public-release hardening
 
 - Made manual construction from the panel map the recommended setup path.
 - Included an optional maintainer-exported FCL under DarkOneJSP3\fcl without
@@ -1856,8 +1821,7 @@ v0.7.27 - Final public-release hardening
 - Preserved the established startup, divider, playlist, provider and layout
   behaviour from v0.7.26.
 
-v0.7.26 - Stable-release documentation cleanup
-----------------------------------------------
+## v0.7.26 - Stable-release documentation cleanup
 
 - Removed obsolete stable-release marker documents and their references.
 - Simplified installation and documentation indexes to describe only the
@@ -1868,8 +1832,7 @@ v0.7.26 - Stable-release documentation cleanup
   references.
 - Preserved every runtime script and behavioural implementation from v0.7.25.
 
-v0.7.25 - Reliable root-owned startup controls
-----------------------------------------------
+## v0.7.25 - Reliable root-owned startup controls
 
 - Moved Startup from the JScript Panel DarkOne Tools menu to the InfoStack
   tab-strip JSplitter menu.
@@ -1886,8 +1849,7 @@ v0.7.25 - Reliable root-owned startup controls
 - Preserved the v0.6.6/v0.6.9 curtain, readiness, 150 ms prepaint and 125 ms
   staged-reveal behaviour.
 
-v0.7.24 - Reliable upper-divider colour menu bridge
----------------------------------------------------
+## v0.7.24 - Reliable upper-divider colour menu bridge
 
 - Moved Side divider colour from the Album Art JScript Panel menu to the
   InfoStack tab-strip JSplitter menu.
@@ -1901,8 +1863,7 @@ v0.7.24 - Reliable upper-divider colour menu bridge
 - Extended validation to reject future JScript Panel divider bridges and test
   serialised state updates and broadcasts.
 
-v0.7.23 - Customisable Album Art/Spectrum side dividers
--------------------------------------------------------
+## v0.7.23 - Customisable Album Art/Spectrum side dividers
 
 - Added a shared colour setting for the left and right upper divider strips
   beside the Album Art/Spectrum column.
@@ -1916,8 +1877,7 @@ v0.7.23 - Customisable Album Art/Spectrum side dividers
 - Preserved the verified divider positions and thickness and left the lower
   control-panel dividers unchanged.
 
-v0.7.22 - Panel Settings arrow silhouette and opacity correction
-----------------------------------------------------------------
+## v0.7.22 - Panel Settings arrow silhouette and opacity correction
 
 - Replaced the three overlapping Panel Settings arrow strokes with one closed
   filled silhouette.
@@ -1929,8 +1889,7 @@ v0.7.22 - Panel Settings arrow silhouette and opacity correction
 - Left playlist behaviour, Panel Settings layout and interaction unchanged.
 - Extended validation with pixel-ownership, opacity and geometry smoke tests.
 
-v0.7.21 - JS Playlist Panel Settings arrow rendering correction
----------------------------------------------------------------
+## v0.7.21 - JS Playlist Panel Settings arrow rendering correction
 
 - Replaced the resampled 75 px Panel Settings back-arrow artwork with direct
   rendering at the final scaled button size.
@@ -1941,8 +1900,7 @@ v0.7.21 - JS Playlist Panel Settings arrow rendering correction
 - Extended validation to reject the old resized arrow and exercise the new
   direct-render helper at multiple UI scales.
 
-v0.7.20 - Album Notes AllMusic state-machine hardening
-------------------------------------------------------
+## v0.7.20 - Album Notes AllMusic state-machine hardening
 
 - Added an explicit managed-provider activation path so reopening Album Notes
   for the same focused album re-arms completion instead of silently returning.
@@ -1957,8 +1915,7 @@ v0.7.20 - Album Notes AllMusic state-machine hardening
 - Left startup, layout, InfoStack, dividers, playlists and playback display
   behaviour unchanged.
 
-v0.7.19 - Documentation and lifecycle hardening
------------------------------------------------
+## v0.7.19 - Documentation and lifecycle hardening
 
 - Repaired Configuration Guide section numbering and normalised heading
   underlines across the complete documentation set.
@@ -1971,8 +1928,7 @@ v0.7.19 - Documentation and lifecycle hardening
 - Extended validation to check documentation contents/body agreement, unique
   sequential numbered sections, exact heading underlines and timer cleanup.
 
-v0.7.18 - InfoStack tab-area wording refinement
------------------------------------------------
+## v0.7.18 - InfoStack tab-area wording refinement
 
 - Renamed the manual tab-area command to Set fixed tab area height... so it no
   longer describes a user-set override as automatic.
@@ -1982,8 +1938,7 @@ v0.7.18 - InfoStack tab-area wording refinement
   contradictory label.
 - Left tab geometry, startup sequencing, panel visibility and layout unchanged.
 
-v0.7.17 - Automatic tab-area scale correlation
-----------------------------------------------
+## v0.7.17 - Automatic tab-area scale correlation
 
 - Made automatic InfoStack tab-area padding follow the automatic tab-font base
   scale so larger or smaller responsive fonts retain balanced surrounding space.
@@ -1993,8 +1948,7 @@ v0.7.17 - Automatic tab-area scale correlation
 - Updated menu wording, documentation, metadata and validation coverage.
 - Left startup sequencing, panel visibility, layout and divider code unchanged.
 
-v0.7.16 - Playlist row and automatic tab-font controls
-------------------------------------------------------
+## v0.7.16 - Playlist row and automatic tab-font controls
 
 - Added a Playlist Manager Colours option to enable or disable alternating row
   shading while preserving the existing enabled appearance as the default.
@@ -2006,8 +1960,7 @@ v0.7.16 - Playlist row and automatic tab-font controls
 - Extended metadata, documentation and validation for both controls.
 - Preserved the verified startup, reveal sequencing, layout and divider code.
 
-v0.7.15 - Queue Viewer reset bridge loading fix
------------------------------------------------
+## v0.7.15 - Queue Viewer reset bridge loading fix
 
 - Fixed the DarkOneJSP3 Queue Viewer wrapper calling the coordinated reset
   handler without importing its registry and bridge helper.
@@ -2019,8 +1972,7 @@ v0.7.15 - Queue Viewer reset bridge loading fix
 - Preserved the verified startup, layout, divider, scrolling, waveform and
   provider behaviour from v0.7.14.
 
-v0.7.14 - Playlist reset coverage completion
---------------------------------------------
+## v0.7.14 - Playlist reset coverage completion
 
 - Added project-wide factory-reset participation to JS Playlist and Smooth
   Playlist Manager.
@@ -2034,8 +1986,7 @@ v0.7.14 - Playlist reset coverage completion
   coverage regressions.
 - Preserved the verified startup, layout, divider, waveform and provider code.
 
-v0.7.13 - Final release hardening
----------------------------------
+## v0.7.13 - Final release hardening
 
 - Fixed full-project resets in the consolidated Album Notes panel so both
   Album Notes and embedded MusicBrainz settings are restored before one reload.
@@ -2050,8 +2001,7 @@ v0.7.13 - Final release hardening
   structure, active .txt entry scripts and local preprocessor paths.
 - Preserved the verified v0.7.12 startup, divider, layout and provider runtime.
 
-v0.7.12 - Release-candidate hardening
--------------------------------------
+## v0.7.12 - Release-candidate hardening
 
 - Reconciled legacy upgrade documentation with the current package.
 - Synchronised documentation with the actual package and no-FCL policy.
@@ -2062,8 +2012,7 @@ v0.7.12 - Release-candidate hardening
 - Strengthened release validation with JavaScript syntax, Python compilation,
   documentation consistency, reset coverage and package-content checks.
 
-v0.7.11 - Right upper divider visibility fix
---------------------------------------------
+## v0.7.11 - Right upper divider visibility fix
 
 - Corrected the centre visualiser width so it stops before the right upper
   divider rather than extending underneath it.
@@ -2072,8 +2021,7 @@ v0.7.11 - Right upper divider visibility fix
 - Added validation that both upper divider strips reserve visible layout space.
 - Left DarkOneJSP3.fcl unchanged.
 
-v0.7.10 - Upper black divider continuation
-------------------------------------------
+## v0.7.10 - Upper black divider continuation
 
 - Added black divider strips to the left and right of the Album Art/Spectrum
   column, matching the exact positions and thickness of the lower dividers.
@@ -2083,8 +2031,7 @@ v0.7.10 - Upper black divider continuation
 - Left the lower divider appearance and DarkOneJSP3.fcl unchanged.
 - Added validation for the matching upper black divider geometry.
 
-v0.7.9 - Visible divider-edge alignment correction
---------------------------------------------------
+## v0.7.9 - Visible divider-edge alignment correction
 
 - Restored the original lower separator positions and thickness exactly.
 - Aligned the upper InfoStack and playlist columns with the outer visible
@@ -2097,8 +2044,7 @@ v0.7.9 - Visible divider-edge alignment correction
   upper outer-edge calculations.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.8 - Control-window alignment correction
---------------------------------------------
+## v0.7.8 - Control-window alignment correction
 
 - Corrected the v0.7.7 assumption that the painted one-third separator lines
   represented the actual lower control-panel boundaries.
@@ -2111,8 +2057,7 @@ v0.7.8 - Control-window alignment correction
 - Added validation requiring matching 21/64 geometry in both controllers.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.7 - Main-column alignment fix
-----------------------------------
+## v0.7.7 - Main-column alignment fix
 
 - Aligned the upper InfoStack, centre visualiser and playlist columns with the
   one-third divider positions used by the lower control panels.
@@ -2125,8 +2070,7 @@ v0.7.7 - Main-column alignment fix
   geometry.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.6 - Centre visualiser gap fix
-----------------------------------
+## v0.7.6 - Centre visualiser gap fix
 
 - Removed the obsolete 20-pixel horizontal inset from the Album Art/Spectrum
   JSplitter controller.
@@ -2136,8 +2080,7 @@ v0.7.6 - Centre visualiser gap fix
 - Corrected validator control flow so post-scan errors fail validation.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.5 - JScript Panel import hotfix
-------------------------------------
+## v0.7.5 - JScript Panel import hotfix
 
 - Fixed an immediate startup error in customised JScript Panel samples where
   common.js attempted to call include(), which is unavailable inside an
@@ -2148,8 +2091,7 @@ v0.7.5 - JScript Panel import hotfix
   imported JScript Panel helper files.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.4 - Reset architecture and package completion
---------------------------------------------------
+## v0.7.4 - Reset architecture and package completion
 
 - Included and renamed the complete customised JScript Panel sample tree.
 - Removed inactive historical namespace identifiers from runtime files.
@@ -2159,8 +2101,7 @@ v0.7.4 - Reset architecture and package completion
 - Updated validation and repository documentation for source/full-package use.
 - DarkOneJSP3.fcl remains intentionally user-exported and is not patched.
 
-v0.7.3 - Legacy property cleanup
---------------------------------
+## v0.7.3 - Legacy property cleanup
 
 - Removed active DARKONE2021.* property migration from the shared JScript Panel
   configuration code.
@@ -2176,8 +2117,7 @@ v0.7.3 - Legacy property cleanup
   deletion call.
 - DarkOneJSP3.fcl remains intentionally untouched.
 
-v0.7.2 - Functional factory reset
----------------------------------
+## v0.7.2 - Functional factory reset
 
 - Replaced ineffective SetProperty(name, null) calls with explicit canonical
   defaults for every coordinated DarkOneJSP3 property.
@@ -2189,8 +2129,7 @@ v0.7.2 - Functional factory reset
 - Added validation that rejects null-based property reset implementations.
 - DarkOneJSP3.fcl remains intentionally untouched.
 
-v0.7.1 - Coordinated property reset
------------------------------------
+## v0.7.1 - Coordinated property reset
 
 - Added DarkOne Tools > Reset DarkOneJSP3 with panel-local, appearance,
   behaviour and full-project reset commands.
@@ -2200,9 +2139,8 @@ v0.7.1 - Coordinated property reset
 - Added confirmation before any multi-panel reset.
 - DarkOneJSP3.fcl remains intentionally untouched.
 
+## v0.6.15 - Refinement and hardening pass
 
-v0.6.15 - Refinement and hardening pass
----------------------------------------
 - Batched shared-setting updates into one category-aware notification, so
   control and display panels rebuild only when relevant settings change.
 - Clamped invalid negative display times and removed duplicate display-font
@@ -2229,8 +2167,8 @@ v0.6.15 - Refinement and hardening pass
 - Left the user-managed FCL unchanged and excluded it from the hotfix.
 - Included all nine documentation files in the separate v0.6.15 hotfix.
 
-v0.6.14 - Optional-button message-box compatibility fix
--------------------------------------------------------
+## v0.6.14 - Optional-button message-box compatibility fix
+
 - Fixed Optional buttons > Command guide failing with an
   MB_ICONINFORMATION is undefined runtime error.
 - Replaced the unsupported alias with MB_ICONASTERISK, the information-icon
@@ -2243,27 +2181,27 @@ v0.6.14 - Optional-button message-box compatibility fix
 - Left the user-managed FCL unchanged and excluded it from the hotfix.
 - Included the complete documentation set in the separate v0.6.14 hotfix.
 
-v0.6.13 - Documentation structure and clarity refresh
------------------------------------------------------
-- Reorganised README.txt into a concise project overview and documentation map.
-- Rewrote INSTALLATION.txt as a version-neutral fresh-install, upgrade, hotfix
+## v0.6.13 - Documentation structure and clarity refresh
+
+- Reorganised README.md into a concise project overview and documentation map.
+- Rewrote INSTALLATION.md as a version-neutral fresh-install, upgrade, hotfix
   and rollback guide, including the no-FCL-patching policy.
-- Rebuilt CONFIGURATION_GUIDE.txt around the actual right-click locations and
+- Rebuilt CONFIGURATION_GUIDE.md around the actual right-click locations and
   current menu hierarchy, with duplicate legacy guidance removed.
-- Reorganised TROUBLESHOOTING.txt by topic, added a first-response checklist
+- Reorganised TROUBLESHOOTING.md by topic, added a first-response checklist
   and clarified the difference between consolidated Album Notes and standalone
   AllMusic/MusicBrainz panels.
 - Tidied the layout map, migration reference and credits while preserving exact
   identifiers and attribution.
 - Moved the changelog title to the top, removed its duplicate mid-file heading
-  and retained CHANGELOG.txt as the sole release-history source.
+  and retained CHANGELOG.md as the sole release-history source.
 - Added documentation-specific release validation and included the complete
   changed documentation set in the separate hotfix archive.
 - Left all runtime scripts and the user-managed FCL unchanged from
   v0.6.12.
 
-v0.6.12 - InfoStack native colour-picker correction
----------------------------------------------------
+## v0.6.12 - InfoStack native colour-picker correction
+
 - Corrected the InfoStack tab-font custom-colour action to use JSplitter's
   two-argument utils.ColourPicker(window_id, default_colour) signature.
 - The Windows colour-selection dialog now opens directly instead of the manual
@@ -2276,8 +2214,8 @@ v0.6.12 - InfoStack native colour-picker correction
 - Included every changed documentation and metadata file in the separate
   v0.6.12 hotfix archive.
 
-v0.6.11 - InfoStack tab font colour customisation
--------------------------------------------------
+## v0.6.11 - InfoStack tab font colour customisation
+
 - Added a dedicated Tab font colour submenu to the InfoStack tab-row context
   menu.
 - Added Default - DarkOne blue and Custom colour choices with a #RRGGBB preview
@@ -2291,8 +2229,8 @@ v0.6.11 - InfoStack tab font colour customisation
 - Included every changed documentation and metadata file in the separate
   v0.6.11 hotfix archive.
 
-v0.6.10 - Display accent colour customisation
----------------------------------------------
+## v0.6.10 - Display accent colour customisation
+
 - Replaced the restrictive Blue/Green/Light Blue/Red/White/Yellow display
   palette with Default - DarkOne blue and Custom colour.
 - Added the native JScript Panel colour picker and a #RRGGBB preview of the
@@ -2309,8 +2247,8 @@ v0.6.10 - Display accent colour customisation
 - Included every changed documentation and metadata file in the separate
   v0.6.10 hotfix archive.
 
-v0.6.9 - Startup reveal sequencing refinement
----------------------------------------------
+## v0.6.9 - Startup reveal sequencing refinement
+
 - Rebased directly on the approved v0.6.6 baseline; discarded v0.6.7 and v0.6.8
   experiments are not included.
 - Fixed the Display/Waveform container briefly exposing a native black first
@@ -2325,8 +2263,8 @@ v0.6.9 - Startup reveal sequencing refinement
 - Included all changed documentation, metadata and validation rules in the
   separate v0.6.9 hotfix archive.
 
-v0.6.6 - Graceful theme startup
--------------------------------
+## v0.6.6 - Graceful theme startup
+
 - Hid every InfoStack child as soon as its JSplitter controller is evaluated,
   preventing the Album Notes or another FCL-visible child from flashing before
   the saved active tab is restored.
@@ -2341,8 +2279,8 @@ v0.6.6 - Graceful theme startup
   is a clean reveal from black rather than a simulated alpha fade.
 - Included all changed documentation and release metadata in the v0.6.6 hotfix.
 
-v0.6.5 - Album Notes panel-title cleanup
-----------------------------------------
+## v0.6.5 - Album Notes panel-title cleanup
+
 - Made the consolidated Album Notes title the only supported title for the
   fourth InfoStack child.
 - Removed retired information-source and provider-title runtime
@@ -2353,17 +2291,17 @@ v0.6.5 - Album Notes panel-title cleanup
 - Added upgrade guidance and validation that catches deprecated titles in the
   active controller, manifest and exported layout.
 
-v0.6.4 - Documentation and package housekeeping
------------------------------------------------
-- Removed version-by-version release notes from README.txt so CHANGELOG.txt is
+## v0.6.4 - Documentation and package housekeeping
+
+- Removed version-by-version release notes from README.md so CHANGELOG.md is
   the single maintained release-history source.
 - Removed the obsolete docs\REMOVED_FILES_v0.5.0.txt inventory from the full
   package.
 - Updated the separate hotfix archive to include every documentation and
   release- metadata file changed by the update.
 
-v0.6.3 - Album Notes context-menu tidy-up
------------------------------------------
+## v0.6.3 - Album Notes context-menu tidy-up
+
 - Kept Refresh enabled sources and Clear current source cache as prominent
   top-level actions.
 - Grouped source-page, URL and retrieval-diagnostic commands under a compact
@@ -2371,8 +2309,8 @@ v0.6.3 - Album Notes context-menu tidy-up
 - Left Copy displayed notes at the top level and shortened the nested action
   labels for quicker scanning.
 
-v0.6.2 - MusicBrainz view synchronisation hotfix
-------------------------------------------------
+## v0.6.2 - MusicBrainz view synchronisation hotfix
+
 - Fixed View > MusicBrainz Links/Releases updating the selected menu state
   without immediately replacing the previously painted Album Notes content.
 - Centralised consolidated-panel view changes so the hidden MusicBrainz object
@@ -2380,25 +2318,25 @@ v0.6.2 - MusicBrainz view synchronisation hotfix
 - Preserved MusicBrainz scroll state when leaving either MusicBrainz view and
   added an explicit repaint after every consolidated view change.
 
-v0.6.1 - Album Notes refinement
--------------------------------
+## v0.6.1 - Album Notes refinement
+
 - Added configurable provider priority, single-source browsing, separate
   MusicBrainz resolver/view controls, stronger album identity matching,
   provider-specific caching/retries, retrieval diagnostics and independent
   API/HTML request identities.
 
-v0.6.0 - Consolidated Album Notes panel
----------------------------------------
+## v0.6.0 - Consolidated Album Notes panel
+
 - Consolidated album-note retrieval and MusicBrainz views into one configurable
   panel with independently enabled sources.
 
-v0.5.1 - Request identity profiles
-----------------------------------
+## v0.5.1 - Request identity profiles
+
 - Standardised the default application identity and added a shared optional
   Google Chrome 150-style request profile for AllMusic and MusicBrainz.
 
-v0.5.0 - Release hardening
---------------------------
+## v0.5.0 - Release hardening
+
 - Replaced the unsupported bundled Queue Viewer sample with the incremental
   maintained %queue_indexes% implementation.
 - Added explicit handle-list cleanup, item-accurate progress and source-item
@@ -2421,12 +2359,12 @@ v0.5.0 - Release hardening
 - Refreshed embedded layout metadata for consistency with the maintained
   scripts.
 
-v0.4.14 - Maintenance update
-----------------------------
+## v0.4.14 - Maintenance update
+
 - Refined project metadata and attribution consistency across the release.
 
-v0.4.13 - AllMusic MusicBrainz fallback-state and timeout fix
--------------------------------------------------------------
+## v0.4.13 - AllMusic MusicBrainz fallback-state and timeout fix
+
 - Fixed the main cause of intermittent silent relationship lookups: the
   mb_fallback_started one-shot guard was not reset when the focused album
   changed after a blocked or failed lookup. The next album could print "Trying
@@ -2445,8 +2383,8 @@ v0.4.13 - AllMusic MusicBrainz fallback-state and timeout fix
 - Clears pending watchdogs and delayed-request timers when the album changes,
   the object resets or either AllMusic panel unloads.
 
-v0.4.12 - Enhanced MusicBrainz InfoStack alternative
-----------------------------------------------------
+## v0.4.12 - Enhanced MusicBrainz InfoStack alternative
+
 - Reworked samples\MusicBrainz.txt and samples\js\musicbrainz.js as a
   project-enhanced panel that can replace AllMusic in the same InfoStack
   slot.
@@ -2468,8 +2406,8 @@ v0.4.12 - Enhanced MusicBrainz InfoStack alternative
   refresh/delete/open-cache tools, artist-page/MBID actions and configurable
   maintainer contact text.
 
-v0.4.11 - Graceful AllMusic browser-verification fallback
----------------------------------------------------------
+## v0.4.11 - Graceful AllMusic browser-verification fallback
+
 - Detects Cloudflare challenge responses using Cf-Mitigated/CF-Ray headers and
   the "Just a moment..." challenge page instead of treating them as reviews.
 - Stops repeated automatic requests for the affected album after a challenge.
@@ -2486,8 +2424,8 @@ v0.4.11 - Graceful AllMusic browser-verification fallback
 - Keeps the MusicBrainz relationship resolver but removes any need for browser-
   impersonation headers or challenge circumvention.
 
-v0.4.10 - JSP3 MusicBrainz timer API correction
------------------------------------------------
+## v0.4.10 - JSP3 MusicBrainz timer API correction
+
 - Replaced the unsupported browser-style setTimeout() call in allmusic.js with
   JScript Panel 3.8.5's documented window.SetTimeout(func, delay) API.
 - Restored delayed MusicBrainz request chaining without a runtime exception.
@@ -2495,8 +2433,8 @@ v0.4.10 - JSP3 MusicBrainz timer API correction
   remain.
 - Retained the v0.4.9 blocked-search and MusicBrainz relationship resolver.
 
-v0.4.9 - AllMusic blocked-search and MusicBrainz resolver fix
--------------------------------------------------------------
+## v0.4.9 - AllMusic blocked-search and MusicBrainz resolver fix
+
 - Fixed a JSP3 callback bug where any server response was treated as successful
   even when HTTP status was 403 or another error.
 - Added status/header forwarding to both AllMusic wrappers.
@@ -2509,8 +2447,8 @@ v0.4.9 - AllMusic blocked-search and MusicBrainz resolver fix
   necessary.
 - Ignores stale web responses when the focused album changes mid-request.
 
-v0.4.8 - Current AllMusic search-result matching
-------------------------------------------------
+## v0.4.8 - Current AllMusic search-result matching
+
 - Replaced the strict legacy div.info/title/artist parser with generic
   discovery of AllMusic album links.
 - Matches album titles after project-specific cleanup and validates the nearest
@@ -2519,8 +2457,8 @@ v0.4.8 - Current AllMusic search-result matching
   CSS class equality.
 - Adds candidate-count and search-URL diagnostics when no match is found.
 
-v0.4.7 - Row-aware Playlist Manager scroll memory
--------------------------------------------------
+## v0.4.7 - Row-aware Playlist Manager scroll memory
+
 - Replaced absolute-pixel-only manager scroll persistence with a versioned
   semantic anchor containing the top playlist row, row offset and playlist
   GUID.
@@ -2533,9 +2471,9 @@ v0.4.7 - Row-aware Playlist Manager scroll memory
   SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2 for the enhanced state.
 - Added automatic one-time migration from the previous numeric scroll property.
 
-v0.4.6 - Credits and attribution
---------------------------------
-- Added a maintained CREDITS.txt to the consolidated documentation set.
+## v0.4.6 - Credits and attribution
+
+- Added a maintained CREDITS.md to the consolidated documentation set.
 - Credited tedGo, DeViLhoOD, Br3tt / Falstaff, marc2003, dima-lur and
   additional bundled sample contributors.
 - Documented the location of the original JScript Panel 3 licence files.
@@ -2543,8 +2481,8 @@ v0.4.6 - Credits and attribution
 - Recorded the use of AI-assisted development under DeViLhoOD's direction and
   testing.
 
-v0.4.5 - AllMusic paragraph preservation
-----------------------------------------
+## v0.4.5 - AllMusic paragraph preservation
+
 - Replaced the first-paragraph-only AllMusic parser with complete review-body
   extraction.
 - Preserved individual HTML paragraphs with a blank line between them.
@@ -2554,8 +2492,8 @@ v0.4.5 - AllMusic paragraph preservation
 - Existing cached reviews must be deleted/refreshed once to regain paragraph
   formatting because lost breaks cannot be reconstructed from the cache.
 
-v0.4.4 - Extended free scrolling and scrollbar drag mode
---------------------------------------------------------
+## v0.4.4 - Extended free scrolling and scrollbar drag mode
+
 - Increased the custom free-scroll wheel distance range from 4-120 to 4-240
   pixels per notch.
 - Added a persistent "Snap scrollbar dragging to playlist rows" toggle.
@@ -2567,8 +2505,8 @@ v0.4.4 - Extended free scrolling and scrollbar drag mode
 - Added safe synchronisation between free wheel scrolling and free scrollbar
   dragging, including correct continuous thumb positioning.
 
-v0.4.3 - Optional free wheel scrolling
---------------------------------------
+## v0.4.3 - Optional free wheel scrolling
+
 - Added a persistent "Snap wheel scrolling to playlist rows" toggle to the main
   JS Playlist Smooth scrolling menu.
 - Kept row snapping enabled by default, preserving existing behaviour.
@@ -2579,8 +2517,8 @@ v0.4.3 - Optional free wheel scrolling
 - Added timer cleanup and safe synchronisation when another navigation method
   changes the playlist offset.
 
-v0.4.2 - Independent control-button roundness
----------------------------------------------
+## v0.4.2 - Independent control-button roundness
+
 - Added Button roundness submenus to both DarkOne control panels.
 - Added Automatic, Square, Subtle, Classic DarkOne, Rounded and Pill presets.
 - Added a custom 0-100% corner-radius control.
@@ -2590,8 +2528,8 @@ v0.4.2 - Independent control-button roundness
 - Added a true square drawing path for a 0% radius.
 - Elliptical appearance presets remain elliptical by design.
 
-v0.4.1 - Smooth Playlist Manager filter restoration
----------------------------------------------------
+## v0.4.1 - Smooth Playlist Manager filter restoration
+
 - Restored the DarkOne2021 playlist-name filter to the JSP3 manager header.
 - Added live case-insensitive filtering with a 180 ms debounce.
 - Restored the search/clear icon and end-of-filter divider.
@@ -2601,8 +2539,8 @@ v0.4.1 - Smooth Playlist Manager filter restoration
 - Updated the counter to display "matching of total playlists" while filtered.
 - Preserved compact row spacing, scroll-state and high-refresh enhancements.
 
-v0.4.0 - JS Playlist parity and documentation consolidation
------------------------------------------------------------
+## v0.4.0 - JS Playlist parity and documentation consolidation
+
 - Restored smooth row transitions to the JSP3 JS Playlist.
 - Added configurable repaint timing: 8/10/12/16 ms or custom 7-40 ms.
 - Added configurable smoothness divisor, wheel throttle and wheel row step.
@@ -2613,92 +2551,92 @@ v0.4.0 - JS Playlist parity and documentation consolidation
 - Consolidated the fragmented docs folder into eight maintained documents.
 - Updated the layout manifest from 0.2 to 0.4.0.
 
-v0.3.7 - Waveform anti-flash
-----------------------------
+## v0.3.7 - Waveform anti-flash
+
 - Kept Waveform Minibar hidden briefly after playback starts from stopped
   state.
 - Added a persistent 0-2000 ms reveal delay; default 200 ms.
 - Preserved immediate behaviour for ordinary track transitions.
 
-v0.3.6 - Playlist Manager row spacing
--------------------------------------
+## v0.3.6 - Playlist Manager row spacing
+
 - Restored DarkOne2021-style compact playlist-manager density.
 - Added Compact, Balanced, original JSP3 and custom row-height controls.
 - Added SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT.
 
-v0.3.5 - DirectWrite font fidelity and customisation
-----------------------------------------------------
+## v0.3.5 - DirectWrite font fidelity and customisation
+
 - Restored Arial Black/Black 900 defaults for labels and captions.
 - Added font family, weight and scale controls for controls, captions and
   values.
 - Added DirectWrite font validation and cross-panel refresh.
 
-v0.3.4 - Waveform area
-----------------------
+## v0.3.4 - Waveform area
+
 - Painted the unfilled waveform spacer and removed the accidental line/inset.
 - Added waveform host-background options and blank-on-stop fallback.
 
-v0.3.3 - Quick Search appearance
---------------------------------
+## v0.3.3 - Quick Search appearance
+
 - Recreated the original two-pixel #696969 frame and #1E1E1E interior.
 - Restored the DarkOne QS.bmp icon resource and configuration guidance.
 
-v0.3.2 - InfoStack title-case and tab-area controls
----------------------------------------------------
+## v0.3.2 - InfoStack title-case and tab-area controls
+
 - Made Title Case the default tab-label style.
 - Added automatic/fixed tab-area height controls.
 
-v0.3.1 - InfoStack alignment
-----------------------------
+## v0.3.1 - InfoStack alignment
+
 - Vertically centred labels over the complete reserved tab strip.
 
-v0.3.0 - InfoStack customisation
---------------------------------
+## v0.3.0 - InfoStack customisation
+
 - Added visible-tab toggles, renameable labels, font controls and backgrounds.
 - Prevented the final tab from being hidden.
 
-v0.2.8 - Queue paint-triggered lazy scan
-----------------------------------------
+## v0.2.8 - Queue paint-triggered lazy scan
+
 - Started the deferred queue scan from the first real paint callback.
 
-v0.2.7 - Queue visibility revision
-----------------------------------
+## v0.2.7 - Queue visibility revision
+
 - Removed unreliable JSplitter-to-JSP3 visibility signalling.
 
-v0.2.6 - Lazy incremental queue scan
-------------------------------------
+## v0.2.6 - Lazy incremental queue scan
+
 - Removed the multi-second synchronous startup scan.
 - Added incremental scanning and deferred work until the Queue tab is opened.
 
-v0.2.5 - Queue index optimisation
----------------------------------
+## v0.2.5 - Queue index optimisation
+
 - Used the runtime-confirmed %queue_indexes% field directly.
 
-v0.2.4 - JSP3 Queue Viewer reconstruction
------------------------------------------
+## v0.2.4 - JSP3 Queue Viewer reconstruction
+
 - Rebuilt queue enumeration through EvalPlaylistItem and %queue_indexes%.
 
-v0.2.3 - Native Queue Viewer option
------------------------------------
+## v0.2.3 - Native Queue Viewer option
+
 - Documented foo_queue_viewer as an interchangeable DOJSP3.Queue child.
 
-v0.2.2 - JSplitter menu fix
----------------------------
+## v0.2.2 - JSplitter menu fix
+
 - Removed unsupported MenuObject.Dispose from JSplitter scripts.
 
-v0.2.1 - Initial runtime fixes
-------------------------------
+## v0.2.1 - Initial runtime fixes
+
 - Replaced undeclared JSplitter constants with local values.
 - Removed unsupported JSP2 queue API calls.
 
-v0.2.0 - Full JSplitter layout-controller migration
----------------------------------------------------
+## v0.2.0 - Full JSplitter layout-controller migration
+
 - Replaced all six Panel Stack Splitters with six JSplitter controllers.
 - Added stable child addressing through exact custom titles.
 - Added Direct2D layout/background drawing and persistent InfoStack state.
 - Migrated the three DarkOne control/display panels to JSP3.
 
-v0.1.x - JScript Panel 3 migration foundation
----------------------------------------------
+## v0.1.x - JScript Panel 3 migration foundation
+
 - Migrated the DarkOne panels from JSP2 GDI/ActiveX code to JSP3/DirectWrite.
 - Carried forward AllMusic, Last.fm, Album Art and smooth-sample improvements.

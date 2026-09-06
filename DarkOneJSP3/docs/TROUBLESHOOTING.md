@@ -1,25 +1,24 @@
-DarkOneJSP3 Troubleshooting
-===========================
+# DarkOneJSP3 Troubleshooting
 
-Contents
---------
-1. Before troubleshooting
-2. Layout and startup
-3. Display, controls and InfoStack
-4. Playlists and queue
-5. Quick Search and waveform
-6. Album Notes, AllMusic and MusicBrainz
-7. Finding panel menus and settings
-8. Factory reset
-9. Performance and smoothness
-10. Diagnostics to include in a bug report
+## Contents
 
-1. Before troubleshooting
--------------------------
+1. [Before troubleshooting](#1-before-troubleshooting)
+2. [Layout and startup](#2-layout-and-startup)
+3. [Display, controls and InfoStack](#3-display-controls-and-infostack)
+4. [Playlists and queue](#4-playlists-and-queue)
+5. [Quick Search and waveform](#5-quick-search-and-waveform)
+6. [Album Notes, AllMusic and MusicBrainz](#6-album-notes-allmusic-and-musicbrainz)
+7. [Finding panel menus and settings](#7-finding-panel-menus-and-settings)
+8. [Factory reset](#8-factory-reset)
+9. [Performance and smoothness](#9-performance-and-smoothness)
+10. [Diagnostics to include in a bug report](#10-diagnostics-to-include-in-a-bug-report)
+
+## 1. Before troubleshooting
+
 1. Restart foobar2000.
 2. Reload the affected JScript Panel or JSplitter instance if script changes are
    still not visible.
-3. Compare every custom title with LAYOUT_AND_PANEL_MAP.txt.
+3. Compare every custom title with LAYOUT_AND_PANEL_MAP.md.
 4. Confirm that the panel loads the packaged script rather than another copy.
 5. Open View > Console and check for [DarkOneJSP3] errors.
 6. Run the validator from the package/profile root:
@@ -30,41 +29,41 @@ Contents
 
      python DarkOneJSP3\tools\sync_mirrors.py --check .
 
-2. Layout and startup
----------------------
-[DarkOneJSP3] Child panel not found
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 2. Layout and startup
+
+### [DarkOneJSP3] Child panel not found
+
 A custom title is missing, misspelled, duplicated or placed at the wrong
-hierarchy level. Compare the complete layout with LAYOUT_AND_PANEL_MAP.txt.
+hierarchy level. Compare the complete layout with LAYOUT_AND_PANEL_MAP.md.
 Visible tab text is unrelated to the DOJSP3.* identifier.
 
-Album Notes tab is blank
-~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Notes tab is blank
+
 The fourth child of DOJSP3.InfoStack must load samples\Album Notes.txt and
 use the exact title DOJSP3.AlbumNotes.
 
-Album Notes flashes briefly during startup
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Notes flashes briefly during startup
+
 The packaged InfoStack controller hides every child before the first valid
 layout pass. Confirm that JSplitter 03 loads the supplied Info Stack and Tabs
 loader and controller. This protection also applies when Startup > Transition
 is set to Off.
 
-Display/Waveform flashes black after an optional reveal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Display/Waveform flashes black after an optional reveal
+
 Black reveal and Staged reveal paint the hidden root to DarkOne grey, wait
 150 ms for the native DisplayStack surface to settle, then show the children.
 Confirm that JSplitter 01 and 06 load the supplied controllers.
 
-A brief light-grey native frame appears with Transition Off
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### A brief light-grey native frame appears with Transition Off
+
 Off performs no deliberate startup hold, so a system may expose a native Columns
 UI/JSplitter backing surface before every child completes its first paint. Use
 Black reveal when this is noticeable. This is separate from the fixed black
 DisplayStack flash in optional reveal modes.
 
-Theme stays black for about two seconds
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Theme stays black for about two seconds
+
 An optional startup transition is waiting for nested controllers to report
 ready. The default layout-readiness timeout reveals the interface after
 2000 ms and logs pending controller names.
@@ -72,52 +71,54 @@ ready. The default layout-readiness timeout reveals the interface after
 Confirm that all six JSplitter hosts use the supplied loaders and correct
 titles. Use TOOLS > Startup > Transition > Off while repairing the layout.
 
-Startup menu values change but startup timing does not
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Startup menu values change but startup timing does not
+
 The supported Startup menu is under TOOLS and displays values owned by
 DOJSP3.Root. If Startup still appears in the InfoStack tab-strip or INFOSTACK
 button menu, the layout is loading stale or mismatched script files. Replace
 the scripts from one complete package and restart foobar2000.
 
-Startup timing is unwanted or feels wrong
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Startup timing is unwanted or feels wrong
+
 Open TOOLS > Startup. Off is the default. For optional modes, adjust the minimum
 black hold and preview the sequence. Keep the layout-readiness timeout at
 2000 ms unless diagnosing a slow or incomplete controller.
 
-Script changes do not appear
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Script changes do not appear
+
 Some panel instances retain currently loaded wrapper text. Reload the affected
 panel or restart foobar2000. Also check that the wrapper imports the expected
 file under DarkOneJSP3 or the packaged JScript Panel samples folder.
 
-3. Display, controls and InfoStack
-----------------------------------
-Custom display accent changes Plain Font but not Dot Matrix
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 3. Display, controls and InfoStack
+
+### Custom display accent changes Plain Font but not Dot Matrix
+
 Confirm that the display wrapper and its Panel_Display.js and
 Object_DisplaySystem.js modules come from the same package. Reload the Display
 panel after manual script edits.
 
-Display colour menu still shows six fixed colours
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Display colour menu still shows six fixed colours
+
 The current display wrapper exposes Default, Columns UI selected-item and
 Custom accent modes. If a six-colour palette still appears, reload the centre
 Display panel and confirm that its wrapper and modules come from the same
 package. The current menu is:
 
-  Display accent colour > Default - DarkOne blue
-  Display accent colour > Columns UI selected-item background
-  Display accent colour > Custom colour (#RRGGBB)
-  Display accent colour > Set custom colour...
+```text
+Display accent colour > Default - DarkOne blue
+Display accent colour > Columns UI selected-item background
+Display accent colour > Custom colour (#RRGGBB)
+Display accent colour > Set custom colour...
+```
 
-Fonts look thinner than DarkOne2021
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Fonts look thinner than DarkOne2021
+
 Use DarkOne Tools > Fonts > Reset all font defaults. The intended small-label
 font is Arial Black with DirectWrite Black/900 weight.
 
-Information page background does not match the tab strip
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Information page background does not match the tab strip
+
 Right-click inside Biography, Last.fm, Album Notes, Properties or the
 scripted Queue Viewer and open Colours > Page background. Choose Transparent /
 inherit parent to reveal the InfoStack backing colour, Columns UI global
@@ -129,26 +130,26 @@ settings.
 If Enable Dynamic is checked, the artwork-derived palette temporarily overrides
 the saved Page background and Text choices. Uncheck it to restore those values.
 
-InfoStack labels sit too high or low
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### InfoStack labels sit too high or low
+
 Use Tab area and Tab font size from the InfoStack context menu. The controller
 centres labels within the configured tab area. In automatic mode, the tab area
 now follows the automatic font base scale; a manually fixed area does not.
 
-InfoStack custom colour does not change the active tab
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### InfoStack custom colour does not change the active tab
+
 This is intentional. Tab font colour controls normal inactive labels. The active
 label remains white and a hovered label remains grey.
 
-InfoStack Set custom colour... opens a text-entry field
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### InfoStack Set custom colour... opens a text-entry field
+
 Reload JSplitter 03 from the supplied controller. The implementation uses the
 two-argument JSplitter form utils.ColourPicker(window_id, default_colour). The
 standard Windows colour dialog should open directly; text entry is only a
 fallback when the native picker cannot be invoked.
 
-Bottom-area Set custom colour... does not open or reports Overflow
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Bottom-area Set custom colour... does not open or reports Overflow
+
 Install the current shared colour helpers and reload the three bottom JScript
 panels. JScript Panel expects native picker colours as signed 32-bit integers,
 while DarkOneJSP3 stores opaque ARGB values in an unsigned form for persistence.
@@ -161,31 +162,31 @@ Selecting the Custom colour radio item itself does not open the picker; it
 immediately reapplies the remembered custom value. Use Set custom colour... only
 when editing that stored value.
 
-Optional button no longer works after a component update
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Optional button no longer works after a component update
+
 Use Optional buttons > Re-detect command types. If a registered menu path has
 changed, select the command again. Embedded Columns UI panels do not always
 expose a main-menu command that opens them as a floating window.
 
-Command guide reports MB_ICONINFORMATION is undefined
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Command guide reports MB_ICONINFORMATION is undefined
+
 Reload both supplied Control Panel wrappers. JScript Panel 3.8.5 exposes the
 standard information icon through MB_ICONASTERISK in helpers.txt and does not
 define MB_ICONINFORMATION. A remaining error indicates mixed or cached script
 files.
 
-4. Playlists and queue
-----------------------
-JS Playlist scrolls in hard jumps
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 4. Playlists and queue
+
+### JS Playlist scrolls in hard jumps
+
 - Enable Smooth scrolling in the playlist context menu.
 - Confirm that the wrapper imports the packaged jsplaylist\main.js and
   jsplaylist\playlist.js files.
 - Choose Restore DarkOneJSP3 defaults.
 - Increase the UI refresh interval only if motion is smooth but CPU use is high.
 
-JS Playlist still snaps to rows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### JS Playlist still snaps to rows
+
 Disable Snap wheel scrolling to playlist rows. Set the free-scroll distance from
 the same menu. Disable Snap scrollbar dragging to playlist rows separately when
 continuous thumb dragging is also wanted.
@@ -193,8 +194,8 @@ continuous thumb dragging is also wanted.
 Keyboard navigation, scrollbar arrows/page clicks and drag-autoscroll remain
 row-aligned by design.
 
-JS Playlist scrollbar dragging feels capped at one cadence
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### JS Playlist scrollbar dragging feels capped at one cadence
+
 - Confirm Enable smooth scrolling is active.
 - Confirm both the supplied jsplaylist\main.js and jsplaylist\scrollbar.js are
   installed together; mixing versions bypasses the dedicated drag frame loop.
@@ -203,8 +204,8 @@ JS Playlist scrollbar dragging feels capped at one cadence
 - With Snap scrollbar dragging to playlist rows enabled, visual updates remain
   row-aligned; disable it when continuous pixel movement is preferred.
 
-Enhanced Spectrum Analyser pauses while dragging volume
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Enhanced Spectrum Analyser pauses while dragging volume
+
 - Volume writes are protected by a minimum 16 ms cadence, regardless of the
   visual knob-refresh setting.
 - Automatic follows the fastest live refresh interval reported by JS Playlist
@@ -215,15 +216,15 @@ Enhanced Spectrum Analyser pauses while dragging volume
   version in the bug report; lowering the knob preview cadence should not change
   the protected volume-write frequency.
 
-JS Playlist CPU use is high
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### JS Playlist CPU use is high
+
 Increase the UI refresh interval from 8 ms to 10, 12 or 16 ms. The selected
 value controls both the smooth-scroll animation cadence and the coalesced
 repaints that display it. A 16 ms interval is normally sufficient for a 60 Hz
 display.
 
-Playlist Manager position does not restore as expected
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Playlist Manager position does not restore as expected
+
 - Enable Remember manager scroll position.
 - The row-aware state is stored in SMOOTH.PLAYLIST.MANAGER.SCROLL.STATE.V2.
 - If the saved anchor playlist was deleted, the manager falls back to the saved
@@ -231,8 +232,8 @@ Playlist Manager position does not restore as expected
 - A taller panel may make the former top row physically impossible to retain;
   the position then clamps to the nearest valid scroll limit.
 
-Scripted Queue scan appears delayed
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Scripted Queue scan appears delayed
+
 The DarkOneJSP3 Queue Viewer should normally report that it loaded queue entries
 through the direct JSplitter queue bridge. DOJSP3.Root owns
 `js_data\darkonejsp3.queue-state.json` and refreshes it from
@@ -251,8 +252,8 @@ playlists`, confirm that DOJSP3.Root is using the supplied current root script
 and load the DarkOneJSP3 wrapper rather than the generic sample entry:
 `DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt`.
 
-Scripted Queue editing commands are missing or disabled
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Scripted Queue editing commands are missing or disabled
+
 The recommended DarkOneJSP3 wrapper enables queue mutation only after it has
 received a writable state from DOJSP3.Root. Right-click a queue entry and check
 for Remove item from queue, Move up/down, Move to top/bottom and Clear playback
@@ -274,29 +275,29 @@ project wrapper, double-click and Skip to this track remove only preceding queue
 entries, advance to the target and preserve the remaining tail. Play source item
 now deliberately starts the playlist source directly and may clear the queue.
 
-Queue Viewer reports jsp3EnhancedHandleSampleReset is undefined
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Queue Viewer reports jsp3EnhancedHandleSampleReset is undefined
+
 The DarkOneJSP3 Queue Viewer wrapper must import the component-local
 samples\shared\sample_defaults.js registry and
 samples\js\jsp3_enhanced_reset.js bridge before Queue Viewer initialises.
 Reload the supplied wrapper and restart foobar2000 if cached code remains.
 
-5. Quick Search and waveform
-----------------------------
-Quick Search is missing or the wrong panel appears
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 5. Quick Search and waveform
+
+### Quick Search is missing or the wrong panel appears
+
 The documented layout uses a JScript Panel 3 instance titled `DOJSP3.QuickSearch`
 loading `DarkOneJSP3 - Quick Search.txt`. Replace any older search child with
 the documented scripted panel when migrating a manually maintained layout.
 
-Quick Search overlaps the controls above when the window is small
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Quick Search overlaps the controls above when the window is small
+
 Reload both `DOJSP3.QuickSearch` and `DOJSP3.Controls`, then use the current
 Automatic, 1-line or 2-line height modes. The JSplitter parent owns the available
 lower-left slot and caps fixed modes before they can overlap the upper controls.
 
-Quick Search inherited background does not follow Bottom area colour
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Quick Search inherited background does not follow Bottom area colour
+
 Set Normal background or Error background to Transparent / inherit parent. The
 panel reads the shared Bottom-area state on initialisation and follows live
 updates without its own poller. With Background linear gradient enabled, the
@@ -305,14 +306,14 @@ one flat colour. Reload DOJSP3.QuickSearch together with the current Bottom
 Controls script if files from different builds were mixed; the current pair
 uses the extended bottom-area geometry message to align that gradient.
 
-Custom PNG is unavailable
-~~~~~~~~~~~~~~~~~~~~~~~~~
+### Custom PNG is unavailable
+
 Place a valid transparent PNG at
 `<profile>\DarkOneJSP3\images\quicksearch.png`, then reopen the Quick Search
 context menu. The fixed path is intentional; there is no custom-path dialog.
 
-Waveform background does not match the host
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform background does not match the host
+
 Keep Host background set to Automatic to follow the shared Bottom area
 background, or choose a fixed colour from the narrow JSplitter spacer menu.
 In Waveform Minibar preferences, enable Transparent background (requires Columns
@@ -322,12 +323,12 @@ through instead of black. Confirm that Preferences > Components reports
 `1.2.69-patched`, reload DOJSP3.DisplayStack or restart foobar2000, and confirm
 the supplied JSplitter 06 controller is loaded.
 
-Waveform background changes only after a click or resize
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform background changes only after a click or resize
+
 This is characteristic of the older component. Install Waveform Minibar
 1.2.69-patched from:
 
-  https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases
+[Waveform Minibar (mod) patched releases](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 The patched build observes native ancestor repaint events and invalidates the
 pseudo-transparent backing immediately during playback. It requires no
@@ -336,74 +337,74 @@ subscription is unavailable, its automatic guarded 100 ms fallback should
 still update without waveform interaction. If it does not, check for a second
 copy of foo_wave_minibar_mod.dll in another active profile/component directory.
 
-Entire waveform flashes when clicking a playlist or InfoStack
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Entire waveform flashes when clicking a playlist or InfoStack
+
 Confirm `1.2.69-patched` is the component version actually loaded. It applies
 host child clipping and retains the last completed waveform composite so
 unrelated Playlist, Playlist Manager and InfoStack repaints cannot briefly
 cover or blank the native waveform child. Restart foobar2000 after replacing
 the DLL and remove or rename duplicate older component copies.
 
-Waveform edges show a fine fringe on a transparent background
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform edges show a fine fringe on a transparent background
+
 Transparent mode uses an RGB colour key rather than per-pixel alpha. On a very
 high-contrast backing, pre-blended anti-aliased edge pixels can remain visible.
 Right-click inside Waveform Minibar and disable Enable anti-aliasing to restore
 the original hard-edged waveform.
 
-Waveform playback uses more CPU than desired
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform playback uses more CPU than desired
+
 Open the native component preferences through Waveform Minibar > Configure and
 select 25 or 30 FPS instead of 60-144 FPS. Enable anti-aliasing is not a
 per-frame playback filter: it runs only when the cached waveform bitmap is
 rebuilt, so lowering the playback frame rate is the relevant steady-state CPU
 control.
 
-The waveform host menu cannot be found
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### The waveform host menu cannot be found
+
 Right-click the narrow JSplitter host/spacer around the Waveform Minibar. A
 right-click inside the native waveform opens the component's own menu instead.
 
-Previous waveform flashes when a new track starts
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Previous waveform flashes when a new track starts
+
 Increase the host New-track reveal delay. The default is 200 ms; 300-500 ms may
 work better with slower or uncached waveform generation.
 
-Waveform remains visible after playback stops
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform remains visible after playback stops
+
 Enable Force blank waveform when playback stops in the host menu and set
 Waveform Minibar to Playing, blank when stopped.
 
-6. Album Notes, AllMusic and MusicBrainz
-----------------------------------------
-Album Notes skips an expected source
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 6. Album Notes, AllMusic and MusicBrainz
+
+### Album Notes skips an expected source
+
 Open Current source > Show diagnostics. Check whether the provider is disabled,
 loaded from cache, unresolved, retried or failed. Also check Source priority and
 Album-note mode. Browse one source intentionally does not fall through.
 
-Album Notes remains on Checking AllMusic...
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Notes remains on Checking AllMusic...
+
 The packaged provider explicitly reactivates an idle same-album lookup,
 discards stale search history and advances when no provider work starts. If the
 message remains, use Current source > Show diagnostics, refresh enabled sources
 and confirm that Album Notes, allmusic.js and album_notes.js come from the same
 package.
 
-Album Notes matched the wrong release or edition
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Notes matched the wrong release or edition
+
 Open Provider and matching settings. Set the correct MusicBrainz release-group
 MBID manually, or forget the saved album identity and resolve it again. Correct
 artist/album tags before clearing the current source cache.
 
-TheAudioDB repeatedly reports no result
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### TheAudioDB repeatedly reports no result
+
 The returned artist and album must pass exact normalised verification. After
 correcting tags or the manual release-group identity, clear the current source
 cache. Negative results are otherwise retained for 24 hours.
 
-AllMusic review appears as one paragraph
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### AllMusic review appears as one paragraph
+
 An older cached review may already contain flattened text. In Album Notes, make
 AllMusic the active source, choose Clear current source cache, then Refresh
 enabled sources. A freshly retrieved review can still be a single paragraph when
@@ -412,8 +413,8 @@ the source itself contains no paragraph breaks.
 For the standalone AllMusic sample, use its own Delete cached review and Refresh
 from AllMusic commands.
 
-AllMusic review contains account prompts or section names
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### AllMusic review contains account prompts or section names
+
 An earlier test build could treat generic text from the full AllMusic album page
 as a review after the dedicated review endpoint returned no body. Current builds
 require a recognised editorial-review container on the full page and ignore
@@ -425,8 +426,8 @@ AllMusic the active source and choose Clear current source cache, then Refresh
 enabled sources. The standalone AllMusic sample provides Delete cached review
 and Refresh from AllMusic instead.
 
-AllMusic cannot match an album that exists in a browser
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### AllMusic cannot match an album that exists in a browser
+
 AllMusic may serve a normal browser while rejecting script requests. DarkOneJSP3
 can use MusicBrainz release/release-group relationships as a resolver when the
 AllMusic search is blocked or unparseable.
@@ -439,56 +440,56 @@ The resolution order is:
 Check Current source > Show diagnostics. When automated retrieval remains
 blocked, use Current source > Open source page to read the source in a browser.
 
-AllMusic reports a browser-verification/Cloudflare challenge
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### AllMusic reports a browser-verification/Cloudflare challenge
+
 A challenge page requires a real browser session. The Chrome-style request
 identity changes headers only and does not execute a browser challenge. Use Open
 source page. The standalone AllMusic sample additionally offers its own browser
 and clipboard-cache fallback commands.
 
-MusicBrainz says no artist ID was found
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz says no artist ID was found
+
 Open Artist identity and either enable automatic resolution, resolve the current
 artist now or set the artist MBID manually. Automatic matching deliberately
 requires an exact normalised name, sort name or alias and does not guess between
 ambiguous candidates.
 
-MusicBrainz selected the wrong artist
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz selected the wrong artist
+
 Use Artist identity > Clear cached artist match, then set the correct MBID
 manually. The map is stored in js_data\musicbrainz.artist-map.json.
 
-MusicBrainz remains on a loading message
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz remains on a loading message
+
 Requests use a 15-second watchdog and limited retries for transport errors,
 HTTP 408/425/429 and transient 5xx responses. Check the console for timeout and
 retry messages, restore connectivity, then refresh the data.
 
-MusicBrainz returns HTTP 429 or 503
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz returns HTTP 429 or 503
+
 Requests are serialised at a minimum 1.1-second interval and busy responses are
 retried. Wait briefly, then use Refresh MusicBrainz data. Configure a contact
 URL/email in the MusicBrainz menu when distributing a customised build.
 
-MusicBrainz data looks stale
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz data looks stale
+
 Use Refresh MusicBrainz data. Clearing the current Releases or Links cache does
 not remove the artist-ID map or the Album Notes album-identity map.
 
-Changing request identity did not bypass a provider block
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Changing request identity did not bypass a provider block
+
 This is expected. DarkOneJSP3 application and Chrome-style profiles only select
 HTTP headers. They do not supply cookies, JavaScript execution or an interactive
 browser session.
 
-Album Art becomes too small when Spectrum is hidden
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Art becomes too small when Spectrum is hidden
+
 Right-click Album Art > Panel sizing and choose Fill panel height (crop sides)
 when you prefer to keep a full-height 1:1 square at narrow window widths. Fit
 square inside panel remains the non-cropping default.
 
-Upper divider colour does not change
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Upper divider colour does not change
+
 Right-click the InfoStack tab strip and open Side divider colour, or
 right-click one of the exposed upper divider strips. The two upper strips always
 share one setting. Columns UI global background follows the active Columns UI
@@ -498,30 +499,30 @@ Do not use a divider menu added to the generic Album Art JScript Panel. That
 cross-component notification path is not reliable. Restart or reload InfoStack
 and Main Columns if code was copied over while foobar2000 remained open.
 
-7. Finding panel menus and settings
------------------------------------
-Playlist Manager shows playlist operations instead of settings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 7. Finding panel menus and settings
+
+### Playlist Manager shows playlist operations instead of settings
+
 Right-clicking a playlist row opens operations for that playlist. Right-click
 empty panel space or the scrollbar to open Header Bar, Playlist filter,
 Colours, Background Wallpaper, DarkOneJSP3 smooth scrolling, Playlist row
 spacing and Configure....
 
-Main JS Playlist Panel Settings cannot be found
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Main JS Playlist Panel Settings cannot be found
+
 Right-click a track or empty playlist area and choose Panel Settings.... The
 playlist header bar has a separate right-click menu for Groups, Columns and
 Double Track Line.
 
-Biography, Last.fm or Properties menu cannot be found
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Biography, Last.fm or Properties menu cannot be found
+
 Right-click empty content space inside the page. Panel-specific commands appear
 first, followed by the shared Font size, Colours, Background Wallpaper,
 Selection mode and Configure... controls. Clicking directly on selectable text
 or a link can invoke that object's action instead.
 
-Background Wallpaper is enabled but no image appears
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Background Wallpaper is enabled but no image appears
+
 Front cover of playing track and Custom image follow active playback, matching
 Playlist Manager. Start playback and confirm the playing track has embedded or
 external front artwork. For Custom image, select Custom image first and then
@@ -532,16 +533,16 @@ The image is deliberately subtle: it is cover-cropped below the page header and
 painted at 10% opacity over the current page background. Selecting None,
 stopping playback normally or resetting page appearance removes it.
 
-Combined sample wallpaper or page colour is hidden
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Combined sample wallpaper or page colour is hidden
+
 Last.fm Bio + Images and Album Notes + Album Art can draw the displayed artwork
 as their own full-panel backing above the generic page background. Right-click
 either region, open Image background and disable Use displayed image as
 background to reveal the selected Colours > Page background or Background
 Wallpaper. Blur and Light/Medium/Dark affect only the displayed-image backing.
 
-Last.fm combined sample does not download images automatically
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Last.fm combined sample does not download images automatically
+
 Confirm playback is active, Selection mode is Prefer now playing, Automatic
 downloads is enabled and either the foreground image or Image background is
 enabled. A visible panel requests the playing artist when its local image folder
@@ -581,53 +582,65 @@ shows No images available. Enable Hide if no images available to give that
 region back to the biography; the setting does not hide temporary failures, and
 Download now reveals the region during another manual attempt.
 
-Combined sample image area is missing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Image download remains pending or times out
+
+An HTTP request without a callback expires after 45 seconds; a file-download
+batch expires after 120 seconds. Deadlines continue while the panel is hidden.
+The console reports the timeout, and eligible automatic retries wait at least
+another 30 seconds. A late callback cannot finish a newer request.
+
+Because the native file callback identifies only its destination path, a timed-out
+path is not queued again until that callback arrives. Other image paths can still
+be downloaded. If the safety limit of 256 outstanding/quarantined file paths is
+reached, allow native transfers to finish before reloading the panel. Reloading
+clears the in-memory bookkeeping; it does not cancel native transfers.
+
+### Combined sample image area is missing
+
 Display images and Display album art intentionally collapse the foreground
 image region instead of leaving blank space. Right-click the remaining text
 region and enable the corresponding Display command. Image border offers None,
 Solid and Sunken styles plus Default or Custom colour.
 
-Colours is missing from Queue
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Colours is missing from Queue
+
 The recommended scripted Queue Viewer is a JScript Panel and should expose the
 shared Colours menu, including Selected background. If it does not, confirm
 that DOJSP3.Queue is loading
 `DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt` rather than the generic
 standalone sample.
 
-Waveform host settings do not appear
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform host settings do not appear
+
 Right-click the narrow JSplitter spacer around the Waveform Minibar child. A
 right-click inside the waveform opens the native component's menu instead.
 
-8. Factory reset
-----------------
-Factory reset appears to only reload panels
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 8. Factory reset
+
+### Factory reset appears to only reload panels
+
 The reset writes explicit per-panel defaults before reloading each
 participating panel. It covers DarkOneJSP3-managed properties; unrelated
 upstream sample customisation is intentionally preserved. Confirm that
 participating wrappers import the appropriate project or standalone sample reset registry and bridge.
 
-Album Notes settings do not fully reset
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Notes settings do not fully reset
+
 The consolidated Album Notes panel resets both its provider role and embedded
 MusicBrainz role in one reload while preserving downloaded provider cache files.
 Confirm that samples\Album Notes.txt imports the component-local sample reset helpers.
 
-Playlist refresh or scroll settings do not reset
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Playlist refresh or scroll settings do not reset
+
 JS Playlist and Smooth Playlist Manager must import the component-local
 sample-default registry and neutral reset bridge. Behaviour reset restores their
 custom refresh and scroll settings; full reset also clears the playlist
 manager's saved scroll anchors.
 
-9. Performance and smoothness
------------------------------
+## 9. Performance and smoothness
 
-Playlist remains unusually heavy while idle
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Playlist remains unusually heavy while idle
+
 The enhanced playlist and Playlist Manager use demand-driven schedulers and
 should not retain their high-refresh animation timers at idle. Confirm that the
 current JS Playlist and Smooth Playlist Manager wrappers are loaded and that
@@ -635,23 +648,23 @@ both use samples\shared\performance_utils.js. Older saved entry scripts are
 also supported through the guarded compatibility block in helpers.txt. Reload
 the affected panel after replacing scripts.
 
-Playlist text appears stale after metadata or queue changes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Playlist text appears stale after metadata or queue changes
+
 The row-render cache responds to playlist, metadata, queue, playback-time,
 seek and dynamic stream-information callbacks. Reload the playlist panel if
 third-party tagging software changed files without notifying foobar2000. For diagnosis, temporarily set
 JSPLAYLIST.Enable Render Cache to false in Configure..., reload the panel and
 compare the result.
 
-Collecting paint-time diagnostics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Collecting paint-time diagnostics
+
 Enable JSPLAYLIST.Enable Performance Profiling or
 SMOOTH.Enable Performance Profiling in the relevant panel's Configure... window,
 then reproduce the workload. The foobar2000 console reports average and peak
 paint time every 120 frames. Disable profiling after testing.
 
-10. Diagnostics to include in a bug report
-------------------------------------------
+## 10. Diagnostics to include in a bug report
+
 Include:
 - DarkOneJSP3 package version from build-info.json;
 - foobar2000, Columns UI, JScript Panel 3 and JSplitter versions;

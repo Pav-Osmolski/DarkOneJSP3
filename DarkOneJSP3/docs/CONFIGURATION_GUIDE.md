@@ -1,29 +1,28 @@
-DarkOneJSP3 Configuration Guide
-===============================
+# DarkOneJSP3 Configuration Guide
 
 This guide maps the user-facing DarkOneJSP3 menus and settings in the
 supported layout. Native component menus can contain additional component-owned
 commands; those are identified where they are outside DarkOneJSP3's control.
 
-Contents
---------
+## Contents
 
-1. Menu conventions and shared page controls
-2. DarkOne Tools and control panels
-3. Centre display, Album Art and Spectrum
-4. InfoStack tab strip
-5. Playlist Manager
-6. Main JS Playlist
-7. Biography, Last.fm and Properties
-8. Queue Viewer
-9. Quick Search and waveform area
-10. Album Notes and online sources
-11. Standalone metadata panels
-12. Persistent-property reference
-13. Resetting DarkOneJSP3
+- [Menu notation](#menu-notation)
 
-Menu notation
--------------
+1. [Menu conventions and shared page controls](#1-menu-conventions-and-shared-page-controls)
+2. [DarkOne Tools and control panels](#2-darkone-tools-and-control-panels)
+3. [Centre display, Album Art and Spectrum](#3-centre-display-album-art-and-spectrum)
+4. [InfoStack tab strip](#4-infostack-tab-strip)
+5. [Playlist Manager](#5-playlist-manager)
+6. [Main JS Playlist](#6-main-js-playlist)
+7. [Biography, Last.fm and Properties](#7-biography-lastfm-and-properties)
+8. [Queue Viewer](#8-queue-viewer)
+9. [Quick Search and waveform area](#9-quick-search-and-waveform-area)
+10. [Album Notes and online sources](#10-album-notes-and-online-sources)
+11. [Standalone metadata panels](#11-standalone-metadata-panels)
+12. [Persistent-property reference](#12-persistent-property-reference)
+13. [Resetting DarkOneJSP3](#13-resetting-darkonejsp3)
+
+## Menu notation
 
 A path such as TOOLS > Startup means click the named optional button, then open
 the listed submenu.
@@ -40,17 +39,14 @@ The exact place clicked matters in several panels:
   settings; right-click inside Waveform Minibar for that native component's own
   menu.
 
-1. Menu conventions and shared page controls
---------------------------------------------
+## 1. Menu conventions and shared page controls
 
-Shared JScript Panel page controls
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Shared JScript Panel page controls
 
 The adapted information pages append common controls beneath their own
 panel-specific commands.
 
-Font size
-~~~~~~~~~
+### Font size
 
 Available when the panel contains text, list or display objects:
 - 10
@@ -58,14 +54,12 @@ Available when the panel contains text, list or display objects:
 - 14
 - 16
 
-Colours
-~~~~~~~
+### Colours
 
 Available on Biography, Last.fm, Album Notes, Properties and the recommended
 scripted Queue Viewer. Each panel instance stores its choice independently.
 
-Enable Dynamic
-^^^^^^^^^^^^^^
+#### Enable Dynamic
 
 When enabled, the current artwork supplies the page background, text and
 selection palette. Artwork changes, playback changes and playback stopping
@@ -73,8 +67,7 @@ refresh the palette automatically. Disabling Dynamic restores the page's saved
 background, text and selected-background choices; those values are not
 discarded while Dynamic is active.
 
-Page background
-^^^^^^^^^^^^^^^
+#### Page background
 
 Choices:
 - Transparent / inherit parent
@@ -91,16 +84,14 @@ Set custom colour... to edit that stored value with the native picker.
 Transparent / inherit parent reveals the InfoStack backing colour. Columns UI
 global background follows the active Columns UI background colour.
 
-Text
-^^^^
+#### Text
 
 Choices:
 - Default: follows the active Columns UI or Default UI text colour
 - Custom: reapplies the remembered custom value
 - Set custom colour...
 
-Selected background
-^^^^^^^^^^^^^^^^^^^
+#### Selected background
 
 Available only in the recommended scripted Queue Viewer.
 
@@ -113,8 +104,7 @@ Custom selected backgrounds automatically receive a contrasting text colour.
 With Dynamic enabled, both selected background and selected text instead follow
 the current artwork palette.
 
-Background Wallpaper
-~~~~~~~~~~~~~~~~~~~~
+### Background Wallpaper
 
 Available on Biography, Last.fm Biography, Album Notes, Properties, the two
 combined image layouts and the recommended scripted Queue Viewer. Each panel
@@ -139,8 +129,7 @@ fully stops, the wallpaper is disabled, the source is replaced or the panel is
 unloaded. Hidden InfoStack pages defer image loading and blur until they next
 become visible.
 
-Combined image layouts
-~~~~~~~~~~~~~~~~~~~~~~
+### Combined image layouts
 
 Last.fm Bio + Images and Album Notes + Album Art add controls for their displayed
 artwork before the content-specific commands:
@@ -190,15 +179,13 @@ successfully confirmed that no usable artist images are present. It does not
 collapse the region for a network or parsing failure. Download now reveals the
 region again while the manual retry is active.
 
-Selection mode
-~~~~~~~~~~~~~~
+### Selection mode
 
 Available on panels that follow a media-library or playlist item:
 - Prefer now playing
 - Follow selected track (playlist)
 
-Configure...
-~~~~~~~~~~~~
+### Configure...
 
 Opens the current JScript Panel script editor/configuration window. It is an
 advanced command; normal DarkOneJSP3 settings should be changed through the
@@ -207,11 +194,9 @@ menus documented here.
 Album Art uses a related but separate Background colour menu because it is a
 generic image panel rather than an InfoStack text page. See section 3.
 
-2. DarkOne Tools and control panels
------------------------------------
+## 2. DarkOne Tools and control panels
 
-Opening the menus
-~~~~~~~~~~~~~~~~~
+### Opening the menus
 
 DarkOne Tools opens only from an optional control-panel button configured as:
 
@@ -227,8 +212,7 @@ Display accent colour only.
 On the right control panel, right-click directly on the volume knob to open the
 volume menu instead of the general control-panel menu.
 
-Optional buttons
-~~~~~~~~~~~~~~~~
+### Optional buttons
 
 Menu path: either control panel > Optional buttons
 
@@ -274,8 +258,7 @@ panel detects the internal command and caches style 4 after the first use.
 Behaviour reset restores the standard three-part layout and shows Spectrum.
 Appearance reset restores the InfoStack tab strip.
 
-Button appearance
-~~~~~~~~~~~~~~~~~
+### Button appearance
 
 Shared button appearance is available from DarkOne Tools > Buttons. These
 settings update both control panels regardless of which panel contains TOOLS.
@@ -305,8 +288,7 @@ Button roundness
 The percentage is relative to the maximum possible corner radius for the
 current button size. Presets that intentionally use ellipses remain elliptical.
 
-Volume knob
-~~~~~~~~~~~
+### Volume knob
 
 Right-click the volume knob for:
 - Up
@@ -334,8 +316,7 @@ changed by this setting.
 
 The mouse wheel adjusts volume when the pointer is over the knob.
 
-Volume drag refresh rate
-~~~~~~~~~~~~~~~~~~~~~~~~
+### Volume drag refresh rate
 
 Controls the visual refresh cadence used while dragging the knob.
 
@@ -359,15 +340,13 @@ value is immediate and the exact final value is flushed on release.
 A manual choice overrides the preview cadence only; it does not raise the
 volume-write frequency above the protected 16 ms maximum cadence.
 
-DarkOne Tools
-~~~~~~~~~~~~~
+### DarkOne Tools
 
 DarkOne Tools is available only from the optional TOOLS button described above.
 Its top-level menu places Buttons immediately after Appearance for shorter
 access to shared button appearance.
 
-Appearance
-~~~~~~~~~~
+### Appearance
 
 Bottom area background
 - Transparent / inherit parent
@@ -551,11 +530,9 @@ DarkOneJSP3 uses the DARKONEJSP3.* property namespace for project-managed
 control and display settings. Legacy DARKONE2021.* properties are not read or
 recreated.
 
-3. Centre display, Album Art and Spectrum
------------------------------------------
+## 3. Centre display, Album Art and Spectrum
 
-Centre display
-~~~~~~~~~~~~~~
+### Centre display
 
 Right-click the centre display.
 
@@ -575,8 +552,7 @@ digits and punctuation, and the stop-after-current and playback-order status
 icons. Switching away from Custom preserves the remembered custom value.
 Columns UI colour changes are applied live.
 
-Album Art
-~~~~~~~~~
+### Album Art
 
 Right-click inside the Album Art panel.
 
@@ -618,8 +594,7 @@ Crop/Full source-image fitting mode. Fill panel height keeps the square based on
 the available height and allows the left/right edges to clip when the host is
 narrower than that square.
 
-Album Art/Spectrum side dividers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album Art/Spectrum side dividers
 
 Right-click the InfoStack tab strip and open Side divider colour. The same
 menu is available by right-clicking either narrow upper divider strip.
@@ -640,16 +615,14 @@ Playlist width priorities use one divider between their two visible panels.
 Transparent removes explicit divider fill while preserving the reserved
 alignment. The lower control-panel dividers remain independently configured.
 
-Enhanced Spectrum Analyser
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Enhanced Spectrum Analyser
 
 The spectrum panel is a native component. DarkOneJSP3 supplies its layout
 position and surrounding divider colours but does not replace or reproduce the
 component's own context menu. Configure analyser modes, channels, frequency
 range, colours and rendering through the native component menu.
 
-4. InfoStack tab strip
-----------------------
+## 4. InfoStack tab strip
 
 Right-click empty space on the tab row beneath the left information area, or
 open the same menu from an optional button configured with
@@ -663,26 +636,22 @@ The visible pages appear directly at the top of the menu for quick selection:
 - Queue
 - Properties
 
-Show tab strip
-~~~~~~~~~~~~~~
+### Show tab strip
 
 Show or hide the InfoStack tab row itself. When hidden, the active information
 page expands to use the full InfoStack height; the optional INFOSTACK button
 remains available for page selection and configuration.
 
-Tab settings
-~~~~~~~~~~~~
+### Tab settings
 
 Groups the tab-specific configuration commands below so the top-level menu
 remains focused on page selection.
 
-Visible tabs
-^^^^^^^^^^^^
+#### Visible tabs
 
 Show or hide pages independently. The final visible tab cannot be hidden.
 
-Tab titles
-^^^^^^^^^^
+#### Tab titles
 
 - Rename each page label
 - Use Title Case defaults
@@ -694,8 +663,7 @@ A visible label does not change the child's required DOJSP3.* custom title.
 Default labels are Playlists, Biography, Last.fm, Album Notes, Queue and
 Properties.
 
-Tab font size
-^^^^^^^^^^^^^
+#### Tab font size
 
 - Automatic tab font size
 - Set fixed tab font size...
@@ -706,8 +674,7 @@ Automatic base scale ranges from 50% to 200%; the default is 100%. A fixed font
 size bypasses responsive calculation. Enter 0 in the fixed-size dialog to
 return to automatic sizing.
 
-Tab font colour
-^^^^^^^^^^^^^^^
+#### Tab font colour
 
 - Default - DarkOne blue: #298FCC
 - Columns UI selected-item background
@@ -718,21 +685,18 @@ Custom colour reapplies the remembered value immediately; Set custom colour...
 opens the native picker. This affects normal inactive labels. The active label remains white and the
 hovered label remains grey.
 
-Tab area
-^^^^^^^^
+#### Tab area
 
 - Automatic height (follows tab font sizing)
 - Set fixed tab area height...
 
 Enter 0 in the fixed-height dialog to restore automatic height.
 
-Appearance
-~~~~~~~~~~
+### Appearance
 
 Groups the InfoStack backing and side-divider colour controls.
 
-InfoStack backing colour
-^^^^^^^^^^^^^^^^^^^^^^^^
+#### InfoStack backing colour
 
 Controls the JSplitter backing behind the information pages and tab strip:
 - Transparent / inherit parent
@@ -746,23 +710,19 @@ Controls the JSplitter backing behind the information pages and tab strip:
 Custom colour reapplies the remembered value immediately; Set custom colour...
 opens the native picker.
 
-Side divider colour
-^^^^^^^^^^^^^^^^^^^
+#### Side divider colour
 
 Uses the shared upper-divider menu described in section 3.
 
-5. Playlist Manager
--------------------
+## 5. Playlist Manager
 
-Choosing the correct menu
-~~~~~~~~~~~~~~~~~~~~~~~~~
+### Choosing the correct menu
 
 Right-click a playlist row for playlist operations. Right-click empty panel
 space or the scrollbar for panel settings. Right-clicking inside the filter
 field opens the normal Cut, Copy and Paste text-editing menu.
 
-Settings menu: empty space or scrollbar
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Settings menu: empty space or scrollbar
 
 Header Bar
 - Shows or hides the complete top bar.
@@ -830,8 +790,7 @@ An end-of-list position remains anchored to the end where possible.
 Configure...
 - Opens the JScript Panel script editor/configuration window.
 
-Playlist-row operations
-~~~~~~~~~~~~~~~~~~~~~~~
+### Playlist-row operations
 
 When a playlist row is targeted, the menu can include:
 - Rename this playlist (F2)
@@ -854,11 +813,9 @@ When a playlist row is targeted, the menu can include:
 Commands appear or change according to playlist type, lock state and recycler
 contents.
 
-6. Main JS Playlist
--------------------
+## 6. Main JS Playlist
 
-Track and empty-area context menu
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Track and empty-area context menu
 
 Right-click a track or empty area in the main playlist.
 
@@ -926,8 +883,7 @@ Remove, Invert selection, Cut, Copy, Paste and the normal foobar2000 track
 context commands. With no selection, Paste remains available when the active
 playlist accepts items and the clipboard contains compatible data.
 
-Header-bar context menu
-~~~~~~~~~~~~~~~~~~~~~~~
+### Header-bar context menu
 
 Right-click the playlist column header bar.
 
@@ -941,8 +897,7 @@ Columns
 Double Track Line
 - Enables or disables the extra line used by configured columns.
 
-Panel Settings interface
-~~~~~~~~~~~~~~~~~~~~~~~~
+### Panel Settings interface
 
 Use the back arrow to return to the playlist. The interface contains four
 pages.
@@ -978,8 +933,7 @@ Appearance
 - Blurred
 - Default Wallpaper Path
 
-Information-panel playlist manager
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Information-panel playlist manager
 
 When Show Information Panel is enabled, its internal playlist manager has
 its own playlist menu. Depending on the target playlist, it can provide:
@@ -993,11 +947,9 @@ its own playlist menu. Depending on the target playlist, it can provide:
 - Playlist lock controls
 - Items: foobar2000 context commands
 
-7. Biography, Last.fm and Properties
-------------------------------------
+## 7. Biography, Last.fm and Properties
 
-Biography
-~~~~~~~~~
+### Biography
 
 Right-click empty content space in the Biography page.
 
@@ -1014,8 +966,7 @@ Panel-specific commands:
 The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
-Last.fm
-~~~~~~~
+### Last.fm
 
 Right-click empty content space in the Last.fm page.
 
@@ -1051,8 +1002,7 @@ Account and file commands:
 The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
-Properties
-~~~~~~~~~~
+### Properties
 
 Right-click empty content space in the Properties page.
 
@@ -1066,19 +1016,21 @@ Metadata, Location and Tech Info independently show or hide those sections.
 The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
-8. Queue Viewer
----------------
+## 8. Queue Viewer
 
-Scripted Queue Viewer (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Scripted Queue Viewer (recommended)
 
 Use a JScript Panel 3 instance with the exact custom title:
 
-  DOJSP3.Queue
+```text
+DOJSP3.Queue
+```
 
 Load the reset-aware project wrapper rather than the generic sample entry:
 
-  DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+```text
+DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+```
 
 Inside DarkOneJSP3 the wrapper uses a bidirectional, file-backed bridge owned by
 DOJSP3.Root. JSplitter calls `plman.GetPlaybackQueueContents()` directly and
@@ -1152,8 +1104,7 @@ Existing DarkOneJSP3 layouts whose Queue wrapper was saved inside the FCL are
 recognised through the project queue bridge, so Selected background appears
 without replacing the layout or manually reloading the current wrapper.
 
-Standalone Enhanced Sample Library behaviour
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Standalone Enhanced Sample Library behaviour
 
 The same Queue Viewer implementation remains usable as a standalone enhanced
 JScript Panel sample. Outside DarkOneJSP3 there is no JSplitter mutation bridge,
@@ -1165,15 +1116,15 @@ allows a non-empty discovery scan to stop as soon as every queue position has
 been found. An empty queue still requires a complete fallback scan because
 JScript Panel 3 exposes no direct queue enumeration API.
 
-9. Quick Search and waveform area
----------------------------------
+## 9. Quick Search and waveform area
 
-Quick Search
-~~~~~~~~~~~~
+### Quick Search
 
 The DOJSP3.QuickSearch child is a JScript Panel 3 instance loading:
 
-  DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
+```text
+DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
+```
 
 Right-click inside the search control to configure it.
 
@@ -1248,8 +1199,7 @@ are configured from the same menu. Search for same entries are published to
 JS Playlist - Enhanced. The scripted implementation keeps search behaviour and
 configuration within the DarkOneJSP3 panel.
 
-Waveform host
-~~~~~~~~~~~~~
+### Waveform host
 
 Right-click the narrow JSplitter host/spacer around the waveform, not the
 Waveform Minibar child itself.
@@ -1299,8 +1249,7 @@ event-driven path does not require a DarkOneJSP3-specific plugin notification
 or normal-operation polling; a guarded 100 ms fallback activates automatically
 only if native repaint subscription cannot be installed.
 
-Native Waveform Minibar menu
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Native Waveform Minibar menu
 
 Right-click inside the Waveform Minibar child, rather than the narrow host
 spacer, to open the component-owned menu:
@@ -1325,19 +1274,17 @@ work; 60 FPS is a balanced starting point, while 100-144 FPS is intended for
 users who prefer smoother motion on high-refresh displays.
 
 The component's played/unplayed waveform colours remain component-owned
-settings; see INSTALLATION.txt for the reference DarkOneJSP3 values. Transparent
+settings; see INSTALLATION.md for the reference DarkOneJSP3 values. Transparent
 mode uses an RGB colour key. On an unusually high-contrast backing, anti-aliased
 edges may therefore show a fine pre-blended fringe; disabling anti-aliasing
 restores the original hard-edged waveform.
 
-10. Album Notes and online sources
-----------------------------------
+## 10. Album Notes and online sources
 
 The fourth InfoStack child must be titled DOJSP3.AlbumNotes and load
 samples\Album Notes.txt. Right-click empty content space inside the page.
 
-View
-~~~~
+### View
 
 - Album notes
 - MusicBrainz releases
@@ -1346,8 +1293,7 @@ View
 MusicBrainz view entries are enabled only when their corresponding source roles
 are enabled.
 
-Album-note mode and sources
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Album-note mode and sources
 
 Album-note mode
 - Best available: checks enabled sources in Source priority order
@@ -1368,8 +1314,7 @@ Sources
 MusicBrainz matching and its two views are independent. Existing tagged or
 locally saved release-group IDs can still be used when online matching is off.
 
-Source priority
-~~~~~~~~~~~~~~~
+### Source priority
 
 Commands:
 - Move earlier
@@ -1383,8 +1328,7 @@ Default order:
 3. Wikipedia
 4. Apple Music
 
-Provider, identity and cache settings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Provider, identity and cache settings
 
 Provider and matching settings
 - Set TheAudioDB API key... (the public development key defaults to 2)
@@ -1422,8 +1366,7 @@ Cache periods
   30 days or Manual refresh only. No-result responses are cached for 24
 hours to avoid repeated identical lookups.
 
-Top-level actions and diagnostics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Top-level actions and diagnostics
 
 Top-level actions:
 - Refresh enabled sources
@@ -1440,8 +1383,7 @@ Diagnostics identify disabled, cached, skipped, retried, failed and successful
 providers. Reopening the same album re-arms provider completion and cannot leave
 the enabled-source chain waiting without an active request or terminal result.
 
-AllMusic actions
-~~~~~~~~~~~~~~~~
+### AllMusic actions
 
 When AllMusic is the active note source, its additional actions include:
 - Paste review from clipboard
@@ -1466,8 +1408,7 @@ Streaming/account prompts, navigation, section labels and footer text are
 ignored. Page-shell text cached by an earlier test build is removed
 automatically when that album is next loaded.
 
-MusicBrainz Releases and Links views
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### MusicBrainz Releases and Links views
 
 The MusicBrainz views provide additional controls.
 
@@ -1516,18 +1457,18 @@ exact normalised names, sort names or aliases; ambiguous candidates are not
 guessed. Requests are serialised and spaced by at least 1.1 seconds, with
 bounded retries for throttling and transient failures.
 
-Local state files
-~~~~~~~~~~~~~~~~~
+### Local state files
 
-  js_data\darkonejsp3.album-identity.json
-  js_data\darkonejsp3.network-state.json
-  js_data\musicbrainz.artist-map.json
+```text
+js_data\darkonejsp3.album-identity.json
+js_data\darkonejsp3.network-state.json
+js_data\musicbrainz.artist-map.json
+```
 
 The panel then appends Font size, Colours, Background Wallpaper, Selection mode and
 Configure... from the shared page controls in section 1.
 
-11. Standalone metadata panels
-------------------------------
+## 11. Standalone metadata panels
 
 Enhanced standalone AllMusic and MusicBrainz samples remain available for
 layouts outside the default InfoStack. Do not substitute the standalone
@@ -1542,13 +1483,13 @@ Other retained JScript Panel samples can expose their upstream context menus.
 DarkOneJSP3 documents the samples used by the supported layout; it does not
 claim ownership of every generic sample menu bundled with JScript Panel 3.
 
-12. Persistent-property reference
----------------------------------
+## 12. Persistent-property reference
 
 Direct property editing is useful for diagnostics, but context menus are the
 supported way to configure normal operation. Principal DarkOneJSP3-managed
 properties include:
 
+```text
 Startup
   DARKONEJSP3.STARTUP.TRANSITION
   DARKONEJSP3.STARTUP.MINIMUM.DELAY
@@ -1677,9 +1618,9 @@ Waveform host
   DarkOneJSP3.DisplayWaveform.BackgroundColour
   DarkOneJSP3.DisplayWaveform.HideWhenStopped
   DarkOneJSP3.DisplayWaveform.NewTrackRevealDelay
+```
 
-Performance diagnostics
-~~~~~~~~~~~~~~~~~~~~~~~
+### Performance diagnostics
 
 The rendering optimisations are enabled by default. Advanced testing options
 are available through each JScript Panel's Configure... property editor:
@@ -1697,8 +1638,7 @@ comparing configurations. Changing the cache properties requires a panel
 reload. Disabling the render cache restores per-paint title-format evaluation
 for diagnostic comparison, but is not recommended for normal use.
 
-13. Resetting DarkOneJSP3
--------------------------
+## 13. Resetting DarkOneJSP3
 
 Menu path: DarkOne Tools > Reset DarkOneJSP3
 

@@ -5,7 +5,7 @@ import re
 from .context import ValidationContext
 
 
-def run(ctx: ValidationContext) -> None:
+def _check_reset_and_shared(ctx: ValidationContext) -> None:
     root = ctx.root
     project = ctx.project
     samples = ctx.samples
@@ -468,6 +468,16 @@ def run(ctx: ValidationContext) -> None:
                     if token not in block:
                         errors.append('Album Notes + Album Art reset default is missing: ' + token)
 
+
+def _check_metadata_and_artwork(ctx: ValidationContext) -> None:
+    root = ctx.root
+    project = ctx.project
+    samples = ctx.samples
+    errors = ctx.errors
+    rel = ctx.rel
+    text = ctx.text
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
     album_notes = samples / 'Album Notes.txt'
     if album_notes.exists():
         album_notes_entry_body = text(album_notes)
@@ -743,6 +753,17 @@ def run(ctx: ValidationContext) -> None:
             errors.append('Standalone MusicBrainz reset bridge is missing')
         if '// @version "0.6.4"' not in musicbrainz_body:
             errors.append('MusicBrainz entry version is not 0.6.4')
+
+
+def _check_playlist_and_resources(ctx: ValidationContext) -> None:
+    root = ctx.root
+    project = ctx.project
+    samples = ctx.samples
+    errors = ctx.errors
+    rel = ctx.rel
+    text = ctx.text
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
     js_playlist_entry = samples / 'JS Playlist.txt'
     if js_playlist_entry.exists():
         body = text(js_playlist_entry)
@@ -1030,9 +1051,8 @@ def run(ctx: ValidationContext) -> None:
         if 'display_system.setDisplayStyle(idx - 1);' not in body:
             errors.append('Display Style menu does not use the validated style setter')
 
-    js_playlist_settings = samples / 'jsplaylist' / 'settings.js'
-    if js_playlist_settings.exists():
-        body = text(js_playlist_settings)
+    if js_playlist_settings_resource.exists():
+        body = text(js_playlist_settings_resource)
         for token in [
             'function createSettingsBackArrow(colour, size)',
             'var image = utils.CreateImage(size, size);',
@@ -1126,6 +1146,16 @@ def run(ctx: ValidationContext) -> None:
         if 'this.lanch_timer' in body:
             errors.append('Smooth input box retains the misspelled launch-timer field')
 
+
+def _check_migration_and_infostack(ctx: ValidationContext) -> None:
+    root = ctx.root
+    project = ctx.project
+    samples = ctx.samples
+    errors = ctx.errors
+    rel = ctx.rel
+    text = ctx.text
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
     registry_path = project / 'shared' / 'reset_defaults.js'
     sample_registry_path = samples / 'shared' / 'sample_defaults.js'
     if registry_path.exists():
@@ -1361,9 +1391,8 @@ def run(ctx: ValidationContext) -> None:
             if obsolete in body:
                 errors.append('InfoStack bridge helper retains unused protocol alias: ' + obsolete)
 
-    display_system_path = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
-    if display_system_path.exists():
-        body = text(display_system_path)
+    if display_system.exists():
+        body = text(display_system)
         for token in [
             'var DARKONE_DISPLAY_ACCENT_COLUMNS_UI_SELECTED = 2;',
             'var DARKONE_DISPLAY_ACCENT_MODES = [',
@@ -1391,6 +1420,16 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Display accent menu consolidation is missing: ' + token)
 
+
+def _check_layout_and_protocols(ctx: ValidationContext) -> None:
+    root = ctx.root
+    project = ctx.project
+    samples = ctx.samples
+    errors = ctx.errors
+    rel = ctx.rel
+    text = ctx.text
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
     # Established startup and layout invariants.
     root_controller = project / 'jsplitter' / '01_root.js'
     if root_controller.exists():
@@ -1558,9 +1597,8 @@ def run(ctx: ValidationContext) -> None:
             if obsolete in body:
                 errors.append('Upper divider remains hard-coded black: ' + obsolete)
 
-    bottom_config = project / 'jscript' / 'js' / 'Config_Global_Script.js'
-    if bottom_config.exists():
-        body = text(bottom_config)
+    if config_global.exists():
+        body = text(config_global)
         for token in [
             "'DarkOneJSP3.BottomArea.Query'",
             "'DarkOneJSP3.BottomArea.State'",
@@ -1799,11 +1837,17 @@ def run(ctx: ValidationContext) -> None:
             'function configureWaveformPseudoTransparency(waveform)',
             'waveform.SupportPseudoTransparency = true;',
             'var waveform = waveformPanel();',
+            'function waveformVerticalInset(lowerHeight)',
+            'return Math.max(0, DOJSP3.idiv(lowerHeight, 4));',
+            'var lowerHeight = Math.max(1, wh - half);',
+            'half + waveformVerticalInset(lowerHeight)',
         ]:
             if token not in body:
                 errors.append('Waveform background palette is missing: ' + token)
         if 'window.GetProperty(BACKGROUND_MODE_PROPERTY, BACKGROUND_AUTOMATIC)' not in body:
             errors.append('Waveform Automatic background is not the default for new properties')
+        if 'waveformSpacerHeight' in body:
+            errors.append('Waveform layout retains the obsolete fixed-height spacer')
 
     reset_defaults = project / 'shared' / 'reset_defaults.js'
     if reset_defaults.exists() and (
@@ -1852,9 +1896,8 @@ def run(ctx: ValidationContext) -> None:
         if 'layoutArtSpectrumForSize(ww, wh);' not in body:
             errors.append('Album Art/Spectrum controller does not fill its host')
 
-    info_stack_tabs = project / 'jsplitter' / '03_info_stack_tabs.js'
-    if info_stack_tabs.exists():
-        info_body = text(info_stack_tabs)
+    if info_stack.exists():
+        info_body = text(info_stack)
         for token in [
             "var TAB_STRIP_VISIBLE_PROPERTY = 'DarkOneJSP3.InfoStack.TabStripVisible';",
             'function isTabStripVisible()',
@@ -1966,6 +2009,16 @@ def run(ctx: ValidationContext) -> None:
     else:
         errors.append('Optional-button command script is missing')
 
+
+def _check_controls_and_colours(ctx: ValidationContext) -> None:
+    root = ctx.root
+    project = ctx.project
+    samples = ctx.samples
+    errors = ctx.errors
+    rel = ctx.rel
+    text = ctx.text
+    # Standalone enhanced-sample reset bridge scope and ownership.
+    sample_defaults_import = '%fb2k_component_path%samples\\shared\\sample_defaults.js'
     colour_helper = project / 'shared' / 'colour_utils.js'
     if colour_helper.exists():
         body = text(colour_helper)
@@ -2302,9 +2355,8 @@ def run(ctx: ValidationContext) -> None:
         ]:
             if token in body:
                 errors.append('Control Left still exposes shared button appearance: ' + token)
-    config_global = project / 'jscript' / 'js' / 'Config_Global_Script.js'
-    if config_global.exists():
-        body = text(config_global)
+    if global_config.exists():
+        body = text(global_config)
         for token in [
             'function darkOneAppendButtonsAppearanceMenu(parent, style, depth, roundness)',
             'function darkOneHandleButtonsAppearanceMenuSelection(id)',
@@ -2322,7 +2374,6 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('DarkOne Tools shared Buttons appearance support is missing: ' + token)
 
-    volume_knob = project / 'jscript' / 'js' / 'Object_Volumeknob.js'
     if volume_knob.exists():
         body = text(volume_knob)
         for token in [
@@ -2351,9 +2402,8 @@ def run(ctx: ValidationContext) -> None:
             if token not in body:
                 errors.append('Volume knob cleanup is missing: ' + token)
 
-    right_control = project / 'jscript' / 'js' / 'Panel_Control_Right.js'
-    if right_control.exists():
-        body = text(right_control)
+    if control_right_panel.exists():
+        body = text(control_right_panel)
         for token in [
             'DarkOnePerformance.createRepaintScheduler',
             'if (!v_drag) volume_knob_repaint.request()',
@@ -2366,9 +2416,8 @@ def run(ctx: ValidationContext) -> None:
             if forbidden in body:
                 errors.append('Control Right still retains a delayed knob-selection state: ' + forbidden)
 
-    display_system_source = project / 'jscript' / 'js' / 'Object_DisplaySystem.js'
-    if display_system_source.exists():
-        body = text(display_system_source)
+    if display_system_path.exists():
+        body = text(display_system_path)
         for token in [
             'DarkOnePerformance.createRepaintScheduler',
             'DarkOnePerformance.createTrailingDeadline',
@@ -2388,9 +2437,9 @@ def run(ctx: ValidationContext) -> None:
         # Calls made through the shared configuration helper must exist on the
         # real DisplaySystem implementation. Runtime mocks must not invent APIs
         # that were removed by later rendering optimisations.
-        config_global = project / 'jscript' / 'js' / 'Config_Global_Script.js'
-        if config_global.exists():
-            config_body = text(config_global)
+        global_config = project / 'jscript' / 'js' / 'Config_Global_Script.js'
+        if global_config.exists():
+            config_body = text(global_config)
             exported_methods = set(re.findall(r'this\.([A-Za-z_$][\w$]*)\s*=\s*function\s*\(', body))
             called_methods = set(re.findall(r'display_system\.([A-Za-z_$][\w$]*)\s*\(', config_body))
             missing_methods = sorted(called_methods - exported_methods)
@@ -2398,3 +2447,12 @@ def run(ctx: ValidationContext) -> None:
                 errors.append('Config_Global_Script calls missing DisplaySystem method: ' + method)
             if 'resetRenderedImages' in config_body:
                 errors.append('Config_Global_Script retains the removed composite-image cache API: resetRenderedImages')
+
+
+def run(ctx: ValidationContext) -> None:
+    _check_reset_and_shared(ctx)
+    _check_metadata_and_artwork(ctx)
+    _check_playlist_and_resources(ctx)
+    _check_migration_and_infostack(ctx)
+    _check_layout_and_protocols(ctx)
+    _check_controls_and_colours(ctx)

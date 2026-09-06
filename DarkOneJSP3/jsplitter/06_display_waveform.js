@@ -5,6 +5,11 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // Replaces Panel Stack Splitter 06.
 //
 // Version history (newest first):
+// v0.3.16 balances the visible Waveform Minibar vertically within the lower
+// DisplayStack region. The native component uses roughly the upper two-thirds
+// of its child height for waveform content, so a quarter-region top inset
+// produces matching apparent whitespace above and below without fixed pixels.
+//
 // v0.3.15 accepts the extended Bottom-area geometry message used to align
 // Quick Search gradients while preserving the earlier three-field shape.
 //
@@ -48,7 +53,6 @@ var startupReadiness = DarkOneProtocol.startup.createReadinessBridge(
 var ww = 0;
 var wh = 0;
 var waveformTop = 0;
-var waveformSpacerHeight = 20;
 
 var BACKGROUND_MODE_PROPERTY = 'DarkOneJSP3.DisplayWaveform.BackgroundMode';
 var BACKGROUND_COLOUR_PROPERTY = 'DarkOneJSP3.DisplayWaveform.BackgroundColour';
@@ -404,21 +408,34 @@ function scheduleWaveformReveal() {
     }, delay);
 }
 
+function waveformVerticalInset(lowerHeight) {
+    // Waveform Minibar currently draws its visible waveform through roughly
+    // the upper two-thirds of the child surface, leaving the remaining third
+    // blank underneath. Reserving one quarter of the lower DisplayStack region
+    // above the child leaves three quarters for the child; one third of that
+    // is the same quarter-region amount, balancing the apparent top/bottom gap.
+    return Math.max(0, DOJSP3.idiv(lowerHeight, 4));
+}
+
 function layoutDisplayWaveform() {
     if (ww <= 0 || wh <= 0) return;
 
     var display = DOJSP3.panel(DOJSP3.titles.display);
     var waveform = waveformPanel();
     var half = DOJSP3.clamp(DOJSP3.idiv(wh, 2), 1, wh);
+    var lowerHeight = Math.max(1, wh - half);
     var maximumWaveformTop = Math.max(0, wh - 1);
 
-    waveformTop = Math.min(maximumWaveformTop, half + waveformSpacerHeight);
+    waveformTop = Math.min(
+        maximumWaveformTop,
+        half + waveformVerticalInset(lowerHeight)
+    );
 
     DOJSP3.move(display, 0, 0, ww, Math.max(1, half));
 
-    // The old conversion placed the child at half + 21 and inset it by one
-    // pixel, producing a visible line/frame. Start directly after the 20 px
-    // spacer and use the full width instead.
+    // Keep the Waveform child full-width and use a proportional top inset.
+    // This preserves the original borderless conversion while centring the
+    // component's visible waveform area rather than its internally blank tail.
     DOJSP3.move(
         waveform,
         0,

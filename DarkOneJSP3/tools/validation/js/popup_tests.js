@@ -530,7 +530,14 @@ suite("Waveform background modes", function () {
         NotifyOthers() {},
         Repaint() { repaintCount++; }
     };
+    const layoutMoves = [];
+    const layoutPanels = {display: {}, waveform: {}};
     const DOJSP3Mock = {
+        titles: {display: 'display', waveform: 'waveform'},
+        panel(title) { return layoutPanels[title]; },
+        idiv(a, b) { return Math.floor(a / b); },
+        move(...args) { layoutMoves.push(args); },
+        show() {},
         colours: { bar: 0xff202020, separator: 0xff181818 },
         clamp(value, minimum, maximum) {
             return Math.max(minimum, Math.min(maximum, value));
@@ -546,7 +553,7 @@ suite("Waveform background modes", function () {
     const factory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils', 'setTimeout', 'clearTimeout',
         colourSource + '\n' + protocolSource + '\n' + source +
-        '\nreturn { Protocol:DarkOneProtocol, backgroundMode, backgroundColour, applySharedBottomAreaState, configureWaveformPseudoTransparency, on_notify_data, on_colours_changed, on_paint, setSize:function(w,h){ww=w;wh=h;} };'
+        '\nreturn { Protocol:DarkOneProtocol, backgroundMode, backgroundColour, applySharedBottomAreaState, configureWaveformPseudoTransparency, on_notify_data, on_colours_changed, on_paint, on_size, setSize:function(w,h){ww=w;wh=h;} };'
     );
     const controller = factory(
         windowMock,
@@ -558,6 +565,18 @@ suite("Waveform background modes", function () {
         waveformSetTimeout,
         waveformClearTimeout
     );
+    for (const height of [1, 2, 3, 4, 5, 100, 197, 394, 395, 900]) {
+        layoutMoves.length = 0;
+        controller.on_size(720, height);
+        const half = Math.max(1, Math.floor(height / 2));
+        const lower = Math.max(1, height - half);
+        const top = Math.min(height - 1, half + Math.floor(lower / 4));
+        const displayMove = layoutMoves.find(item => item[0] === layoutPanels.display);
+        const waveMove = layoutMoves.find(item => item[0] === layoutPanels.waveform);
+        if (!displayMove || !waveMove || displayMove.slice(1).join(',') !== [0, 0, 720, half].join(',') ||
+                waveMove.slice(1).join(',') !== [0, top, 720, Math.max(1, height - top)].join(','))
+            throw new Error('Waveform layout geometry differs at height ' + height);
+    }
     controller.setSize(640, 300);
     const pseudoTransparentWaveform = { SupportPseudoTransparency: false };
     if (!controller.configureWaveformPseudoTransparency(pseudoTransparentWaveform) ||

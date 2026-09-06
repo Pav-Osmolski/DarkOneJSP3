@@ -1,14 +1,14 @@
-DarkOneJSP3 Layout and Panel Map
-================================
+# DarkOneJSP3 Layout and Panel Map
 
-Purpose
--------
+## Purpose
+
 JSplitter controllers locate their children by exact Columns UI custom title.
 These DOJSP3.* titles are runtime identifiers, not merely visible labels.
 Capitalisation and hierarchy must match this document.
 
-Exact hierarchy and custom titles
----------------------------------
+## Exact hierarchy and custom titles
+
+```text
 Column
 └─ JSplitter 01                         DOJSP3.Root
    ├─ JSplitter 02                      DOJSP3.Main
@@ -30,9 +30,11 @@ Column
       │  ├─ JScript Panel 3 11          DOJSP3.Display
       │  └─ Waveform Minibar (mod)      DOJSP3.Waveform
       └─ JScript Panel 3 12             DOJSP3.ControlsRight
+```
 
-JScript Panel 3 script assignments
-----------------------------------
+## JScript Panel 3 script assignments
+
+```text
 01  samples\Smooth Playlist Manager.txt
 02  samples\Last.fm Bio.txt
 03  samples\Last.fm Artist Info + User Info.txt
@@ -45,9 +47,11 @@ JScript Panel 3 script assignments
 10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
 11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
 12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
+```
 
-JSplitter loader and controller assignments
--------------------------------------------
+## JSplitter loader and controller assignments
+
+```text
 01  loaders\JSplitter 01 - Root.txt
     controller: jsplitter\01_root.js
 
@@ -65,9 +69,10 @@ JSplitter loader and controller assignments
 
 06  loaders\JSplitter 06 - Display and Waveform.txt
     controller: jsplitter\06_display_waveform.js
+```
 
-Optional control-panel commands
--------------------------------
+## Optional control-panel commands
+
 - DarkOneJSP3/Layout/Toggle, normally labelled LAYOUT, cycles through
   InfoStack | ArtSpectrum | Playlist, ArtSpectrum | Playlist,
   InfoStack | Playlist (Playlist priority) and Expanded InfoStack | Playlist
@@ -80,8 +85,8 @@ Optional control-panel commands
   DarkOne Tools popup. It is the sole launcher for shared theme tools and the
   button appearance settings used by both control panels.
 
-Title rules
------------
+## Title rules
+
 - Visible InfoStack tab text can be renamed without changing the DOJSP3.* title.
 - The fourth InfoStack child must be DOJSP3.AlbumNotes.
 - DOJSP3.Queue should use a JScript Panel 3 instance loading the DarkOneJSP3
@@ -91,8 +96,9 @@ Title rules
   bridge.
 - Do not duplicate a DOJSP3.* title elsewhere in the same layout hierarchy.
 
-Relationship to the original DarkOne2021 PSS layout
----------------------------------------------------
+## Relationship to the original DarkOne2021 PSS layout
+
+```text
 PSS01 -> JSplitter 01: root main/bottom geometry and shared background
 PSS02 -> JSplitter 02: side columns align to the outer edges of the
          original one-third separator strips; the upper pair share a
@@ -101,13 +107,14 @@ PSS03 -> JSplitter 03: six-panel information stack and tab row
 PSS04 -> JSplitter 04: album artwork and spectrum placement
 PSS05 -> JSplitter 05: bottom controls, Quick Search and separators
 PSS06 -> JSplitter 06: display and waveform placement
+```
 
 The old PSS03 source mentioned a seventh child, but the actual DarkOne2021
 layout and tab row contained six panels. DarkOneJSP3 implements those six
 panels.
 
-FCL note
---------
+## FCL note
+
 This panel map is the authoritative setup reference. The full package also
 contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with one
 `DarkOneJSP3` layout using the scripted Queue Viewer and scripted Quick Search.

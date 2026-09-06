@@ -386,11 +386,21 @@ var _scroll_fade_surface_h = 0;
 var _scroll_fade_mask = null;
 var _scroll_fade_mask_key = '';
 
+function _disposeScrollFadeResources() {
+	try { if (_scroll_fade_surface) _scroll_fade_surface.Dispose(); } catch (e) {}
+	try { if (_scroll_fade_mask) _scroll_fade_mask.Dispose(); } catch (e) {}
+	_scroll_fade_surface = _scroll_fade_mask = null;
+	_scroll_fade_surface_w = _scroll_fade_surface_h = 0;
+	_scroll_fade_mask_key = '';
+}
+
 function _scrollFadeSurface(w, h) {
 	w = Math.max(1, Math.ceil(w));
 	h = Math.max(1, Math.ceil(h));
 	if (!_scroll_fade_surface || _scroll_fade_surface_w != w || _scroll_fade_surface_h != h) {
-		_scroll_fade_surface = utils.CreateImage(w, h);
+		var next_surface = utils.CreateImage(w, h);
+		try { if (_scroll_fade_surface) _scroll_fade_surface.Dispose(); } catch (e) {}
+		_scroll_fade_surface = next_surface;
 		_scroll_fade_surface_w = w;
 		_scroll_fade_surface_h = h;
 	}
@@ -439,6 +449,7 @@ function _scrollFadeMask(h, fade_height, fade_top, fade_bottom) {
 	}
 
 	mask.ReleaseGraphics();
+	try { if (_scroll_fade_mask) _scroll_fade_mask.Dispose(); } catch (e) {}
 	_scroll_fade_mask = mask;
 	_scroll_fade_mask_key = key;
 	return mask;

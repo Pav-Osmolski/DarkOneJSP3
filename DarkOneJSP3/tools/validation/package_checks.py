@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import re
 
 from .context import ValidationContext
@@ -32,6 +33,30 @@ def run(ctx: ValidationContext) -> None:
         path for path in root.rglob('*')
         if path.is_file() and path.suffix.lower() != '.fcl'
     ]
+    canonical_docs = {
+        'README.md',
+        'INSTALLATION.md',
+        'LAYOUT_AND_PANEL_MAP.md',
+        'CONFIGURATION_GUIDE.md',
+        'TROUBLESHOOTING.md',
+        'MIGRATION_REFERENCE.md',
+        'CHANGELOG.md',
+        'CREDITS.md',
+        'VALIDATION_REPORT.md',
+        'ENHANCED_SAMPLES.md',
+    }
+    actual_docs = {path.name for path in docs.iterdir() if path.is_file()} if docs.exists() else set()
+    retired_doc_names = {Path(name).with_suffix('.txt').name for name in canonical_docs}
+    retired_doc_files = sorted(path.name for path in docs.glob('*.txt')) if docs.exists() else []
+    if retired_doc_files:
+        errors.append(
+            'DarkOneJSP3/docs must be Markdown-only; retired .txt documentation remains: ' +
+            ', '.join(retired_doc_files)
+        )
+    missing_docs = sorted(canonical_docs - actual_docs)
+    if missing_docs:
+        errors.append('Canonical Markdown documentation is missing: ' + ', '.join(missing_docs))
+
     obsolete_references = [
         'foo' + '_quicksearch',
         'foo' + '_uie_quicksearch',
@@ -52,9 +77,22 @@ def run(ctx: ValidationContext) -> None:
         'native_' + 'layout',
     ]
     searchable_suffixes = {'.js', '.json', '.md', '.py', '.txt'}
+    for path in all_files:
+        if path.suffix.lower() not in searchable_suffixes and path.name != '.gitignore':
+            continue
+        try:
+            body = text(path)
+        except (UnicodeDecodeError, OSError):
+            continue
+        for retired_name in retired_doc_names:
+            if retired_name in body:
+                errors.append(
+                    'Retired documentation filename reference in ' + rel(path) + ': ' + retired_name
+                )
+
     immutable_history_paths = {
-        docs / 'CHANGELOG.txt',
-        docs / 'MIGRATION_REFERENCE.txt',
+        docs / 'CHANGELOG.md',
+        docs / 'MIGRATION_REFERENCE.md',
         project / 'reference' / 'Original DarkOne2021 PSS and panel map.txt',
     }
     for path in all_files:
@@ -160,6 +198,9 @@ def run(ctx: ValidationContext) -> None:
     if (project / 'build-info.json').exists():
         try:
             build = json.loads(text(project / 'build-info.json'))
+            if not isinstance(build, dict):
+                build = {}
+                raise ValueError('top-level value must be an object')
             version = str(build.get('version', '')).strip()
         except Exception as exc:
             errors.append('Invalid build-info.json: ' + str(exc))
@@ -168,6 +209,9 @@ def run(ctx: ValidationContext) -> None:
         if build.get('release') != f'DarkOneJSP3 v{version}':
             errors.append('build-info release string does not match its version')
         modules = build.get('modules', {})
+        if not isinstance(modules, dict):
+            errors.append('build-info modules must be an object')
+            modules = {}
         for module_name, (expected, label) in EXPECTED_MODULE_VERSIONS.items():
             if modules.get(module_name) != expected:
                 errors.append(
@@ -197,7 +241,7 @@ def run(ctx: ValidationContext) -> None:
 
     # Public documentation must use only the current project identifiers.
     former_doc_identifiers = ['DarkOneJS3', 'DOJS3', 'DARKONEJS3']
-    for path in [root / 'README.md', *sorted(docs.glob('*.txt'))]:
+    for path in [root / 'README.md', *sorted(docs.glob('*.md'))]:
         if not path.exists():
             continue
         body = text(path)
@@ -209,7 +253,7 @@ def run(ctx: ValidationContext) -> None:
         'DOJSP3.MusicBrainz',
         'DOJSP3.Allmusic',
     ]
-    for path in [root / 'README.md', *sorted(docs.glob('*.txt'))]:
+    for path in [root / 'README.md', *sorted(docs.glob('*.md'))]:
         if not path.exists():
             continue
         body = text(path)
@@ -218,7 +262,7 @@ def run(ctx: ValidationContext) -> None:
                 errors.append(rel(path) + ' contains a retired title alias: ' + alias)
 
     for stale_reference in ['RENAMING_TO_DARKONEJSP3.txt']:
-        for path in [root / 'README.md', *sorted(docs.glob('*.txt'))]:
+        for path in [root / 'README.md', *sorted(docs.glob('*.md'))]:
             if path.exists() and stale_reference in text(path):
                 errors.append(rel(path) + ' contains a stale marker reference: ' + stale_reference)
 

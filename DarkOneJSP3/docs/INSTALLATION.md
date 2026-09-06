@@ -1,32 +1,31 @@
-DarkOneJSP3 Installation and Upgrade Guide
-==========================================
+# DarkOneJSP3 Installation and Upgrade Guide
 
-Contents
---------
-1. Requirements
-2. Back up first
-3. Fresh installation
-4. Building or restoring the Columns UI layout
-5. Post-install checklist
-6. Upgrading and hotfixes
-7. Rollback
+## Contents
 
-1. Requirements
----------------
+1. [Requirements](#1-requirements)
+2. [Back up first](#2-back-up-first)
+3. [Fresh installation](#3-fresh-installation)
+4. [Building or restoring the Columns UI layout](#4-building-or-restoring-the-columns-ui-layout)
+5. [Post-install checklist](#5-post-install-checklist)
+6. [Upgrading and hotfixes](#6-upgrading-and-hotfixes)
+7. [Rollback](#7-rollback)
+
+## 1. Requirements
+
 Install these components before building or restoring the layout:
 
-- foobar2000 v2 x64 (https://www.foobar2000.org/windows)
-- Columns UI (https://www.foobar2000.org/components/view/foo_ui_columns)
-- JScript Panel 3.8.5 (https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-- JSplitter 4.x, tested with 4.1.14 (https://github.com/dima-lur/jsplitter/releases)
-- Enhanced Spectrum Analyser (https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
-- Waveform Minibar (mod) 1.2.69-patched (https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
+- [foobar2000 v2 x64](https://www.foobar2000.org/windows)
+- [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
+- [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
+- [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
+- [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
+- [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 DarkOneJSP3 includes customised scripts and JScript Panel samples. It does not
 replace installed component DLLs.
 
-2. Back up first
-----------------
+## 2. Back up first
+
 Close foobar2000, then back up:
 
 - the foobar2000 profile;
@@ -34,57 +33,71 @@ Close foobar2000, then back up:
 - the existing DarkOneJSP3 folder; and
 - the installed foo_jscript_panel3 samples folder.
 
-3. Fresh installation
----------------------
+## 3. Fresh installation
+
 The package contains two top-level folders:
 
-  DarkOneJSP3\
-  user-components-x64\
+```text
+DarkOneJSP3\
+user-components-x64\
+```
 
 Merge both into the directory used by the active foobar2000 profile. Do not
 copy only one of them, and do not install the same files into multiple profile
 locations.
 
-Standard installation (non-portable)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Standard installation (non-portable)
+
 By default, a standard foobar2000 v2 installation stores its active profile at:
 
-  %APPDATA%\foobar2000-v2\profile\
+```text
+%APPDATA%\foobar2000-v2\profile\
+```
 
 %APPDATA% normally expands to:
 
-  C:\Users\<username>\AppData\Roaming
+```text
+C:\Users\<username>\AppData\Roaming
+```
 
 Merge the supplied folders into the profile directory. The resulting paths
 should be:
 
-  %APPDATA%\foobar2000-v2\profile\DarkOneJSP3\
-  %APPDATA%\foobar2000-v2\profile\user-components-x64\foo_jscript_panel3\samples\
+```text
+%APPDATA%\foobar2000-v2\profile\DarkOneJSP3\
+%APPDATA%\foobar2000-v2\profile\user-components-x64\foo_jscript_panel3\samples\
+```
 
 Paste this path into the File Explorer address bar to open it directly:
 
-  %APPDATA%\foobar2000-v2\profile
+```text
+%APPDATA%\foobar2000-v2\profile
+```
 
 Do not place the package folders beside foobar2000.exe for a normal
 non-portable installation. If the profile location was customised, use the
 actual path represented by %fb2k_profile_path% instead.
 
-Portable installation
-~~~~~~~~~~~~~~~~~~~~~
+### Portable installation
+
 A portable installation commonly uses the installation root itself:
 
-  <foobar2000>\DarkOneJSP3\
-  <foobar2000>\user-components-x64\foo_jscript_panel3\samples\
+```text
+<foobar2000>\DarkOneJSP3\
+<foobar2000>\user-components-x64\foo_jscript_panel3\samples\
+```
 
 or its profile subfolder:
 
-  <foobar2000>\profile\DarkOneJSP3\
-  <foobar2000>\profile\user-components-x64\foo_jscript_panel3\samples\
+```text
+<foobar2000>\profile\DarkOneJSP3\
+<foobar2000>\profile\user-components-x64\foo_jscript_panel3\samples\
+```
 
 Use the structure that matches %fb2k_profile_path% for the active installation.
 
-JScript Panel files
-~~~~~~~~~~~~~~~~~~~
+### JScript Panel files
+
 The supplied user-components-x64 tree contains customised JScript Panel sample
 and helper files. Merge it into the active profile so the files reach the
 installed foo_jscript_panel3 sample directory.
@@ -92,36 +105,40 @@ installed foo_jscript_panel3 sample directory.
 These enhanced samples are standalone and can also be used by other themes.
 Existing filenames and legacy entry-script imports are preserved, but retaining
 a backup is still recommended because the files replace the installed sample
-tree. See ENHANCED_SAMPLES.txt for the compatibility contract.
+tree. See ENHANCED_SAMPLES.md for the compatibility contract.
 
 Do not delete or overwrite the foo_jscript_panel3 component DLL. Component
 binaries are not supplied by this package.
 
-4. Building or restoring the Columns UI layout
-----------------------------------------------
-Recommended: manual layout setup
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Recreate the exact hierarchy and custom titles in LAYOUT_AND_PANEL_MAP.txt.
+## 4. Building or restoring the Columns UI layout
+
+### Recommended: manual layout setup
+
+Recreate the exact hierarchy and custom titles in LAYOUT_AND_PANEL_MAP.md.
 This is the recommended setup because it creates component instances directly
 for the local installation and makes every script assignment visible.
 
 Load these files in the six numbered JSplitter instances:
 
-  DarkOneJSP3\jsplitter\loaders\JSplitter 01 - Root.txt
-  DarkOneJSP3\jsplitter\loaders\JSplitter 02 - Main Columns.txt
-  DarkOneJSP3\jsplitter\loaders\JSplitter 03 - Info Stack and Tabs.txt
-  DarkOneJSP3\jsplitter\loaders\JSplitter 04 - Album Art and Spectrum.txt
-  DarkOneJSP3\jsplitter\loaders\JSplitter 05 - Bottom Controls.txt
-  DarkOneJSP3\jsplitter\loaders\JSplitter 06 - Display and Waveform.txt
+```text
+DarkOneJSP3\jsplitter\loaders\JSplitter 01 - Root.txt
+DarkOneJSP3\jsplitter\loaders\JSplitter 02 - Main Columns.txt
+DarkOneJSP3\jsplitter\loaders\JSplitter 03 - Info Stack and Tabs.txt
+DarkOneJSP3\jsplitter\loaders\JSplitter 04 - Album Art and Spectrum.txt
+DarkOneJSP3\jsplitter\loaders\JSplitter 05 - Bottom Controls.txt
+DarkOneJSP3\jsplitter\loaders\JSplitter 06 - Display and Waveform.txt
+```
 
 Each loader enables the intended draw mode and imports its maintained external
 controller script.
 
-Optional FCL convenience
-~~~~~~~~~~~~~~~~~~~~~~~~
+### Optional FCL convenience
+
 This full package contains a maintainer-exported file at:
 
-  DarkOneJSP3\fcl\DarkOneJSP3.fcl
+```text
+DarkOneJSP3\fcl\DarkOneJSP3.fcl
+```
 
 Importing it is optional and is not the primary setup method. The bundled FCL
 contains one saved layout, `DarkOneJSP3`, using the scripted Queue Viewer and
@@ -129,23 +146,27 @@ scripted JScript Panel 3 Quick Search.
 
 FCL files contain component-instance metadata that can vary between
 installations. After import, verify the complete hierarchy, custom titles and
-script assignments against LAYOUT_AND_PANEL_MAP.txt. Project tooling does not
+script assignments against LAYOUT_AND_PANEL_MAP.md. Project tooling does not
 patch or generate the FCL, and hotfix archives do not include it.
 
 When no FCL is present, or when an imported layout does not match the installed
 components, use the manual layout method above. After confirming either method,
 export a fresh local FCL for backup.
 
-Recommended scripted queue panel
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Recommended scripted queue panel
+
 Use a JScript Panel 3 instance as the fifth child of DOJSP3.InfoStack, give it
 the exact custom title:
 
-  DOJSP3.Queue
+```text
+DOJSP3.Queue
+```
 
 and load:
 
-  DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+```text
+DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
+```
 
 This is the recommended DarkOneJSP3 queue implementation. DOJSP3.Root uses
 JSplitter to enumerate and modify the playback queue directly, while the
@@ -153,8 +174,8 @@ JScript Panel provides DarkOne styling, multi-selection, keyboard navigation,
 source-item commands and writable queue controls including remove, multi-remove,
 clear, move up/down and move to top/bottom.
 
-Enhanced Spectrum Analyser component preferences
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Enhanced Spectrum Analyser component preferences
+
 Enhanced Spectrum Analyser maintains its visualisation options in the native
 component. To reproduce the DarkOneJSP3 reference appearance, right-click the
 spectrum panel, open Options and use:
@@ -180,14 +201,14 @@ spectrum panel, open Options and use:
 Colour swatches belonging only to disabled lines and overlays do not affect the
 reference display.
 
-Waveform Minibar component preferences
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Waveform Minibar component preferences
+
 Waveform Minibar stores its own component preferences and they are not restored by
 the bundled Columns UI FCL. Configure Preferences > Tools > Waveform Minibar (mod)
 locally after installing or importing the layout. Install the Windows x64
 `1.2.69-patched` release from:
 
-  https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases
+[Waveform Minibar (mod) patched releases](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
 Confirm `1.2.69-patched` under Preferences > Components before relying on the
 background-refresh and anti-flicker behaviour described below.
@@ -225,8 +246,8 @@ colour key rather than per-pixel alpha, a very high-contrast background may
 show a fine pre-blended edge fringe. Disable anti-aliasing to restore the
 original hard-edged rasterizer output in that case.
 
-Required Album Notes title
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Required Album Notes title
+
 The fourth child of DOJSP3.InfoStack must:
 
 - load samples\Album Notes.txt; and
@@ -235,8 +256,8 @@ The fourth child of DOJSP3.InfoStack must:
 The standalone samples\MusicBrainz.txt panel may be used elsewhere, but not
 as the consolidated InfoStack child.
 
-5. Post-install checklist
--------------------------
+## 5. Post-install checklist
+
 1. Restart foobar2000.
 2. Confirm that all six InfoStack tabs can be selected.
 3. Confirm that Album Notes opens without a child-panel error.
@@ -256,18 +277,18 @@ as the consolidated InfoStack child.
 11. Open the foobar2000 console and check for [DarkOneJSP3] errors.
 12. Export a working FCL for your own backup.
 
-6. Upgrading and hotfixes
--------------------------
-Full-package upgrade
-~~~~~~~~~~~~~~~~~~~~
+## 6. Upgrading and hotfixes
+
+### Full-package upgrade
+
 1. Close foobar2000.
 2. Back up the current installation and layout.
 3. Extract the new full archive over the same root or profile.
 4. Allow files to overwrite.
 5. Restart foobar2000 and review the console.
 
-Hotfix upgrade
-~~~~~~~~~~~~~~
+### Hotfix upgrade
+
 Apply a hotfix only to the baseline named in APPLY_HOTFIX.txt. Hotfix archives
 include every changed documentation file plus changed scripts, metadata and
 validator files. They never replace or delete DarkOneJSP3.fcl.
@@ -276,8 +297,8 @@ Persistent JScript Panel and JSplitter properties are normally retained. If a
 panel still runs cached script text after an update, reload it or restart
 foobar2000.
 
-7. Rollback
------------
+## 7. Rollback
+
 Close foobar2000 and restore the backed-up DarkOneJSP3 and JScript Panel sample
 folders. Re-import your backed-up Columns UI layout only when the layout itself
 was changed.

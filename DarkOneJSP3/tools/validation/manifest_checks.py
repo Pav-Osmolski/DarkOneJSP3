@@ -20,7 +20,7 @@ EXPECTED_TOP_LEVEL_KEYS = {
 }
 
 EXPECTED_FCL_POLICY = {
-    'recommended_setup': 'manual layout from LAYOUT_AND_PANEL_MAP.txt',
+    'recommended_setup': 'manual layout from LAYOUT_AND_PANEL_MAP.md',
     'optional_path': 'DarkOneJSP3/fcl/DarkOneJSP3.fcl',
     'may_be_distributed': True,
     'required': False,
@@ -34,141 +34,88 @@ EXPECTED_FCL_POLICY = {
     'default_layout_search': 'scripted JScript Panel 3 Quick Search',
 }
 
-EXPECTED_PANEL_CONTRACTS = {
-    'DOJSP3.Queue': {
-        'type': 'JScript Panel 3',
-        'source': 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt',
-        'script': 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt',
-    },
-    'DOJSP3.QuickSearch': {
-        'type': 'JScript Panel 3',
-        'source': 'DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt',
-    },
-    'DOJSP3.Spectrum': {
-        'type': 'Enhanced Spectrum Analyser',
-        'source': 'native component',
-    },
-    'DOJSP3.Waveform': {
-        'type': 'Waveform Minibar (mod)',
-        'source': 'native component',
-    },
-}
-
 EXPECTED_INFO_STACK_TAB_AREA = {
     'automatic_label': 'Automatic height (follows tab font sizing)',
     'fixed_override_label': 'Set fixed tab area height...',
     'automatic_value': 0,
 }
 
+EXPECTED_SPLITTERS = (
+    ('DOJSP3.Root', '01_root.js'),
+    ('DOJSP3.Main', '02_main_columns.js'),
+    ('DOJSP3.InfoStack', '03_info_stack_tabs.js'),
+    ('DOJSP3.ArtSpectrum', '04_art_spectrum.js'),
+    ('DOJSP3.Controls', '05_bottom_controls.js'),
+    ('DOJSP3.DisplayStack', '06_display_waveform.js'),
+)
+
+# Complete durable inventory; source headers remain the version authority.
+EXPECTED_PANELS = (
+    ('DOJSP3.PlaylistManager', 'samples/Smooth Playlist Manager.txt'),
+    ('DOJSP3.LastfmBio', 'samples/Last.fm Bio.txt'),
+    ('DOJSP3.LastfmInfo', 'samples/Last.fm Artist Info + User Info.txt'),
+    ('DOJSP3.AlbumNotes', 'samples/Album Notes.txt'),
+    ('DOJSP3.Queue', 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt'),
+    ('DOJSP3.Properties', 'samples/Properties.txt'),
+    ('DOJSP3.AlbumArt', 'samples/Album Art.txt'),
+    ('DOJSP3.Spectrum', 'native component'),
+    ('DOJSP3.Playlist', 'samples/JS Playlist.txt'),
+    ('DOJSP3.ControlsLeft', 'DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Left.txt'),
+    ('DOJSP3.QuickSearch', 'DarkOneJSP3/jscript/DarkOneJSP3 - Quick Search.txt'),
+    ('DOJSP3.Display', 'DarkOneJSP3/jscript/DarkOneJSP3 - Display Panel.txt'),
+    ('DOJSP3.Waveform', 'native component'),
+    ('DOJSP3.ControlsRight', 'DarkOneJSP3/jscript/DarkOneJSP3 - Control Panel - Right.txt'),
+)
+
+
+def _check_exact_entries(ctx, entries, expected, splitters=False):
+    for index, item in enumerate(entries):
+        if not isinstance(item, dict) or index >= len(expected):
+            ctx.errors.append('Layout manifest contains an invalid entry')
+            continue
+        title, source = expected[index]
+        if splitters:
+            contract = {'number': index + 1, 'title': title, 'script': source}
+            if item != contract:
+                ctx.errors.append('Layout manifest JSplitter contract differs: ' + title)
+            continue
+        kind = {'DOJSP3.Spectrum': 'Enhanced Spectrum Analyser',
+                'DOJSP3.Waveform': 'Waveform Minibar (mod)'}.get(title, 'JScript Panel 3')
+        contract = {'number': index + 1, 'title': title, 'source': source, 'type': kind}
+        if title == 'DOJSP3.Queue':
+            contract['script'] = source
+        if source != 'native component':
+            target = ctx.samples / source[8:] if source.startswith('samples/') else ctx.root / source
+            if target.is_file():
+                match = re.search(r'^//\s*@version\s+"([^"]+)"', ctx.text(target), re.M)
+                if match:
+                    contract['version'] = match.group(1)
+                else:
+                    ctx.errors.append('Panel source lacks @version: ' + title)
+            else:
+                ctx.errors.append('Layout manifest panel source is missing: ' + source)
+        if item != contract:
+            ctx.errors.append('Layout manifest panel contract differs: ' + title)
+
 
 def _check_inventory(ctx: ValidationContext, manifest: dict[str, Any]) -> None:
-    errors = ctx.errors
-    project = ctx.project
-    samples = ctx.samples
-    root = ctx.root
-    rel = ctx.rel
-
-    jsplitters = manifest.get('jsplitters', [])
-    if not isinstance(jsplitters, list) or len(jsplitters) != 6:
-        errors.append('Layout manifest must declare exactly six JSplitters')
-        jsplitters = []
-    numbers: list[int] = []
-    titles: list[str] = []
-    scripts: list[str] = []
-    for item in jsplitters:
-        if not isinstance(item, dict):
-            errors.append('Layout manifest contains an invalid JSplitter entry')
+    for key, expected, splitters in (
+            ('jsplitters', EXPECTED_SPLITTERS, True),
+            ('panels', EXPECTED_PANELS, False)):
+        entries = manifest.get(key)
+        if not isinstance(entries, list) or len(entries) != len(expected):
+            ctx.errors.append(f'Layout manifest must declare exactly {len(expected)} {key}')
             continue
-        number = item.get('number')
-        title = str(item.get('title', '')).strip()
-        script = str(item.get('script', '')).strip()
-        if isinstance(number, int) and not isinstance(number, bool):
-            numbers.append(number)
-        else:
-            errors.append('Layout manifest JSplitter number is invalid')
-        titles.append(title)
-        scripts.append(script)
-        if not title or not script:
-            errors.append('Layout manifest JSplitter entry is incomplete')
-        elif not (project / 'jsplitter' / script).is_file():
-            errors.append(
-                'Layout manifest JSplitter source is missing: ' +
-                rel(project / 'jsplitter' / script))
-    if sorted(numbers) != list(range(1, 7)):
-        errors.append('Layout manifest JSplitter numbers must be unique 1-6')
-    if len(set(titles)) != len(titles):
-        errors.append('Layout manifest contains duplicate JSplitter titles')
-    if len(set(scripts)) != len(scripts):
-        errors.append('Layout manifest contains duplicate JSplitter scripts')
-
-    panels = manifest.get('panels', [])
-    if not isinstance(panels, list) or len(panels) != 14:
-        errors.append('Layout manifest must declare exactly fourteen panels')
-        panels = []
-    numbers = []
-    titles = []
-    panels_by_title: dict[str, dict[str, Any]] = {}
-    for item in panels:
-        if not isinstance(item, dict):
-            errors.append('Layout manifest contains an invalid panel entry')
-            continue
-        number = item.get('number')
-        title = str(item.get('title', '')).strip()
-        source = str(item.get('source', '')).strip()
-        if isinstance(number, int) and not isinstance(number, bool):
-            numbers.append(number)
-        else:
-            errors.append('Layout manifest panel number is invalid')
-        titles.append(title)
-        if title:
-            panels_by_title[title] = item
-        if not title or not source:
-            errors.append('Layout manifest panel entry is incomplete')
-            continue
-        if source == 'native component':
-            continue
-        if source.startswith('samples/'):
-            target = samples / source[len('samples/'):]
-        elif source.startswith('DarkOneJSP3/'):
-            target = root / source
-        else:
-            errors.append('Layout manifest panel source is unsupported: ' + source)
-            continue
-        if not target.is_file():
-            errors.append('Layout manifest panel source is missing: ' + rel(target))
-            continue
-        declared_version = item.get('version')
-        if declared_version is not None:
-            match = re.search(
-                r'^//\s*@version\s+"([^"]+)"',
-                ctx.text(target),
-                re.MULTILINE,
-            )
-            if not isinstance(declared_version, str) or not declared_version:
-                errors.append('Layout manifest panel version is invalid: ' + title)
-            elif not match:
-                errors.append('Layout manifest panel source lacks @version: ' + title)
-            elif declared_version != match.group(1):
-                errors.append('Layout manifest panel version differs from source: ' + title)
-    if sorted(numbers) != list(range(1, 15)):
-        errors.append('Layout manifest panel numbers must be unique 1-14')
-    if len(set(titles)) != len(titles):
-        errors.append('Layout manifest contains duplicate panel titles')
-
-    for title, expected in EXPECTED_PANEL_CONTRACTS.items():
-        panel = panels_by_title.get(title)
-        if panel is None:
-            errors.append('Layout manifest panel inventory is missing ' + title)
-            continue
-        for key, value in expected.items():
-            if panel.get(key) != value:
-                errors.append(
-                    f'Layout manifest {title} {key} is incorrect')
+        _check_exact_entries(ctx, entries, expected, splitters)
 
 
 def run(ctx: ValidationContext, manifest: dict[str, Any],
         build: dict[str, Any], version: str) -> None:
     errors = ctx.errors
+
+    if not isinstance(manifest, dict) or not isinstance(build, dict):
+        errors.append('Layout manifest and build metadata must be JSON objects')
+        return
 
     if set(manifest) != EXPECTED_TOP_LEVEL_KEYS:
         errors.append('Layout manifest top-level schema is incorrect')
@@ -176,7 +123,7 @@ def run(ctx: ValidationContext, manifest: dict[str, Any],
         errors.append('Layout manifest version does not match build-info.json')
     if manifest.get('target') != build.get('targets'):
         errors.append('Layout manifest targets do not match build-info.json')
-    if manifest.get('credits') != 'DarkOneJSP3/docs/CREDITS.txt':
+    if manifest.get('credits') != 'DarkOneJSP3/docs/CREDITS.md':
         errors.append('Layout manifest credits path is incorrect')
     if manifest.get('public_attribution') != 'DeViLhoOD':
         errors.append('Layout manifest public attribution is incorrect')

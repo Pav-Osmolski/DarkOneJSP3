@@ -2,21 +2,28 @@
 from __future__ import annotations
 
 from pathlib import Path
+import argparse
 import sys
 
 sys.dont_write_bytecode = True
 
 from validation import ValidationContext
 from validation import runtime_checks, static_checks
+from validation.markdown_checks import run_wiki
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    root = Path(args[0] if args else '.').resolve()
+    parser = argparse.ArgumentParser(description='Validate a complete DarkOneJSP3 release tree')
+    parser.add_argument('root', nargs='?', default='.')
+    parser.add_argument('--wiki', type=Path, help='Also validate the standalone Wiki tree')
+    args = parser.parse_args(argv)
+    root = Path(args.root).resolve()
     ctx = ValidationContext(root)
 
     static_checks.run(ctx)
     runtime_checks.run(ctx)
+    if args.wiki:
+        run_wiki(args.wiki.resolve(), ctx.errors, ctx)
 
     if ctx.errors:
         print(f'DarkOneJSP3 v{ctx.version or "unknown"} validation FAILED')
