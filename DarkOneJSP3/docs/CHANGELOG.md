@@ -2,6 +2,12 @@
 
 ## v1.2.0 - Theme Manager
 
+- Fixed disappearing JS Playlist settings tabs after live Theme Apply. Tab
+  buttons now rebuild with their replacement image, retaining the selected
+  page, page scroll and unfinished text edits. Added executed regression
+  coverage for repeated Apply, tab selection and resize. JS Playlist is
+  **0.6.9**; release validator is **0.11.22**.
+
 - Playback-time Apply improvement: JS Playlist and Playlist Manager now refresh
   theme-owned appearance in place. JS Playlist avoids list/layout rebuilds and
   retains unchanged wallpaper; Playlist Manager recalculates geometry only

@@ -30,6 +30,43 @@ suite("optional theme callback guards", function () {
     ctx.jsp3EnhancedRefreshTheme(["js-playlist"]);
     if (wallpaper !== 1) throw new Error("Unchanged wallpaper was regenerated");
 
+    // Exercise the real settings button lifecycle: a stubbed setButtons hid
+    // the regression where live recolouring erased every settings tab.
+    const settingsSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/jsplaylist/settings.js"), "utf8");
+    const graphics = {DrawRectangle() {}, WriteTextSimple() {}, FillRectangle() {}};
+    const imageFactory = () => ({GetGraphics() { return graphics; }, ReleaseGraphics() {}});
+    Object.assign(ctx, {
+        utils: {CreateImage: imageFactory},
+        DarkOnePerformance: {disposeUnique() {}, dispose(img) { if (img) img.disposed = true; }},
+        setAlpha(c) { return c; }, scale(n) { return n; }, g_colour_text: 123,
+        g_font_12_bold: "font", cSettings: {tabPaddingWidth: 20, topBarHeight: 40},
+        cHeaderBar: {borderWidth: 1}, createSettingsBackArrow: imageFactory,
+        ButtonStates: {normal: 0, hover: 1}, full_repaint() {},
+        button: function (a, b, c) { this.img = [a, b, c]; this.checkstate = () => this.state || 0; },
+        oPage: function (id, name, label) { this.label = label; this.elements = []; this.setSize = function () {}; }
+    });
+    vm.runInContext('String.prototype.calc_width2 = function () { return 80; };\n' + extract(settingsSource, "oSettings"), ctx);
+    ctx.p.settings = new ctx.oSettings();
+    ctx.p.settings.setSize(0, 0, 800, 600);
+    const pages = ctx.p.settings.pages;
+    pages[2].offset = 7;
+    pages[2].elements.push({objType: "TB", inputbox: {text: "unsaved edit"}});
+    ctx.p.settings.currentPageId = 2;
+    for (let pass = 0; pass < 3; pass++) {
+        const previousImage = ctx.p.settings.tab_img;
+        ctx.jsp3EnhancedRefreshTheme(["js-playlist"]);
+        if (ctx.p.settings.tabButtons.length !== 4 || !previousImage.disposed ||
+                ctx.p.settings.tabButtons.some(b => b.img.some(img => img !== ctx.p.settings.tab_img || img.disposed)) ||
+                ctx.p.settings.pages !== pages || ctx.p.settings.currentPageId !== 2 ||
+                pages[2].offset !== 7 || pages[2].elements[0].inputbox.text !== "unsaved edit")
+            throw new Error("Live theme refresh lost settings tabs, image ownership or page/edit state");
+    }
+    ctx.p.settings.tabButtons[1].state = ctx.ButtonStates.hover;
+    ctx.p.settings.on_mouse("lbtn_up", 0, 0);
+    if (ctx.p.settings.currentPageId !== 1) throw new Error("Recoloured settings tabs cannot be selected");
+    ctx.p.settings.setSize(0, 0, 900, 700);
+    if (ctx.p.settings.tabButtons.length !== 4) throw new Error("Resize duplicated settings tabs");
+
     const managerSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/smooth/jsspm.js"), "utf8");
     let metrics = 0;
     const manager = {ppt: {showFilterBox: true, filterBoxWidth: 300, defaultRowHeight: 32},

@@ -1479,6 +1479,11 @@ function oSettings() {
 		this.tab_height = this.txtHeight + scale(10) + cHeaderBar.borderWidth;
 		this.tab_img = utils.CreateImage(this.tab_width, this.tab_height);
 		this.tabButtons = [];
+		// Colour refreshes do not resize the panel. Rebind every tab to the
+		// replacement image here, without resetting pages or their edit state.
+		for (var i = 0; i < this.pages.length; i++) {
+			this.tabButtons.push(new button(this.tab_img, this.tab_img, this.tab_img));
+		}
 	}
 
 	this.setSize = function (x, y, w, h) {
@@ -1487,7 +1492,6 @@ function oSettings() {
 		this.w = w;
 		this.h = h;
 		this.txtHeight = scale(12);
-		this.setButtons();
 
 		if (this.pages.length == 0) {
 			this.pages.push(new oPage(0, "p.settings.pages[0]", "General", 7));
@@ -1495,10 +1499,10 @@ function oSettings() {
 			this.pages.push(new oPage(2, "p.settings.pages[2]", "Groups", 23));
 			this.pages.push(new oPage(3, "p.settings.pages[3]", "Appearance", 11));
 		}
+		this.setButtons();
 
 		for (var i = 0; i < this.pages.length; i++) {
 			this.pages[i].setSize();
-			this.tabButtons.push(new button(this.tab_img, this.tab_img, this.tab_img));
 		}
 	}
 

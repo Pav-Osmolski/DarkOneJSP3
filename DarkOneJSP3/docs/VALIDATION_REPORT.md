@@ -677,6 +677,11 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.0 release package (release validator 0.11.21) passes with **230 audited
+The v1.2.0 release package (release validator 0.11.22) passes with **230 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
 count and remains byte-for-byte unchanged.
+
+JS Playlist settings-tab regression: executed the real settings constructor and
+live theme callback with mocked host graphics. Verified four tabs on initial
+size, three repeated refreshes, replacement image ownership, retained selected
+page/scroll/edit text, tab selection and no duplicated tabs after resize.
