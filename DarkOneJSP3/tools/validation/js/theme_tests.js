@@ -2,6 +2,49 @@
 
 suite("optional theme callback guards", function () {
     const fs = require("fs");
+    const vm = require("vm");
+    const playlistMain = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/jsplaylist/main.js"), "utf8");
+    function extract(source, name) {
+        const match = source.match(new RegExp("function " + name + "\\([^]*?\\n}"));
+        if (!match) throw new Error("Missing " + name);
+        return match[0];
+    }
+    let paints = 0, colours = 0, wallpaper = 0, buttons = 0;
+    const settings = {"JSPLAYLIST.Enable Custom Colours": true};
+    const ctx = {
+        properties: {enableDynamicColours: false, enableCustomColours: false, showwallpaper: false, wallpaperblurred: false, wallpaperpath: ""},
+        window: {GetProperty(k, d) { return k in settings ? settings[k] : d; }, Repaint() { paints++; }},
+        get_colours() { colours++; }, update_wallpaper() { wallpaper++; },
+        p: {}, cList: {free_scroll_offset: 7}, selectedTracks: [1, 7, 15]
+    };
+    ["topBar", "headerBar", "scrollbar", "playlistManager", "settings"].forEach(key =>
+        ctx.p[key] = {setButtons() { buttons++; }, setCursorButton() { buttons++; }});
+    vm.createContext(ctx);
+    vm.runInContext(extract(playlistMain, "refresh_playlist_theme_colours") + "\n" + extract(playlistMain, "jsp3EnhancedRefreshTheme"), ctx);
+    if (!ctx.jsp3EnhancedRefreshTheme(["js-playlist"]) || paints !== 1 || colours !== 1 || buttons !== 6 || wallpaper !== 0 ||
+            !ctx.properties.enableCustomColours || ctx.cList.free_scroll_offset !== 7 || ctx.selectedTracks.length !== 3)
+        throw new Error("Playlist live theme refresh rebuilt wallpaper or lost scroll/selection state");
+    settings["JSPLAYLIST.Show Wallpaper"] = true;
+    ctx.jsp3EnhancedRefreshTheme(["js-playlist"]);
+    if (wallpaper !== 1 || !ctx.properties.showwallpaper) throw new Error("Changed wallpaper was not refreshed");
+    ctx.jsp3EnhancedRefreshTheme(["js-playlist"]);
+    if (wallpaper !== 1) throw new Error("Unchanged wallpaper was regenerated");
+
+    const managerSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/smooth/jsspm.js"), "utf8");
+    let metrics = 0;
+    const manager = {ppt: {showFilterBox: true, filterBoxWidth: 300, defaultRowHeight: 32},
+        window: {GetProperty(k, d) { return k === "SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT" ? 32 : d; }},
+        clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }, get_colours() {},
+        brw: {rows: [1, 2], scrollbar: {setNewColours() {}}, repaint() {}},
+        get_metrics() { metrics++; }, g_filterbox: {cancel_edit() { throw new Error("Unexpected filter reset"); }}};
+    vm.createContext(manager);
+    vm.runInContext(extract(managerSource, "jsp3EnhancedRefreshTheme"), manager);
+    if (!manager.jsp3EnhancedRefreshTheme(["playlist-manager"]) || metrics !== 0 || manager.brw.rows.length !== 2)
+        throw new Error("Manager colour refresh rebuilt geometry or playlist rows");
+    manager.ppt.defaultRowHeight = 26;
+    manager.jsp3EnhancedRefreshTheme(["playlist-manager"]);
+    if (metrics !== 1) throw new Error("Manager theme row spacing was not refreshed");
+
     const entries = [
         "DarkOneJSP3/jscript/js/Panel_Control_Left.js",
         "DarkOneJSP3/jscript/js/Panel_Control_Right.js",

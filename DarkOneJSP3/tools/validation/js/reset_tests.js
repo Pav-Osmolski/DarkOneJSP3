@@ -373,6 +373,27 @@ suite("legacy saved-entry reset", function () {
         assert(properties[property] === expected, 'Legacy adapter did not reset role ' + role);
         assert(reloads === 1, 'Legacy adapter did not reload exactly once for role ' + role);
     }
+    const theme = JSON.parse(fs.readFileSync(__path('DarkOneJSP3/themes/Default.json'), 'utf8'));
+    theme.appearance.playlist.colourType = 'Custom';
+    properties['JSPLAYLIST.Enable Custom Colours'] = false;
+    reloads = 0;
+    let refreshCalls = 0;
+    global.jsp3EnhancedRefreshTheme = function (receivedRoles) {
+        assert(receivedRoles.length === 1 && receivedRoles[0] === 'js-playlist', 'Wrong live refresh role');
+        refreshCalls++; return true;
+    };
+    jsp3EnhancedHandleSampleReset('DarkOneJSP3.Theme.Apply', JSON.stringify(theme), 'js-playlist');
+    assert(refreshCalls === 1 && reloads === 0, 'Successful live refresh reloaded the sample');
+    for (const behaviour of ['decline', 'throw']) {
+        properties['JSPLAYLIST.Enable Custom Colours'] = false;
+        global.jsp3EnhancedRefreshTheme = function () {
+            if (behaviour === 'throw') throw new Error('injected refresh failure');
+            return false;
+        };
+        jsp3EnhancedHandleSampleReset('DarkOneJSP3.Theme.Apply', JSON.stringify(theme), 'js-playlist');
+    }
+    assert(reloads === 2, 'Failed or unsupported live refresh lost reload recovery');
+    delete global.jsp3EnhancedRefreshTheme;
 });
 
 suite("project JScript reset receiver", function () {

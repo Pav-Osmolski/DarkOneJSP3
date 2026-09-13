@@ -43,7 +43,7 @@
       "title": "DOJSP3.PlaylistManager",
       "type": "JScript Panel 3",
       "source": "samples/Smooth Playlist Manager.txt",
-      "version": "0.5.9"
+      "version": "0.5.10"
     },
     {
       "number": 2,
@@ -108,7 +108,7 @@
       "title": "DOJSP3.Playlist",
       "type": "JScript Panel 3",
       "source": "samples/JS Playlist.txt",
-      "version": "0.6.7"
+      "version": "0.6.8"
     },
     {
       "number": 11,

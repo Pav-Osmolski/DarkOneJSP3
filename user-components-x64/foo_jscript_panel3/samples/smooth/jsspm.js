@@ -1157,6 +1157,26 @@ function get_metrics() {
 	brw.setSize();
 }
 
+function jsp3EnhancedRefreshTheme(roles) {
+	if (roles.length !== 1 || roles[0] !== "playlist-manager") return false;
+	ppt.enableDynamicColours = window.GetProperty("SMOOTH.DYNAMIC.COLOURS.ENABLED", false);
+	ppt.enableCustomColours = window.GetProperty("SMOOTH.CUSTOM.COLOURS.ENABLED", false);
+	var show = window.GetProperty("SMOOTH.PLAYLIST.MANAGER.SHOW.FILTER", true);
+	var width = clamp(Math.round(Number(window.GetProperty("SMOOTH.PLAYLIST.MANAGER.FILTER.WIDTH", 300))) || 300, 120, 600);
+	var height = clamp(Math.round(Number(window.GetProperty("SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT", 26))) || 26, 20, 64);
+	var geometryChanged = show !== ppt.showFilterBox || width !== ppt.filterBoxWidth || height !== ppt.defaultRowHeight;
+	ppt.showFilterBox = show;
+	ppt.filterBoxWidth = width;
+	ppt.defaultRowHeight = height;
+	ppt.alternatingRowShading = window.GetProperty("SMOOTH.PLAYLIST.MANAGER.ALTERNATING.ROWS", true);
+	if (!show) g_filterbox.cancel_edit();
+	get_colours();
+	brw.scrollbar.setNewColours();
+	if (geometryChanged) get_metrics();
+	brw.repaint();
+	return true;
+}
+
 function check_scroll(scroll___) {
 	if (scroll___ < 0)
 		scroll___ = 0;

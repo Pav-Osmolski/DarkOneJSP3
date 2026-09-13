@@ -7,6 +7,8 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 // spectrum column, and right playlist column.
 //
 // Version history (newest first):
+// v0.7.42 refreshes theme colours/layout without reloading native children.
+//
 // v0.7.41 publishes the real main-area width so an expanded InfoStack retains
 // the standard tab-strip font and height calculations.
 //
@@ -379,8 +381,15 @@ function on_paint(gr) {
     }
 }
 
+function refreshMainColumnsTheme(change) {
+    if (darkOneJsp3ThemeHasChanges(change, [MAIN_LAYOUT_MODE_PROPERTY]))
+        layoutMainColumns(mainLayoutMode(), true);
+    window.Repaint();
+    return true;
+}
+
 function on_notify_data(name, data) {
-    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data, DARKONEJSP3_RESET_ROLE, refreshMainColumnsTheme)) return;
     if (name === ART_SPECTRUM_MODE_STATE_NOTIFICATION) {
         var visible = String(data) !== 'art-only';
         var changed = !artSpectrumModeKnown || visible !== artSpectrumVisualiserVisible;

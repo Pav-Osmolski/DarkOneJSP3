@@ -774,8 +774,8 @@ def _check_playlist_and_resources(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.7"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.7')
+        if '// @version "0.6.8"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.8')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1085,8 +1085,8 @@ def _check_playlist_and_resources(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.9"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.9')
+        if '// @version "0.5.10"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.10')
         if 'samples\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
         if 'samples\\shared\\ui_cadence.js' not in body:

@@ -40,6 +40,13 @@ function jsp3EnhancedHasResetRole(role) {
         Object.prototype.hasOwnProperty.call(JSP3_ENHANCED_RESET_REGISTRY, role);
 }
 
+function jsp3EnhancedThemeTiming(roles, phase) {
+    try {
+        if (window.GetProperty("DARKONEJSP3.THEME.DEBUG.TIMING", false))
+            console.log("[Theme timing] " + new Date().getTime() + " " + roles.join(",") + " " + phase);
+    } catch (e) {}
+}
+
 function jsp3EnhancedHandleSampleReset(name, info, roles) {
     if (typeof DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION !== "undefined" &&
             name === DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION) {
@@ -72,6 +79,7 @@ function jsp3EnhancedHandleSampleReset(name, info, roles) {
             ? roles
             : [roles];
         var changed = false;
+        jsp3EnhancedThemeTiming(themeRoles, "apply-received");
         for (var themeIndex = 0; themeIndex < themeRoles.length; themeIndex++) {
             if (typeof themeRoles[themeIndex] === "string" && themeRoles[themeIndex]) {
                 try {
@@ -83,6 +91,19 @@ function jsp3EnhancedHandleSampleReset(name, info, roles) {
             }
         }
         if (changed) {
+            jsp3EnhancedThemeTiming(themeRoles, "properties-applied");
+            if (typeof jsp3EnhancedRefreshTheme === "function") {
+                try {
+                    if (jsp3EnhancedRefreshTheme(themeRoles) === true) {
+                        jsp3EnhancedThemeTiming(themeRoles, "live-refreshed");
+                        return true;
+                    }
+                }
+                catch (refreshError) {
+                    try { console.log("[DarkOneJSP3] Live theme refresh failed: " + refreshError.message); } catch (logError) {}
+                }
+            }
+            jsp3EnhancedThemeTiming(themeRoles, "reload-requested");
             try { window.Reload(); } catch (themeReloadError) { window.Repaint(); }
         } else window.Repaint();
         return true;

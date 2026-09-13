@@ -646,6 +646,13 @@ presentation. Native validation of this build remains outstanding.
 
 ## Result
 
+Playback-time refresh tests require JS Playlist colour changes to preserve
+scroll/selection state and avoid wallpaper reload or layout reconstruction.
+Wallpaper changes refresh their image once. Playlist Manager colour changes
+skip geometry while changed row spacing recalculates it. The legacy adapter
+tests exercise successful live refresh and reload recovery after an exception
+or declined callback. These tests validate work avoided, not native stall time.
+
 Final release hardening tests edit the draft during Apply and require the
 staged request to retain its original settings. They also check that Capture
 does not overlap Apply, capture timer failure leaves no active request or
@@ -670,6 +677,6 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.0 release package (release validator 0.11.20) passes with **230 audited
+The v1.2.0 release package (release validator 0.11.21) passes with **230 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
 count and remains byte-for-byte unchanged.

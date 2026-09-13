@@ -388,8 +388,10 @@ function jsp3EnhancedApplyTheme(info, role) {
     for (var name in values) {
         if (!Object.prototype.hasOwnProperty.call(values, name)) continue;
         try {
-            if (window.GetProperty(name, values[name]) !== values[name]) changed = true;
-            window.SetProperty(name, values[name]);
+            if (window.GetProperty(name, null) !== values[name]) {
+                window.SetProperty(name, values[name]);
+                changed = true;
+            }
         } catch (e) {}
     }
     return changed;

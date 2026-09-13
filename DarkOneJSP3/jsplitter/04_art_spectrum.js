@@ -92,8 +92,15 @@ function on_paint(gr) {
     gr.FillSolidRect(0, 0, ww, wh, 0xff000000);
 }
 
+function refreshArtSpectrumTheme() {
+    layoutArtSpectrum();
+    broadcastArtSpectrumMode();
+    window.Repaint();
+    return true;
+}
+
 function on_notify_data(name, data) {
-    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data, DARKONEJSP3_RESET_ROLE, refreshArtSpectrumTheme)) return;
     if (name === ART_SPECTRUM_PREPARE_NOTIFICATION) {
         var parts = String(data || '').split('|');
         var targetWidth = Math.round(Number(parts[0]));

@@ -11,6 +11,12 @@ function on_char(code) {
 }
 
 function on_colours_changed() {
+	refresh_playlist_theme_colours();
+	resize_panels();
+	window.Repaint();
+}
+
+function refresh_playlist_theme_colours() {
 	get_colours();
 	p.topBar.setButtons();
 	p.headerBar.setButtons();
@@ -18,8 +24,23 @@ function on_colours_changed() {
 	p.scrollbar.setCursorButton();
 	p.playlistManager.setButtons();
 	p.settings.setButtons();
-	resize_panels();
+}
+
+function jsp3EnhancedRefreshTheme(roles) {
+	if (roles.length !== 1 || roles[0] !== "js-playlist") return false;
+	properties.enableDynamicColours = window.GetProperty("JSPLAYLIST.Enable Dynamic Colours", false);
+	properties.enableCustomColours = window.GetProperty("JSPLAYLIST.Enable Custom Colours", false);
+	var show = window.GetProperty("JSPLAYLIST.Show Wallpaper", false);
+	var blur = window.GetProperty("JSPLAYLIST.Wallpaper Blurred", false);
+	var path = window.GetProperty("JSPLAYLIST.Default Wallpaper Path", "");
+	var wallpaperChanged = show !== properties.showwallpaper || blur !== properties.wallpaperblurred || path !== properties.wallpaperpath;
+	properties.showwallpaper = show;
+	properties.wallpaperblurred = blur;
+	properties.wallpaperpath = path;
+	refresh_playlist_theme_colours();
+	if (wallpaperChanged) update_wallpaper();
 	window.Repaint();
+	return true;
 }
 
 function on_drag_drop(action, x, y, mask) {

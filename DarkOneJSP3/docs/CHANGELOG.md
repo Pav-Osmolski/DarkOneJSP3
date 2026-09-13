@@ -2,6 +2,16 @@
 
 ## v1.2.0 - Theme Manager
 
+- Playback-time Apply improvement: JS Playlist and Playlist Manager now refresh
+  theme-owned appearance in place. JS Playlist avoids list/layout rebuilds and
+  retains unchanged wallpaper; Playlist Manager recalculates geometry only
+  when needed. Main Columns and Art/Spectrum also refresh without reloading.
+- Added opt-in sample Apply timing, skipped unchanged theme property writes,
+  and preserved reload recovery for missing, declined or failed live handlers.
+  JS Playlist is **0.6.8**, Playlist Manager **0.5.10**, sample adapters **0.2.5**,
+  Main Columns **0.7.42**, and validator **0.11.21**. Native retesting is required
+  to measure improvement over the recorded 0.65–0.68-second animation pauses.
+
 - Final release hardening: Apply snapshots the draft before publishing its
   command, preventing later edits from changing staged settings mid-request.
   Capture waits for pending Apply completion and cleans up on timer failure.
