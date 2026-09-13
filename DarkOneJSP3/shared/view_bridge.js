@@ -1,6 +1,9 @@
 "use strict";
 
 // Version history (newest first):
+// v0.2.1 extends selected InfoStack page actions through Theme (106) and moves
+// the divider custom-colour editor to the non-conflicting action 906.
+//
 // v0.2.0 adds dedicated root-owned Startup state and selected-action transport
 // for the locally owned TOOLS popup.
 //
@@ -22,15 +25,15 @@ var DarkOneViewBridge = (function () {
     function normaliseInfoStackActionId(value) {
         value = Math.round(Number(value));
         if (!isFinite(value)) return null;
-        if ((value >= 100 && value <= 105) || value === 250 ||
+        if ((value >= 100 && value <= 106) || value === 250 ||
                 (value >= 200 && value <= 203) ||
-                (value >= 300 && value <= 305) ||
-                (value >= 400 && value <= 405) ||
+                (value >= 300 && value <= 306) ||
+                (value >= 400 && value <= 406) ||
                 (value >= 450 && value <= 453) ||
                 value === 600 || value === 601 ||
                 (value >= 700 && value <= 706) ||
                 (value >= 800 && value <= 803) ||
-                value === 106 || (value >= 900 && value <= 905)) return value;
+                (value >= 900 && value <= 906)) return value;
         return null;
     }
 

@@ -740,6 +740,62 @@ function DarkOneQuickSearch() {
         if (typeof this.layoutCommand === 'function') this.layoutCommand();
     };
 
+    this.refreshTheme = function (change) {
+        var previousLines = this.properties.lines;
+        var previousWidth = this.properties.widthPercent;
+        var previousFontSize = this.properties.fontSize;
+        var previousAutoScale = this.properties.autoFontScale;
+
+        this.properties.normalTextMode = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.MODE', QS_COLOUR_DEFAULT),
+            QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM));
+        this.properties.normalTextCustom = DarkOneColour.opaque(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM', 0xffdcdcdc));
+        this.properties.normalBackgroundMode = quickSearchNormaliseBackgroundMode(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE', QS_BACKGROUND_MODES.columnsUi),
+            QS_BACKGROUND_MODES.columnsUi, false);
+        this.properties.normalBackgroundCustom = DarkOneColour.opaque(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM', 0xff1e1e1e));
+        this.properties.borderMode = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE', QS_COLOUR_DEFAULT),
+            QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM));
+        this.properties.borderCustom = DarkOneColour.opaque(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM', 0xff696969));
+        this.properties.errorTextMode = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.MODE', QS_COLOUR_DEFAULT),
+            QS_COLOUR_DEFAULT, QS_COLOUR_CUSTOM));
+        this.properties.errorTextCustom = DarkOneColour.opaque(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.TEXT.CUSTOM', 0xffffe1e1));
+        this.properties.errorBackgroundMode = quickSearchNormaliseBackgroundMode(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.MODE', QS_ERROR_BACKGROUND_DEFAULT),
+            QS_ERROR_BACKGROUND_DEFAULT, true);
+        this.properties.errorBackgroundCustom = DarkOneColour.opaque(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.COLOUR.ERROR.BACKGROUND.CUSTOM', 0xff581f1f));
+        this.properties.lines = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES', 2), 0, 2));
+        this.properties.widthPercent = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT', 44), 20, 100));
+        this.properties.fontSize = quickSearchNormaliseFontSize(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.FONT.SIZE', 0));
+        this.properties.autoFontScale = Math.round(quickSearchClamp(window.GetProperty(
+            'DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE', 100), 50, 200));
+
+        this.parentBackgroundState = change && change.bottomState ?
+            QS_BACKGROUND_PROTOCOL.parseState(change.bottomState) : quickSearchReadBottomAreaState();
+        this.inheritedBackgroundBrushKey = '';
+        this.inheritedBackgroundBrush = '';
+        this.coloursChanged();
+        if (previousLines !== this.properties.lines ||
+                previousWidth !== this.properties.widthPercent ||
+                previousFontSize !== this.properties.fontSize ||
+                previousAutoScale !== this.properties.autoFontScale) {
+            this.size(this.w, this.h, false);
+            this.layoutCommand();
+        }
+        window.Repaint();
+        return true;
+    };
+
     this.fontSizeFrom = function (font) {
         try {
             var parsed = JSON.parse(String(font || ''));
@@ -989,7 +1045,7 @@ function DarkOneQuickSearch() {
         this.layoutCommand();
     };
 
-    this.size = function (w, h) {
+    this.size = function (w, h, repaint) {
         this.w = Math.max(1, Number(w) || 1);
         this.h = Math.max(1, Number(h) || 1);
 
@@ -1040,7 +1096,7 @@ function DarkOneQuickSearch() {
         this.input.w = this.inputW;
         this.input.h = this.inputH;
         this.applyInputColours();
-        window.Repaint();
+        if (repaint !== false) window.Repaint();
     };
 
     this.coloursChanged();

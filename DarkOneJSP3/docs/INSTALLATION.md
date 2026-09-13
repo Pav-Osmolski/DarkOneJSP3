@@ -132,6 +132,25 @@ DarkOneJSP3\jsplitter\loaders\JSplitter 06 - Display and Waveform.txt
 Each loader enables the intended draw mode and imports its maintained external
 controller script.
 
+### Add Theme Manager for the v1.2.0 WIP
+
+The bundled maintainer-exported FCL predates Theme Manager and is intentionally
+unchanged. Add a seventh JScript Panel 3 child to `DOJSP3.InfoStack`, give it
+the custom title `DOJSP3.ThemeManager`, and load:
+
+```text
+DarkOneJSP3\jscript\DarkOneJSP3 - Theme Manager.txt
+```
+
+See [THEME_MANAGER.md](THEME_MANAGER.md) for the complete theme-file and UI
+guide. Without this optional child, existing layouts continue to work and
+TOOLS > Theme Manager displays setup instructions. InfoStack discovers the
+optional page after it announces availability. If component-startup timing
+causes that cross-component announcement to be missed, a short-lived presence
+beacon authorises bounded discovery retries; selecting TOOLS > Theme Manager
+also performs one guarded lookup. Stock six-child startup still avoids
+optional-title probes, missing-child errors and startup delays.
+
 ### Optional FCL convenience
 
 This full package contains a maintainer-exported file at:
@@ -259,7 +278,8 @@ as the consolidated InfoStack child.
 ## 5. Post-install checklist
 
 1. Restart foobar2000.
-2. Confirm that all six InfoStack tabs can be selected.
+2. Confirm that the six original InfoStack tabs can be selected. If Theme
+   Manager was added, confirm its optional seventh tab and TOOLS command too.
 3. Confirm that Album Notes opens without a child-panel error.
 4. Confirm that DOJSP3.Queue is a JScript Panel 3 instance loading the
    DarkOneJSP3 Queue Viewer wrapper.

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.1.3
+  <strong>Current release:</strong> v1.2.0
 </p>
 
 > [!IMPORTANT]
@@ -49,6 +49,8 @@ workflow of the original theme.
 * JScript Panel 3 control, display, queue and information panels.
 * Direct2D-accelerated rendering for a smoother, more responsive interface.
 * Configurable InfoStack tabs, titles, dimensions, backgrounds and tab colours.
+* Optional modern Theme Manager page with readable JSON themes and coordinated
+  styling across DarkOneJSP3 panels.
 * Four switchable upper layouts, including Playlist-priority and wide views.
 * Default or custom display panel accent colour.
 * Album Notes panel with configurable providers, source priority,
@@ -69,7 +71,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.1.3** is the current release.
+**DarkOneJSP3 v1.2.0** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -220,6 +222,7 @@ See:
 * [Installation Guide](DarkOneJSP3/docs/INSTALLATION.md)
 * [Layout and Panel Map](DarkOneJSP3/docs/LAYOUT_AND_PANEL_MAP.md)
 * [Configuration Guide](DarkOneJSP3/docs/CONFIGURATION_GUIDE.md)
+* [Theme Manager](DarkOneJSP3/docs/THEME_MANAGER.md)
 * [Enhanced Sample Library Guide](DarkOneJSP3/docs/ENHANCED_SAMPLES.md)
 * [Troubleshooting](DarkOneJSP3/docs/TROUBLESHOOTING.md)
 * [Migration Reference](DarkOneJSP3/docs/MIGRATION_REFERENCE.md)

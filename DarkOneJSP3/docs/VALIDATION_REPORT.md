@@ -1,4 +1,4 @@
-# DarkOneJSP3 v1.1.3 Validation Report
+# DarkOneJSP3 v1.2.0 Validation Report
 
 ## Scope
 
@@ -67,7 +67,8 @@ validation and the audited-file count.
   contract. The adjacent default-on Bottom side dividers toggle is checked for
   separator placement, persistence, cross-host hiding/restoration and retained
   colour settings.
-- InfoStack navigation validation exercises the direct six-page top-level menu,
+- InfoStack navigation validation exercises the six original pages, optional
+  seventh Theme Manager page and direct top-level menu,
   Tab settings/Appearance grouping, persistent Show tab strip state,
   full-height active-page layout while hidden, appearance-reset restoration and
   the optional `DarkOneJSP3/InfoStack/Menu` command. The button-opened popup is
@@ -245,6 +246,38 @@ validation and the audited-file count.
   short-lived command and rebroadcast it to the other JSplitter controllers.
   JScript peers apply defaults locally; tests require exactly one coordinated
   bottom-area commit from the initiator.
+- Cross-host Theme capture is exercised through request-bound
+  `darkonejsp3.theme-capture-query.json` and
+  `darkonejsp3.theme-capture-response.json` runtime files. Tests require Bottom
+  Controls to consume and retire malformed or valid queries, publish its own
+  response, rebroadcast to JSplitter peers, collect the hidden Theme-tab value
+  from InfoStack and retain the first response if a role replies twice. The
+  Theme Manager must import the bundle, keep availability separate from
+  visibility and remove only runtime files belonging to its completed request.
+  InfoStack's 80% tab base scale and Quick Search's independent 125% base scale
+  plus fixed size are captured into separate descriptive paths end to end.
+- Saved-theme Apply must publish a parseable revision-matched bottom-area state
+  and commit before scheduling the wider panel notification at the commit's
+  absolute boundary. Tests verify the DarkOne mode, shared revision, delayed
+  ordering, one retry on a failed state write and removal of both pending
+  commands when both attempts fail.
+- Changed Theme Apply delivery is exercised through the shared detailed-result
+  adapter. Control Left, Display, Control Right and Quick Search must provide
+  guarded in-place refresh callbacks, suppress independent native reloads after
+  a successful refresh and retain reload as the compatibility fallback when a
+  callback declines or throws. Unchanged themes use only the lightweight
+  repaint path.
+- Quick Search's in-place refresh must reload its theme-owned colour, layout and
+  font properties into the existing instance, recompute colour/font geometry
+  and preserve unrelated search behaviour, history and favourites.
+- Bottom Controls must stage a matching cross-host theme command against the
+  commit's absolute boundary, preserve the canonical revision and avoid a host
+  reload. Executed tests cover both callback orders and require exactly one
+  repaint for a changed colour and none when the active theme is reapplied.
+- Applying an InfoStack theme after the optional Theme child resolves must
+  preserve that cached structural reference and publish `available[6]: true`;
+  the regression fails if appearance application reloads the controller or
+  serialises a false availability value.
 - Bottom-area painting covers the complete Bottom Controls host, including the
   lower Quick Search region and the narrow layout gaps beside both divider
   strips; Transparent / inherit parent resolves every bottom surface to #181818,
@@ -307,11 +340,32 @@ validation and the audited-file count.
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 36 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 41 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
   feature contracts rather than duplicating the validator's test inventory.
+- Theme validation covers the readable JSON format, format-version rejection,
+  RGB/ARGB parsing, strict per-role property allow-lists, numeric clamping,
+  command expiry/deduplication, presence-beacon discovery and cleanup, deferred
+  child resolution, remembered optional-page restoration, consistent menu
+  availability, clipped scroll-row hit targets, reverse role-property capture,
+  deterministic Custom/Dynamic/Off playlist flag translation, legacy
+  two-switch normalisation, dedicated playlist and Quick Search colour paths,
+  independent InfoStack/Quick Search font paths, earlier-WIP shared-palette and
+  shared-font-scale fallbacks,
+  signed native-picker conversion for every JS Playlist and Playlist Manager
+  custom-colour command, unsigned ARGB input and safe cancel/failure handling,
+  an end-to-end JS Playlist Rating capture with an empty optional wallpaper
+  path, strict optional-path acceptance and default-theme path clearing,
+  stale/mismatched response rejection, deterministic shared-field conflict
+  handling, changed-property reporting, successful/failed in-place refresh
+  handling, transactional Theme Manager file-operation guards, rounded
+  action-button outlines and non-overlapping
+  colour-row geometry at 50%, 75%, 100%, 150% and 200% Manager scale. The Theme
+  Manager roundness control is executed through every TOOLS-equivalent preset
+  plus a custom percentage, and the internal automatic sentinel is required to
+  render descriptively.
 - Demand-driven repaint schedulers coalesce requests, stop when idle and retain
   pending repaint work while a panel is hidden.
 - Volume-knob dragging coalesces rapid mouse input, applies the first value
@@ -560,7 +614,45 @@ These are offline static and mocked-host tests. Native Windows/foobar2000 visual
 rendering, rapid resize behaviour and live provider requests still require a
 manual smoke test before public release.
 
+## Acknowledged Theme Apply regression coverage
+
+The v1.2.0 WIP validation now executes the complete two-phase bottom-area
+handshake. It verifies that Bottom Controls accepts a Theme Manager request,
+stages the matching cross-host theme command, negotiates at least 75 ms of
+remaining lead time, publishes a request/state-matched acknowledgement and
+registers its repaint before Theme Manager releases JScript work.
+
+The Theme engine tests prove that staged properties do not repaint early, that
+the live-resource callback runs once at the acknowledged boundary, that the
+following normal Apply does not add a duplicate repaint, and that a rapid newer
+stage cancels the older timer. Unsafe IDs, malformed payloads, ordinary TOOLS
+bottom-colour commits, fresh-command races and unpaired-command recovery are
+also covered.
+
+The latest pass adds identical-stage supersession (including preservation of
+dirty property names), one-owner commit/watchdog cancellation, request-bound
+paint receipts, mismatched bottom revisions, failed acknowledgement writes,
+and withholding the wider theme broadcast until paint completion. Tests reject
+fallback polling that bypasses a failed acknowledgement. Timer and release-file
+failures retain bounded recovery rather than leaving Apply waiting indefinitely.
+
+The seven-Apply recording still showed child-panel spreads of up to 50 ms and
+exposed backing delays of approximately 217–283 ms in the previous build.
+The latest implementation removes competing local commit timers, reduces
+resource rebuilds and postpones potentially expensive wider theme delivery
+until bottom paint callbacks complete. Automated host mocks verify ordering
+and state transitions; they do not model Windows message scheduling or GPU
+presentation. Native validation of this build remains outstanding.
+
 ## Result
+
+Final release hardening tests edit the draft during Apply and require the
+staged request to retain its original settings. They also check that Capture
+does not overlap Apply, capture timer failure leaves no active request or
+draft mutation, and Reset default cannot hide an Apply failure with success.
+The final review retained viewport culling and cached fonts; Theme Manager
+does not run a continuous repaint timer. This is a code-level review, not a
+native frame-time benchmark.
 
 Run the bundled validator from the package root to reproduce these checks:
 
@@ -568,5 +660,16 @@ Run the bundled validator from the package root to reproduce these checks:
 python DarkOneJSP3\tools\validate_release.py .
 ```
 
-The hardened v1.1.3 package (release validator 0.10.52) passes with **224 audited files and zero warnings**;
-the bundled FCL is excluded from the audited-file count and remains unchanged.
+Playlist Manager's real smoothness and wheel-step menu cases are exercised
+with repeated unchanged OK, values 2 and 3, invalid input and cancellation.
+Tests require live updates without reload, no redundant property writes, and
+preservation of row spacing and alternate-row shading. Native reload-time
+preference loss remains unconfirmed; these dialogs no longer trigger reload.
+
+JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
+and cancelled numeric input, retention of automatic free-scroll distance and
+preservation of unrelated preferences without reload.
+
+The v1.2.0 release package (release validator 0.11.20) passes with **230 audited
+files and zero warnings**. The bundled FCL is excluded from the audited-file
+count and remains byte-for-byte unchanged.

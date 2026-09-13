@@ -40,6 +40,14 @@ EXPECTED_INFO_STACK_TAB_AREA = {
     'automatic_value': 0,
 }
 
+EXPECTED_THEME_MANAGER = {
+    'custom_title': 'DOJSP3.ThemeManager',
+    'script': 'DarkOneJSP3/jscript/DarkOneJSP3 - Theme Manager.txt',
+    'theme_folder': 'DarkOneJSP3/themes',
+    'default_theme': 'Default.json',
+    'optional_fcl_child': True,
+}
+
 EXPECTED_SPLITTERS = (
     ('DOJSP3.Root', '01_root.js'),
     ('DOJSP3.Main', '02_main_columns.js'),
@@ -57,6 +65,7 @@ EXPECTED_PANELS = (
     ('DOJSP3.AlbumNotes', 'samples/Album Notes.txt'),
     ('DOJSP3.Queue', 'DarkOneJSP3/jscript/DarkOneJSP3 - Queue Viewer.txt'),
     ('DOJSP3.Properties', 'samples/Properties.txt'),
+    ('DOJSP3.ThemeManager', 'DarkOneJSP3/jscript/DarkOneJSP3 - Theme Manager.txt'),
     ('DOJSP3.AlbumArt', 'samples/Album Art.txt'),
     ('DOJSP3.Spectrum', 'native component'),
     ('DOJSP3.Playlist', 'samples/JS Playlist.txt'),
@@ -82,8 +91,10 @@ def _check_exact_entries(ctx, entries, expected, splitters=False):
         kind = {'DOJSP3.Spectrum': 'Enhanced Spectrum Analyser',
                 'DOJSP3.Waveform': 'Waveform Minibar (mod)'}.get(title, 'JScript Panel 3')
         contract = {'number': index + 1, 'title': title, 'source': source, 'type': kind}
-        if title == 'DOJSP3.Queue':
+        if title in {'DOJSP3.Queue', 'DOJSP3.ThemeManager'}:
             contract['script'] = source
+        if title == 'DOJSP3.ThemeManager':
+            contract['optional'] = True
         if source != 'native component':
             target = ctx.samples / source[8:] if source.startswith('samples/') else ctx.root / source
             if target.is_file():
@@ -138,7 +149,8 @@ def run(ctx: ValidationContext, manifest: dict[str, Any],
     if manifest.get('fcl_policy') != EXPECTED_FCL_POLICY:
         errors.append('Layout manifest bundled-FCL policy is incorrect')
     if manifest.get('features') != {
-            'info_stack_tab_area_menu': EXPECTED_INFO_STACK_TAB_AREA}:
+            'info_stack_tab_area_menu': EXPECTED_INFO_STACK_TAB_AREA,
+            'theme_manager': EXPECTED_THEME_MANAGER}:
         errors.append('Layout manifest user-facing feature contract is incorrect')
 
     _check_inventory(ctx, manifest)

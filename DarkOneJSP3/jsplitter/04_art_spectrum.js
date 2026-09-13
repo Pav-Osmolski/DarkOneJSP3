@@ -93,6 +93,7 @@ function on_paint(gr) {
 }
 
 function on_notify_data(name, data) {
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
     if (name === ART_SPECTRUM_PREPARE_NOTIFICATION) {
         var parts = String(data || '').split('|');
         var targetWidth = Math.round(Number(parts[0]));

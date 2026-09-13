@@ -5,6 +5,10 @@
 suite("native colour helper", function () {
     const fs = require('fs');
     const source = fs.readFileSync(__path("DarkOneJSP3/shared/colour_utils.js"), 'utf8');
+    const playlistSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/jsplaylist/playlist.js"), 'utf8');
+    const playlistManagerSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/smooth/jsspm.js"), 'utf8');
+    const playlistEntry = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/JS Playlist.txt"), 'utf8');
+    const playlistManagerEntry = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/Smooth Playlist Manager.txt"), 'utf8');
     let pickerCalls = [];
     let inputCalls = 0;
     let logs = [];
@@ -32,6 +36,15 @@ suite("native colour helper", function () {
         'Shared helper omits signed JScript Panel picker conversion');
     assert(source.indexOf('utils.ColourPicker(0, this.nativeSigned(current))') !== -1,
         'Shared helper omits signed JSplitter picker conversion');
+    [playlistEntry, playlistManagerEntry].forEach(entry =>
+        assert(entry.indexOf('samples\\shared\\colour_utils.js') !== -1,
+            'Enhanced playlist entry does not import the signed colour-picker adapter'));
+    assert((playlistSource.match(/DarkOneColour\.pickJscript\(/g) || []).length === 6 &&
+        (playlistManagerSource.match(/DarkOneColour\.pickJscript\(/g) || []).length === 3,
+        'Enhanced playlist colour commands do not all use the signed picker adapter');
+    assert(playlistSource.indexOf('utils.ColourPicker(g_colour') === -1 &&
+        playlistManagerSource.indexOf('utils.ColourPicker(g_colour') === -1,
+        'Enhanced playlist colour command still passes unsigned ARGB directly to the native picker');
     assert((colour.opaque(0x00123456) >>> 0) === 0xff123456, 'Opaque conversion failed');
     assert(colour.toHex(0xff123456) === '#123456', 'Hex conversion failed');
     assert((colour.parseOpaque('18, 52, 86') >>> 0) === 0xff123456, 'RGB parsing failed');
@@ -323,28 +336,42 @@ suite("InfoStack button menu", function () {
     const source = fs.readFileSync(__path("DarkOneJSP3/jsplitter/03_info_stack_tabs.js"), 'utf8');
     const properties = new Map();
     let stateWrites = 0;
+    let lastInfoStackState = '';
     let popupTracks = 0;
+    let themeLookups = 0;
+    let availabilityQueries = 0;
+    let themePresent = false;
+    let themeLookupBlocked = false;
+    let beaconRaw = '';
+    let missingThemeMessages = 0;
+    const deferredThemeResolvers = [];
     const repaintArgs = [];
     const createdMenus = [];
-    const panels = Array.from({length: 6}, () => ({visible:false, bounds:null, Show(v){this.visible=!!v;}, Move(x,y,w,h){this.bounds=[x,y,w,h];}}));
+    const panels = Array.from({length: 7}, () => ({visible:false, bounds:null, Show(v){this.visible=!!v;}, Move(x,y,w,h){this.bounds=[x,y,w,h];}}));
     const popup = { items:[], separators:0, checks:[], radio:null, children:[],
         AppendMenuItem(flags,id,label){this.items.push([flags,id,label]);}, AppendMenuSeparator(){this.separators++;},
         CheckMenuItem(id,v){this.checks.push([id,!!v]);}, CheckMenuRadioItem(a,b,c){this.radio=[a,b,c];},
         AppendTo(parent,flags,label){parent.children.push(label);}, TrackPopupMenu(x,y){popupTracks++;this.xy=[x,y]; return global.popupId || 0;} };
     const windowMock = { Name:'DOJSP3.InfoStack', Width:600, Height:300,
         GetProperty(name,fallback){return properties.has(name)?properties.get(name):fallback;},
-        SetProperty(name,value){properties.set(name,value);}, GetPanel(title){const i=['a','b','c','d','e','f'].indexOf(title); return i>=0?panels[i]:null;},
-        NotifyOthers(){}, Repaint(force){repaintArgs.push(force);}, RepaintRect(){}, SetCursor(){}, GetColourCUI(){return 0xff202020;},
+        SetProperty(name,value){properties.set(name,value);}, GetPanel(title){const i=['a','b','c','d','e','f','g'].indexOf(title); if(i===6){themeLookups++;return themePresent&&!themeLookupBlocked?panels[i]:null;} return i>=0?panels[i]:null;},
+        NotifyOthers(name){if(name==='DarkOneJSP3.ThemeManager.QueryAvailability')availabilityQueries++;}, Repaint(force){repaintArgs.push(force);}, RepaintRect(){}, SetCursor(){}, GetColourCUI(){return 0xff202020;},
         CreatePopupMenu(){const m=Object.create(popup); m.items=[];m.checks=[];m.children=[];m.separators=0;createdMenus.push(m);return m;} };
-    const DOJSP3Mock = {titles:{playlistManager:'a',lastfmBio:'b',lastfmInfo:'c',albumNotes:'d',queue:'e',properties:'f'},
+    const DOJSP3Mock = {titles:{playlistManager:'a',lastfmBio:'b',lastfmInfo:'c',albumNotes:'d',queue:'e',properties:'f',themeManager:'g'},
         colours:{bar:0xff202020,separator:0xff181818,buttonNormal:0xff298fcc,buttonActive:0xffffffff,buttonHover:0xff888888},
         clamp(v,a,b){return Math.max(a,Math.min(b,v));}, idiv(v,d){return Math.floor(v/d);},
         panel(title){return windowMock.GetPanel(title);}, move(p,x,y,w,h){if(p)p.Move(x,y,w,h);}, show(p,v){if(p)p.Show(v);} };
-    const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset',
+    const factory = new Function('window','fb','include','gdi','DOJSP3','utils','darkOneJsp3HandleReset','setTimeout','clearTimeout',
         colourSource+'\n'+protocolSource+'\n'+viewBridgeSource+'\n'+infoColourSource+'\n'+infoBridgeSource+'\n'+source+
-        '\nreturn {on_size,on_notify_data,showInfoStackMenu,isTabStripVisible,setTabStripVisible,bridge:DarkOneViewBridge,getLayout:function(){return [tabY,tabAreaHeight,contentHeight];}};');
-    const utilsMock = {InputBox(){return '0';},CreateFolder(){},WriteTextFile(path,data){if(path.indexOf('infostack-menu-state')>=0)stateWrites++;return true;}};
-    const c = factory(windowMock,{ProfilePath:'',ShowPopupMessage(){}},function(){},{Font(name,size){return {Height:size+2};}},DOJSP3Mock,utilsMock,function(){return false;});
+        '\nreturn {on_size,on_notify_data,showInfoStackMenu,isTabStripVisible,setTabStripVisible,handle:handleInfoStackMenuAction,bridge:DarkOneViewBridge,getLayout:function(){return [tabY,tabAreaHeight,contentHeight];},getActive:function(){return activeIndex;},resetThemeForTest:function(){themeManagerPanel=null;themeManagerAnnounced=false;themeManagerResolveAttempt=0;},themeAvailableForTest:function(){return isTabAvailable(6);}};');
+    const utilsMock = {InputBox(){return '0';},CreateFolder(){},IsFile(path){return path.indexOf('theme-manager-availability')>=0 && !!beaconRaw;},ReadTextFile(path){return path.indexOf('theme-manager-availability')>=0?beaconRaw:'';},WriteTextFile(path,data){if(path.indexOf('infostack-menu-state')>=0){stateWrites++;lastInfoStackState=String(data);}return true;}};
+    const c = factory(windowMock,{ProfilePath:'',ShowPopupMessage(){missingThemeMessages++;}},function(){},{Font(name,size){return {Height:size+2};}},DOJSP3Mock,utilsMock,function(){return false;},
+        function(fn){deferredThemeResolvers.push(fn);return deferredThemeResolvers.length;},function(){});
+    if (availabilityQueries !== 1 || themeLookups !== 0)
+        throw new Error('Stock six-child InfoStack probed the absent optional Theme Manager');
+    while (deferredThemeResolvers.length) deferredThemeResolvers.shift()();
+    if (themeLookups !== 0)
+        throw new Error('Beacon polling probed an absent optional Theme Manager');
     c.on_size(600,300);
     if (stateWrites !== 1) throw new Error('Initial InfoStack menu-state snapshot was not published exactly once');
     c.on_size(600,300);
@@ -371,6 +398,8 @@ suite("InfoStack button menu", function () {
     if (!c.isTabStripVisible()) throw new Error('Show tab strip menu command did not restore the strip');
     if (createdMenus[0].children.join(',') !== 'Tab settings,Appearance')
         throw new Error('InfoStack tab-strip menu still exposes Startup or changed its configuration grouping');
+    if (createdMenus[0].items.some(item => item[1] === 106))
+        throw new Error('Unavailable Theme page leaked into the InfoStack menu');
     global.popupId=0; c.showInfoStackMenu(100,299,0);
     if (stateWrites !== 3) throw new Error('Cancelled InfoStack menu rewrote an unchanged snapshot');
     const tracksBeforeLegacyCommand = popupTracks;
@@ -389,6 +418,9 @@ suite("InfoStack button menu", function () {
     if (c.bridge.infoStackActionCommand(1000) !== null ||
             c.bridge.infoStackActionFromCommand('infostack-action:1013') !== null)
         throw new Error('InfoStack selected-action bridge still accepts removed Startup ids');
+    if (c.bridge.infoStackActionCommand(106) !== 'infostack-action:106' ||
+            c.bridge.infoStackActionCommand(906) !== 'infostack-action:906')
+        throw new Error('Theme or custom-divider InfoStack action is not independently addressable');
     const actionNotification = c.bridge.parseNotificationData(c.bridge.serialiseNotification(actionCommand, null));
     if (!actionNotification || actionNotification.command !== actionCommand) throw new Error('InfoStack selected action was lost in notification transport');
     const statePayload = c.bridge.serialiseInfoStackState({activeIndex:3,labels:['a','b','c','d','e','f']}, 1000);
@@ -409,6 +441,74 @@ suite("InfoStack button menu", function () {
     if (c.bridge.parseStartupState('{"version":"v2","state":{"transition":0,"minimumDelay":250,"readinessTimeout":2000}}') !== null ||
             c.bridge.parseStartupActionCommand('startup-set:unknown:1') !== null)
         throw new Error('TOOLS Startup bridge accepted an unsupported state or command');
+
+    const missingLookupStart = themeLookups;
+    c.handle(106, 0);
+    if (themeLookups !== missingLookupStart + 1 || missingThemeMessages !== 1)
+        throw new Error('Explicit TOOLS Theme command did not perform one guarded lookup and report the result');
+
+    themePresent = true;
+    const lazyLookupStart = themeLookups;
+    c.handle(106, 0);
+    if (themeLookups !== lazyLookupStart + 1 || !panels[6].visible)
+        throw new Error('Explicit TOOLS Theme command did not recover a present child after its availability handshake was missed');
+
+    const resolvedLookupCount = themeLookups;
+    c.on_notify_data('DarkOneJSP3.ThemeManager.Available', 'v1');
+    if (themeLookups !== resolvedLookupCount)
+        throw new Error('Repeated Theme availability announcement re-resolved an already cached child');
+    const stateWritesBeforeThemeApply = stateWrites;
+    properties.set('DarkOneJSP3.InfoStack.Tab.Playlists.Label', 'After Apply');
+    c.on_notify_data('DarkOneJSP3.Theme.Apply', '{}');
+    const stateAfterThemeApply = c.bridge.parseInfoStackState(lastInfoStackState);
+    if (!c.themeAvailableForTest() || stateWrites !== stateWritesBeforeThemeApply + 1 ||
+            !stateAfterThemeApply || stateAfterThemeApply.available[6] !== true)
+        throw new Error('Theme Apply discarded structural Theme availability or published it as false');
+
+    c.resetThemeForTest();
+    themeLookupBlocked = true;
+    const deferredLookupStart = themeLookups;
+    c.on_notify_data('DarkOneJSP3.ThemeManager.Available', 'v1');
+    if (themeLookups !== deferredLookupStart + 1 || deferredThemeResolvers.length !== 1)
+        throw new Error('Temporarily unavailable Theme child did not schedule a lifecycle-safe retry');
+    themeLookupBlocked = false;
+    deferredThemeResolvers.shift()();
+    if (!c.themeAvailableForTest() || themeLookups !== deferredLookupStart + 2)
+        throw new Error('Deferred Theme availability retry did not resolve the announced child');
+    const themeMenuStart = createdMenus.length;
+    global.popupId = 106;
+    c.showInfoStackMenu(100, 299, 0);
+    if (!createdMenus[themeMenuStart].items.some(item => item[1] === 106 && item[2] === 'Theme') || !panels[6].visible)
+        throw new Error('Announced Theme Manager was not exposed and selected');
+    properties.set('DarkOneJSP3.InfoStack.Tab.ThemeManager.Visible', false);
+    global.popupId = 100;
+    c.showInfoStackMenu(100, 299, 0);
+    const hiddenThemeMenuStart = createdMenus.length;
+    global.popupId = 106;
+    c.showInfoStackMenu(100, 299, 0);
+    const hiddenThemeItem = createdMenus[hiddenThemeMenuStart].items.find(item => item[1] === 106);
+    if (!hiddenThemeItem || hiddenThemeItem[0] !== 0 || !panels[6].visible ||
+            properties.get('DarkOneJSP3.InfoStack.Tab.ThemeManager.Visible') !== false)
+        throw new Error('Hidden Theme tab could not be opened independently through its menu action');
+
+    // A saved optional page must survive the controller's first layout even
+    // when its child has not resolved yet. The fresh child beacon authorises a
+    // delayed lookup and restores both the visual and internal selection.
+    properties.set('DarkOneJSP3.InfoStack.ActivePanel', 6);
+    panels.forEach(panel => { panel.visible = false; });
+    themePresent = true;
+    themeLookupBlocked = false;
+    beaconRaw = JSON.stringify({version:'v1',issuedAt:Date.now(),title:'g'});
+    deferredThemeResolvers.length = 0;
+    const remembered = factory(windowMock,{ProfilePath:'',ShowPopupMessage(){missingThemeMessages++;}},function(){},{Font(name,size){return {Height:size+2};}},DOJSP3Mock,utilsMock,function(){return false;},
+        function(fn){deferredThemeResolvers.push(fn);return deferredThemeResolvers.length;},function(){});
+    remembered.on_size(600,300);
+    if (properties.get('DarkOneJSP3.InfoStack.ActivePanel') !== 6 || remembered.getActive() !== 0)
+        throw new Error('Initial InfoStack layout destroyed or failed to defer its remembered Theme selection');
+    if (!deferredThemeResolvers.length) throw new Error('Fresh Theme presence beacon did not schedule discovery');
+    deferredThemeResolvers.shift()();
+    if (remembered.getActive() !== 6 || !panels[6].visible || panels[0].visible)
+        throw new Error('Remembered Theme selection was not restored after delayed child discovery');
 });
 
 suite("InfoStack local popup ownership", function () {
@@ -420,12 +520,13 @@ suite("InfoStack local popup ownership", function () {
     const state = {activeIndex:2,visible:[true,true,true,true,true,true],labels:['A','B','Custom Last.fm','D','E','F'],
         tabStripVisible:false,fixedFontSize:0,automaticFontScale:125,tabAreaHeight:0,tabColourMode:2,tabCustomColour:0xff123456,
         backgroundMode:4,backgroundCustomColour:0xff181818,dividerMode:1,dividerCustomColour:0xff000000};
-    const stateRaw = JSON.stringify({version:'v1',issuedAt:Date.now(),state});
+    let stateRaw = JSON.stringify({version:'v1',issuedAt:Date.now(),state});
     const menus = [];
+    let popupCommand = 104;
     function popup() { return {items:[],checks:[],children:[],disposed:false,
         AppendMenuItem(flags,id,label){this.items.push([flags,id,label]);}, AppendMenuSeparator(){},
         CheckMenuItem(id,v){this.checks.push([id,!!v]);}, CheckMenuRadioItem(a,b,c){this.radio=[a,b,c];},
-        AppendTo(parent,flags,label){parent.children.push(label);}, TrackPopupMenu(){this.tracked=true;return 104;},
+        AppendTo(parent,flags,label){parent.children.push(label);}, TrackPopupMenu(){this.tracked=true;return popupCommand;},
         Dispose(){this.disposed=true;} }; }
     const windowMock = {Width:500,CreatePopupMenu(){const m=popup();menus.push(m);return m;},GetColourCUI(){return 0xff202020;},
         GetProperty(n,f){return f;},SetProperty(){}};
@@ -438,9 +539,35 @@ suite("InfoStack local popup ownership", function () {
     api.show({x:100,y:10,w:80,h:20});
     if (!menus.length || !menus[0].tracked || !menus.every(m=>m.disposed)) throw new Error('INFOSTACK local popup was not tracked/disposed by the button panel');
     if (!menus[0].items.some(item=>item[1]===102 && item[2]==='Custom Last.fm')) throw new Error('INFOSTACK local popup did not use the live state snapshot labels');
+    if (menus[0].items.some(item=>item[1]===106))
+        throw new Error('Legacy six-page InfoStack snapshot exposed an unavailable Theme page');
     if (menus[0].children.join(',') !== 'Tab settings,Appearance') throw new Error('INFOSTACK local popup still exposes Startup');
+    if (!menus[9].items.some(item=>item[1]===906) || menus[9].items.some(item=>item[1]===106))
+        throw new Error('INFOSTACK local popup retains the Theme/custom-divider action collision');
     const parsed = api.bridge.parse(written,Date.now());
     if (!parsed || parsed.command !== 'infostack-action:104' || parsed.anchorX !== null) throw new Error('INFOSTACK local popup did not bridge only its selected action');
+
+    stateRaw = JSON.stringify({version:'v1',issuedAt:Date.now(),state:{
+        activeIndex:0,
+        visible:[true,true,true,true,true,true,false],
+        labels:['Playlists','Biography','Last.fm','Album Notes','Queue','Properties','Theme'],
+        available:[true,true,true,true,true,true,true],
+        tabStripVisible:true,fixedFontSize:0,automaticFontScale:100,tabAreaHeight:0,
+        tabColourMode:0,tabCustomColour:0xff298fcc,backgroundMode:4,
+        backgroundCustomColour:0xff181818,dividerMode:1,dividerCustomColour:0xff000000
+    }});
+    menus.length = 0;
+    popupCommand = 106;
+    api.show({x:100,y:10,w:80,h:20});
+    const themeItem = menus[0].items.find(item => item[1] === 106);
+    if (!themeItem || themeItem[0] !== 0 || themeItem[2] !== 'Theme')
+        throw new Error('INFOSTACK local popup omitted or disabled the hidden Theme page');
+    if (!menus[3].items.some(item => item[1] === 306) ||
+            menus[3].checks.some(item => item[0] === 306 && item[1]))
+        throw new Error('INFOSTACK local popup did not expose Theme tab visibility');
+    const themeAction = api.bridge.parse(written,Date.now());
+    if (!themeAction || themeAction.command !== 'infostack-action:106')
+        throw new Error('INFOSTACK local popup did not publish the Theme action');
 });
 
 suite("InfoStack background modes", function () {
@@ -513,9 +640,11 @@ suite("Waveform background modes", function () {
     const colourSource = fs.readFileSync(__path("DarkOneJSP3/shared/colour_utils.js"), 'utf8');
     const protocolSource = fs.readFileSync(__path("DarkOneJSP3/shared/jsplitter_protocols.js"), 'utf8');
     const source = fs.readFileSync(__path("DarkOneJSP3/jsplitter/06_display_waveform.js"), 'utf8');
+    const themeSource = fs.readFileSync(__path("DarkOneJSP3/shared/theme_engine.js"), 'utf8');
     const properties = new Map();
     const initialBottomState = 'v1|1|4278190080|4|4278190080';
     let repaintCount = 0;
+    let themeReloads = 0;
     const fills = [];
     const gradientCalls = [];
     const waveformTimers = [];
@@ -528,7 +657,8 @@ suite("Waveform background modes", function () {
         SetProperty(name, value) { properties.set(name, value); },
         GetColourCUI(index) { return index === 3 ? 0xff445566 : 0xffffffff; },
         NotifyOthers() {},
-        Repaint() { repaintCount++; }
+        Repaint() { repaintCount++; },
+        Reload() { themeReloads++; }
     };
     const layoutMoves = [];
     const layoutPanels = {display: {}, waveform: {}};
@@ -552,7 +682,7 @@ suite("Waveform background modes", function () {
     };
     const factory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'darkOneJsp3HandleReset', 'utils', 'setTimeout', 'clearTimeout',
-        colourSource + '\n' + protocolSource + '\n' + source +
+        colourSource + '\n' + protocolSource + '\n' + themeSource + '\n' + source +
         '\nreturn { Protocol:DarkOneProtocol, backgroundMode, backgroundColour, applySharedBottomAreaState, configureWaveformPseudoTransparency, on_notify_data, on_colours_changed, on_paint, on_size, setSize:function(w,h){ww=w;wh=h;} };'
     );
     const controller = factory(
@@ -714,6 +844,12 @@ suite("Waveform background modes", function () {
     controller.on_colours_changed();
     if (repaintCount !== beforeColoursChanged + 1)
         throw new Error('Waveform host does not repaint after a Columns UI colour change');
+    const theme = JSON.parse(fs.readFileSync(__path("DarkOneJSP3/themes/Default.json"), 'utf8'));
+    const beforeThemeRepaint = repaintCount;
+    const beforeThemeMoves = layoutMoves.length;
+    controller.on_notify_data('DarkOneJSP3.Theme.Apply', JSON.stringify(theme));
+    if (themeReloads !== 0 || repaintCount !== beforeThemeRepaint + 1 || layoutMoves.length !== beforeThemeMoves)
+        throw new Error('Theme background update reloaded or moved the Display/Waveform children');
 });
 
 suite("upper-divider state", function () {

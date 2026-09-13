@@ -183,6 +183,31 @@ suite("scripted Quick Search state", function () {
     assert(qs.properties.targetPlaylist === 'Quick Search' && quickIndex >= 0 && playlists[quickIndex].lock && playlists[quickIndex].lock.mask === 31,
         'Reset did not restore and protect the default Standard results playlist');
 
+    // Theme Apply must refresh the live instance without reconstructing the
+    // panel and losing its search/user state.
+    qs.properties.history = [{text:'keep through theme refresh'}];
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.MODE', 1);
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM', 0xff112233);
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.MODE', 3);
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM', 0xff223344);
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.MODE', 1);
+    properties.set('DARKONEJSP3.QUICKSEARCH.COLOUR.BORDER.CUSTOM', 0xff334455);
+    properties.set('DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES', 1);
+    properties.set('DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT', 60);
+    properties.set('DARKONEJSP3.QUICKSEARCH.FONT.SIZE', 15);
+    properties.set('DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE', 130);
+    assert(qs.refreshTheme() === true && qs.properties.lines === 1 &&
+            qs.properties.widthPercent === 60 && qs.properties.fontSize === 15 &&
+            qs.properties.autoFontScale === 130 &&
+            (qs.colours.text >>> 0) === 0xff112233 &&
+            (qs.colours.background >>> 0) === 0xff223344 &&
+            (qs.colours.border >>> 0) === 0xff334455 &&
+            qs.properties.history.length === 1,
+        'Quick Search in-place Theme Apply left cached appearance values or lost user state');
+    qs.resetConfiguration('appearance');
+    assert(qs.properties.history.length === 1,
+        'Quick Search appearance reset after Theme Apply lost user history');
+
     // The final fixed-file custom PNG model must contain no external-process or
     // file-dialog machinery, and unavailable custom artwork must fall back cleanly.
     assert(source.indexOf('quicksearch.png') !== -1 && source.indexOf('RunCmdAsync') === -1 && source.indexOf('powershell') === -1,

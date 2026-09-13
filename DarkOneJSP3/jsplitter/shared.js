@@ -7,6 +7,7 @@
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\colour_utils.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\jsplitter_protocols.js');
 include(fb.ProfilePath + 'DarkOneJSP3\\shared\\view_bridge.js');
+include(fb.ProfilePath + 'DarkOneJSP3\\shared\\theme_engine.js');
 
 var darkOneGradientRunCacheKey = '';
 var darkOneGradientRunCache = [];
@@ -59,6 +60,7 @@ var DOJSP3 = Object.freeze({
         albumNotes: 'DOJSP3.AlbumNotes',
         queue: 'DOJSP3.Queue',
         properties: 'DOJSP3.Properties',
+        themeManager: 'DOJSP3.ThemeManager',
 
         albumArt: 'DOJSP3.AlbumArt',
         spectrum: 'DOJSP3.Spectrum',
@@ -107,6 +109,10 @@ var DOJSP3 = Object.freeze({
         if (panel) {
             DOJSP3._panels[caption] = panel;
         } else if (!DOJSP3._missing[caption]) {
+            // A missing structural child cannot appear without reloading this
+            // splitter. Cache the miss as well as the diagnostic so layout and
+            // paint callbacks do not repeatedly ask JSplitter for it.
+            DOJSP3._panels[caption] = null;
             DOJSP3._missing[caption] = true;
             console.log('[DarkOneJSP3] Child panel not found: ' + caption +
                 '. Check the exact Columns UI custom title.');

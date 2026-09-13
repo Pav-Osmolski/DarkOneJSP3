@@ -12,6 +12,7 @@ var DARKONE_DISPLAY_ACCENT_MENU_OPTIONS = [
 function on_paint(gr) {
 	darkOnePaintBottomAreaBackground(gr);
 	display_system.draw(gr);
+	if (typeof darkOneJsp3ThemePainted == 'function') darkOneJsp3ThemePainted();
 }
 
 // ----- MOUSE ACTIONS -----
@@ -97,7 +98,26 @@ function on_volume_change(val) {
 	display_system.VolumeChange(val);
 }
 
+function darkOneRefreshDisplayTheme(change) {
+	ww = window.Width;
+	wh = window.Height;
+	get_colours();
+	display_system.display_style = Number(window.GetProperty("Display Style", 0)) == 1 ? 1 : 0;
+	darkOneApplyBottomAreaAppearance(false);
+	if (darkOneJsp3ThemeHasChanges(change, ['Display Style', 'DARKONEJSP3.DISPLAY.FONT.',
+		'DARKONEJSP3.DISPLAY.LABEL.', 'DARKONEJSP3.DISPLAY.VALUE.'])) {
+		display_system.initPos();
+		display_system.setTrackNo();
+		display_system.setPBTime();
+		display_system.setBitrate();
+	}
+	window.Repaint();
+	return true;
+}
+
 function on_notify_data(name, info) {
+	if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(
+		name, info, DARKONEJSP3_RESET_ROLE, darkOneRefreshDisplayTheme)) return;
 	if (darkOneDisplayVolumeCadence && darkOneDisplayVolumeCadence.handleNotification(name, info)) return;
 	if (darkOneHandleResetNotification(name, info)) return;
 	if (typeof darkOneHandleNotify == 'function') {
@@ -158,6 +178,7 @@ function on_playback_stop(reason) {
 }
 
 function on_script_unload() {
+	if (typeof darkOneJsp3DisposeThemeStage == 'function') darkOneJsp3DisposeThemeStage();
 	if (typeof darkOneDisposeBottomAreaBridge == 'function') darkOneDisposeBottomAreaBridge();
 	display_system.onUnload();
 }

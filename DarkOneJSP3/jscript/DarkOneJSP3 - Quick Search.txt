@@ -1,15 +1,17 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Quick Search"
-// @version "0.1.21"
+// @version "0.1.25"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\theme_engine.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\jsplitter_protocols.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\jscript\js\Quick_Search.js"
 // ==/PREPROCESSOR==
 
 var KMask = { none: 0, ctrl: 1, shift: 2 };
+var DARKONEJSP3_RESET_ROLE = "quick-search";
 var g_font_12 = JSON.stringify({ Name: 'Segoe UI', Size: 12, Weight: 400, Style: 0, Stretch: 5 });
 
 function GetKeyboardMask() {
@@ -43,16 +45,28 @@ function on_mouse_lbtn_up(x, y) { quickSearch.lbtnUp(x, y); }
 function on_mouse_leave() { quickSearch.mouseLeave(); }
 function on_mouse_move(x, y) { quickSearch.mouseMove(x, y); }
 function on_mouse_rbtn_up(x, y) { return quickSearch.rbtnUp(x, y); }
-function on_paint(gr) { quickSearch.paint(gr); }
+function on_paint(gr) {
+    quickSearch.paint(gr);
+    if (typeof darkOneJsp3ThemePainted == 'function') darkOneJsp3ThemePainted();
+}
 function on_playlist_items_added(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
 function on_playlist_items_removed(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
 function on_playlist_items_reordered(playlistIndex) { quickSearch.playlistChanged(playlistIndex); }
 function on_playlists_changed() { quickSearch.playlistChanged(-1); }
 function on_playlist_switch() { quickSearch.playlistChanged(plman.ActivePlaylist); }
-function on_script_unload() { quickSearch.dispose(); }
+function on_script_unload() {
+    if (typeof darkOneJsp3DisposeThemeStage == 'function') darkOneJsp3DisposeThemeStage();
+    quickSearch.dispose();
+}
 function on_size() { quickSearch.size(window.Width, window.Height); }
 
+function darkOneRefreshQuickSearchTheme(change) {
+    return !!quickSearch && quickSearch.refreshTheme(change) === true;
+}
+
 function on_notify_data(name, info) {
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(
+            name, info, DARKONEJSP3_RESET_ROLE, darkOneRefreshQuickSearchTheme)) return;
     if (name === DARKONE_QUICKSEARCH_BOTTOM_AREA_GEOMETRY_STATE) {
         quickSearch.parentGeometryChanged(info);
         return;

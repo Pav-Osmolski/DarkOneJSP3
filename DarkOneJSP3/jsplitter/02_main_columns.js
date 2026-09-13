@@ -380,6 +380,7 @@ function on_paint(gr) {
 }
 
 function on_notify_data(name, data) {
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
     if (name === ART_SPECTRUM_MODE_STATE_NOTIFICATION) {
         var visible = String(data) !== 'art-only';
         var changed = !artSpectrumModeKnown || visible !== artSpectrumVisualiserVisible;

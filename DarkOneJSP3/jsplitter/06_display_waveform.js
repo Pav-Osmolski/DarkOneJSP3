@@ -5,6 +5,9 @@ var DARKONEJSP3_RESET_ROLE = "display-waveform";
 // Replaces Panel Stack Splitter 06.
 //
 // Version history (newest first):
+// v0.3.17 refreshes theme-owned background properties without reloading the
+// native Display/Waveform host or disturbing its child playback state.
+//
 // v0.3.16 balances the visible Waveform Minibar vertically within the lower
 // DisplayStack region. The native component uses roughly the upper two-thirds
 // of its child height for waveform content, so a quarter-region top inset
@@ -509,7 +512,15 @@ function on_playback_stop(reason) {
     }
 }
 
+function refreshDisplayWaveformTheme() {
+    // Paint reads the two theme-owned background properties directly.
+    window.Repaint();
+    return true;
+}
+
 function on_notify_data(name, data) {
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(
+            name, data, DARKONEJSP3_RESET_ROLE, refreshDisplayWaveformTheme)) return;
     if (name === BOTTOM_AREA_GEOMETRY_STATE) {
         applyBottomAreaGeometry(data);
         return;

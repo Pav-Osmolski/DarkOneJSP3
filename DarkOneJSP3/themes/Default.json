@@ -1,0 +1,140 @@
+{
+  "format": "DarkOneJSP3 Theme",
+  "formatVersion": 1,
+  "name": "Default",
+  "description": "The factory DarkOneJSP3 appearance.",
+  "author": "DeViLhoOD",
+  "appearance": {
+    "palette": {
+      "pageBackground": "#FF181818",
+      "text": "#FFDCDCDC",
+      "accent": "#FF298FCC",
+      "selected": "#FF303030",
+      "divider": "#FF000000",
+      "volumeIndicator": "#FF404040"
+    },
+    "typography": {
+      "controlFamily": "Arial Black",
+      "controlWeight": 900,
+      "controlScale": 1.0,
+      "displayScale": 1.0,
+      "displayLabelFamily": "Arial Black",
+      "displayLabelWeight": 900,
+      "displayLabelScale": 1.0,
+      "displayValueFamily": "Microsoft Sans Serif",
+      "displayValueWeight": 400,
+      "displayValueScale": 1.0
+    },
+    "controls": {
+      "buttonStyle": 1,
+      "buttonDepth": 0,
+      "roundness": -1,
+      "hitboxScale": 1.0,
+      "iconScale": 1.0,
+      "volumeIndicatorMode": 0
+    },
+    "quickSearch": {
+      "normalTextMode": 0,
+      "customText": "#FFDCDCDC",
+      "normalBackgroundMode": 5,
+      "customBackground": "#FF000000",
+      "borderMode": 0,
+      "customBorder": "#FF000000",
+      "errorTextMode": 0,
+      "customErrorText": "#FFFFE1E1",
+      "errorBackgroundMode": 6,
+      "customErrorBackground": "#FF581F1F",
+      "fixedFontSize": 0,
+      "automaticFontScale": 100
+    },
+    "bottomArea": {
+      "backgroundMode": 2,
+      "customBackground": "#FF000000",
+      "linearGradient": false,
+      "dividerMode": 4,
+      "customDivider": "#FF000000",
+      "sideDividers": true,
+      "depth": 0,
+      "quickSearchLines": 2,
+      "quickSearchWidthPercent": 44
+    },
+    "infoStack": {
+      "backgroundMode": 4,
+      "customBackground": "#FF181818",
+      "fixedFontSize": 0,
+      "automaticFontScale": 100,
+      "tabAreaHeight": 0,
+      "tabStripVisible": true,
+      "tabColourMode": 0,
+      "tabs": {
+        "Playlists": { "visible": true, "label": "Playlists" },
+        "Biography": { "visible": true, "label": "Biography" },
+        "Lastfm": { "visible": true, "label": "Last.fm" },
+        "Allmusic": { "visible": true, "label": "Album Notes" },
+        "Queue": { "visible": true, "label": "Queue" },
+        "Properties": { "visible": true, "label": "Properties" },
+        "ThemeManager": { "visible": true, "label": "Theme" }
+      }
+    },
+    "manager": {
+      "fixedFontSize": 0,
+      "automaticFontScale": 100
+    },
+    "display": {
+      "accentMode": 0,
+      "style": 0
+    },
+    "displayWaveform": {
+      "backgroundMode": 6,
+      "customBackground": "#FF202020"
+    },
+    "albumArt": {
+      "backgroundMode": 0,
+      "customBackground": "#FF000000",
+      "aspect": 0,
+      "squareSizing": 0
+    },
+    "layout": {
+      "dividerMode": 1,
+      "mainColumnsMode": 0,
+      "artSpectrumMode": 0
+    },
+    "pages": {
+      "backgroundMode": 3,
+      "customBackground": "#FF181818",
+      "dynamicColours": false,
+      "textMode": 0,
+      "customText": "#FFDCDCDC",
+      "selectedBackgroundMode": 0,
+      "wallpaperMode": 0,
+      "wallpaperPath": "",
+      "wallpaperBlurred": false,
+      "artwork": {
+        "visible": true,
+        "backgroundEnabled": true,
+        "backgroundBlurred": true,
+        "ratio": 0.5
+      }
+    },
+    "playlistManager": {
+      "colourType": "Off",
+      "text": "#FFFFFFFF",
+      "background": "#FF191923",
+      "selectedBackground": "#FF0FB1FF",
+      "showFilter": true,
+      "filterWidth": 300,
+      "rowHeight": 26,
+      "alternatingRows": true
+    },
+    "playlist": {
+      "colourType": "Custom",
+      "text": "#FFDCDCDC",
+      "highlight": "#FF298FCC",
+      "background": "#FF181818",
+      "selectedBackground": "#FF303030",
+      "mood": "#FFC41E23",
+      "rating": "#FFFF8000",
+      "showWallpaper": false
+    }
+  }
+}

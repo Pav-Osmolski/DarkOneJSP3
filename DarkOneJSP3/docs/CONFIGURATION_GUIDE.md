@@ -276,7 +276,7 @@ Button depth
 - Medium
 - Strong
 
-Button roundness
+Button roundness (%)
 - Automatic / follow button style
 - Square (0%)
 - Subtle (20%)
@@ -343,8 +343,35 @@ volume-write frequency above the protected 16 ms maximum cadence.
 ### DarkOne Tools
 
 DarkOne Tools is available only from the optional TOOLS button described above.
-Its top-level menu places Buttons immediately after Appearance for shorter
-access to shared button appearance.
+Its first command is Theme Manager, followed by Appearance and Buttons.
+
+### Theme Manager
+
+Menu path: DarkOne Tools > Theme Manager
+
+Selects the optional `DOJSP3.ThemeManager` InfoStack page. The page loads,
+previews, saves, names, renames and deletes readable JSON themes in
+`DarkOneJSP3\themes`. **Capture current** refreshes the unsaved draft from the
+DarkOneJSP3-owned settings of available panels; its file-backed bridge includes
+JSplitter-owned properties, and conflicting shared values are reported and left
+unchanged. **Theme tab visible** is read from its saved visibility property,
+independently of whether the Theme Manager child is available. Reset to Default
+reloads the protected `Default.json`.
+The page is labelled **Theme** inside InfoStack. **Visible tabs > Theme** affects
+only the horizontal strip; TOOLS and the optional INFOSTACK button can still
+open a hidden Theme page. The Manager category provides fixed font-size and
+automatic base-scale controls for the Theme Manager interface itself.
+The Colours category provides independent Custom, Dynamic and Off types for JS
+Playlist and Playlist Manager, along with their panel-specific colour values.
+Controls includes dedicated Quick Search text, background and border colours,
+plus its independent fixed font size and automatic base scale. InfoStack's
+similarly named controls apply only to the tab strip.
+Theme Apply preserves the resolved Theme child's structural availability and
+uses the same coordinated bottom-area commit as the direct Appearance menu, so
+all bottom surfaces change at one shared boundary. Its matching cross-host
+theme command is staged against that boundary rather than replayed by the
+slower fallback poll, and Bottom Controls is updated in place without a reload.
+See [THEME_MANAGER.md](THEME_MANAGER.md) for setup, format and safety details.
 
 ### Appearance
 

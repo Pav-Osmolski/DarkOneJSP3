@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "Smooth Playlist Manager - Enhanced"
-// @version "0.5.7"
+// @version "0.5.9"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%samples\shared\performance_utils.js"
 // @import "%fb2k_component_path%samples\shared\ui_cadence.js"
 // @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
 // @import "%fb2k_component_path%samples\shared\sample_defaults.js"
 // @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\smooth\common.js"

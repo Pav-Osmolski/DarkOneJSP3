@@ -29,6 +29,7 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
     expected_reset_entries = {
         'Album Notes + Album Art.txt',
         'Album Notes.txt',
+        'Album Art.txt',
         'Last.fm Artist Info + User Info.txt',
         'Last.fm Bio + Images.txt',
         'Last.fm Bio.txt',
@@ -67,8 +68,8 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
     queue_entry = project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt'
     if queue_entry.exists():
         body = text(queue_entry)
-        if '// @version "0.8.6"' not in body:
-            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.6')
+        if '// @version "0.8.7"' not in body:
+            errors.append('DarkOneJSP3 Queue Viewer wrapper version is not 0.8.7')
         if 'jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")' not in body:
             errors.append('DarkOneJSP3 Queue Viewer reset callback is missing')
         if sample_defaults_import not in body or sample_bridge_import not in body:
@@ -234,7 +235,7 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
         samples / 'Last.fm Artist Info + User Info.txt': '0.1.3',
         samples / 'Album Notes + Album Art.txt': '0.6.14',
         samples / 'Album Notes.txt': '0.6.12',
-        project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.6',
+        project / 'jscript' / 'DarkOneJSP3 - Queue Viewer.txt': '0.8.7',
         samples / 'Properties.txt': '0.1.3',
     }
     for entry, role in page_background_entries.items():
@@ -398,6 +399,8 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
         for token in [
             'function jsp3EnhancedNormaliseResetScope(value)',
             'function jsp3EnhancedHasResetRole(role)',
+            'name === DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION',
+            'jsp3EnhancedCaptureTheme(captureRequest.theme, captureRole)',
             'if (!scope) return false;',
             'if (!handled) return false;',
         ]:
@@ -423,6 +426,8 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
             'var JSP3_ENHANCED_RESET_REGISTRY = {',
             'function jsp3EnhancedRoleDefaults(role, scope)',
             'function jsp3EnhancedApplyRoleReset(role, scope)',
+            'function jsp3EnhancedCaptureTheme(info, role)',
+            'function jsp3EnhancedThemeCaptureRequest(info)',
             'var DARKONEJSP3_SAMPLE_RESET_REGISTRY = JSP3_ENHANCED_RESET_REGISTRY',
         ]:
             if token not in registry_body:
@@ -492,7 +497,7 @@ def _check_metadata_and_artwork(ctx: ValidationContext) -> None:
         album_art_body = text(album_art_entry)
         for token in [
             '// @name "Album Art - Enhanced"',
-            '// @version "0.1.4"',
+            '// @version "0.1.5"',
             '// @author "marc2003 / DeViLhoOD"',
             'albumart.dispose();',
         ]:
@@ -769,8 +774,8 @@ def _check_playlist_and_resources(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.4"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.4')
+        if '// @version "0.6.7"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.7')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',
@@ -1080,8 +1085,8 @@ def _check_playlist_and_resources(ctx: ValidationContext) -> None:
         body = text(playlist_manager_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "playlist-manager")' not in body:
             errors.append('Smooth Playlist Manager reset bridge is missing')
-        if '// @version "0.5.7"' not in body:
-            errors.append('Smooth Playlist Manager entry version is not 0.5.7')
+        if '// @version "0.5.9"' not in body:
+            errors.append('Smooth Playlist Manager entry version is not 0.5.9')
         if 'samples\\shared\\performance_utils.js' not in body:
             errors.append('Smooth Playlist Manager does not import shared performance helpers')
         if 'samples\\shared\\ui_cadence.js' not in body:
@@ -1326,6 +1331,134 @@ def _check_migration_and_infostack(ctx: ValidationContext) -> None:
         ]:
             if token not in body:
                 errors.append('InfoStack local-menu bridge integration is missing: ' + token)
+        for token in [
+            "var THEME_MANAGER_QUERY_NOTIFICATION = 'DarkOneJSP3.ThemeManager.QueryAvailability';",
+            "var THEME_MANAGER_AVAILABLE_NOTIFICATION = 'DarkOneJSP3.ThemeManager.Available';",
+            'if (INFO_PANELS[i].optional) continue;',
+            'return Boolean(themeManagerPanel);',
+            'function resolveThemeManagerPanel(force)',
+            'function scheduleThemeManagerResolution()',
+            'function registerThemeManagerPanel(data)',
+            'function requestThemeManagerAvailability()',
+            'function hasFreshThemeManagerBeacon()',
+            'pendingOptionalActiveIndex',
+            'requestThemeManagerAvailability();',
+            'scheduleThemeManagerResolution();',
+            'if (!startupReadiness.isReady())',
+            "defaultLabel: 'Theme', uppercaseLabel: 'THEME'",
+            'available.push(isTabAvailable(i));',
+            "INFO_PANELS[activeIndex].key === 'ThemeManager'",
+            'selectPanel(requestedIndex, true, allowHidden);',
+            'if (!available) continue;',
+            'if (!available) continue;',
+            "if (name === 'DarkOneJSP3.Theme.Apply')",
+            "darkOneJsp3ApplyTheme(data, DARKONEJSP3_RESET_ROLE);",
+            'publishInfoStackMenuState();',
+            'function on_script_unload()',
+        ]:
+            if token not in body:
+                errors.append('InfoStack optional-child degradation is missing: ' + token)
+        if 'window.GetPanel(INFO_PANELS[index].title)' in body:
+            errors.append('InfoStack still probes an absent optional child by title')
+
+        optional_button_source = project / 'jscript' / 'js' / 'Buttons_Function_OptBtnCmd.js'
+        if optional_button_source.exists():
+            button_body = text(optional_button_source)
+            for token in [
+                'available: [true, true, true, true, true, true, false]',
+                'state.labels.length >= 6 && state.labels.length <= 7',
+                'if (!state.available[i]) continue;',
+                'var directFlags = i === 6 || state.visible[i] ? 0 : 1;',
+                "dividerMenu.AppendMenuItem(0, 906, 'Set custom colour...');",
+            ]:
+                if token not in button_body:
+                    errors.append('INFOSTACK local menu seventh-page integration is missing: ' + token)
+
+        theme_engine = project / 'shared' / 'theme_engine.js'
+        if theme_engine.exists():
+            engine_body = text(theme_engine)
+            for token in [
+                'var DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION = "DarkOneJSP3.Theme.Capture.Query";',
+                'var DARKONEJSP3_THEME_CAPTURE_RESPONSE_NOTIFICATION = "DarkOneJSP3.Theme.Capture.Response";',
+                'var DARKONEJSP3_THEME_CAPTURE_QUERY_FILE = fb.ProfilePath + "js_data\\\\darkonejsp3.theme-capture-query.json";',
+                'var DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE = fb.ProfilePath + "js_data\\\\darkonejsp3.theme-capture-response.json";',
+                'var DARKONEJSP3_THEME_STAGE_NOTIFICATION = "DarkOneJSP3.Theme.Stage";',
+                'function capture(theme, role)',
+                'function captureQuery(theme, id, issuedAt)',
+                'function parseCaptureQuery(value, now)',
+                'function captureResponse(id, role, values)',
+                'function parseCaptureResponse(value, requestId)',
+                'function normaliseCaptureValues(role, source)',
+                'function captureBundle(id, issuedAt, responses)',
+                'function parseCaptureBundle(value, requestId, now)',
+                'function stage(theme, id, issuedAt, applyAt, bottomState)',
+                'function parseStage(value, now)',
+                'function darkOneJsp3CompleteThemeStage(id)',
+                'function darkOneJsp3DisposeThemeStage()',
+                'captureTarget[themePath] = rule === "colour" ? colourText(current) : current;',
+                '"DARKONEJSP3.QUICKSEARCH.FONT.SIZE", "appearance.quickSearch.fixedFontSize"',
+                '"DARKONEJSP3.QUICKSEARCH.FONT.AUTO.SCALE", "appearance.quickSearch.automaticFontScale"',
+            ]:
+                if token not in engine_body:
+                    errors.append('Theme reverse adapter is missing: ' + token)
+
+        theme_manager = project / 'jscript' / 'DarkOneJSP3 - Theme Manager.txt'
+        if theme_manager.exists():
+            manager_body = text(theme_manager)
+            for token in [
+                '{ name: "Manager", description:',
+                'appearance.manager.fixedFontSize',
+                'appearance.manager.automaticFontScale',
+                'function tmManagerBaseSize()',
+                'function tmRebuildFonts()',
+                'function tmMetric(value)',
+                'var nextTheme = tmClone(tmState.theme);',
+                '} catch (notifyError) {}',
+                'fileIndex * tmMetric(38) - tmMetric(76)',
+                'tmState.theme = tmClone(incoming);',
+                'function tmFieldValueLayout(fieldType, x, width, rowY, rowHeight)',
+                'function tmClippedHit(type, value, x, y, w, h, clipTop, clipBottom)',
+                'tmClippedHit("field", i, x, rowY, contentW, rowH, rowsTop, rowsBottom);',
+                'var headerMaskTop = Math.min(top, rowsTop - rowH);',
+                'gr.FillRectangle(x, headerMaskTop, contentW, rowsTop - headerMaskTop, tmColours.background);',
+                'gr.FillRectangle(x, rowsBottom, contentW, Math.max(0, h - rowsBottom), tmColours.background);',
+                'valueLayout.swatchX',
+                'valueLayout.valueWidth',
+                'gr.DrawRoundedRectangle(x, y, w, height, radius, radius, tmMetric(1)',
+                '["Button roundness (%)", "appearance.controls.roundness", "roundness"]',
+                'var TM_ROUNDNESS_VALUES = [-1, 0, 20, 33, 60, 100];',
+                '"Automatic / follow button style"',
+                'if (field[2] === "roundness")',
+                'return "Automatic";',
+                'return String(Math.max(0, Math.min(100, value))) + "%";',
+                'var TM_AVAILABILITY_FILE = fb.ProfilePath + "js_data\\\\darkonejsp3.theme-manager-availability.json";',
+                'var TM_BOTTOM_AREA_STATE_FILE = fb.ProfilePath + "js_data\\\\darkonejsp3.bottom-area-state.txt";',
+                'var TM_BOTTOM_AREA_ACK_FILE = fb.ProfilePath + "js_data\\\\darkonejsp3.bottom-area-ack.txt";',
+                '["Quick Search automatic base scale (%)", "appearance.quickSearch.automaticFontScale"',
+                '["Quick Search fixed font size (0 = auto)", "appearance.quickSearch.fixedFontSize"',
+                '["Tab automatic base scale (%)", "appearance.infoStack.automaticFontScale"',
+                'function tmUpgradeThemeDraft(theme)',
+                'function tmBottomAreaStateForTheme(theme, revision)',
+                'function tmPublishBottomAreaCommit(theme, commandId, issuedAt)',
+                'function tmRemoveThemeCommand(commandId)',
+                'function tmRemoveBottomAreaCommit(commandId)',
+                'function tmRemoveBottomAreaAck(commandId)',
+                'function tmAwaitBottomAreaAck(theme, requestedCommit)',
+                'function tmReleaseCoordinatedTheme(theme, commit, fallback)',
+                'function tmScheduleThemeNotification(theme, applyAt, commandId)',
+                'var bottomCommit = tmPublishBottomAreaCommit(requestedTheme, commandId, now);',
+                '["Capture current", "capture"]',
+                'function tmCaptureCurrent()',
+                'utils.WriteTextFile(\n            DARKONEJSP3_THEME_CAPTURE_QUERY_FILE,',
+                'function tmImportCaptureBridge(capture)',
+                'function tmFinishCapture()',
+                'DarkOneTheme.parseCaptureResponse(data, tmState.capture.id)',
+                'DarkOneTheme.parseCaptureBundle(raw, capture.id, new Date().getTime())',
+                'shared settings differed between panels and were left unchanged',
+                'function on_script_unload()',
+            ]:
+                if token not in manager_body:
+                    errors.append('Theme Manager typography controls are missing: ' + token)
         for obsolete in [
             'function backgroundMode()',
             'function requestDividerState()',
@@ -1691,8 +1824,12 @@ def _check_layout_and_protocols(ctx: ValidationContext) -> None:
             "var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\\\';",
             "var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';",
             "var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';",
+            "var BOTTOM_AREA_ACK_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-ack.txt';",
             'var BOTTOM_AREA_COMMIT_POLL_MS = 25;',
             'function syncBottomAreaCommitFile()',
+            'function publishBottomAreaCommitAck(commit)',
+            'function authoritativeBottomAreaCommit(commit)',
+            'function bottomAreaCommitHasThemeCommand(commit)',
             'function scheduleBottomAreaCommit(commit)',
             "var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\\\shared\\\\bottom-area-state.txt';",
             "var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';",
@@ -1709,6 +1846,20 @@ def _check_layout_and_protocols(ctx: ValidationContext) -> None:
             'function syncResetCommandFile()',
             'function processResetCommand(command)',
             'function acknowledgeResetCommandFile()',
+            'var themeCommandApplyTimer = null;',
+            'var pendingThemeCommandId = \'\';',
+            'function stageThemeCommandForBottomCommit(commit)',
+            'function bottomAreaMatchesExpectedState(state)',
+            'function cancelPendingThemeCommand()',
+            'function applyThemeCommandNow(command, coordinated)',
+            'function processThemeCommand(command, applyAt)',
+            'var THEME_COMMAND_COORDINATION_GRACE_MS = 250;',
+            'acknowledgeThemeCommandFile(command.id)',
+            'var THEME_CAPTURE_POLL_DIVISOR = 20;',
+            'function syncThemeCaptureQueryFile()',
+            'function processThemeCaptureQuery(request)',
+            'function collectThemeCaptureResponse(data)',
+            'function writeThemeCaptureResponses()',
             'runtimeBridgePollTimer = setTimeout(poll, RUNTIME_BRIDGE_POLL_INTERVAL);',
             'if (!state.commit) {\n        acknowledgeBottomAreaCommitFile();',
             'if (!state.command) {\n        acknowledgeResetCommandFile();',
@@ -1759,6 +1910,14 @@ def _check_layout_and_protocols(ctx: ValidationContext) -> None:
         ]:
             if obsolete in body:
                 errors.append('Bottom Controls retains obsolete JSplitter notification plumbing: ' + obsolete)
+        theme_apply_start = body.find('function applyThemeCommandNow(command, coordinated)')
+        theme_apply_end = body.find('function processThemeCommand(command, applyAt)', theme_apply_start)
+        if theme_apply_start >= 0 and theme_apply_end > theme_apply_start:
+            theme_apply_body = body[theme_apply_start:theme_apply_end]
+            if 'window.Reload()' in theme_apply_body:
+                errors.append('Theme-command fallback still reloads the Bottom Controls host')
+            if 'writeBottomAreaStateFile(bottomAreaState())' in theme_apply_body:
+                errors.append('Theme-command fallback still replaces coordinated bottom state with an unversioned snapshot')
 
     protocol_path = project / 'shared' / 'jsplitter_protocols.js'
     if protocol_path.exists():
@@ -1971,6 +2130,10 @@ def _check_layout_and_protocols(ctx: ValidationContext) -> None:
             'function readStartupState()',
             'function writeCommand(command, anchorX)',
             'function parseNotificationData(data)',
+            '(value >= 100 && value <= 106)',
+            '(value >= 300 && value <= 306)',
+            '(value >= 400 && value <= 406)',
+            '(value >= 900 && value <= 906)',
         ]:
             if token not in body:
                 errors.append('View-command bridge is missing: ' + token)
@@ -2296,8 +2459,8 @@ def _check_controls_and_colours(ctx: ValidationContext) -> None:
                 errors.append('Display context-menu cleanup is missing: ' + token)
 
     control_entries = {
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.32-jsp3-3.8.5',
-        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.39-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Left.txt': '3.0.36-jsp3-3.8.5',
+        project / 'jscript' / 'DarkOneJSP3 - Control Panel - Right.txt': '3.0.43-jsp3-3.8.5',
     }
     for path, expected_version in control_entries.items():
         if not path.exists():

@@ -463,6 +463,62 @@ suite("smooth-scroll refresh rate", function () {
     assert(managerReschedules === 1 && managerRequests === 1,
         'Playlist Manager active frame loop was not rescheduled and requested');
     assert(set_playlist_manager_refresh_rate(16) === false, 'Playlist Manager unchanged rate was not ignored');
+    const playlistMenuSource = require('fs').readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/jsplaylist/playlist.js'), 'utf8');
+    const playlistCases = playlistMenuSource.slice(playlistMenuSource.indexOf('\t\tcase 105:'), playlistMenuSource.indexOf('\t\tcase 112:'));
+    const playlistDispatch = new Function('idx', 'utils', 'window', 'cList', 'set_playlist_refresh_interval', 'switch(idx) {' + playlistCases + '}');
+    const scrollPrefs = {scroll_div: 2, wheel_throttle: 8, scrollstep: 3, free_wheel_step: 0, repaint_interval: 8,
+        unrelatedColour: 0xff123456, unrelatedRowHeight: 32};
+    let playlistWrites = [];
+    let playlistReloads = 0;
+    let refreshInputs = [];
+    function playlistChoose(id, answer) {
+        playlistDispatch(id, {InputBox(prompt, title, current) {
+            if (answer instanceof Error) throw answer;
+            return answer === '__OK__' ? current : answer;
+        }}, {Name: 'Playlist test', SetProperty(k, v) { playlistWrites.push([k, v]); }, Reload() { playlistReloads++; }},
+        scrollPrefs, value => refreshInputs.push(value));
+    }
+    [106, 107, 108, 111].forEach(id => {
+        playlistChoose(id, '__OK__'); playlistChoose(id, '__OK__');
+        ['', ' ', null, 'invalid', 'Infinity', new Error('cancel')].forEach(value => playlistChoose(id, value));
+    });
+    assert(playlistWrites.length === 0 && scrollPrefs.free_wheel_step === 0,
+        'Playlist dialogs rewrote unchanged values or converted automatic free-scroll distance to fixed pixels');
+    playlistChoose(106, '3'); playlistChoose(106, '3'); playlistChoose(106, '2');
+    assert(scrollPrefs.scroll_div === 2 && playlistWrites.length === 2,
+        'Playlist smoothness did not update live exactly once for each changed value');
+    ['', null, 'Infinity', new Error('cancel')].forEach(value => playlistChoose(105, value));
+    assert(refreshInputs.length === 0, 'Invalid refresh input reached the live refresh setter');
+    playlistChoose(105, '16');
+    assert(refreshInputs[0] === 16 && playlistReloads === 0 && scrollPrefs.unrelatedColour === 0xff123456 && scrollPrefs.unrelatedRowHeight === 32,
+        'Playlist scroll dialogs reloaded or modified unrelated settings');
+
+    // Execute the real menu cases: an unchanged OK must not reload the panel,
+    // and changed values must not touch row spacing or alternate shading.
+    const managerSource = require('fs').readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/smooth/jsspm.js'), 'utf8');
+    const menuCases = managerSource.slice(managerSource.indexOf('\t\tcase 38:'), managerSource.indexOf('\t\tcase 40:'));
+    const dispatch = new Function('idx', 'utils', 'window', 'ppt', 'clamp', 'switch (idx) {' + menuCases + '}');
+    const managerPrefs = {scrollSmoothness: 1.75, rowScrollStep: 3, defaultRowHeight: 32, alternatingRowShading: false};
+    const managerStored = {'SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT': 32, 'SMOOTH.PLAYLIST.MANAGER.ALTERNATING.ROWS': false};
+    let managerReloads = 0;
+    let settingWrites = 0;
+    const settingWindow = {Name: 'Manager test', Reload() { managerReloads++; },
+        SetProperty(key, value) { managerStored[key] = value; settingWrites++; }};
+    function chooseSetting(id, answer) {
+        dispatch(id, {InputBox() { if (answer instanceof Error) throw answer; return answer; }}, settingWindow, managerPrefs, clamp);
+    }
+    ['1.75', '1.75', '2', '2', '3', '3'].forEach(value => chooseSetting(38, value));
+    assert(managerPrefs.scrollSmoothness === 3 && managerStored['SMOOTH.SCROLL.SMOOTHNESS'] === 3 && settingWrites === 2,
+        'Smoothness did not update live or unnecessarily rewrote an unchanged value');
+    ['', ' ', null, 'not a number', 'Infinity', new Error('cancel')].forEach(value => chooseSetting(38, value));
+    assert(settingWrites === 2 && managerPrefs.scrollSmoothness === 3,
+        'Invalid or cancelled smoothness input changed the setting');
+    chooseSetting(39, '5'); chooseSetting(39, '5');
+    assert(managerPrefs.rowScrollStep === 5 && settingWrites === 3,
+        'Wheel step did not update live or rewrote an unchanged value');
+    assert(managerReloads === 0 && managerPrefs.defaultRowHeight === 32 && managerPrefs.alternatingRowShading === false &&
+        managerStored['SMOOTH.PLAYLIST.MANAGER.ROW.HEIGHT'] === 32 && managerStored['SMOOTH.PLAYLIST.MANAGER.ALTERNATING.ROWS'] === false,
+        'Scroll settings reloaded Playlist Manager or changed unrelated appearance');
 });
 
 suite("JS Playlist render cache", function () {
@@ -1055,6 +1111,7 @@ suite("bottom-area cross-host state", function () {
     const protocolSource = fs.readFileSync(__path("DarkOneJSP3/shared/jsplitter_protocols.js"), 'utf8');
     const resetSource = fs.readFileSync(__path("DarkOneJSP3/shared/reset_defaults.js"), 'utf8');
     const viewBridgeSource = fs.readFileSync(__path("DarkOneJSP3/shared/view_bridge.js"), 'utf8');
+    const themeSource = fs.readFileSync(__path("DarkOneJSP3/shared/theme_engine.js"), 'utf8');
     const hostSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/05_bottom_controls.js"), 'utf8');
     const configSource = fs.readFileSync(__path("DarkOneJSP3/jscript/js/Config_Global_Script.js"), 'utf8');
     const bottomStart = configSource.indexOf('// Shared bottom-area appearance.');
@@ -1111,9 +1168,13 @@ suite("bottom-area cross-host state", function () {
     const files = Object.create(null);
     const NEW_STATE = 'P:\\js_data\\darkonejsp3.bottom-area-state.txt';
     const COMMIT_COMMAND = 'P:\\js_data\\darkonejsp3.bottom-area-command.txt';
+    const COMMIT_ACK = 'P:\\js_data\\darkonejsp3.bottom-area-ack.txt';
     const GEOMETRY_STATE = 'P:\\js_data\\darkonejsp3.bottom-area-geometry.txt';
     const LEGACY_STATE = 'P:\\DarkOneJSP3\\shared\\bottom-area-state.txt';
     const RESET_COMMAND = 'P:\\js_data\\darkonejsp3.reset-command.txt';
+    const THEME_COMMAND = 'P:\\js_data\\darkonejsp3.theme-command.json';
+    const THEME_CAPTURE_QUERY = 'P:\\js_data\\darkonejsp3.theme-capture-query.json';
+    const THEME_CAPTURE_RESPONSE = 'P:\\js_data\\darkonejsp3.theme-capture-response.json';
     let failWrites = 0;
     let failWritePath = '';
     let bottomPickerCalls = 0;
@@ -1696,8 +1757,8 @@ suite("bottom-area cross-host state", function () {
     const hostFactory = new Function(
         'window', 'fb', 'include', 'DOJSP3', 'utils', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'console',
         'darkOneJsp3ResetScope', 'DarkOneViewBridge', 'Date', 'propertyCounter',
-        colourSource + '\n' + protocolSource + '\n' + resetSource + '\n' + hostSource +
-        '\nreturn {Protocol:BOTTOM_AREA_PROTOCOL,paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncCommit:syncBottomAreaCommitFile,syncReset:syncResetCommandFile,syncQuick:syncQuickSearchLayoutCommand,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,layout:layoutBottomControls,dispose:disposeRuntimeBridge,propertyReads:function(){return propertyCounter.count;},resetPropertyReads:function(){propertyCounter.count=0;},setSize:function(w,h){ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}};'
+        colourSource + '\n' + protocolSource + '\n' + resetSource + '\n' + themeSource + '\n' + hostSource +
+        '\nreturn {Protocol:BOTTOM_AREA_PROTOCOL,theme:DarkOneTheme,paint:on_paint,state:bottomAreaState,backgroundColour:bottomBackgroundColour,dividerColour:bottomDividerColour,syncFile:syncBottomAreaStateFile,syncCommit:syncBottomAreaCommitFile,syncReset:syncResetCommandFile,syncTheme:syncThemeCommandFile,syncCapture:syncThemeCaptureQueryFile,notify:on_notify_data,syncQuick:syncQuickSearchLayoutCommand,syncView:syncViewCommandFile,ensure:ensureRuntimeBridge,layout:layoutBottomControls,dispose:disposeRuntimeBridge,propertyReads:function(){return propertyCounter.count;},resetPropertyReads:function(){propertyCounter.count=0;},setSize:function(w,h){ww=w;wh=h;qsX=10;qsY=20;qsW=100;qsH=30;}};'
     );
     const host = hostFactory(
         hostWindow,
@@ -1794,6 +1855,144 @@ suite("bottom-area cross-host state", function () {
     const viewEvent = hostNotifications.filter(item => item[0] === 'DarkOneJSP3.View.Command').pop();
     if (!viewEvent || viewEvent[1] !== 'v1|layout-toggle')
         throw new Error('Valid view command was not rebroadcast correctly');
+
+    const captureTheme = JSON.parse(fs.readFileSync(__path('DarkOneJSP3/themes/Default.json'), 'utf8'));
+    const captureId = 'splitter-capture-test';
+    files[THEME_CAPTURE_QUERY] = host.theme.captureQuery(captureTheme, captureId, hostNow);
+    if (!host.syncCapture())
+        throw new Error('Bottom Controls did not consume the cross-host theme capture query');
+    if (Object.prototype.hasOwnProperty.call(files, THEME_CAPTURE_QUERY))
+        throw new Error('Processed theme capture query file was not acknowledged and removed');
+    const captureQueryEvent = hostNotifications.filter(
+        item => item[0] === 'DarkOneJSP3.Theme.Capture.Query'
+    ).pop();
+    if (!captureQueryEvent || !host.theme.parseCaptureQuery(captureQueryEvent[1], hostNow))
+        throw new Error('Validated theme capture query was not rebroadcast to JSplitter peers');
+    let captureBundle = host.theme.parseCaptureBundle(
+        files[THEME_CAPTURE_RESPONSE], captureId, hostNow
+    );
+    if (!captureBundle || !captureBundle.responses['bottom-controls'])
+        throw new Error('Bottom Controls did not publish its own cross-host capture response');
+    host.notify('DarkOneJSP3.Theme.Capture.Response', host.theme.captureResponse(captureId, 'info-stack', {
+        'appearance.infoStack.tabs.ThemeManager.visible': false
+    }));
+    captureBundle = host.theme.parseCaptureBundle(files[THEME_CAPTURE_RESPONSE], captureId, hostNow);
+    if (!captureBundle ||
+            captureBundle.responses['info-stack']['appearance.infoStack.tabs.ThemeManager.visible'] !== false)
+        throw new Error('Hidden Theme tab visibility was not collected from the InfoStack JSplitter');
+    host.notify('DarkOneJSP3.Theme.Capture.Response', host.theme.captureResponse(captureId, 'info-stack', {
+        'appearance.infoStack.tabs.ThemeManager.visible': true
+    }));
+    captureBundle = host.theme.parseCaptureBundle(files[THEME_CAPTURE_RESPONSE], captureId, hostNow);
+    if (captureBundle.responses['info-stack']['appearance.infoStack.tabs.ThemeManager.visible'] !== false)
+        throw new Error('A duplicate JSplitter response replaced the first capture snapshot');
+    files[THEME_CAPTURE_QUERY] = '{}';
+    if (host.syncCapture() || Object.prototype.hasOwnProperty.call(files, THEME_CAPTURE_QUERY))
+        throw new Error('Malformed theme capture query was processed or left for repeated polling');
+
+    // Theme Manager publishes a bottom commit and a wider theme command with
+    // the same id. Bottom Controls must stage both, acknowledge an attainable
+    // shared boundary, and avoid fallback rewrites, extra paints or reloads.
+    const coordinatedTheme = JSON.parse(fs.readFileSync(
+        __path('DarkOneJSP3/themes/Default.json'), 'utf8'
+    ));
+    function exerciseCoordinatedTheme(id, directNotificationFirst) {
+        const issuedAt = hostNow;
+        const applyAt = issuedAt + 50;
+        const state = host.Protocol.state(
+            2, 0xff000000, false, 4, 0xff000000, true, 0, id
+        );
+        const canonical = host.Protocol.serialiseState(state);
+        files[NEW_STATE] = canonical;
+        files[THEME_COMMAND] = host.theme.command(coordinatedTheme, id, issuedAt);
+        files[COMMIT_COMMAND] = host.Protocol.serialiseCommit(
+            host.Protocol.commit(id, issuedAt, applyAt, state)
+        );
+        const timerStart = hostTimeouts.length;
+        const repaintsBefore = hostRepaints;
+        const reloadsBefore = hostReloads;
+        const themeEventsBefore = hostNotifications.filter(
+            item => item[0] === 'DarkOneJSP3.Theme.Apply'
+        ).length;
+        failWrites = 1;
+        failWritePath = COMMIT_ACK;
+        if (host.syncCommit() || hostRepaints !== repaintsBefore ||
+                !files[COMMIT_COMMAND] || host.syncTheme() || host.syncFile(false))
+            throw new Error('Failed acknowledgement write allowed an uncoordinated apply');
+        failWritePath = '';
+        if (!host.syncCommit())
+            throw new Error('Theme apply did not consume its coordinated bottom commit');
+        const acknowledged = host.Protocol.parseCommit(files[COMMIT_ACK], hostNow);
+        if (!acknowledged || acknowledged.id !== id ||
+                acknowledged.applyAt < hostNow + 75 ||
+                host.Protocol.serialiseState(acknowledged.state) !== canonical)
+            throw new Error('Bottom Controls did not acknowledge the authoritative theme boundary');
+        hostNow = acknowledged.applyAt;
+        if (directNotificationFirst) {
+            host.notify('DarkOneJSP3.Theme.Apply', host.theme.stringify(coordinatedTheme));
+        }
+        hostTimeouts.slice(timerStart).forEach(function(timer) {
+            if (!timer.active || timer.fn.name === 'poll') return;
+            timer.active = false;
+            timer.fn();
+        });
+        if (!directNotificationFirst) {
+            host.notify('DarkOneJSP3.Theme.Apply', host.theme.stringify(coordinatedTheme));
+        }
+        if (files[NEW_STATE] !== canonical)
+            throw new Error('Theme apply replaced the coordinated bottom revision with an unversioned state');
+        if (host.syncFile(false))
+            throw new Error('Confirming a coordinated theme revision caused a second bottom apply');
+        if (Object.prototype.hasOwnProperty.call(files, THEME_COMMAND))
+            throw new Error('Coordinated theme command was left for the 500 ms fallback poll');
+        if (hostReloads !== reloadsBefore)
+            throw new Error('Coordinated theme apply reloaded the bottom host');
+        if (hostNotifications.filter(item => item[0] === 'DarkOneJSP3.Theme.Apply').length !== themeEventsBefore)
+            throw new Error('JSplitter relayed the wider theme before bottom paint completion');
+        host.paint({FillSolidRect() {}, DrawLine() {}});
+        if (files['P:\\js_data\\darkonejsp3.bottom-area-painted.txt'] !== id)
+            throw new Error('Bottom host did not acknowledge its completed paint');
+        files['P:\\js_data\\darkonejsp3.theme-release.txt'] = id;
+        runHostPollTick();
+        if (hostNotifications.filter(
+                item => item[0] === 'DarkOneJSP3.Theme.Apply'
+            ).length !== themeEventsBefore + 1)
+            throw new Error('Coordinated theme command was not relayed exactly once to JSplitter peers');
+        return { repaintsBefore: repaintsBefore, repaintsAfter: hostRepaints };
+    }
+
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.MODE', 4);
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR', 0xff000000);
+    hostProperties.set('DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT', false);
+    hostProperties.set('DARKONEJSP3.BOTTOM.DIVIDER.MODE', 4);
+    hostProperties.set('DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR', 0xff000000);
+    hostProperties.set('DARKONEJSP3.BOTTOM.SIDE.DIVIDERS', true);
+    hostProperties.set('DARKONEJSP3.BOTTOM.DEPTH', 0);
+    hostProperties.set('DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES', 2);
+    hostProperties.set('DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT', 44);
+    const firstThemeApply = exerciseCoordinatedTheme('theme-sync-first', true);
+    if (firstThemeApply.repaintsAfter !== firstThemeApply.repaintsBefore + 1 ||
+            (host.backgroundColour() >>> 0) !== 0xff202020)
+        throw new Error('First coordinated theme apply did not paint its bottom colour exactly once');
+    const sameThemeApply = exerciseCoordinatedTheme('theme-sync-same', false);
+    if (sameThemeApply.repaintsAfter !== sameThemeApply.repaintsBefore)
+        throw new Error('Reapplying the active theme caused a redundant bottom repaint');
+    const reloadsAfterThemeBoundary = hostReloads;
+    if (host.syncTheme() || hostReloads !== reloadsAfterThemeBoundary)
+        throw new Error('Theme fallback replayed an already coordinated command');
+    hostNow = Date.now();
+
+    // A poll can observe Theme Manager's first file before its matching commit
+    // write becomes visible. The legacy fallback must leave a fresh command
+    // untouched during the coordination grace, then recover if no commit comes.
+    const graceThemeId = 'theme-grace-fallback';
+    files[THEME_COMMAND] = host.theme.command(coordinatedTheme, graceThemeId, hostNow);
+    if (host.syncTheme() || !Object.prototype.hasOwnProperty.call(files, THEME_COMMAND))
+        throw new Error('Fresh theme command bypassed the bottom-commit coordination grace');
+    hostNow += 251;
+    if (!host.syncTheme() || Object.prototype.hasOwnProperty.call(files, THEME_COMMAND))
+        throw new Error('Unpaired theme command did not recover after the coordination grace');
+    hostNow = Date.now();
 
     files[RESET_COMMAND] = 'malformed-reset';
     if (host.syncReset()) throw new Error('A malformed reset command was processed');
@@ -2026,6 +2225,7 @@ suite("bottom-area cross-host state", function () {
         depthMode: 0
     };
     const panelARepaints = panelA.repaints;
+    delete files[COMMIT_ACK];
     panelA.api.send(customState);
     if (!files[NEW_STATE] || panelA.api.parse(files[NEW_STATE]).backgroundMode !== 3)
         throw new Error('JScript panel did not persist the shared bottom-area state');
@@ -2052,6 +2252,8 @@ suite("bottom-area cross-host state", function () {
         item => item[0] === 'DarkOneJSP3.BottomArea.Commit').length;
     const hostRepaintsBeforeCommit = hostRepaints;
     if (!host.syncCommit()) throw new Error('Bottom Controls did not consume the coordinated colour commit');
+    if (Object.prototype.hasOwnProperty.call(files, COMMIT_ACK))
+        throw new Error('Ordinary panel colour commits incorrectly entered the Theme Manager acknowledgement path');
     const relayedCommit = hostNotifications.filter(
         item => item[0] === 'DarkOneJSP3.BottomArea.Commit').pop();
     if (!relayedCommit || hostNotifications.filter(

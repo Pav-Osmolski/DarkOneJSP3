@@ -109,11 +109,13 @@ var DARKONEJSP3_RESET_REGISTRY = {
             "DarkOneJSP3.InfoStack.Tab.Queue.Visible": true,
             "DarkOneJSP3.InfoStack.Tab.Queue.Label": "Queue",
             "DarkOneJSP3.InfoStack.Tab.Properties.Visible": true,
-            "DarkOneJSP3.InfoStack.Tab.Properties.Label": "Properties"
+            "DarkOneJSP3.InfoStack.Tab.Properties.Label": "Properties",
+            "DarkOneJSP3.InfoStack.Tab.ThemeManager.Visible": true,
+            "DarkOneJSP3.InfoStack.Tab.ThemeManager.Label": "Theme"
         },
         behaviour: {
             "DarkOneJSP3.InfoStack.ActivePanel": 0,
-            "DarkOneJSP3.InfoStack.LabelDefaultsVersion": 2
+            "DarkOneJSP3.InfoStack.LabelDefaultsVersion": 3
         }
     },
     "display-waveform": {

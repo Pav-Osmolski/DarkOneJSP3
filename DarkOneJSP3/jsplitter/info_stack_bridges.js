@@ -5,6 +5,9 @@
 // Root; this helper retains only the InfoStack readiness handshake.
 //
 // Version history (newest first):
+// v0.2.1 moves the divider custom-colour editor away from page action 106,
+// which is now reserved for the optional Theme page.
+//
 // v0.2.0 removes Startup configuration from InfoStack after TOOLS gained its
 // dedicated root-owned state and command bridge.
 //
@@ -71,7 +74,7 @@ function appendInfoStackDividerMenu(menu) {
         MENU_STRING
     );
     menu.AppendMenuSeparator();
-    menu.AppendMenuItem(MENU_STRING, 106, 'Set custom colour...');
+    menu.AppendMenuItem(MENU_STRING, 906, 'Set custom colour...');
 }
 
 function handleInfoStackBridgeMenu(id) {
@@ -80,7 +83,7 @@ function handleInfoStackBridgeMenu(id) {
         setDividerState(selected.mode);
         return true;
     }
-    if (id === 106) {
+    if (id === 906) {
         chooseCustomDividerColour();
         return true;
     }

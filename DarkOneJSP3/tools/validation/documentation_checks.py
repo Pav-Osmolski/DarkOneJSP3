@@ -328,7 +328,7 @@ def run(ctx: ValidationContext) -> None:
         ),
         docs / 'LAYOUT_AND_PANEL_MAP.md': (
             ('Column', 'DOJSP3.Root', 'DOJSP3.ControlsRight'),
-            ('01  samples\\Smooth Playlist Manager.txt', '12  <profile>\\DarkOneJSP3\\jscript\\DarkOneJSP3 - Control Panel - Right.txt'),
+            ('01  samples\\Smooth Playlist Manager.txt', '13  <profile>\\DarkOneJSP3\\jscript\\DarkOneJSP3 - Control Panel - Right.txt'),
             ('01  loaders\\JSplitter 01 - Root.txt', 'controller: jsplitter\\06_display_waveform.js'),
             ('PSS01 -> JSplitter 01', 'PSS06 -> JSplitter 06'),
         ),

@@ -992,19 +992,28 @@ function oBrowser() {
 			this.repaint();
 			break;
 		case 4:
-			g_colour_text = utils.ColourPicker(g_colour_text);
-			window.SetProperty("SMOOTH.COLOUR.TEXT", g_colour_text);
-			on_colours_changed();
+			var picked_text = DarkOneColour.pickJscript(g_colour_text, "Playlist Manager text", "Enter #RRGGBB");
+			if (picked_text !== null) {
+				g_colour_text = picked_text;
+				window.SetProperty("SMOOTH.COLOUR.TEXT", g_colour_text);
+				on_colours_changed();
+			}
 			break;
 		case 5:
-			g_colour_background = utils.ColourPicker(g_colour_background);
-			window.SetProperty("SMOOTH.COLOUR.BACKGROUND.NORMAL", g_colour_background);
-			on_colours_changed();
+			var picked_background = DarkOneColour.pickJscript(g_colour_background, "Playlist Manager background", "Enter #RRGGBB");
+			if (picked_background !== null) {
+				g_colour_background = picked_background;
+				window.SetProperty("SMOOTH.COLOUR.BACKGROUND.NORMAL", g_colour_background);
+				on_colours_changed();
+			}
 			break;
 		case 6:
-			g_colour_selection = utils.ColourPicker(g_colour_selection);
-			window.SetProperty("SMOOTH.COLOUR.BACKGROUND.SELECTED", g_colour_selection);
-			on_colours_changed();
+			var picked_selection = DarkOneColour.pickJscript(g_colour_selection, "Playlist Manager selected background", "Enter #RRGGBB");
+			if (picked_selection !== null) {
+				g_colour_selection = picked_selection;
+				window.SetProperty("SMOOTH.COLOUR.BACKGROUND.SELECTED", g_colour_selection);
+				on_colours_changed();
+			}
 			break;
 		case 10:
 		case 11:
@@ -1052,10 +1061,30 @@ function oBrowser() {
 			} catch (e) {}
 			break;
 		case 38:
-			try { var sm = Number(utils.InputBox('Lower is snappier; higher is smoother. Suggested range: 1.25 to 6.', window.Name, ppt.scrollSmoothness)); if (!isNaN(sm)) { window.SetProperty("SMOOTH.SCROLL.SMOOTHNESS", clamp(sm, 1.25, 10)); window.Reload(); } } catch (e) {}
+			try {
+				var smoothInput = utils.InputBox('Lower is snappier; higher is smoother. Suggested range: 1.25 to 6.', window.Name, ppt.scrollSmoothness);
+				if (smoothInput == null || !String(smoothInput).trim()) break;
+				var sm = Number(smoothInput);
+				if (!isFinite(sm)) break;
+				sm = clamp(sm, 1.25, 10);
+				if (sm !== ppt.scrollSmoothness) {
+					window.SetProperty("SMOOTH.SCROLL.SMOOTHNESS", sm);
+					ppt.scrollSmoothness = sm;
+				}
+			} catch (e) {}
 			break;
 		case 39:
-			try { var rs = Number(utils.InputBox('Mouse-wheel row step. Suggested range: 1 to 10.', window.Name, ppt.rowScrollStep)); if (!isNaN(rs)) { window.SetProperty("SMOOTH.ROW.SCROLL.STEP", clamp(Math.round(rs), 1, 10)); window.Reload(); } } catch (e) {}
+			try {
+				var stepInput = utils.InputBox('Mouse-wheel row step. Suggested range: 1 to 10.', window.Name, ppt.rowScrollStep);
+				if (stepInput == null || !String(stepInput).trim()) break;
+				var rs = Number(stepInput);
+				if (!isFinite(rs)) break;
+				rs = clamp(Math.round(rs), 1, 10);
+				if (rs !== ppt.rowScrollStep) {
+					window.SetProperty("SMOOTH.ROW.SCROLL.STEP", rs);
+					ppt.rowScrollStep = rs;
+				}
+			} catch (e) {}
 			break;
 		case 40:
 		case 41:

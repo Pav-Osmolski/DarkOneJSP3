@@ -88,6 +88,7 @@ for (var i = 0; i < 7; i++) g_btns && gr.DrawBitmap(g_btns, padX + qx[i] + (bbw 
 	darkOneDrawText(gr, "VOLUME", btn_font, btnsCol.text_normal, rbx + padX, by1, bbw, Math.ceil(bbh / 3 * 2), 1);
 	buttonsDraw(gr);
 	volknob && volknob.draw(gr);
+	if (typeof darkOneJsp3ThemePainted == 'function') darkOneJsp3ThemePainted();
 }
 
 // ----- MOUSE ACTIONS -----
@@ -135,7 +136,26 @@ function on_volume_change(val) {
 	if (!v_drag) volume_knob_repaint.request();
 }
 
+function darkOneRefreshControlRightTheme(change) {
+	ww = window.Width;
+	wh = window.Height;
+	get_colours();
+	var geometry = darkOneJsp3ThemeHasChanges(change, ['DARKONEJSP3.FONT.', 'DARKONEJSP3.CONTROL.',
+		'DARKONEJSP3.BUTTON.', 'DARKONEJSP3.ICON.', 'Buttons ', 'Button', 'DARKONEJSP3.VOLUME.']);
+	if (geometry) buttonsOptions();
+	darkOneApplyBottomAreaAppearance(false);
+	if (geometry) {
+	i_size = ww / 105 * 3 * (typeof darkOneIconScale == 'function' ? darkOneIconScale() : 1.0);
+	buttonsSizes();
+	buttonsRefresh();
+	}
+	window.Repaint();
+	return true;
+}
+
 function on_notify_data(name, info) {
+	if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(
+		name, info, DARKONEJSP3_RESET_ROLE, darkOneRefreshControlRightTheme)) return;
 	if (darkOneVolumeCadenceOwner && darkOneVolumeCadenceOwner.handleNotification(name, info)) return;
 	if (darkOneHandleResetNotification(name, info)) return;
 	if (typeof darkOneHandleNotify == 'function') {
@@ -158,6 +178,7 @@ function on_colours_changed() {
 }
 
 function on_script_unload() {
+	if (typeof darkOneJsp3DisposeThemeStage == 'function') darkOneJsp3DisposeThemeStage();
 	if (typeof darkOneDisposeBottomAreaBridge == 'function') darkOneDisposeBottomAreaBridge();
 	if (darkOneVolumeCadenceOwner) darkOneVolumeCadenceOwner.dispose();
 	volume_knob_repaint.cancel();

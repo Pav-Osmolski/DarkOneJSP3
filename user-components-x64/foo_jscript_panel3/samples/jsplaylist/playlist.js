@@ -1312,34 +1312,52 @@ function oList(object_name) {
 			on_colours_changed();
 			break;
 		case 4:
-			g_colour_text = utils.ColourPicker(g_colour_text);
-			window.SetProperty("JSPLAYLIST.COLOUR TEXT NORMAL", g_colour_text);
-			on_colours_changed();
+			var picked_text = DarkOneColour.pickJscript(g_colour_text, "JS Playlist text", "Enter #RRGGBB");
+			if (picked_text !== null) {
+				g_colour_text = picked_text;
+				window.SetProperty("JSPLAYLIST.COLOUR TEXT NORMAL", g_colour_text);
+				on_colours_changed();
+			}
 			break;
 		case 5:
-			g_colour_highlight = utils.ColourPicker(g_colour_highlight);
-			window.SetProperty("JSPLAYLIST.COLOUR TEXT HIGHLIGHT", g_colour_highlight);
-			on_colours_changed();
+			var picked_highlight = DarkOneColour.pickJscript(g_colour_highlight, "JS Playlist highlight", "Enter #RRGGBB");
+			if (picked_highlight !== null) {
+				g_colour_highlight = picked_highlight;
+				window.SetProperty("JSPLAYLIST.COLOUR TEXT HIGHLIGHT", g_colour_highlight);
+				on_colours_changed();
+			}
 			break;
 		case 6:
-			g_colour_background = utils.ColourPicker(g_colour_background);
-			window.SetProperty("JSPLAYLIST.COLOUR BACKGROUND NORMAL", g_colour_background);
-			on_colours_changed();
+			var picked_background = DarkOneColour.pickJscript(g_colour_background, "JS Playlist background", "Enter #RRGGBB");
+			if (picked_background !== null) {
+				g_colour_background = picked_background;
+				window.SetProperty("JSPLAYLIST.COLOUR BACKGROUND NORMAL", g_colour_background);
+				on_colours_changed();
+			}
 			break;
 		case 7:
-			g_colour_selection = utils.ColourPicker(g_colour_selection);
-			window.SetProperty("JSPLAYLIST.COLOUR BACKGROUND SELECTED", g_colour_selection);
-			on_colours_changed();
+			var picked_selection = DarkOneColour.pickJscript(g_colour_selection, "JS Playlist selected background", "Enter #RRGGBB");
+			if (picked_selection !== null) {
+				g_colour_selection = picked_selection;
+				window.SetProperty("JSPLAYLIST.COLOUR BACKGROUND SELECTED", g_colour_selection);
+				on_colours_changed();
+			}
 			break;
 		case 8:
-			g_colour_mood = utils.ColourPicker(g_colour_mood);
-			window.SetProperty("JSPLAYLIST.COLOUR.MOOD", g_colour_mood);
-			window.Repaint();
+			var picked_mood = DarkOneColour.pickJscript(g_colour_mood, "JS Playlist mood", "Enter #RRGGBB");
+			if (picked_mood !== null) {
+				g_colour_mood = picked_mood;
+				window.SetProperty("JSPLAYLIST.COLOUR.MOOD", g_colour_mood);
+				window.Repaint();
+			}
 			break;
 		case 9:
-			g_colour_rating = utils.ColourPicker(g_colour_rating);
-			window.SetProperty("JSPLAYLIST.COLOUR.RATING", g_colour_rating);
-			window.Repaint();
+			var picked_rating = DarkOneColour.pickJscript(g_colour_rating, "JS Playlist rating", "Enter #RRGGBB");
+			if (picked_rating !== null) {
+				g_colour_rating = picked_rating;
+				window.SetProperty("JSPLAYLIST.COLOUR.RATING", g_colour_rating);
+				window.Repaint();
+			}
 			break;
 		case 100:
 			properties.smoothscrolling = !properties.smoothscrolling;
@@ -1362,36 +1380,54 @@ function oList(object_name) {
 			break;
 		case 105:
 			try {
-				var refresh_ms = Number(utils.InputBox("Enter a refresh interval from 7 to 40 milliseconds. Lower values are smoother but use more CPU.", window.Name, cList.repaint_interval));
-				if (!isNaN(refresh_ms)) {
-					set_playlist_refresh_interval(refresh_ms);
+				var refresh_ms_input = utils.InputBox("Enter a refresh interval from 7 to 40 milliseconds. Lower values are smoother but use more CPU.", window.Name, cList.repaint_interval);
+				if (refresh_ms_input == null || !String(refresh_ms_input).trim()) break;
+				var refresh_ms = Number(refresh_ms_input);
+				if (isFinite(refresh_ms)) {
+					refresh_ms = Math.max(7, Math.min(40, Math.round(refresh_ms)));
+					if (refresh_ms !== cList.repaint_interval) set_playlist_refresh_interval(refresh_ms);
 				}
 			} catch (e) {}
 			break;
 		case 106:
 			try {
-				var smoothness = Number(utils.InputBox("Enter smoothness from 1.25 to 10. Lower is snappier; higher eases more slowly.", window.Name, cList.scroll_div));
-				if (!isNaN(smoothness)) {
-					cList.scroll_div = Math.max(1.25, Math.min(10, smoothness));
-					window.SetProperty("JSPLAYLIST.Smooth Scroll Divisor", cList.scroll_div);
+				var smoothness_input = utils.InputBox("Enter smoothness from 1.25 to 10. Lower is snappier; higher eases more slowly.", window.Name, cList.scroll_div);
+				if (smoothness_input == null || !String(smoothness_input).trim()) break;
+				var smoothness = Number(smoothness_input);
+				if (isFinite(smoothness)) {
+					smoothness = Math.max(1.25, Math.min(10, smoothness));
+					if (smoothness !== cList.scroll_div) {
+						window.SetProperty("JSPLAYLIST.Smooth Scroll Divisor", smoothness);
+						cList.scroll_div = smoothness;
+					}
 				}
 			} catch (e) {}
 			break;
 		case 107:
 			try {
-				var throttle = Number(utils.InputBox("Enter wheel throttle from 0 to 40 milliseconds. Use 0 for immediate response.", window.Name, cList.wheel_throttle));
-				if (!isNaN(throttle)) {
-					cList.wheel_throttle = Math.max(0, Math.min(40, Math.round(throttle)));
-					window.SetProperty("JSPLAYLIST.Playlist Wheel Throttle (ms)", cList.wheel_throttle);
+				var throttle_input = utils.InputBox("Enter wheel throttle from 0 to 40 milliseconds. Use 0 for immediate response.", window.Name, cList.wheel_throttle);
+				if (throttle_input == null || !String(throttle_input).trim()) break;
+				var throttle = Number(throttle_input);
+				if (isFinite(throttle)) {
+					throttle = Math.max(0, Math.min(40, Math.round(throttle)));
+					if (throttle !== cList.wheel_throttle) {
+						window.SetProperty("JSPLAYLIST.Playlist Wheel Throttle (ms)", throttle);
+						cList.wheel_throttle = throttle;
+					}
 				}
 			} catch (e) {}
 			break;
 		case 108:
 			try {
-				var row_step = Number(utils.InputBox("Enter the number of playlist rows moved by each wheel notch (1 to 10).", window.Name, cList.scrollstep));
-				if (!isNaN(row_step)) {
-					cList.scrollstep = Math.max(1, Math.min(10, Math.round(row_step)));
-					window.SetProperty("JSPLAYLIST.Playlist Scroll Step", cList.scrollstep);
+				var row_step_input = utils.InputBox("Enter the number of playlist rows moved by each wheel notch (1 to 10).", window.Name, cList.scrollstep);
+				if (row_step_input == null || !String(row_step_input).trim()) break;
+				var row_step = Number(row_step_input);
+				if (isFinite(row_step)) {
+					row_step = Math.max(1, Math.min(10, Math.round(row_step)));
+					if (row_step !== cList.scrollstep) {
+						window.SetProperty("JSPLAYLIST.Playlist Scroll Step", row_step);
+						cList.scrollstep = row_step;
+					}
 				}
 			} catch (e) {}
 			break;
@@ -1404,11 +1440,16 @@ function oList(object_name) {
 			break;
 		case 111:
 			try {
-				var default_step = cList.free_wheel_step > 0 ? cList.free_wheel_step : Math.max(4, Math.round(cRow.playlist_h * 0.65));
-				var pixel_step = Number(utils.InputBox("Enter the free-scroll distance per wheel notch from 4 to 240 pixels. Enter 0 to use the automatic 65% row-height value.", window.Name, default_step));
-				if (!isNaN(pixel_step)) {
-					cList.free_wheel_step = pixel_step === 0 ? 0 : Math.max(4, Math.min(240, Math.round(pixel_step)));
-					window.SetProperty("JSPLAYLIST.Free Wheel Step (pixels)", cList.free_wheel_step);
+				var default_step = cList.free_wheel_step;
+				var pixel_step_input = utils.InputBox("Enter the free-scroll distance per wheel notch from 4 to 240 pixels. Enter 0 to use the automatic 65% row-height value.", window.Name, default_step);
+				if (pixel_step_input == null || !String(pixel_step_input).trim()) break;
+				var pixel_step = Number(pixel_step_input);
+				if (isFinite(pixel_step)) {
+					pixel_step = pixel_step === 0 ? 0 : Math.max(4, Math.min(240, Math.round(pixel_step)));
+					if (pixel_step !== cList.free_wheel_step) {
+						window.SetProperty("JSPLAYLIST.Free Wheel Step (pixels)", pixel_step);
+						cList.free_wheel_step = pixel_step;
+					}
 				}
 			} catch (e) {}
 			break;

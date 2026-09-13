@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Queue Viewer"
-// @version "0.8.6"
+// @version "0.8.7"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\theme_engine.js"
 // @import "%fb2k_component_path%samples\shared\colour_utils.js"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\queue_bridge.js"
 // @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
@@ -53,5 +54,7 @@ function on_size() {
 }
 
 function on_notify_data(name, info) {
+    if (typeof darkOneJsp3HandleTheme == 'function' &&
+            darkOneJsp3HandleTheme(name, info, "queue-viewer")) return;
     if (jsp3EnhancedHandleSampleReset(name, info, "queue-viewer")) return;
 }

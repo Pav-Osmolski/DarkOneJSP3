@@ -1,0 +1,1273 @@
+// ==PREPROCESSOR==
+// @name "DarkOneJSP3 - Theme Manager"
+// @version "0.1.14"
+// @author "DeViLhoOD"
+// @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\theme_engine.js"
+// @import "%fb2k_profile_path%DarkOneJSP3\shared\jsplitter_protocols.js"
+// ==/PREPROCESSOR==
+
+"use strict";
+
+var TM_FOLDER = fb.ProfilePath + "DarkOneJSP3\\themes\\";
+var TM_DEFAULT_FILE = "Default.json";
+var TM_ACTIVE_PROPERTY = "DARKONEJSP3.THEME.ACTIVE.FILE";
+var TM_SELECTED_PROPERTY = "DARKONEJSP3.THEME.MANAGER.SELECTED.FILE";
+var TM_CATEGORY_PROPERTY = "DARKONEJSP3.THEME.MANAGER.CATEGORY";
+var TM_MB_YESNO = 0x00000004;
+var TM_MB_ICONQUESTION = 0x00000020;
+var TM_IDYES = 6;
+var TM_HAND = 32649;
+var TM_ARROW = 32512;
+var TM_QUERY_NOTIFICATION = "DarkOneJSP3.ThemeManager.QueryAvailability";
+var TM_AVAILABLE_NOTIFICATION = "DarkOneJSP3.ThemeManager.Available";
+var TM_AVAILABILITY_VERSION = "v1";
+var TM_AVAILABILITY_FILE = fb.ProfilePath + "js_data\\darkonejsp3.theme-manager-availability.json";
+var TM_BOTTOM_AREA_STATE_FILE = fb.ProfilePath + "js_data\\darkonejsp3.bottom-area-state.txt";
+var TM_BOTTOM_AREA_COMMIT_FILE = fb.ProfilePath + "js_data\\darkonejsp3.bottom-area-command.txt";
+var TM_BOTTOM_AREA_ACK_FILE = fb.ProfilePath + "js_data\\darkonejsp3.bottom-area-ack.txt";
+var TM_BOTTOM_AREA_PAINTED_FILE = fb.ProfilePath + "js_data\\darkonejsp3.bottom-area-painted.txt";
+var TM_THEME_RELEASE_FILE = fb.ProfilePath + "js_data\\darkonejsp3.theme-release.txt";
+var tmBottomPaints = {};
+var TM_BOTTOM_AREA_COMMIT_DELAY = 50;
+var TM_BOTTOM_AREA_ACK_POLL_MS = 10;
+var TM_BOTTOM_AREA_ACK_TIMEOUT_MS = 750;
+var TM_BOTTOM_AREA_FALLBACK_LEAD_MS = 75;
+var TM_ROUNDNESS_VALUES = [-1, 0, 20, 33, 60, 100];
+var TM_ROUNDNESS_LABELS = [
+    "Automatic / follow button style",
+    "Square (0%)",
+    "Subtle (20%)",
+    "Classic DarkOne (33%)",
+    "Rounded (60%)",
+    "Maximum / pill (100%)"
+];
+var TM_CAPTURE_ROLES = [
+    "control-left", "control-right", "display", "main-columns", "art-spectrum",
+    "bottom-controls", "quick-search", "info-stack", "display-waveform",
+    "lastfm-bio", "lastfm-info", "properties", "album-notes", "queue-viewer",
+    "album-art", "playlist-manager", "js-playlist"
+];
+var TM_SPLITTER_CAPTURE_ROLES = [
+    "main-columns", "art-spectrum", "bottom-controls", "info-stack", "display-waveform"
+];
+var tmCaptureTimer = 0;
+var tmApplyTimer = 0;
+var tmApplyAckTimer = 0;
+var tmApplyCommandId = "";
+var tmApplyAckDeadline = 0;
+
+var tmColours = {
+    background: 0xff101216,
+    sidebar: 0xff171a20,
+    card: 0xff1e222a,
+    cardHover: 0xff252b35,
+    border: 0xff323947,
+    text: 0xffe6e9ef,
+    muted: 0xff969eae,
+    accent: 0xff298fcc,
+    danger: 0xffc94c5d,
+    success: 0xff4dab78
+};
+
+var tmFonts = {
+    title: JSON.stringify({ Name: "Segoe UI", Size: 22, Weight: 600, Style: 0, Stretch: 5 }),
+    heading: JSON.stringify({ Name: "Segoe UI", Size: 14, Weight: 600, Style: 0, Stretch: 5 }),
+    normal: JSON.stringify({ Name: "Segoe UI", Size: 12, Weight: 400, Style: 0, Stretch: 5 }),
+    small: JSON.stringify({ Name: "Segoe UI", Size: 10, Weight: 400, Style: 0, Stretch: 5 })
+};
+
+var tmCategories = [
+    { name: "Colours", description: "Core palette and panel-specific playlist colours." },
+    { name: "Typography", description: "Font families, weights and responsive scaling." },
+    { name: "Controls", description: "Button styling, hit targets and bottom controls." },
+    { name: "InfoStack", description: "Tabs, backing and information-page appearance." },
+    { name: "Layout", description: "Panel arrangements, playlist and artwork presentation." },
+    { name: "Manager", description: "Typography and scaling for the Theme Manager interface." }
+];
+
+var tmFields = {
+    Colours: [
+        ["Accent", "appearance.palette.accent", "colour"],
+        ["Page background", "appearance.palette.pageBackground", "colour"],
+        ["Text", "appearance.palette.text", "colour"],
+        ["Selected row", "appearance.palette.selected", "colour"],
+        ["Divider", "appearance.palette.divider", "colour"],
+        ["Volume indicator", "appearance.palette.volumeIndicator", "colour"],
+        ["Playlist colour type", "appearance.playlist.colourType", "enum", ["Custom", "Dynamic", "Off"]],
+        ["Playlist text", "appearance.playlist.text", "colour"],
+        ["Playlist highlight", "appearance.playlist.highlight", "colour"],
+        ["Playlist background", "appearance.playlist.background", "colour"],
+        ["Playlist selected background", "appearance.playlist.selectedBackground", "colour"],
+        ["Playlist mood", "appearance.playlist.mood", "colour"],
+        ["Playlist rating", "appearance.playlist.rating", "colour"],
+        ["Playlist Manager colour type", "appearance.playlistManager.colourType", "enum", ["Custom", "Dynamic", "Off"]],
+        ["Playlist Manager text", "appearance.playlistManager.text", "colour"],
+        ["Playlist Manager background", "appearance.playlistManager.background", "colour"],
+        ["Playlist Manager selected background", "appearance.playlistManager.selectedBackground", "colour"]
+    ],
+    Typography: [
+        ["Control font", "appearance.typography.controlFamily", "text"],
+        ["Control weight", "appearance.typography.controlWeight", "number", 100, 950],
+        ["Control scale", "appearance.typography.controlScale", "number", 0.5, 2],
+        ["Display master scale", "appearance.typography.displayScale", "number", 0.5, 2],
+        ["Display label font", "appearance.typography.displayLabelFamily", "text"],
+        ["Display label weight", "appearance.typography.displayLabelWeight", "number", 100, 950],
+        ["Display label scale", "appearance.typography.displayLabelScale", "number", 0.5, 2],
+        ["Display value font", "appearance.typography.displayValueFamily", "text"],
+        ["Display value weight", "appearance.typography.displayValueWeight", "number", 100, 950],
+        ["Display value scale", "appearance.typography.displayValueScale", "number", 0.5, 2]
+    ],
+    Controls: [
+        ["Button style", "appearance.controls.buttonStyle", "choice", ["Standard", "Thick", "Round", "Round (Alt)", "Round (Alt + Narrow)"], 1],
+        ["Button depth", "appearance.controls.buttonDepth", "choice", ["Flat", "Soft", "Medium", "Strong"]],
+        ["Button roundness (%)", "appearance.controls.roundness", "roundness"],
+        ["Hitbox scale", "appearance.controls.hitboxScale", "number", 0.5, 2],
+        ["Icon scale", "appearance.controls.iconScale", "number", 0.5, 2],
+        ["Volume indicator mode", "appearance.controls.volumeIndicatorMode", "choice", ["Default", "Custom"]],
+        ["Bottom background mode", "appearance.bottomArea.backgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI"]],
+        ["Bottom custom background", "appearance.bottomArea.customBackground", "colour"],
+        ["Bottom divider mode", "appearance.bottomArea.dividerMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI"]],
+        ["Bottom custom divider", "appearance.bottomArea.customDivider", "colour"],
+        ["Bottom depth", "appearance.bottomArea.depth", "choice", ["Flat", "Soft"]],
+        ["Linear gradient", "appearance.bottomArea.linearGradient", "toggle"],
+        ["Side dividers", "appearance.bottomArea.sideDividers", "toggle"],
+        ["Quick Search lines", "appearance.bottomArea.quickSearchLines", "choice", ["Hidden", "One", "Two"]],
+        ["Quick Search width (%)", "appearance.bottomArea.quickSearchWidthPercent", "number", 20, 100],
+        ["Quick Search automatic base scale (%)", "appearance.quickSearch.automaticFontScale", "number", 50, 200],
+        ["Quick Search fixed font size (0 = auto)", "appearance.quickSearch.fixedFontSize", "number", 0, 48],
+        ["Quick Search text mode", "appearance.quickSearch.normalTextMode", "choice", ["Default", "Custom"]],
+        ["Quick Search text colour", "appearance.quickSearch.customText", "colour"],
+        ["Quick Search background mode", "appearance.quickSearch.normalBackgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI"]],
+        ["Quick Search background colour", "appearance.quickSearch.customBackground", "colour"],
+        ["Quick Search border mode", "appearance.quickSearch.borderMode", "choice", ["Default", "Custom"]],
+        ["Quick Search border colour", "appearance.quickSearch.customBorder", "colour"],
+        ["Error text mode", "appearance.quickSearch.errorTextMode", "choice", ["Default", "Custom"]],
+        ["Error text colour", "appearance.quickSearch.customErrorText", "colour"],
+        ["Error background mode", "appearance.quickSearch.errorBackgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI", "Error default"]],
+        ["Error background colour", "appearance.quickSearch.customErrorBackground", "colour"]
+    ],
+    InfoStack: [
+        ["Backing mode", "appearance.infoStack.backgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI"]],
+        ["Custom backing", "appearance.infoStack.customBackground", "colour"],
+        ["Tab strip visible", "appearance.infoStack.tabStripVisible", "toggle"],
+        ["Tab accent mode", "appearance.infoStack.tabColourMode", "choice", ["Default", "Custom", "Columns UI"]],
+        ["Tab automatic base scale (%)", "appearance.infoStack.automaticFontScale", "number", 50, 200],
+        ["Fixed tab font size (0 = auto)", "appearance.infoStack.fixedFontSize", "number", 0, 48],
+        ["Tab area height (0 = auto)", "appearance.infoStack.tabAreaHeight", "number", 0, 240],
+        ["Playlists tab visible", "appearance.infoStack.tabs.Playlists.visible", "toggle"],
+        ["Playlists tab label", "appearance.infoStack.tabs.Playlists.label", "text"],
+        ["Biography tab visible", "appearance.infoStack.tabs.Biography.visible", "toggle"],
+        ["Biography tab label", "appearance.infoStack.tabs.Biography.label", "text"],
+        ["Last.fm tab visible", "appearance.infoStack.tabs.Lastfm.visible", "toggle"],
+        ["Last.fm tab label", "appearance.infoStack.tabs.Lastfm.label", "text"],
+        ["Album Notes tab visible", "appearance.infoStack.tabs.Allmusic.visible", "toggle"],
+        ["Album Notes tab label", "appearance.infoStack.tabs.Allmusic.label", "text"],
+        ["Queue tab visible", "appearance.infoStack.tabs.Queue.visible", "toggle"],
+        ["Queue tab label", "appearance.infoStack.tabs.Queue.label", "text"],
+        ["Properties tab visible", "appearance.infoStack.tabs.Properties.visible", "toggle"],
+        ["Properties tab label", "appearance.infoStack.tabs.Properties.label", "text"],
+        ["Theme tab visible", "appearance.infoStack.tabs.ThemeManager.visible", "toggle"],
+        ["Theme tab label", "appearance.infoStack.tabs.ThemeManager.label", "text"],
+        ["Page background mode", "appearance.pages.backgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Dark grey", "Custom", "Columns UI"]],
+        ["Page custom background", "appearance.pages.customBackground", "colour"],
+        ["Page text mode", "appearance.pages.textMode", "choice", ["Default", "Custom"]],
+        ["Page custom text", "appearance.pages.customText", "colour"],
+        ["Dynamic page colours", "appearance.pages.dynamicColours", "toggle"],
+        ["Wallpaper mode", "appearance.pages.wallpaperMode", "choice", ["None", "Artwork", "File"]],
+        ["Wallpaper file", "appearance.pages.wallpaperPath", "text"],
+        ["Blur wallpaper", "appearance.pages.wallpaperBlurred", "toggle"]
+    ],
+    Layout: [
+        ["Main columns", "appearance.layout.mainColumnsMode", "choice", ["Standard", "Artwork + Playlist", "InfoStack + Playlist", "Expanded InfoStack"]],
+        ["Artwork / spectrum", "appearance.layout.artSpectrumMode", "choice", ["Split", "Artwork only"]],
+        ["Display style", "appearance.display.style", "choice", ["Plain Font", "Dot Matrix"]],
+        ["Display accent mode", "appearance.display.accentMode", "choice", ["Default", "Custom", "Columns UI"]],
+        ["Waveform host background", "appearance.displayWaveform.backgroundMode", "choice", ["Transparent", "Black", "DarkOne", "Custom", "Dark grey", "Columns UI", "Automatic"]],
+        ["Waveform host custom colour", "appearance.displayWaveform.customBackground", "colour"],
+        ["Album Art background", "appearance.albumArt.backgroundMode", "choice", ["UI default", "Splitter", "Custom"]],
+        ["Album Art custom background", "appearance.albumArt.customBackground", "colour"],
+        ["Album Art aspect", "appearance.albumArt.aspect", "choice", ["Fit", "Fill", "Stretch", "Crop"]],
+        ["Album Art square sizing", "appearance.albumArt.squareSizing", "choice", ["Fit square", "Fill height"]],
+        ["Playlist wallpaper", "appearance.playlist.showWallpaper", "toggle"],
+        ["Playlist Manager filter", "appearance.playlistManager.showFilter", "toggle"],
+        ["Playlist Manager filter width", "appearance.playlistManager.filterWidth", "number", 80, 1000],
+        ["Playlist Manager row height", "appearance.playlistManager.rowHeight", "number", 18, 80],
+        ["Alternating playlist rows", "appearance.playlistManager.alternatingRows", "toggle"],
+        ["Artwork visible", "appearance.pages.artwork.visible", "toggle"],
+        ["Artwork background", "appearance.pages.artwork.backgroundEnabled", "toggle"],
+        ["Blur artwork background", "appearance.pages.artwork.backgroundBlurred", "toggle"],
+        ["Artwork ratio", "appearance.pages.artwork.ratio", "number", 0.1, 0.9]
+    ],
+    Manager: [
+        ["Font size (0 = automatic)", "appearance.manager.fixedFontSize", "number", 0, 24],
+        ["Automatic base scale (%)", "appearance.manager.automaticFontScale", "number", 50, 200]
+    ]
+};
+
+var tmState = {
+    width: 0,
+    height: 0,
+    files: [],
+    selectedFile: "Default.json",
+    theme: null,
+    category: 0,
+    scroll: 0,
+    fileScroll: 0,
+    mouseX: 0,
+    sidebarWidth: 220,
+    hover: null,
+    hits: [],
+    dirty: false,
+    capture: null,
+    status: "",
+    statusColour: tmColours.muted
+};
+
+function tmClone(value) { return JSON.parse(JSON.stringify(value)); }
+
+function tmOwn(object, key) {
+    return object && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function tmUpgradeThemeDraft(theme) {
+    theme = tmClone(theme);
+    var appearance = theme.appearance || (theme.appearance = {});
+    var quickSearch = appearance.quickSearch;
+    if (!quickSearch || typeof quickSearch !== "object" || Array.isArray(quickSearch)) {
+        quickSearch = appearance.quickSearch = {};
+    }
+    var infoStack = appearance.infoStack;
+    if (!infoStack || typeof infoStack !== "object" || Array.isArray(infoStack)) infoStack = {};
+    if (!tmOwn(quickSearch, "fixedFontSize")) quickSearch.fixedFontSize = 0;
+    if (!tmOwn(quickSearch, "automaticFontScale")) {
+        quickSearch.automaticFontScale = tmOwn(infoStack, "automaticFontScale")
+            ? infoStack.automaticFontScale : 100;
+    }
+    return theme;
+}
+
+function tmCaptureFileMatches(path, id) {
+    try {
+        if (!utils.IsFile(path)) return false;
+        var raw = String(utils.ReadTextFile(path, 65001) || "");
+        if (!raw || raw.length > 262144) return false;
+        var payload = JSON.parse(raw);
+        return payload && payload.version === 1 && String(payload.id || "") === String(id || "");
+    } catch (e) {}
+    return false;
+}
+
+function tmCleanupCaptureFiles(capture) {
+    if (!capture) return;
+    var paths = [DARKONEJSP3_THEME_CAPTURE_QUERY_FILE, DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE];
+    for (var i = 0; i < paths.length; i++) {
+        try {
+            if (tmCaptureFileMatches(paths[i], capture.id)) utils.RemovePath(paths[i]);
+        } catch (e) {}
+    }
+}
+
+function tmCancelCapture() {
+    var capture = tmState.capture;
+    if (tmCaptureTimer) window.ClearTimeout(tmCaptureTimer);
+    tmCaptureTimer = 0;
+    tmState.capture = null;
+    tmCleanupCaptureFiles(capture);
+}
+
+function tmBaseName(path) {
+    return String(path || "").replace(/\//g, "\\").split("\\").pop();
+}
+
+function tmValidName(value) {
+    value = String(value == null ? "" : value).replace(/^\s+|\s+$/g, "").replace(/\.json$/i, "");
+    if (!value || value.length > 80 || /[<>:"\\/|?*\u0000-\u001f]/.test(value) || /[. ]$/.test(value)) return null;
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(value)) return null;
+    return value;
+}
+
+function tmPath(file) { return TM_FOLDER + tmBaseName(file); }
+
+function tmSetStatus(message, colour) {
+    tmState.status = String(message || "");
+    tmState.statusColour = colour || tmColours.muted;
+    window.Repaint();
+}
+
+function tmListFiles() {
+    try { utils.CreateFolder(TM_FOLDER); } catch (e) {}
+    var files = [];
+    try {
+        var listed = utils.ListFiles(TM_FOLDER).toArray();
+        for (var i = 0; i < listed.length; i++) {
+            var file = tmBaseName(listed[i]);
+            if (/\.json$/i.test(file)) files.push(file);
+        }
+    } catch (error) {}
+    files.sort(function (a, b) {
+        if (/^default\.json$/i.test(a)) return -1;
+        if (/^default\.json$/i.test(b)) return 1;
+        a = a.toLowerCase(); b = b.toLowerCase();
+        return a < b ? -1 : a > b ? 1 : 0;
+    });
+    tmState.files = files;
+}
+
+function tmRead(file, apply) {
+    file = tmBaseName(file);
+    try {
+        tmCancelCapture();
+        var raw = String(utils.ReadTextFile(tmPath(file), 65001) || "");
+        if (raw.length > 262144) throw new Error("file exceeds the 256 KiB safety limit");
+        var parsed = DarkOneTheme.parse(raw);
+        tmState.selectedFile = file;
+        tmState.theme = tmUpgradeThemeDraft(parsed);
+        tmRebuildFonts();
+        tmState.dirty = false;
+        tmState.scroll = 0;
+        var fileIndex = tmState.files.indexOf(file);
+        if (fileIndex >= 0) tmState.fileScroll = Math.max(0, fileIndex * tmMetric(38) - tmMetric(76));
+        window.SetProperty(TM_SELECTED_PROPERTY, file);
+        if (apply) tmApply();
+        else tmSetStatus("Loaded " + file, tmColours.success);
+        return true;
+    } catch (error) {
+        tmSetStatus("Could not load " + file + ": " + error.message, tmColours.danger);
+    }
+    return false;
+}
+
+function tmWrite(file, theme) {
+    file = tmBaseName(file);
+    var result = utils.WriteTextFile(tmPath(file), DarkOneTheme.stringify(theme));
+    if (result === false) throw new Error("utils.WriteTextFile returned false");
+}
+
+function tmNewCommandId() {
+    return String(new Date().getTime()) + "-" + String(Math.floor(Math.random() * 1000000000));
+}
+
+function tmBottomAreaStateForTheme(theme, revision) {
+    var protocol = DarkOneProtocol.bottomArea;
+    var current = null;
+    try {
+        current = protocol.parseState(utils.ReadTextFile(TM_BOTTOM_AREA_STATE_FILE, 65001));
+    } catch (e) {}
+    if (!current) current = protocol.state(
+        protocol.defaults.backgroundMode,
+        protocol.defaults.backgroundCustomColour,
+        protocol.defaults.backgroundLinearGradient,
+        protocol.defaults.dividerMode,
+        protocol.defaults.dividerCustomColour,
+        protocol.defaults.sideDividersVisible,
+        protocol.defaults.depthMode
+    );
+    var values = DarkOneTheme.roleProperties(theme, "bottom-controls");
+    function value(propertyName, fallback) {
+        return tmOwn(values, propertyName) ? values[propertyName] : fallback;
+    }
+    return protocol.state(
+        value("DARKONEJSP3.BOTTOM.BACKGROUND.MODE", current.backgroundMode),
+        value("DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR", current.backgroundCustomColour),
+        value("DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT", current.backgroundLinearGradient),
+        value("DARKONEJSP3.BOTTOM.DIVIDER.MODE", current.dividerMode),
+        value("DARKONEJSP3.BOTTOM.DIVIDER.CUSTOM.COLOUR", current.dividerCustomColour),
+        value("DARKONEJSP3.BOTTOM.SIDE.DIVIDERS", current.sideDividersVisible),
+        value("DARKONEJSP3.BOTTOM.DEPTH", current.depthMode),
+        revision
+    );
+}
+
+function tmWriteRuntimeFile(path, content) {
+    try { if (utils.WriteTextFile(path, String(content)) !== false) return true; }
+    catch (e) {}
+    try { return utils.WriteTextFile(path, String(content)) !== false; }
+    catch (e2) {}
+    return false;
+}
+
+function tmPublishBottomAreaCommit(theme, commandId, issuedAt) {
+    var protocol = DarkOneProtocol.bottomArea;
+    var state = tmBottomAreaStateForTheme(theme, commandId);
+    var commit = protocol.commit(
+        commandId,
+        issuedAt,
+        issuedAt + TM_BOTTOM_AREA_COMMIT_DELAY,
+        state
+    );
+    var serialisedCommit = protocol.serialiseCommit(commit);
+    var serialisedState = protocol.serialiseState(commit && commit.state);
+    if (!serialisedCommit || !tmWriteRuntimeFile(TM_BOTTOM_AREA_COMMIT_FILE, serialisedCommit)) {
+        throw new Error("bottom-area commit bridge write failed");
+    }
+    if (!tmWriteRuntimeFile(TM_BOTTOM_AREA_STATE_FILE, serialisedState)) {
+        tmRemoveBottomAreaCommit(commandId);
+        throw new Error("bottom-area state bridge write failed");
+    }
+    return commit;
+}
+
+function tmRemoveThemeCommand(commandId) {
+    try {
+        if (!utils.IsFile(DARKONEJSP3_THEME_COMMAND_FILE)) return true;
+        var raw = String(utils.ReadTextFile(DARKONEJSP3_THEME_COMMAND_FILE, 65001) || "");
+        if (!raw || raw.length > 262144) return false;
+        var payload = JSON.parse(raw);
+        if (!payload || String(payload.id || "") !== String(commandId || "")) return false;
+        return utils.RemovePath(DARKONEJSP3_THEME_COMMAND_FILE) !== false;
+    } catch (e) {}
+    return false;
+}
+
+function tmRemoveBottomAreaCommit(commandId) {
+    try {
+        if (!utils.IsFile(TM_BOTTOM_AREA_COMMIT_FILE)) return true;
+        var raw = String(utils.ReadTextFile(TM_BOTTOM_AREA_COMMIT_FILE, 65001) || "");
+        var commit = DarkOneProtocol.bottomArea.parseCommit(raw, new Date().getTime());
+        if (!commit || commit.id !== String(commandId || "")) return false;
+        return utils.RemovePath(TM_BOTTOM_AREA_COMMIT_FILE) !== false;
+    } catch (e) {}
+    return false;
+}
+
+function tmRemoveBottomAreaAck(commandId) {
+    try {
+        if (!utils.IsFile(TM_BOTTOM_AREA_ACK_FILE)) return true;
+        var raw = String(utils.ReadTextFile(TM_BOTTOM_AREA_ACK_FILE, 65001) || "");
+        var commit = DarkOneProtocol.bottomArea.parseCommit(raw, new Date().getTime());
+        if (!commit || commit.id !== String(commandId || "")) return false;
+        return utils.RemovePath(TM_BOTTOM_AREA_ACK_FILE) !== false;
+    } catch (e) {}
+    return false;
+}
+
+function tmCancelPendingApply(removeRuntimeFiles) {
+    var commandId = tmApplyCommandId;
+    if (tmApplyAckTimer) window.ClearTimeout(tmApplyAckTimer);
+    if (tmApplyTimer) window.ClearTimeout(tmApplyTimer);
+    tmApplyAckTimer = 0;
+    tmApplyTimer = 0;
+    tmApplyAckDeadline = 0;
+    tmApplyCommandId = "";
+    tmBottomPaints = {};
+    if (removeRuntimeFiles && commandId) {
+        tmRemoveBottomAreaAck(commandId);
+        tmRemoveBottomAreaCommit(commandId);
+        tmRemoveThemeCommand(commandId);
+    }
+}
+
+function tmScheduleThemeNotification(theme, applyAt, commandId) {
+    if (tmApplyTimer) window.ClearTimeout(tmApplyTimer);
+    tmApplyTimer = 0;
+    var payload = DarkOneTheme.stringify(theme);
+    var deadline = applyAt + 1500;
+    var notify = function () {
+        tmApplyTimer = 0;
+        if (commandId !== tmApplyCommandId) return;
+        var parentPainted = false;
+        try { parentPainted = utils.ReadTextFile(TM_BOTTOM_AREA_PAINTED_FILE, 65001) === commandId; } catch (e) {}
+        var childrenPainted = tmBottomPaints['control-left'] && tmBottomPaints['control-right'] &&
+            tmBottomPaints.display && tmBottomPaints['quick-search'];
+        if ((!parentPainted || !childrenPainted) && new Date().getTime() < deadline) {
+            try {
+                tmApplyTimer = window.SetTimeout(notify, 15);
+                return;
+            } catch (paintTimerError) { deadline = 0; }
+        }
+        // Release expensive, potentially reloading roles only after bottom
+        // paint callbacks have returned. Hidden/missing panels are bounded.
+        var released = tmWriteRuntimeFile(TM_THEME_RELEASE_FILE, commandId);
+        try { window.NotifyOthers(DARKONEJSP3_THEME_NOTIFICATION, payload); }
+        catch (notifyError) {}
+        tmSetStatus("Applied " + theme.name +
+            (!released ? ". Host release write failed; host will use its fallback." :
+                parentPainted && childrenPainted ? "." : ". Paint confirmation timed out; used fallback."),
+            released && parentPainted && childrenPainted ? tmColours.success : tmColours.muted);
+    };
+    var delay = Math.max(0, Math.round(Number(applyAt)) - new Date().getTime());
+    if (delay <= 0) {
+        notify();
+        return;
+    }
+    try { tmApplyTimer = window.SetTimeout(notify, delay); }
+    catch (timerError) { notify(); }
+}
+
+function tmReadBottomAreaAck(commandId, expectedState) {
+    try {
+        if (!utils.IsFile(TM_BOTTOM_AREA_ACK_FILE)) return null;
+        var raw = String(utils.ReadTextFile(TM_BOTTOM_AREA_ACK_FILE, 65001) || "");
+        var commit = DarkOneProtocol.bottomArea.parseCommit(raw, new Date().getTime());
+        if (!commit || commit.id !== String(commandId || "")) return null;
+        if (DarkOneProtocol.bottomArea.serialiseState(commit.state) !==
+                DarkOneProtocol.bottomArea.serialiseState(expectedState)) return null;
+        return commit;
+    } catch (e) {}
+    return null;
+}
+
+function tmReleaseCoordinatedTheme(theme, commit, fallback) {
+    if (!commit || commit.id !== tmApplyCommandId) return false;
+    if (tmApplyAckTimer) window.ClearTimeout(tmApplyAckTimer);
+    tmApplyAckTimer = 0;
+    tmApplyAckDeadline = 0;
+    tmRemoveBottomAreaAck(commit.id);
+    var stagedPayload = DarkOneTheme.stage(
+        theme,
+        commit.id,
+        commit.issuedAt,
+        commit.applyAt,
+        commit.state
+    );
+    if (stagedPayload) {
+        try { window.NotifyOthers(DARKONEJSP3_THEME_STAGE_NOTIFICATION, stagedPayload); }
+        catch (stageNotifyError) {}
+    }
+    var serialisedCommit = DarkOneProtocol.bottomArea.serialiseCommit(commit);
+    if (serialisedCommit) {
+        try {
+            window.NotifyOthers(
+                DarkOneProtocol.bottomArea.notifications.commit,
+                serialisedCommit
+            );
+        } catch (commitNotifyError) {}
+    }
+    tmSetStatus(
+        "Applying " + theme.name + " to all available panels." +
+            (fallback ? " Bottom Controls did not acknowledge in time; used the safe fallback." : ""),
+        fallback ? tmColours.muted : tmColours.success
+    );
+    tmScheduleThemeNotification(theme, commit.applyAt, commit.id);
+    return true;
+}
+
+function tmAwaitBottomAreaAck(theme, requestedCommit) {
+    var commandId = requestedCommit.id;
+    tmApplyAckDeadline = new Date().getTime() + TM_BOTTOM_AREA_ACK_TIMEOUT_MS;
+    var poll = function () {
+        tmApplyAckTimer = 0;
+        if (tmApplyCommandId !== commandId) return;
+        var acknowledged = tmReadBottomAreaAck(commandId, requestedCommit.state);
+        if (acknowledged) {
+            tmReleaseCoordinatedTheme(theme, acknowledged, false);
+            return;
+        }
+        var now = new Date().getTime();
+        if (now >= tmApplyAckDeadline) {
+            var fallbackCommit = DarkOneProtocol.bottomArea.commit(
+                commandId,
+                now,
+                now + TM_BOTTOM_AREA_FALLBACK_LEAD_MS,
+                requestedCommit.state
+            );
+            tmReleaseCoordinatedTheme(theme, fallbackCommit, true);
+            return;
+        }
+        try { tmApplyAckTimer = window.SetTimeout(poll, TM_BOTTOM_AREA_ACK_POLL_MS); }
+        catch (timerError) {
+            var immediate = DarkOneProtocol.bottomArea.commit(
+                commandId,
+                now,
+                now + TM_BOTTOM_AREA_FALLBACK_LEAD_MS,
+                requestedCommit.state
+            );
+            tmReleaseCoordinatedTheme(theme, immediate, true);
+        }
+    };
+    poll();
+}
+
+function tmApply() {
+    tmCancelCapture();
+    tmCancelPendingApply(true);
+    var commandId = "";
+    var commandWritten = false;
+    try {
+        // One immutable request across file, acknowledgement and notification
+        // delivery, even if the user continues editing while Apply is pending.
+        var requestedTheme = tmClone(tmState.theme);
+        var now = new Date().getTime();
+        commandId = tmNewCommandId();
+        var payload = DarkOneTheme.command(requestedTheme, commandId, now);
+        try { utils.CreateFolder(fb.ProfilePath + "js_data\\"); } catch (folderError) {}
+        if (utils.WriteTextFile(DARKONEJSP3_THEME_COMMAND_FILE, payload) === false) throw new Error("theme bridge write failed");
+        commandWritten = true;
+        tmApplyCommandId = commandId;
+        // Bottom Controls owns the composite backing in a separate JSplitter
+        // host. Wait for it to acknowledge the real deadline before staging
+        // JScript-owned values and releasing every bottom surface together.
+        var bottomCommit = tmPublishBottomAreaCommit(requestedTheme, commandId, now);
+        try { window.SetProperty(TM_ACTIVE_PROPERTY, tmState.selectedFile); } catch (propertyError) {}
+        tmSetStatus("Applying " + requestedTheme.name + "...", tmColours.muted);
+        tmAwaitBottomAreaAck(requestedTheme, bottomCommit);
+    } catch (error) {
+        tmCancelPendingApply(false);
+        if (commandWritten) {
+            tmRemoveBottomAreaCommit(commandId);
+            tmRemoveBottomAreaAck(commandId);
+            tmRemoveThemeCommand(commandId);
+        }
+        tmSetStatus("Theme was not applied: " + error.message, tmColours.danger);
+    }
+}
+
+function tmSave() {
+    tmCancelCapture();
+    if (/^default\.json$/i.test(tmState.selectedFile)) return tmSaveAs();
+    try {
+        tmWrite(tmState.selectedFile, tmState.theme);
+        tmState.dirty = false;
+        tmSetStatus("Saved " + tmState.selectedFile, tmColours.success);
+    } catch (error) { tmSetStatus("Save failed: " + error.message, tmColours.danger); }
+}
+
+function tmAskName(prompt, initial) {
+    try {
+        var value = utils.InputBox(prompt + "\n\nThe .json extension is added automatically.", "DarkOneJSP3 Theme Manager", initial || "");
+        var valid = tmValidName(value);
+        if (!valid) tmSetStatus("Use a normal Windows file name (1–80 characters).", tmColours.danger);
+        return valid;
+    } catch (e) {}
+    return null;
+}
+
+function tmFileExists(file) {
+    try { return utils.IsFile(tmPath(file)); } catch (e) { return false; }
+}
+
+function tmSaveAs() {
+    tmCancelCapture();
+    var name = tmAskName("Name this theme.", tmState.theme && tmState.theme.name !== "Default" ? tmState.theme.name : "My Theme");
+    if (!name) return;
+    var file = name + ".json";
+    if (tmFileExists(file)) {
+        tmSetStatus(file + " already exists. Choose another name.", tmColours.danger);
+        return;
+    }
+    try {
+        // Do not mutate the live editor state until persistence succeeds.
+        var nextTheme = tmClone(tmState.theme);
+        nextTheme.name = name;
+        tmWrite(file, nextTheme);
+        tmState.theme = nextTheme;
+        tmState.selectedFile = file;
+        tmState.dirty = false;
+        window.SetProperty(TM_SELECTED_PROPERTY, file);
+        tmListFiles();
+        tmSetStatus("Created " + file, tmColours.success);
+    } catch (error) { tmSetStatus("Save failed: " + error.message, tmColours.danger); }
+}
+
+function tmRename() {
+    tmCancelCapture();
+    if (/^default\.json$/i.test(tmState.selectedFile)) {
+        tmSetStatus("Default.json is protected. Use Save as for a personal theme.", tmColours.muted);
+        return;
+    }
+    var name = tmAskName("Rename this theme.", tmState.theme.name);
+    if (!name) return;
+    var nextFile = name + ".json";
+    if (nextFile.toLowerCase() !== tmState.selectedFile.toLowerCase() && tmFileExists(nextFile)) {
+        tmSetStatus(nextFile + " already exists.", tmColours.danger);
+        return;
+    }
+    var oldPath = tmPath(tmState.selectedFile);
+    try {
+        var nextTheme = tmClone(tmState.theme);
+        nextTheme.name = name;
+        tmWrite(nextFile, nextTheme);
+        if (nextFile.toLowerCase() !== tmState.selectedFile.toLowerCase() && utils.RemovePath(oldPath) === false) {
+            throw new Error("new file was written but the old file could not be removed");
+        }
+        tmState.theme = nextTheme;
+        tmState.selectedFile = nextFile;
+        tmState.dirty = false;
+        window.SetProperty(TM_SELECTED_PROPERTY, nextFile);
+        tmListFiles();
+        tmSetStatus("Renamed theme to " + nextFile, tmColours.success);
+    } catch (error) { tmSetStatus("Rename failed: " + error.message, tmColours.danger); }
+}
+
+function tmDelete() {
+    tmCancelCapture();
+    if (/^default\.json$/i.test(tmState.selectedFile)) {
+        tmSetStatus("Default.json cannot be deleted.", tmColours.muted);
+        return;
+    }
+    var answer = utils.MessageBox("Delete " + tmState.selectedFile + "?\n\nThis cannot be undone.", "DarkOneJSP3 Theme Manager", TM_MB_YESNO | TM_MB_ICONQUESTION);
+    if (answer !== TM_IDYES) return;
+    try {
+        if (utils.RemovePath(tmPath(tmState.selectedFile)) === false) throw new Error("utils.RemovePath returned false");
+        tmListFiles();
+        if (!tmRead(TM_DEFAULT_FILE, true))
+            tmSetStatus("Theme deleted, but Default.json could not be loaded.", tmColours.danger);
+    } catch (error) { tmSetStatus("Delete failed: " + error.message, tmColours.danger); }
+}
+
+function tmResetDefault() {
+    tmRead(TM_DEFAULT_FILE, true);
+}
+
+function tmCaptureCurrent() {
+    if (!tmState.theme) return;
+    if (tmApplyAckTimer || tmApplyTimer) {
+        tmSetStatus("Wait for Apply to finish before capturing current settings.", tmColours.muted);
+        return;
+    }
+    tmCancelCapture();
+    var now = new Date().getTime();
+    var id = tmNewCommandId();
+    var payload;
+    try { payload = DarkOneTheme.captureQuery(tmState.theme, id, now); }
+    catch (error) {
+        tmSetStatus("Current settings could not be requested: " + error.message, tmColours.danger);
+        return;
+    }
+    tmState.capture = { id: id, issuedAt: now, responses: {}, bridgeWritten: false };
+    tmSetStatus("Reading current settings from available panels…", tmColours.muted);
+    try {
+        utils.CreateFolder(fb.ProfilePath + "js_data\\");
+        tmState.capture.bridgeWritten = utils.WriteTextFile(
+            DARKONEJSP3_THEME_CAPTURE_QUERY_FILE,
+            payload
+        ) !== false;
+    } catch (bridgeError) {}
+    var notified = false;
+    try {
+        window.NotifyOthers(DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION, payload);
+        notified = true;
+    } catch (notifyError) {}
+    if (!tmState.capture.bridgeWritten && !notified) {
+        tmCleanupCaptureFiles(tmState.capture);
+        tmState.capture = null;
+        tmSetStatus("Current settings request could not be sent.", tmColours.danger);
+        return;
+    }
+    try { tmCaptureTimer = window.SetTimeout(tmFinishCapture, 1500); }
+    catch (timerError) {
+        tmCancelCapture();
+        tmSetStatus("Current settings could not be collected: timer unavailable. The draft was not changed.", tmColours.danger);
+    }
+}
+
+function tmRememberCaptureResponse(capture, role, values) {
+    if (!capture || TM_CAPTURE_ROLES.indexOf(role) < 0 ||
+            Object.prototype.hasOwnProperty.call(capture.responses, role)) return false;
+    capture.responses[role] = values;
+    return true;
+}
+
+function tmImportCaptureBridge(capture) {
+    if (!capture) return false;
+    try {
+        if (!utils.IsFile(DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE)) return false;
+        var raw = String(utils.ReadTextFile(DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE, 65001) || "");
+        var bundle = DarkOneTheme.parseCaptureBundle(raw, capture.id, new Date().getTime());
+        if (!bundle) return false;
+        for (var role in bundle.responses) {
+            if (!Object.prototype.hasOwnProperty.call(bundle.responses, role)) continue;
+            tmRememberCaptureResponse(capture, role, bundle.responses[role]);
+        }
+        return true;
+    } catch (e) {}
+    return false;
+}
+
+function tmFinishCapture() {
+    tmCaptureTimer = 0;
+    var capture = tmState.capture;
+    tmImportCaptureBridge(capture);
+    tmState.capture = null;
+    tmCleanupCaptureFiles(capture);
+    if (!capture) return;
+
+    var buckets = {};
+    var responseCount = 0;
+    for (var roleIndex = 0; roleIndex < TM_CAPTURE_ROLES.length; roleIndex++) {
+        var role = TM_CAPTURE_ROLES[roleIndex];
+        var values = capture.responses[role];
+        if (!values) continue;
+        responseCount++;
+        for (var path in values) {
+            if (!Object.prototype.hasOwnProperty.call(values, path)) continue;
+            if (!buckets[path]) buckets[path] = [];
+            var key = JSON.stringify(values[path]);
+            var found = false;
+            for (var valueIndex = 0; valueIndex < buckets[path].length; valueIndex++) {
+                if (buckets[path][valueIndex].key === key) { found = true; break; }
+            }
+            if (!found) buckets[path].push({ key: key, value: values[path] });
+        }
+    }
+
+    var missingSplitterCount = 0;
+    for (var splitterIndex = 0; splitterIndex < TM_SPLITTER_CAPTURE_ROLES.length; splitterIndex++) {
+        if (!Object.prototype.hasOwnProperty.call(
+                capture.responses,
+                TM_SPLITTER_CAPTURE_ROLES[splitterIndex]
+        )) missingSplitterCount++;
+    }
+
+    if (!responseCount) {
+        tmSetStatus("No panels returned current settings; the draft was not changed.", tmColours.danger);
+        return;
+    }
+
+    var before = JSON.stringify(tmState.theme);
+    var capturedCount = 0;
+    var conflictCount = 0;
+    for (var themePath in buckets) {
+        if (!Object.prototype.hasOwnProperty.call(buckets, themePath)) continue;
+        if (buckets[themePath].length !== 1) {
+            conflictCount++;
+            continue;
+        }
+        var target = tmState.theme;
+        var parts = themePath.split(".");
+        for (var partIndex = 0; partIndex < parts.length - 1; partIndex++) {
+            if (!target[parts[partIndex]] || typeof target[parts[partIndex]] !== "object") {
+                target[parts[partIndex]] = {};
+            }
+            target = target[parts[partIndex]];
+        }
+        target[parts[parts.length - 1]] = buckets[themePath][0].value;
+        capturedCount++;
+    }
+
+    tmState.dirty = tmState.dirty || JSON.stringify(tmState.theme) !== before;
+    tmState.scroll = 0;
+    var message = "Captured " + capturedCount + " current settings from " + responseCount +
+        (responseCount === 1 ? " panel." : " panels.");
+    if (conflictCount) message += " " + conflictCount +
+        (conflictCount === 1
+            ? " shared setting differed between panels and was left unchanged."
+            : " shared settings differed between panels and were left unchanged.");
+    if (missingSplitterCount) message += " " + missingSplitterCount +
+        (missingSplitterCount === 1
+            ? " splitter panel did not respond; its settings were left unchanged."
+            : " splitter panels did not respond; their settings were left unchanged.");
+    else if (!conflictCount && tmState.dirty) message += " Save or Save as to keep this draft.";
+    else if (!conflictCount) message += " The draft already matched.";
+    tmSetStatus(message, conflictCount || missingSplitterCount ? tmColours.muted : tmColours.success);
+}
+
+function tmGet(path) {
+    var value = tmState.theme;
+    var parts = path.split(".");
+    for (var i = 0; i < parts.length; i++) value = value && value[parts[i]];
+    return value;
+}
+
+function tmSet(path, value) {
+    tmCancelCapture();
+    var target = tmState.theme;
+    var parts = path.split(".");
+    for (var i = 0; i < parts.length - 1; i++) {
+        if (!target[parts[i]] || typeof target[parts[i]] !== "object") target[parts[i]] = {};
+        target = target[parts[i]];
+    }
+    target[parts[parts.length - 1]] = value;
+    tmState.dirty = true;
+    if (/^appearance\.manager\./.test(path)) {
+        tmRebuildFonts();
+        tmState.scroll = 0;
+    }
+    tmSetStatus("Unsaved changes — Apply to preview or Save to keep them.", tmColours.muted);
+}
+
+function tmManagerNumber(path, fallback, minimum, maximum) {
+    var value = Number(tmGet(path));
+    if (!isFinite(value)) value = fallback;
+    return Math.max(minimum, Math.min(maximum, value));
+}
+
+function tmManagerBaseSize() {
+    var fixed = tmManagerNumber("appearance.manager.fixedFontSize", 0, 0, 24);
+    if (fixed > 0) return fixed;
+    return Math.max(8, Math.min(24, Math.round(
+        12 * tmManagerNumber("appearance.manager.automaticFontScale", 100, 50, 200) / 100
+    )));
+}
+
+function tmManagerScale() {
+    return tmManagerBaseSize() / 12;
+}
+
+function tmMetric(value) {
+    return Math.max(1, Math.round(Number(value) * tmManagerScale()));
+}
+
+function tmRebuildFonts() {
+    var base = tmManagerBaseSize();
+    function font(size, weight) {
+        return JSON.stringify({
+            Name: "Segoe UI",
+            Size: Math.max(8, Math.min(44, Math.round(size))),
+            Weight: weight,
+            Style: 0,
+            Stretch: 5
+        });
+    }
+    tmFonts.title = font(base * 22 / 12, 600);
+    tmFonts.heading = font(base * 14 / 12, 600);
+    tmFonts.normal = font(base, 400);
+    tmFonts.small = font(base * 10 / 12, 400);
+}
+
+function tmEdit(field, x, y) {
+    var value = tmGet(field[1]);
+    if (field[2] === "toggle") {
+        tmSet(field[1], !Boolean(value));
+    } else if (field[2] === "colour") {
+        var picked = DarkOneColour.pickJscript(DarkOneTheme.colour(value), "Theme Manager", "Enter #RRGGBB or #AARRGGBB");
+        if (picked !== null) tmSet(field[1], DarkOneTheme.colourText(picked));
+    } else if (field[2] === "roundness") {
+        var roundnessMenu = window.CreatePopupMenu();
+        try {
+            var currentRoundness = Math.round(Number(value));
+            if (!isFinite(currentRoundness)) currentRoundness = -1;
+            currentRoundness = currentRoundness < 0 ? -1 : Math.max(0, Math.min(100, currentRoundness));
+            for (var r = 0; r < TM_ROUNDNESS_VALUES.length; r++) {
+                roundnessMenu.AppendMenuItem(0, r + 1, TM_ROUNDNESS_LABELS[r]);
+                if (currentRoundness === TM_ROUNDNESS_VALUES[r]) roundnessMenu.CheckMenuItem(r + 1, true);
+            }
+            roundnessMenu.AppendMenuSeparator();
+            roundnessMenu.AppendMenuItem(0, 100, "Custom roundness...");
+            if (TM_ROUNDNESS_VALUES.indexOf(currentRoundness) < 0) roundnessMenu.CheckMenuItem(100, true);
+            var roundnessId = roundnessMenu.TrackPopupMenu(x, y);
+            if (roundnessId >= 1 && roundnessId <= TM_ROUNDNESS_VALUES.length) {
+                tmSet(field[1], TM_ROUNDNESS_VALUES[roundnessId - 1]);
+            } else if (roundnessId === 100) {
+                try {
+                    var enteredRoundness = Number(utils.InputBox(
+                        "Enter button corner roundness from 0 to 100.\n\n" +
+                        "0 = square\n33 = classic DarkOne rounded\n100 = maximum / pill\n\n" +
+                        "Use Automatic in the preset menu to restore button-style behaviour.",
+                        "DarkOneJSP3 button roundness",
+                        currentRoundness < 0 ? 33 : currentRoundness
+                    ));
+                    if (!isFinite(enteredRoundness)) throw new Error("Enter a number.");
+                    tmSet(field[1], Math.max(0, Math.min(100, Math.round(enteredRoundness))));
+                } catch (roundnessError) {
+                    if (roundnessError && roundnessError.message === "Enter a number.")
+                        tmSetStatus(roundnessError.message, tmColours.danger);
+                }
+            }
+        } finally { roundnessMenu.Dispose(); }
+    } else if (field[2] === "choice" || field[2] === "enum") {
+        var menu = window.CreatePopupMenu();
+        try {
+            for (var i = 0; i < field[3].length; i++) menu.AppendMenuItem(0, i + 1, field[3][i]);
+            var id = menu.TrackPopupMenu(x, y);
+            if (id > 0) tmSet(field[1], field[2] === "enum"
+                ? field[3][id - 1]
+                : id - 1 + (Number(field[4]) || 0));
+        } finally { menu.Dispose(); }
+    } else {
+        try {
+            var entered = utils.InputBox("Set " + field[0] + ".", "DarkOneJSP3 Theme Manager", value == null ? "" : String(value));
+            if (field[2] === "number") {
+                entered = Number(entered);
+                if (!isFinite(entered)) throw new Error("Enter a number.");
+                entered = Math.max(field[3], Math.min(field[4], entered));
+            } else {
+                entered = String(entered).substring(0, 160);
+            }
+            tmSet(field[1], entered);
+        } catch (error) {
+            if (error && error.message === "Enter a number.") tmSetStatus(error.message, tmColours.danger);
+        }
+    }
+}
+
+function tmInside(hit, x, y) { return x >= hit.x && y >= hit.y && x < hit.x + hit.w && y < hit.y + hit.h; }
+
+function tmHit(type, value, x, y, w, h) {
+    tmState.hits.push({ type: type, value: value, x: x, y: y, w: w, h: h });
+}
+
+function tmClippedHit(type, value, x, y, w, h, clipTop, clipBottom) {
+    var top = Math.max(y, clipTop);
+    var bottom = Math.min(y + h, clipBottom);
+    if (bottom > top) tmHit(type, value, x, top, w, bottom - top);
+}
+
+function tmText(gr, value, font, colour, x, y, w, h, align) {
+    gr.WriteTextSimple(String(value == null ? "" : value), font, colour, x, y, Math.max(0, w), Math.max(0, h), align || 0, 2, 1, 1);
+}
+
+function tmButton(gr, label, action, x, y, w, dangerous) {
+    var key = "action:" + action;
+    var hover = tmState.hover === key;
+    var height = tmMetric(32);
+    var radius = tmMetric(6);
+    gr.FillRoundedRectangle(x, y, w, height, radius, radius, hover ? (dangerous ? tmColours.danger : tmColours.accent) : tmColours.card);
+    gr.DrawRoundedRectangle(x, y, w, height, radius, radius, tmMetric(1), dangerous ? tmColours.danger : tmColours.border);
+    tmText(gr, label, tmFonts.small, tmColours.text, x, y, w, height, 2);
+    tmHit("action", action, x, y, w, height);
+}
+
+function tmDisplayValue(field, value) {
+    if (field[2] === "toggle") return value ? "On" : "Off";
+    if (field[2] === "colour") return String(value || "");
+    if (field[2] === "roundness") {
+        value = Math.round(Number(value));
+        if (!isFinite(value) || value < 0) return "Automatic";
+        return String(Math.max(0, Math.min(100, value))) + "%";
+    }
+    if (field[2] === "choice") return field[3][Number(value) - (Number(field[4]) || 0)] || ("Mode " + value);
+    if (field[2] === "enum") return field[3].indexOf(String(value)) >= 0 ? String(value) : "Unknown";
+    return String(value == null ? "" : value);
+}
+
+function tmFieldValueLayout(fieldType, x, width, rowY, rowHeight) {
+    var padding = tmMetric(14);
+    var gap = tmMetric(10);
+    var swatchSize = fieldType === "colour"
+        ? Math.min(tmMetric(26), Math.max(1, rowHeight - tmMetric(16))) : 0;
+    var right = x + width - padding;
+    var swatchX = fieldType === "colour" ? right - swatchSize : right;
+    var valueRight = fieldType === "colour" ? swatchX - gap : right;
+    var desiredValueX = x + Math.round(width * 0.58);
+    var minimumValueWidth = tmMetric(fieldType === "colour" ? 92 : 64);
+    var valueX = Math.max(x + padding, Math.min(desiredValueX, valueRight - minimumValueWidth));
+    var labelX = x + padding;
+    return {
+        labelX: labelX,
+        labelWidth: Math.max(1, valueX - labelX - gap),
+        valueX: valueX,
+        valueWidth: Math.max(1, valueRight - valueX),
+        swatchX: swatchX,
+        swatchY: rowY + Math.round((rowHeight - swatchSize) / 2),
+        swatchSize: swatchSize,
+        gap: gap,
+        right: right
+    };
+}
+
+function on_paint(gr) {
+    var w = tmState.width, h = tmState.height;
+    var scale = tmManagerScale();
+    var compact = w < 760 * scale;
+    var sidebarW = compact
+        ? Math.max(110, Math.min(tmMetric(190), Math.round(w * 0.28)))
+        : Math.min(tmMetric(220), Math.round(w * 0.36));
+    tmState.sidebarWidth = sidebarW;
+    var headerH = tmMetric(74);
+    tmState.hits = [];
+    gr.FillRectangle(0, 0, w, h, tmColours.background);
+    gr.FillRectangle(0, 0, sidebarW, h, tmColours.sidebar);
+    gr.FillRectangle(sidebarW, 0, 1, h, tmColours.border);
+
+    tmText(gr, "THEMES", tmFonts.small, tmColours.muted, tmMetric(18), tmMetric(18), sidebarW - tmMetric(36), tmMetric(20));
+    var fileStep = tmMetric(38);
+    var fileHeight = tmMetric(34);
+    var maxFileScroll = Math.max(0, tmState.files.length * fileStep - Math.max(1, h - tmMetric(58)));
+    tmState.fileScroll = Math.max(0, Math.min(maxFileScroll, tmState.fileScroll));
+    var fileY = tmMetric(48) - tmState.fileScroll;
+    for (var i = 0; i < tmState.files.length; i++) {
+        var file = tmState.files[i];
+        var key = "file:" + file;
+        if (fileY + fileHeight >= tmMetric(40) && fileY < h) {
+            if (file === tmState.selectedFile) gr.FillRoundedRectangle(tmMetric(10), fileY, sidebarW - tmMetric(20), fileHeight, tmMetric(5), tmMetric(5), tmColours.card);
+            else if (tmState.hover === key) gr.FillRoundedRectangle(tmMetric(10), fileY, sidebarW - tmMetric(20), fileHeight, tmMetric(5), tmMetric(5), tmColours.cardHover);
+            tmText(gr, file.replace(/\.json$/i, ""), tmFonts.normal, file === tmState.selectedFile ? tmColours.text : tmColours.muted, tmMetric(18), fileY, sidebarW - tmMetric(36), fileHeight);
+            tmHit("file", file, tmMetric(10), fileY, sidebarW - tmMetric(20), fileHeight);
+        }
+        fileY += fileStep;
+    }
+
+    var x = sidebarW + tmMetric(24);
+    var contentW = Math.max(1, w - x - tmMetric(24));
+    tmText(gr, tmState.theme ? tmState.theme.name : "Theme Manager", tmFonts.title, tmColours.text, x, tmMetric(12), contentW, tmMetric(32));
+    tmText(gr, "DarkOneJSP3 Theme Manager · v1.2.0", tmFonts.small, tmColours.muted, x, tmMetric(42), contentW, tmMetric(20));
+
+    var buttonW = compact ? tmMetric(64) : tmMetric(78);
+    var gap = tmMetric(7);
+    var actions = [["Apply", "apply"], ["Load", "load"], ["Save", "save"], ["Save as", "saveAs"], ["Rename", "rename"], ["Delete", "delete"], ["Capture current", "capture"], ["Reset default", "default"]];
+    var bx = x;
+    var by = headerH;
+    for (i = 0; i < actions.length; i++) {
+        var actionW = actions[i][0].length > 9 ? tmMetric(98) : buttonW;
+        if (bx + actionW > w - tmMetric(16)) { bx = x; by += tmMetric(39); }
+        tmButton(gr, actions[i][0], actions[i][1], bx, by, actionW, actions[i][1] === "delete");
+        bx += actionW + gap;
+    }
+
+    var categoryY = by + tmMetric(48);
+    var categoryH = tmMetric(34);
+    var categoryColumns = contentW < tmMetric(440) ? 2 : tmCategories.length;
+    var categoryRows = Math.ceil(tmCategories.length / categoryColumns);
+    var categoryW = Math.max(tmMetric(40), Math.floor((contentW - (categoryColumns - 1) * tmMetric(5)) / categoryColumns));
+    for (i = 0; i < tmCategories.length; i++) {
+        var cx = x + (i % categoryColumns) * (categoryW + tmMetric(5));
+        var cy = categoryY + Math.floor(i / categoryColumns) * (categoryH + tmMetric(5));
+        var ckey = "category:" + i;
+        if (i === tmState.category) gr.FillRoundedRectangle(cx, cy, categoryW, categoryH, 5, 5, tmColours.accent);
+        else if (tmState.hover === ckey) gr.FillRoundedRectangle(cx, cy, categoryW, categoryH, 5, 5, tmColours.cardHover);
+        tmText(gr, compact ? tmCategories[i].name.substring(0, 9) : tmCategories[i].name, tmFonts.small, tmColours.text, cx, cy, categoryW, categoryH, 2);
+        tmHit("category", i, cx, cy, categoryW, categoryH);
+    }
+
+    var top = categoryY + categoryRows * (categoryH + tmMetric(5)) + tmMetric(9);
+    var rowsTop = top + tmMetric(34);
+    var rowsBottom = h - tmMetric(34);
+    var rowH = tmMetric(48);
+    var fields = tmFields[tmCategories[tmState.category].name];
+    var rowGap = tmMetric(6);
+    var maxScroll = Math.max(0, fields.length * (rowH + rowGap) - Math.max(1, h - rowsTop - tmMetric(42)));
+    tmState.scroll = Math.max(0, Math.min(maxScroll, tmState.scroll));
+    var rowY = rowsTop - tmState.scroll;
+    for (i = 0; i < fields.length; i++) {
+        var field = fields[i];
+        if (rowY + rowH >= rowsTop && rowY <= rowsBottom) {
+            var fkey = "field:" + i;
+            gr.FillRoundedRectangle(x, rowY, contentW, rowH, tmMetric(6), tmMetric(6), tmState.hover === fkey ? tmColours.cardHover : tmColours.card);
+            var valueLayout = tmFieldValueLayout(field[2], x, contentW, rowY, rowH);
+            tmText(gr, field[0], tmFonts.normal, tmColours.text, valueLayout.labelX, rowY, valueLayout.labelWidth, rowH);
+            var value = tmDisplayValue(field, tmGet(field[1]));
+            if (field[2] === "colour") {
+                var swatch = DarkOneTheme.colour(tmGet(field[1]));
+                if (swatch !== undefined) gr.FillRoundedRectangle(
+                    valueLayout.swatchX,
+                    valueLayout.swatchY,
+                    valueLayout.swatchSize,
+                    valueLayout.swatchSize,
+                    tmMetric(4),
+                    tmMetric(4),
+                    swatch
+                );
+            }
+            tmText(gr, value, tmFonts.small, tmColours.muted, valueLayout.valueX, rowY, valueLayout.valueWidth, rowH, 2);
+            tmClippedHit("field", i, x, rowY, contentW, rowH, rowsTop, rowsBottom);
+        }
+        rowY += rowH + rowGap;
+    }
+
+    // Rows are deliberately painted first. This opaque fixed-header mask clips
+    // partial cards without relying on a graphics clip API that differs across
+    // JScript Panel releases, then restores the category description on top.
+    var headerMaskTop = Math.min(top, rowsTop - rowH);
+    gr.FillRectangle(x, headerMaskTop, contentW, rowsTop - headerMaskTop, tmColours.background);
+    tmText(gr, tmCategories[tmState.category].description, tmFonts.normal, tmColours.muted, x, top, contentW, tmMetric(24));
+    gr.FillRectangle(x, rowsBottom, contentW, Math.max(0, h - rowsBottom), tmColours.background);
+
+    if (tmState.status) {
+        var statusHeight = tmMetric(30);
+        gr.FillRectangle(sidebarW + 1, h - statusHeight, w - sidebarW - 1, statusHeight, 0xff15181e);
+        tmText(gr, tmState.status, tmFonts.small, tmState.statusColour, x, h - statusHeight, contentW, statusHeight);
+    }
+}
+
+function on_size() { tmState.width = window.Width; tmState.height = window.Height; window.Repaint(); }
+
+function on_mouse_move(x, y) {
+    tmState.mouseX = x;
+    var hover = null;
+    for (var i = tmState.hits.length - 1; i >= 0; i--) {
+        if (tmInside(tmState.hits[i], x, y)) { hover = tmState.hits[i].type + ":" + tmState.hits[i].value; break; }
+    }
+    if (hover !== tmState.hover) {
+        tmState.hover = hover;
+        window.SetCursor(hover ? TM_HAND : TM_ARROW);
+        window.Repaint();
+    }
+}
+
+function on_mouse_leave() { tmState.hover = null; window.SetCursor(TM_ARROW); window.Repaint(); }
+
+function on_mouse_lbtn_up(x, y) {
+    for (var i = tmState.hits.length - 1; i >= 0; i--) {
+        var hit = tmState.hits[i];
+        if (!tmInside(hit, x, y)) continue;
+        if (hit.type === "file") tmRead(hit.value, false);
+        else if (hit.type === "category") { tmState.category = Number(hit.value); tmState.scroll = 0; window.SetProperty(TM_CATEGORY_PROPERTY, tmState.category); window.Repaint(); }
+        else if (hit.type === "field") tmEdit(tmFields[tmCategories[tmState.category].name][Number(hit.value)], x, y);
+        else if (hit.type === "action") {
+            if (hit.value === "apply") tmApply();
+            else if (hit.value === "load") tmRead(tmState.selectedFile, false);
+            else if (hit.value === "save") tmSave();
+            else if (hit.value === "saveAs") tmSaveAs();
+            else if (hit.value === "rename") tmRename();
+            else if (hit.value === "delete") tmDelete();
+            else if (hit.value === "capture") tmCaptureCurrent();
+            else if (hit.value === "default") tmResetDefault();
+        }
+        return;
+    }
+}
+
+function on_mouse_wheel(step) {
+    if (tmState.mouseX < tmState.sidebarWidth) {
+        tmState.fileScroll = Math.max(0, tmState.fileScroll - Number(step) * tmMetric(38));
+    } else {
+        tmState.scroll = Math.max(0, tmState.scroll - Number(step) * tmMetric(42));
+    }
+    window.Repaint();
+}
+
+function on_notify_data(name, data) {
+    if (name === DARKONEJSP3_THEME_PAINT_NOTIFICATION) {
+        try {
+            if (typeof data !== "string" || data.length > 1024) return;
+            var painted = JSON.parse(data);
+            if (painted.id === tmApplyCommandId &&
+                ['control-left', 'control-right', 'display', 'quick-search'].indexOf(painted.role) >= 0)
+                tmBottomPaints[painted.role] = true;
+        } catch (e) {}
+        return;
+    }
+    if (name === TM_QUERY_NOTIFICATION && String(data || "") === TM_AVAILABILITY_VERSION) {
+        tmAnnounceAvailability();
+        return;
+    }
+    if (name === DARKONEJSP3_THEME_CAPTURE_RESPONSE_NOTIFICATION && tmState.capture) {
+        var response = DarkOneTheme.parseCaptureResponse(data, tmState.capture.id);
+        if (response) tmRememberCaptureResponse(tmState.capture, response.role, response.values);
+        return;
+    }
+    if (name === DARKONEJSP3_THEME_NOTIFICATION) {
+        try {
+            var incoming = DarkOneTheme.parse(data);
+            if (!tmState.dirty) {
+                tmCancelCapture();
+                tmState.theme = tmClone(incoming);
+                tmState.theme = tmUpgradeThemeDraft(tmState.theme);
+                tmRebuildFonts();
+                tmState.scroll = 0;
+            }
+            window.Repaint();
+        } catch (e) {}
+    }
+}
+
+function tmAnnounceAvailability() {
+    try {
+        utils.CreateFolder(fb.ProfilePath + "js_data\\");
+        utils.WriteTextFile(TM_AVAILABILITY_FILE, JSON.stringify({
+            version: TM_AVAILABILITY_VERSION,
+            issuedAt: new Date().getTime(),
+            title: "DOJSP3.ThemeManager"
+        }));
+    } catch (beaconError) {}
+    try { window.NotifyOthers(TM_AVAILABLE_NOTIFICATION, TM_AVAILABILITY_VERSION); } catch (e) {}
+}
+
+function on_script_unload() {
+    tmCancelCapture();
+    tmCancelPendingApply(true);
+    try { if (utils.IsFile(TM_AVAILABILITY_FILE)) utils.RemovePath(TM_AVAILABILITY_FILE); } catch (e) {}
+}
+
+tmListFiles();
+tmState.category = Math.max(0, Math.min(tmCategories.length - 1, Math.round(Number(window.GetProperty(TM_CATEGORY_PROPERTY, 0)) || 0)));
+var remembered = tmBaseName(window.GetProperty(TM_SELECTED_PROPERTY, TM_DEFAULT_FILE));
+if (!tmFileExists(remembered)) remembered = TM_DEFAULT_FILE;
+if (!tmRead(remembered, false)) {
+    tmState.theme = { format: DARKONEJSP3_THEME_FORMAT, formatVersion: 1, name: "Unavailable", appearance: {} };
+    tmRebuildFonts();
+}
+tmAnnounceAvailability();

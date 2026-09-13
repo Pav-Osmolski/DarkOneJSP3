@@ -175,6 +175,8 @@ suite("sample reset registry", function () {
         'InfoStack fixed font-size default failed');
     assert(properties['DarkOneJSP3.InfoStack.AutoFontScale'] === 100,
         'InfoStack automatic font-scale default failed');
+    assert(properties['DarkOneJSP3.InfoStack.Tab.ThemeManager.Label'] === 'Theme',
+        'InfoStack appearance reset restored the retired Theme Manager tab label');
     assert(properties['DarkOneJSP3.InfoStack.ActivePanel'] === 4,
         'InfoStack appearance reset changed active-panel behaviour');
 

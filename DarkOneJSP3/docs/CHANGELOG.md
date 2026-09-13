@@ -1,5 +1,231 @@
 # DarkOneJSP3 Changelog
 
+## v1.2.0 - Theme Manager
+
+- Final release hardening: Apply snapshots the draft before publishing its
+  command, preventing later edits from changing staged settings mid-request.
+  Capture waits for pending Apply completion and cleans up on timer failure.
+  Reset/delete preserve load and Apply errors instead of reporting premature
+  success. Theme Manager is **0.1.14**; release validator is **0.11.20**.
+
+- Hardened JS Playlist scrolling dialogs: blank, invalid and cancelled input
+  preserves settings; unchanged OK does not rewrite properties. Confirming
+  free-scroll distance now preserves Automatic (0) instead of silently fixing
+  it to the current pixel distance. Smoothness already updated without reload.
+  Added real menu-handler regressions and advanced JS Playlist to **0.6.7**,
+  with validator **0.11.19**.
+
+- Smooth Playlist Manager now applies smoothness and wheel row-step changes
+  in place. Pressing OK with the same value performs no write or reload; blank,
+  invalid and cancelled input preserves the current setting. This removes the
+  unnecessary reload associated with reports of row spacing and alternate-row
+  shading reverting. Added regression coverage for repeated OK, values 2/3,
+  cancellation and preservation of unrelated appearance settings.
+- Advanced Playlist Manager to **0.5.9** and the release validator to **0.11.18**.
+
+- Consolidated each bottom panel's theme/background commit into one timer and
+  deferred wider theme delivery until the four JScript bottom panels and the
+  Bottom Controls backing acknowledge their paint callbacks. This reduces
+  contention from other panels reloading during the bottom update.
+- Fixed identical rapid Apply requests discarding pending cache refreshes.
+  Superseding requests retain dirty property names; stale paint receipts cannot
+  release a newer request. Failed acknowledgement writes retain the request for
+  retry instead of starting an unacknowledged apply.
+- Removed duplicate repaint requests and redundant Display colour refreshes.
+  Background-only changes no longer rebuild button geometry or the volume knob.
+  Quick Search uses the commit's parent background and retains its user state.
+  Display/Waveform theme background changes also refresh without native reload.
+- Added bounded recovery for missing paint receipts and failed timers, plus
+  opt-in `DARKONEJSP3.THEME.DEBUG.TIMING` console traces for preparation, commit
+  and paint callback. Timing is disabled by default.
+- Extended existing regression suites for identical supersession, dirty-name
+  preservation, commit/watchdog ownership, mismatched revisions, failed
+  acknowledgement writes and request-bound paint completion. Updated obsolete
+  validation contracts and excluded new runtime receipt files from releases.
+- The seven-Apply recording of the preceding build still showed child-panel
+  spreads up to 50 ms and exposed backing delays around 217–283 ms. These changes
+  target those paths; perfect native frame synchronisation is not yet verified.
+  Paint receipts confirm script callbacks, not Windows compositor presentation.
+- Fixed saved-theme Apply publishing `Theme: false` in
+  `darkonejsp3.infostack-menu-state.json`. InfoStack now applies theme-owned
+  appearance and geometry in place, preserving the resolved optional child;
+  structural availability is no longer reset or transiently serialised by an
+  appearance-only controller reload.
+- Replaced Theme Manager's immediate bottom-area state repaint with the same
+  50 ms coordinated commit used by **TOOLS > Appearance**. Control Left,
+  Display, Control Right, Quick Search and the Bottom Controls JSplitter now
+  stage one revision and repaint at the same absolute boundary instead of
+  visibly changing in separate component-host segments.
+- Delayed the wider JScript theme notification to that commit boundary so a
+  panel reload cannot reveal the new canonical bottom colour ahead of the
+  coordinated repaint. Rapid repeated Apply commands cancel the older pending
+  notification, and matched rollback removes both theme and bottom-commit
+  commands if canonical-state publication fails.
+- Fixed **Capture current** conflating the InfoStack tab automatic base scale
+  with Quick Search's independent automatic font scale. Quick Search now has
+  dedicated `fixedFontSize` and `automaticFontScale` JSON fields, while older
+  WIP themes retain a read-only fallback to the former shared value.
+- Added **Quick Search automatic base scale (%)** and **Quick Search fixed font
+  size (0 = auto)** to Controls, and clarified the InfoStack labels as **Tab
+  automatic base scale (%)** and **Fixed tab font size (0 = auto)**.
+- Fixed saved-theme Apply leaving parts of the bottom area on the previous
+  custom colour and leaving **TOOLS > Appearance > Bottom area background**
+  checked as Custom. Theme Manager now persists and broadcasts the canonical
+  bottom-area state before its panel reload notification, so every JScript
+  bottom panel and the JSplitter owner observe the same mode.
+- Hardened bottom-area theme delivery with current-state preservation for
+  omitted JSON fields, a bounded write retry, and removal of the pending theme
+  command when the canonical state cannot be published. This prevents a failed
+  bridge write from deliberately launching a partial Apply.
+- Fixed **Capture current** silently discarding the complete JS Playlist
+  response—including Rating and every other playlist colour—when its optional
+  wallpaper path was empty. Optional file paths now have an explicit
+  empty-string rule shared by forward apply, reverse capture and response
+  validation; required labels and other text remain non-empty.
+- Added end-to-end regression coverage for a custom Rating colour travelling
+  from the standalone JS Playlist adapter, through strict response validation,
+  into the Theme Manager draft while the wallpaper path is empty. Reset default
+  can now also clear previously configured page and playlist wallpaper paths.
+- Fixed JScript Panel 3 `Overflow` errors when opening the Playlist Manager
+  Text, Background or Selected background colour picker after Theme Manager had
+  applied an unsigned ARGB value. All Playlist Manager and JS Playlist colour
+  commands now pass a signed 32-bit value through the shared native-picker
+  adapter, validate the result and leave the property untouched on cancel or
+  failure.
+- Expanded the Theme Manager **Colours** category with independent JS Playlist
+  text, highlight, background, selected-background, mood and rating colours,
+  plus independent Playlist Manager text, background and selected-background
+  colours. These no longer reuse shared palette paths, eliminating false
+  Capture current conflicts with Display, InfoStack and information pages.
+- Replaced the JS Playlist custom-colours toggle with descriptive **Playlist
+  colour type** and **Playlist Manager colour type** choices: Custom, Dynamic
+  and Off. Apply writes mutually exclusive native switches; Capture normalises
+  the legacy two-switch state with Dynamic precedence. JSON stores the readable
+  words rather than numeric mode IDs.
+- Added dedicated Quick Search text, background and border custom colours, and
+  clarified **Quick Search background mode**. Older WIP JSON themes retain
+  read-only fallbacks to their former shared palette fields, while new captures
+  migrate values into the dedicated paths.
+- Fixed **Capture current** retaining stale/default values for JSplitter-owned
+  fields. JScript Panel notifications do not reliably cross into the JSplitter
+  domain, so the Theme Manager now writes a validated short-lived query that
+  Bottom Controls consumes and rebroadcasts; collected JSplitter responses are
+  returned through a separate bounded response file.
+- Kept InfoStack availability and visual-tab visibility strictly independent
+  during capture. **Theme tab visible** now comes only from
+  `DarkOneJSP3.InfoStack.Tab.ThemeManager.Visible`; the presence of the
+  `DOJSP3.ThemeManager` child can no longer imply that its tab is enabled.
+- Hardened reverse capture with exact role-specific theme-path allow-lists,
+  value normalisation, identifier validation, 64/256 KiB payload limits,
+  five-second expiry, first-response-wins deduplication, request-bound runtime
+  file cleanup and an explicit status warning if any core JSplitter role fails
+  to respond.
+- Added **Capture current** before Reset default. It performs a bounded reverse
+  lookup across all loaded DarkOneJSP3 panel roles and merges their live
+  appearance properties into the unsaved theme draft without applying or
+  saving automatically.
+- Added strict reverse mappings for project panels and standalone enhanced
+  samples. Capture restores live fields omitted from manually trimmed JSON,
+  converts native colours back to readable `#AARRGGBB`, rejects stale or
+  mismatched responses and accepts only descriptive appearance paths.
+- Made shared-field capture deterministic. Matching values from multiple panels
+  are merged once; divergent values are reported and left unchanged instead of
+  allowing asynchronous response order to choose a winner.
+- Clipped scrolled Theme Manager cards and their hit targets to the field
+  viewport. Rows can no longer paint across or remain clickable through the
+  fixed category-description header.
+- Preserved a remembered Theme page across startup while its optional child is
+  still resolving. The controller now uses a temporary visible fallback
+  without overwriting the saved selection, then restores Theme as both the
+  visual and internal active page when discovery succeeds.
+- Made InfoStack availability semantics consistent. An unavailable Theme page
+  is omitted from both InfoStack menu owners and their Tab settings; once its
+  child resolves it behaves like the other installed pages, while its separate
+  visibility flag continues to control only the horizontal tab.
+- Added a validated, short-lived Theme Manager presence beacon to supplement
+  the cross-component notification handshake. It enables deterministic bounded
+  startup discovery without making stock six-child layouts probe an absent
+  panel title, and is removed when the Theme Manager unloads.
+- Replaced the raw Theme Manager **Button roundness** number editor with
+  **Button roundness (%)** and the same Automatic, 0%, 20%, 33%, 60%, 100% and
+  Custom choices exposed by **TOOLS > Buttons**. The internal `-1` automatic
+  sentinel is now displayed as **Automatic**, while explicit and custom values
+  display with a percent sign. Existing JSON themes remain compatible.
+- Matched every Theme Manager action-button outline to its rounded fill. The
+  Delete button no longer draws a square danger-colour border over rounded
+  corners, and border thickness now follows Manager scaling.
+- Replaced the colour-row's conflicting fixed-offset and percentage geometry
+  with one scaled layout model. Hexadecimal values occupy a bounded region to
+  the left of a right-anchored, vertically centred swatch, preserving a clean
+  gap from 50–200% Manager scale without crossing the field label.
+- Fixed a false missing-panel result when a valid `DOJSP3.ThemeManager` child
+  was present but its JScript Panel-to-JSplitter availability notification was
+  missed or arrived during child initialisation. Availability replies now use
+  bounded deferred resolution, and an explicit Theme command performs one
+  authoritative guarded lookup before displaying setup guidance.
+- Kept explicit **TOOLS > Theme Manager** access as the missing-child recovery
+  route. A successful guarded lookup refreshes shared availability without
+  changing the Theme tab's saved visibility.
+- Hardened Theme Manager file and update paths: failed Save as writes no longer
+  mutate the live theme name, best-effort notification failure no longer
+  overrides a successfully persisted Apply command, externally applied Manager
+  settings rebuild its fonts and geometry, and scaled theme-list restoration
+  now uses scaled offsets.
+- Corrected Restore Defaults so it restores the visible label **Theme**, not the
+  retired **Theme Manager** label.
+- Renamed the seventh page's user-facing InfoStack label from **Theme Manager**
+  to **Theme** while retaining **TOOLS > Theme Manager** for the feature entry
+  point and `DOJSP3.ThemeManager` as its stable structural title.
+- Extended the optional INFOSTACK-button menu-state bridge from six to seven
+  available pages. Theme now appears in both InfoStack menus, including while
+  its visual tab is hidden.
+- Decoupled the Theme page from its tab-strip visibility. TOOLS and INFOSTACK
+  can open it without silently restoring the horizontal Theme tab; the **Visible
+  tabs > Theme** option controls only the strip.
+- Fixed a newly exposed action-ID collision between Theme page selection and
+  the InfoStack side-divider custom-colour editor by moving the latter to its
+  own validated command ID.
+- Added a sixth Theme Manager category, **Manager**, with fixed font size and
+  automatic base-scale controls. Typography, spacing, hit targets, scrolling
+  and responsive layout now scale together and update immediately.
+- Fixed an optional-theme callback regression that could stop Control Left,
+  Control Right, Display, Quick Search or Queue Viewer when `theme_engine.js`
+  was missing, stale or not yet available. Each panel now guards the callback
+  and continues normally without theme-update support.
+- Reworked optional Theme Manager discovery as a two-way availability
+  handshake. A standard six-child InfoStack no longer asks JSplitter for the
+  absent `DOJSP3.ThemeManager` title, so it produces no missing-panel error,
+  no placeholder tab and no repeated lookup work.
+- Made InfoStack start in a usable degraded state when any configured child is
+  missing. Structural misses are logged once for diagnosis, while available
+  tabs and the rest of the interface continue immediately instead of waiting
+  behind the startup curtain.
+- Added an optional seventh InfoStack page, `DOJSP3.ThemeManager`, opened from
+  **TOOLS > Theme Manager** and implemented by
+  `DarkOneJSP3 - Theme Manager.txt`.
+- Added a responsive dark interface for loading, applying, saving, naming,
+  renaming and deleting human-readable JSON themes, with a protected
+  `themes\Default.json` factory theme.
+- Added a strict descriptive theme adapter with allow-listed property mappings,
+  safe numeric clamping, ARGB/RGB colour parsing, format-version validation and
+  no executable theme content.
+- Added cross-host theme delivery using an expiring, deduplicated `js_data`
+  command consumed by Bottom Controls and rebroadcast to JSplitter hosts.
+- Extended theme coverage to control panels, Display, Quick Search, bottom
+  area, InfoStack, Album Art, Display/Waveform backing, layout modes, JS Playlist,
+  Playlist Manager and the supported information pages.
+- Kept the bundled FCL byte-for-byte unchanged. Existing layouts remain valid;
+  the optional Theme Manager child is added manually to existing layouts.
+- Added runtime format, mapping, clamping, command-expiry, optional-callback,
+  child-discovery, remembered-selection restoration, viewport clipping,
+  lifecycle-retry and transactional file-operation tests, keeping the
+  behavioural suite count at 41. Advanced InfoStack to **0.7.5**, Theme Manager
+  to **0.1.13**, the theme engine to **0.2.7**, Bottom-area appearance to
+  **0.3.6**, the standalone sample defaults and reset bridge to **0.2.4**, JS
+  Playlist to **0.6.6**, Smooth Playlist Manager to **0.5.8**, Quick Search to
+  **0.1.25**, Control Left to **3.0.36**, Control Right to **3.0.43**, Display
+  to **3.0.40**, and the release validator to **0.11.17**.
+
 ## v1.1.3 - Markdown documentation and release hardening
 
 - Rebalanced `DOJSP3.Waveform` vertically inside `DOJSP3.DisplayStack`.

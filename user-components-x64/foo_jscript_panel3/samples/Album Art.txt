@@ -1,9 +1,11 @@
 // ==PREPROCESSOR==
 // @name "Album Art - Enhanced"
-// @version "0.1.4"
+// @version "0.1.5"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
 // @import "%fb2k_component_path%samples\js\albumart.js"
@@ -53,6 +55,10 @@ function on_mouse_rbtn_up(x, y) {
 
 function on_mouse_wheel(s) {
 	albumart.wheel(s);
+}
+
+function on_notify_data(name, info) {
+	if (jsp3EnhancedHandleSampleReset(name, info, "album-art")) return;
 }
 
 function on_paint(gr) {

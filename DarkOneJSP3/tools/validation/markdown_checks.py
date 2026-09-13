@@ -10,6 +10,7 @@ WIKI_PAGES = {
     'Credits-and-Attribution', 'Enhanced-Sample-Library', 'FAQ', 'Home',
     'Installation-and-Upgrading', 'Layout-and-Panel-Map', 'Migration-from-DarkOne2021',
     'Quick-Start', 'Release-History', 'Troubleshooting', 'Validation-and-Maintenance',
+    'Theme-Manager',
     '_Footer', '_Sidebar',
 }
 

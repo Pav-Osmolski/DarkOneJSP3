@@ -41,6 +41,52 @@ function jsp3EnhancedHasResetRole(role) {
 }
 
 function jsp3EnhancedHandleSampleReset(name, info, roles) {
+    if (typeof DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION !== "undefined" &&
+            name === DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION) {
+        var captureRequest = jsp3EnhancedThemeCaptureRequest(info);
+        if (!captureRequest) return true;
+        var captureRoles = Object.prototype.toString.call(roles) === "[object Array]"
+            ? roles : [roles];
+        for (var captureIndex = 0; captureIndex < captureRoles.length; captureIndex++) {
+            var captureRole = captureRoles[captureIndex];
+            if (typeof captureRole !== "string" || !captureRole) continue;
+            try {
+                var captureValues = jsp3EnhancedCaptureTheme(captureRequest.theme, captureRole);
+                if (!captureValues || !Object.keys(captureValues).length) continue;
+                var capturePayload = JSON.stringify({
+                    version: 1,
+                    id: captureRequest.id,
+                    role: captureRole,
+                    values: captureValues
+                });
+                if (capturePayload.length <= 65536) {
+                    window.NotifyOthers(DARKONEJSP3_THEME_CAPTURE_RESPONSE_NOTIFICATION, capturePayload);
+                }
+            } catch (captureError) {}
+        }
+        return true;
+    }
+    if (typeof DARKONEJSP3_THEME_NOTIFICATION !== "undefined" &&
+            name === DARKONEJSP3_THEME_NOTIFICATION) {
+        var themeRoles = Object.prototype.toString.call(roles) === "[object Array]"
+            ? roles
+            : [roles];
+        var changed = false;
+        for (var themeIndex = 0; themeIndex < themeRoles.length; themeIndex++) {
+            if (typeof themeRoles[themeIndex] === "string" && themeRoles[themeIndex]) {
+                try {
+                    if (jsp3EnhancedApplyTheme(info, themeRoles[themeIndex])) changed = true;
+                } catch (themeError) {
+                    try { console.log("[DarkOneJSP3] Theme rejected: " + themeError.message); } catch (e0) {}
+                    return true;
+                }
+            }
+        }
+        if (changed) {
+            try { window.Reload(); } catch (themeReloadError) { window.Repaint(); }
+        } else window.Repaint();
+        return true;
+    }
     if (name !== JSP3_ENHANCED_RESET_NOTIFICATION &&
             name !== JSP3_ENHANCED_LEGACY_RESET_NOTIFICATION) return false;
 

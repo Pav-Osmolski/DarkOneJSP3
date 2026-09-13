@@ -67,8 +67,9 @@ function showOptionalButtonCommandGuide() {
 function darkOneInfoStackMenuFallbackState() {
     return {
         activeIndex: 0,
-        visible: [true, true, true, true, true, true],
-        labels: ['Playlists', 'Biography', 'Last.fm', 'Album Notes', 'Queue', 'Properties'],
+        visible: [true, true, true, true, true, true, false],
+        labels: ['Playlists', 'Biography', 'Last.fm', 'Album Notes', 'Queue', 'Properties', 'Theme'],
+        available: [true, true, true, true, true, true, false],
         tabStripVisible: true,
         fixedFontSize: 0,
         automaticFontScale: 100,
@@ -93,16 +94,24 @@ function darkOneInfoStackMenuState() {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
-    result.activeIndex = number(state.activeIndex, 0, 0, 5);
-    if (state.visible instanceof Array && state.visible.length === 6) {
-        for (var i = 0; i < 6; i++) result.visible[i] = Boolean(state.visible[i]);
+    var persistedCount = state.labels instanceof Array && state.labels.length >= 6 && state.labels.length <= 7
+        ? state.labels.length : 6;
+    result.activeIndex = number(state.activeIndex, 0, 0, persistedCount - 1);
+    if (state.visible instanceof Array && state.visible.length === persistedCount) {
+        for (var i = 0; i < persistedCount; i++) result.visible[i] = Boolean(state.visible[i]);
     }
-    if (state.labels instanceof Array && state.labels.length === 6) {
-        for (var j = 0; j < 6; j++) {
+    if (state.labels instanceof Array && state.labels.length === persistedCount) {
+        for (var j = 0; j < persistedCount; j++) {
             var label = String(state.labels[j] || '').replace(/^\s+|\s+$/g, '');
-            if (label) result.labels[j] = label.substring(0, 40);
+            result.labels[j] = label ? label.substring(0, 40) : (j === 6 ? 'Theme' : 'Page ' + String(j + 1));
         }
     }
+    if (state.available instanceof Array && state.available.length === persistedCount) {
+        for (var k = 0; k < persistedCount; k++) result.available[k] = Boolean(state.available[k]);
+    } else if (persistedCount === 7) {
+        result.available[6] = true;
+    }
+    if (!result.available[result.activeIndex]) result.activeIndex = 0;
     result.tabStripVisible = state.tabStripVisible !== false;
     result.fixedFontSize = number(state.fixedFontSize, 0, 0, 48);
     result.automaticFontScale = number(state.automaticFontScale, 100, 50, 200);
@@ -137,13 +146,15 @@ function darkOneShowInfoStackLocalMenu(button) {
     var selectedId = 0;
 
     try {
-        for (var i = 0; i < 6; i++) {
-            menu.AppendMenuItem(state.visible[i] ? 0 : 1, 100 + i, darkOneInfoStackMenuLabel(state.labels[i]));
+        for (var i = 0; i < state.labels.length; i++) {
+            if (!state.available[i]) continue;
+            var directFlags = i === 6 || state.visible[i] ? 0 : 1;
+            menu.AppendMenuItem(directFlags, 100 + i, darkOneInfoStackMenuLabel(state.labels[i]));
             visibilityMenu.AppendMenuItem(0, 300 + i, darkOneInfoStackMenuLabel(state.labels[i]));
             visibilityMenu.CheckMenuItem(300 + i, state.visible[i]);
             titlesMenu.AppendMenuItem(0, 400 + i, 'Rename ' + darkOneInfoStackMenuLabel(state.labels[i]) + '...');
         }
-        menu.CheckMenuRadioItem(100, 105, 100 + state.activeIndex);
+        menu.CheckMenuRadioItem(100, 100 + state.labels.length - 1, 100 + state.activeIndex);
         menu.AppendMenuSeparator();
         menu.AppendMenuItem(0, 250, 'Show tab strip');
         menu.CheckMenuItem(250, state.tabStripVisible);
@@ -176,7 +187,7 @@ function darkOneShowInfoStackLocalMenu(button) {
 
         DarkOneColour.appendRadioOptions(dividerMenu, DARKONE_INFOSTACK_DIVIDER_OPTIONS, state.dividerMode, state.dividerCustomColour, 0);
         dividerMenu.AppendMenuSeparator();
-        dividerMenu.AppendMenuItem(0, 106, 'Set custom colour...');
+        dividerMenu.AppendMenuItem(0, 906, 'Set custom colour...');
 
         visibilityMenu.AppendTo(tabSettingsMenu, 16, 'Visible tabs');
         titlesMenu.AppendTo(tabSettingsMenu, 16, 'Tab titles');

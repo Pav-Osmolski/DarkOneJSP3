@@ -4,11 +4,38 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\shared.js');
 var DARKONEJSP3_RESET_ROLE = "info-stack";
 
 // Replaces Panel Stack Splitter 03.
-// The source PSS contains stale placement/show code for a seventh child but
-// only six actual panels and six buttons. This port deliberately implements
-// the six real panels.
+// The six original pages remain required. v1.2 adds an optional seventh child
+// for Theme Manager without changing or regenerating the exported FCL.
 //
 // Version history (newest first):
+// v0.7.5 applies theme-owned InfoStack appearance in place so an appearance
+// update cannot discard the resolved optional child or publish a false Theme
+// availability snapshot during a controller reload.
+//
+// v0.7.4 preserves a saved Theme selection until its optional child resolves,
+// clips unavailable pages out of both InfoStack menus and supplements the
+// notification handshake with a short-lived presence beacon. Stock six-child
+// layouts still avoid probing a missing panel title.
+//
+// v0.7.3 makes optional Theme discovery lifecycle-safe. Availability replies
+// are resolved again outside notification callbacks, and an explicit Theme
+// command performs one guarded child lookup before reporting it missing. Both
+// InfoStack menu owners keep the Theme command visible even when an early or
+// cross-component availability announcement was missed.
+//
+// v0.7.2 exposes the seventh page to both InfoStack menu owners, shortens its
+// display label to Theme and decouples page access from tab-strip visibility.
+// Theme can therefore remain hidden from the strip while TOOLS or INFOSTACK
+// opens it directly.
+//
+// v0.7.1 discovers the optional Theme Manager through a notification handshake
+// so a stock six-child InfoStack never probes or reports the absent panel.
+// Missing required children are logged once but no longer hold the startup
+// curtain open, leaving the remaining interface usable for repair.
+//
+// v0.7.0 adds the optional Theme Manager child and seventh tab while keeping
+// the existing maintainer-exported FCL compatible and unchanged.
+//
 // v0.6.34 keeps discrete InfoStack geometry changes on the normal lightweight
 // resize/repaint path. Scroll-edge fade smoothness is resolved inside the shared
 // DirectWrite fade helper, so tab-strip changes require no forced child repaint.
@@ -108,8 +135,20 @@ var INFO_PANELS = [
     { key: 'Lastfm',     title: DOJSP3.titles.lastfmInfo,      defaultLabel: 'Last.fm',    uppercaseLabel: 'LAST.FM' },
     { key: 'Allmusic',   title: DOJSP3.titles.albumNotes,      defaultLabel: 'Album Notes', uppercaseLabel: 'ALBUM NOTES' },
     { key: 'Queue',      title: DOJSP3.titles.queue,           defaultLabel: 'Queue',      uppercaseLabel: 'QUEUE' },
-    { key: 'Properties', title: DOJSP3.titles.properties,      defaultLabel: 'Properties', uppercaseLabel: 'PROPERTIES' }
+    { key: 'Properties', title: DOJSP3.titles.properties,      defaultLabel: 'Properties', uppercaseLabel: 'PROPERTIES' },
+    { key: 'ThemeManager', title: DOJSP3.titles.themeManager,  defaultLabel: 'Theme', uppercaseLabel: 'THEME', optional: true }
 ];
+
+var THEME_MANAGER_QUERY_NOTIFICATION = 'DarkOneJSP3.ThemeManager.QueryAvailability';
+var THEME_MANAGER_AVAILABLE_NOTIFICATION = 'DarkOneJSP3.ThemeManager.Available';
+var THEME_MANAGER_AVAILABILITY_VERSION = 'v1';
+var THEME_MANAGER_AVAILABILITY_FILE = fb.ProfilePath + 'js_data\\darkonejsp3.theme-manager-availability.json';
+var THEME_MANAGER_AVAILABILITY_MAX_AGE = 15000;
+var themeManagerPanel = null;
+var themeManagerAnnounced = false;
+var themeManagerResolveTimer = 0;
+var themeManagerResolveAttempt = 0;
+var THEME_MANAGER_RESOLVE_DELAYS = [0, 50, 250, 750];
 
 
 function hideInfoChildrenBeforeFirstLayout() {
@@ -117,6 +156,10 @@ function hideInfoChildrenBeforeFirstLayout() {
     // evaluating this controller. Hide every candidate immediately so the
     // saved active tab is the first information panel the user actually sees.
     for (var i = 0; i < INFO_PANELS.length; i++) {
+        // Optional children announce themselves after their own script has
+        // loaded. Avoid GetPanel here: JSplitter may display a host diagnostic
+        // for a missing title even when the JavaScript exception is caught.
+        if (INFO_PANELS[i].optional) continue;
         try {
             var child = window.GetPanel(INFO_PANELS[i].title);
             if (child) child.Show(false);
@@ -143,6 +186,7 @@ include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\info_stack_bridges.js');
 
 
 var activeIndex = DOJSP3.clamp(Number(window.GetProperty(ACTIVE_PROPERTY, 0)) || 0, 0, INFO_PANELS.length - 1);
+var pendingOptionalActiveIndex = INFO_PANELS[activeIndex].optional ? activeIndex : -1;
 var hoverIndex = -1;
 var ww = 0;
 var wh = 0;
@@ -183,7 +227,7 @@ function labelProperty(index) {
 
 function migrateTitleCaseDefaults() {
     var version = Number(window.GetProperty(LABEL_DEFAULTS_VERSION_PROPERTY, 0)) || 0;
-    if (version >= 2) return;
+    if (version >= 4) return;
 
     // v0.3.0/v0.3.1 stored all-caps defaults. v0.6.0 renames only the
     // untouched information-source default from AllMusic to Album Notes.
@@ -198,14 +242,100 @@ function migrateTitleCaseDefaults() {
         if (version < 2 && INFO_PANELS[i].key === 'Allmusic' && current === 'AllMusic') {
             window.SetProperty(labelProperty(i), 'Album Notes');
         }
+        if (version < 4 && INFO_PANELS[i].key === 'ThemeManager' &&
+                (current === 'Theme Manager' || current === 'THEME MANAGER')) {
+            window.SetProperty(labelProperty(i), 'Theme');
+        }
     }
-    window.SetProperty(LABEL_DEFAULTS_VERSION_PROPERTY, 2);
+    window.SetProperty(LABEL_DEFAULTS_VERSION_PROPERTY, 4);
 }
 
 migrateTitleCaseDefaults();
 
 function isTabVisible(index) {
-    return Boolean(window.GetProperty(visibleProperty(index), true));
+    return isTabAvailable(index) && Boolean(window.GetProperty(visibleProperty(index), true));
+}
+
+function isTabAvailable(index) {
+    if (!INFO_PANELS[index].optional) return true;
+    return Boolean(themeManagerPanel);
+}
+
+function hasFreshThemeManagerBeacon() {
+    try {
+        if (!utils.IsFile(THEME_MANAGER_AVAILABILITY_FILE)) return false;
+        var raw = String(utils.ReadTextFile(THEME_MANAGER_AVAILABILITY_FILE, 65001) || '');
+        if (!raw || raw.length > 512) return false;
+        var beacon = JSON.parse(raw);
+        var age = new Date().getTime() - Math.round(Number(beacon.issuedAt));
+        return beacon.version === THEME_MANAGER_AVAILABILITY_VERSION &&
+            beacon.title === DOJSP3.titles.themeManager && isFinite(age) &&
+            age >= -5000 && age <= THEME_MANAGER_AVAILABILITY_MAX_AGE;
+    } catch (e) {}
+    return false;
+}
+
+function resolveThemeManagerPanel(force) {
+    if (themeManagerPanel) return true;
+    if (!force && !themeManagerAnnounced && !hasFreshThemeManagerBeacon()) return false;
+
+    var resolved = null;
+    try { resolved = window.GetPanel(DOJSP3.titles.themeManager); } catch (e) {}
+    if (!resolved) return false;
+
+    themeManagerPanel = resolved;
+    themeManagerAnnounced = true;
+    themeManagerResolveAttempt = 0;
+    if (themeManagerResolveTimer) {
+        clearTimeout(themeManagerResolveTimer);
+        themeManagerResolveTimer = 0;
+    }
+
+    if (pendingOptionalActiveIndex >= 0) {
+        activeIndex = pendingOptionalActiveIndex;
+        pendingOptionalActiveIndex = -1;
+        window.SetProperty(ACTIVE_PROPERTY, activeIndex);
+    } else {
+        try { themeManagerPanel.Show(false); } catch (hideError) {}
+    }
+    if (ww > 0 && wh > 0) layoutInfoStack();
+    rebuildInfoStackRenderModel();
+    window.Repaint();
+    publishInfoStackMenuState();
+    return true;
+}
+
+function scheduleThemeManagerResolution() {
+    if (themeManagerPanel || themeManagerResolveTimer ||
+            themeManagerResolveAttempt >= THEME_MANAGER_RESOLVE_DELAYS.length) return;
+
+    var delay = THEME_MANAGER_RESOLVE_DELAYS[themeManagerResolveAttempt++];
+    themeManagerResolveTimer = setTimeout(function () {
+        themeManagerResolveTimer = 0;
+        if (!resolveThemeManagerPanel()) scheduleThemeManagerResolution();
+    }, delay);
+}
+
+function registerThemeManagerPanel(data) {
+    if (String(data || '') !== THEME_MANAGER_AVAILABILITY_VERSION) return false;
+    themeManagerAnnounced = true;
+    if (resolveThemeManagerPanel()) return true;
+
+    // GetPanel can be temporarily unavailable while a child notification is
+    // still being dispatched. Retry after the callback has unwound instead of
+    // permanently converting a valid availability reply into a missing panel.
+    themeManagerResolveAttempt = 0;
+    scheduleThemeManagerResolution();
+    return false;
+}
+
+function requestThemeManagerAvailability() {
+    try {
+        window.NotifyOthers(
+            THEME_MANAGER_QUERY_NOTIFICATION,
+            THEME_MANAGER_AVAILABILITY_VERSION
+        );
+    } catch (e) {}
 }
 
 function tabLabel(index) {
@@ -223,14 +353,17 @@ function menuLabel(value) {
 function infoStackMenuStateSnapshot() {
     var visible = [];
     var labels = [];
+    var available = [];
     for (var i = 0; i < INFO_PANELS.length; i++) {
         visible.push(isTabVisible(i));
         labels.push(tabLabel(i));
+        available.push(isTabAvailable(i));
     }
     return {
         activeIndex: activeIndex,
         visible: visible,
         labels: labels,
+        available: available,
         tabStripVisible: isTabStripVisible(),
         fixedFontSize: Math.max(0, Math.round(Number(window.GetProperty(FONT_PROPERTY, 0)) || 0)),
         automaticFontScale: automaticFontScale(),
@@ -298,7 +431,18 @@ function ensureActiveTab() {
         visible = [0];
     }
 
-    if (isTabVisible(activeIndex)) return;
+    // Theme is intentionally selectable through TOOLS/INFOSTACK even when its
+    // visual tab is hidden. Other hidden pages retain the established fallback.
+    if (isTabVisible(activeIndex) ||
+            (INFO_PANELS[activeIndex].key === 'ThemeManager' && isTabAvailable(activeIndex))) return;
+
+    // Do not destroy a saved optional selection merely because its child loads
+    // after this controller. Use a temporary visible fallback until discovery
+    // restores the pending page, unless the user explicitly selects elsewhere.
+    if (pendingOptionalActiveIndex >= 0 && activeIndex === pendingOptionalActiveIndex) {
+        activeIndex = visible[0];
+        return;
+    }
 
     activeIndex = visible[0];
     window.SetProperty(ACTIVE_PROPERTY, activeIndex);
@@ -371,6 +515,7 @@ function setTabAreaHeight(value) {
 }
 
 function panelAt(index) {
+    if (INFO_PANELS[index].optional) return themeManagerPanel;
     return DOJSP3.panel(INFO_PANELS[index].title);
 }
 
@@ -378,7 +523,7 @@ function applyVisibility() {
     ensureActiveTab();
     for (var i = 0; i < INFO_PANELS.length; i++) {
         var p = panelAt(i);
-        DOJSP3.show(p, isTabVisible(i) && i === activeIndex);
+        DOJSP3.show(p, isTabAvailable(i) && i === activeIndex);
     }
 }
 
@@ -405,23 +550,42 @@ function layoutInfoStack() {
         tabY = wh;
     }
 
-    var allChildrenAvailable = true;
     for (var i = 0; i < INFO_PANELS.length; i++) {
         var child = panelAt(i);
-        if (!child) allChildrenAvailable = false;
         DOJSP3.move(child, 0, 0, ww, contentHeight);
     }
     applyVisibility();
     rebuildInfoStackRenderModel();
-    if (!startupReadiness.isReady() && allChildrenAvailable) {
+    // Readiness means the controller can lay out what is available. A missing
+    // child is a recoverable configuration issue and must not leave the whole
+    // interface behind the startup curtain until its timeout expires.
+    if (!startupReadiness.isReady()) {
         startupReadiness.signal();
     }
 }
 
-function selectPanel(index, notify) {
+function selectPanel(index, notify, allowHidden) {
     index = DOJSP3.clamp(Math.round(Number(index) || 0), 0, INFO_PANELS.length - 1);
-    if (!isTabVisible(index) || activeIndex === index) return;
+    if (pendingOptionalActiveIndex >= 0 && index !== pendingOptionalActiveIndex) {
+        pendingOptionalActiveIndex = -1;
+        window.SetProperty(ACTIVE_PROPERTY, index);
+    }
+    if (INFO_PANELS[index].optional && !isTabAvailable(index)) {
+        // Availability announcements can be lost between JScript Panel 3 and
+        // JSplitter, or arrive before this controller has finished loading.
+        // An explicit user request is a safe point for one authoritative lookup.
+        resolveThemeManagerPanel(true);
+    }
+    if (!isTabAvailable(index)) {
+        fb.ShowPopupMessage(
+            'Theme Manager is not present in this layout yet. Add a JScript Panel 3 child to the InfoStack splitter, set its custom title to DOJSP3.ThemeManager, and load DarkOneJSP3 - Theme Manager.txt.\n\nThe bundled FCL is intentionally unchanged.',
+            'DarkOneJSP3 Theme Manager'
+        );
+        return;
+    }
+    if ((!isTabVisible(index) && !allowHidden) || activeIndex === index) return;
 
+    pendingOptionalActiveIndex = -1;
     activeIndex = index;
     window.SetProperty(ACTIVE_PROPERTY, activeIndex);
     applyVisibility();
@@ -600,7 +764,11 @@ function handleInfoStackMenuAction(id, targetIndex) {
     if (!id) return false;
     targetIndex = DOJSP3.clamp(Math.round(Number(targetIndex) || 0), 0, INFO_PANELS.length - 1);
     if (id >= 100 && id < 100 + INFO_PANELS.length) {
-        selectPanel(id - 100, true);
+        var requestedIndex = id - 100;
+        // Menu access and tab-strip visibility are separate for Theme. Opening
+        // it must not silently undo the user's hidden-tab preference.
+        var allowHidden = INFO_PANELS[requestedIndex].key === 'ThemeManager';
+        selectPanel(requestedIndex, true, allowHidden);
     } else if (id === 250) {
         setTabStripVisible(!isTabStripVisible());
     } else if (id === 200) {
@@ -677,6 +845,7 @@ function handleInfoStackMenuAction(id, targetIndex) {
 
 function showInfoStackMenu(x, y, targetIndex) {
     targetIndex = DOJSP3.clamp(Math.round(Number(targetIndex) || 0), 0, INFO_PANELS.length - 1);
+    if (!isTabAvailable(targetIndex)) targetIndex = activeIndex;
 
     var menu = window.CreatePopupMenu();
     var tabSettingsMenu = window.CreatePopupMenu();
@@ -693,7 +862,12 @@ function showInfoStackMenu(x, y, targetIndex) {
 
     var i;
     for (i = 0; i < INFO_PANELS.length; i++) {
-        menu.AppendMenuItem(isTabVisible(i) ? MENU_STRING : MENU_GRAYED, 100 + i, menuLabel(tabLabel(i)));
+        var available = isTabAvailable(i);
+        if (!available) continue;
+        var directFlags = INFO_PANELS[i].key === 'ThemeManager' || isTabVisible(i)
+            ? MENU_STRING : MENU_GRAYED;
+        menu.AppendMenuItem(directFlags, 100 + i, menuLabel(tabLabel(i)));
+        if (!available) continue;
         visibilityMenu.AppendMenuItem(MENU_STRING, 300 + i, menuLabel(tabLabel(i)));
         visibilityMenu.CheckMenuItem(300 + i, isTabVisible(i));
         titlesMenu.AppendMenuItem(MENU_STRING, 400 + i, 'Rename ' + menuLabel(tabLabel(i)) + '...');
@@ -763,6 +937,28 @@ function on_mouse_rbtn_up(x, y) {
 }
 
 function on_notify_data(name, data) {
+    if (name === 'DarkOneJSP3.Theme.Apply') {
+        // Availability is structural runtime state, not a theme property.
+        // Refresh appearance and geometry without reloading this controller or
+        // dropping the already resolved optional Theme child reference.
+        try {
+            if (typeof darkOneJsp3ApplyTheme == 'function') {
+                darkOneJsp3ApplyTheme(data, DARKONEJSP3_RESET_ROLE);
+            }
+            layoutInfoStack();
+            rebuildInfoStackRenderModel();
+            publishInfoStackMenuState();
+            window.Repaint();
+        } catch (themeError) {
+            try { console.log('[DarkOneJSP3] InfoStack theme rejected: ' + themeError.message); } catch (logError) {}
+        }
+        return;
+    }
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
+    if (name === THEME_MANAGER_AVAILABLE_NOTIFICATION) {
+        registerThemeManagerPanel(data);
+        return;
+    }
     if (name === INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION) {
         var width = Number(data);
         if (!isFinite(width) || width <= 0) return;
@@ -793,3 +989,11 @@ function on_notify_data(name, data) {
         selectPanel(data, false);
     }
 }
+
+function on_script_unload() {
+    if (themeManagerResolveTimer) clearTimeout(themeManagerResolveTimer);
+    themeManagerResolveTimer = 0;
+}
+
+requestThemeManagerAvailability();
+scheduleThemeManagerResolution();

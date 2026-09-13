@@ -502,7 +502,7 @@ function darkOnePaintBottomAreaBackground(gr) {
         }
     }
 }
-function darkOneApplyBottomAreaAppearance() {
+function darkOneApplyBottomAreaAppearance(repaint) {
     p_backcol = darkOneBottomBackgroundColour();
     darkOneBottomAreaPaintGradient = darkOneBottomBackgroundLinearGradient();
     darkOneBottomAreaPaintDepthMode = darkOneBottomDepthMode();
@@ -520,7 +520,7 @@ function darkOneApplyBottomAreaAppearance() {
         display_system.InitColours();
         display_system.setColours();
     }
-    try { window.Repaint(); } catch (e) {}
+    if (repaint !== false) try { window.Repaint(); } catch (e) {}
 }
 function darkOneApplyBottomAreaState(state, repaint) {
     state = darkOneBottomAreaParseState(state);
@@ -1692,6 +1692,8 @@ function darkOneToolsMenu(x, y) {
         bottomDivider,
         bottomDepth
     );
+    m.AppendMenuItem(MF_STRING, 9900, 'Theme Manager');
+    m.AppendMenuSeparator();
     appearance.AppendTo(m, MF_STRING, 'Appearance');
     buttons.AppendTo(m, MF_STRING, 'Buttons');
 
@@ -1769,6 +1771,21 @@ function darkOneToolsMenu(x, y) {
     }
 
     if (bottomAreaHandled) return true;
+    if (idx === 9900) {
+        try {
+            if (!DarkOneViewBridge.writeCommand(
+                    DarkOneViewBridge.infoStackActionCommand(106), null)) {
+                throw new Error('the InfoStack bridge command could not be written');
+            }
+        } catch (themeManagerError) {
+            utils.MessageBox(
+                'Theme Manager could not be opened.\n\n' + themeManagerError.message,
+                'DarkOneJSP3',
+                0x00000010
+            );
+        }
+        return true;
+    }
     if (darkOneHandleButtonsAppearanceMenuSelection(idx)) return true;
     if (darkOneHandleToolsStartupMenuSelection(idx, startupState)) return true;
 

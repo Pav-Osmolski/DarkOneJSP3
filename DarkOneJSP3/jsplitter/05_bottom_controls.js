@@ -20,12 +20,21 @@ var runtimeBridgePollTick = 0;
 var bottomAreaCommitApplyTimer = null;
 var bottomAreaPendingCommitId = '';
 var bottomAreaLastCommitId = '';
+var bottomAreaLastCommit = null;
 var bottomAreaStateFileSnapshot = '';
 var bottomAreaExpectedState = '';
 var bottomAreaExpectedStateDeadline = 0;
 var bottomAreaExpectedIssuedAt = 0;
 var bottomAreaExpectedStateFailureLogged = false;
 var lastResetCommandId = '';
+var lastThemeCommandId = '';
+var themeCommandApplyTimer = null;
+var pendingThemeCommandId = '';
+var pendingBottomThemeCommand = null;
+var pendingThemeRelay = null;
+var pendingParentPaintId = '';
+var bottomThemeLocalChanged = false;
+var activeThemeCapture = null;
 var lastQuickSearchLayoutCommandId = '';
 var lastViewCommandId = '';
 var runtimeCommandRemoveFailureLogged = Object.create(null);
@@ -34,21 +43,38 @@ var BOTTOM_AREA_PROTOCOL = DarkOneProtocol.bottomArea;
 var RUNTIME_DATA_DIR = fb.ProfilePath + 'js_data\\';
 var BOTTOM_AREA_STATE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-state.txt';
 var BOTTOM_AREA_COMMIT_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-command.txt';
+var BOTTOM_AREA_ACK_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-ack.txt';
+var BOTTOM_AREA_PAINTED_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-painted.txt';
+var THEME_RELEASE_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.theme-release.txt';
 var BOTTOM_AREA_GEOMETRY_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.bottom-area-geometry.txt';
 var BOTTOM_AREA_GEOMETRY_VERSION = 'v2';
 var BOTTOM_AREA_GEOMETRY_QUERY = 'DarkOneJSP3.BottomArea.Geometry.Query';
 var BOTTOM_AREA_GEOMETRY_STATE = 'DarkOneJSP3.BottomArea.Geometry.State';
 var BOTTOM_AREA_COMMIT_POLL_MS = 25;
+var BOTTOM_AREA_ACK_MIN_LEAD_MS = 75;
 var BOTTOM_AREA_STATE_CONFIRM_MS = 2000;
 var BOTTOM_AREA_LEGACY_STATE_FILE = fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt';
 var RESET_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.reset-command.txt';
+var THEME_COMMAND_FILE = typeof DARKONEJSP3_THEME_COMMAND_FILE == 'string'
+    ? DARKONEJSP3_THEME_COMMAND_FILE
+    : RUNTIME_DATA_DIR + 'darkonejsp3.theme-command.json';
+var THEME_CAPTURE_QUERY_FILE = typeof DARKONEJSP3_THEME_CAPTURE_QUERY_FILE == 'string'
+    ? DARKONEJSP3_THEME_CAPTURE_QUERY_FILE
+    : RUNTIME_DATA_DIR + 'darkonejsp3.theme-capture-query.json';
+var THEME_CAPTURE_RESPONSE_FILE = typeof DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE == 'string'
+    ? DARKONEJSP3_THEME_CAPTURE_RESPONSE_FILE
+    : RUNTIME_DATA_DIR + 'darkonejsp3.theme-capture-response.json';
 var QUICKSEARCH_LAYOUT_COMMAND_FILE = RUNTIME_DATA_DIR + 'darkonejsp3.quicksearch-layout-command.txt';
 var VIEW_COMMAND_FILE = DarkOneViewBridge.commandFile;
 var RUNTIME_BRIDGE_POLL_INTERVAL = BOTTOM_AREA_COMMIT_POLL_MS;
 var RUNTIME_COMMAND_POLL_DIVISOR = 4;
 var RUNTIME_STATE_POLL_DIVISOR = 20;
 var RESET_COMMAND_POLL_DIVISOR = 20;
+var THEME_COMMAND_POLL_DIVISOR = 20;
+var THEME_COMMAND_COORDINATION_GRACE_MS = 250;
+var THEME_CAPTURE_POLL_DIVISOR = 20;
 var LAST_RESET_COMMAND_PROPERTY = 'DARKONEJSP3.RESET.LAST.COMMAND.ID';
+var LAST_THEME_COMMAND_PROPERTY = 'DARKONEJSP3.THEME.LAST.COMMAND.ID';
 var BOTTOM_BACKGROUND_MODE_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.MODE';
 var BOTTOM_BACKGROUND_CUSTOM_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.CUSTOM.COLOUR';
 var BOTTOM_BACKGROUND_GRADIENT_PROPERTY = 'DARKONEJSP3.BOTTOM.BACKGROUND.LINEAR.GRADIENT';
@@ -59,6 +85,13 @@ var BOTTOM_DEPTH_PROPERTY = 'DARKONEJSP3.BOTTOM.DEPTH';
 var QUICKSEARCH_LAYOUT_LINES_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.LINES';
 var QUICKSEARCH_LAYOUT_WIDTH_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.WIDTH.PERCENT';
 var QUICKSEARCH_LAYOUT_LINE_PIXELS_PROPERTY = 'DARKONEJSP3.QUICKSEARCH.LAYOUT.LINE.PIXELS';
+var JSPLITTER_THEME_CAPTURE_ROLES = {
+    'main-columns': true,
+    'art-spectrum': true,
+    'bottom-controls': true,
+    'info-stack': true,
+    'display-waveform': true
+};
 var bottomAreaGeometrySnapshot = '';
 var bottomAreaGeometryHeight = 1;
 var bottomAreaGeometryDisplayTop = 0;
@@ -280,6 +313,8 @@ function bottomAreaStateRevisionIssuedAt(state) {
 
 function syncBottomAreaStateFile(createIfMissing) {
     if (bottomAreaPendingCommitId) return false;
+    var queued = readBottomAreaCommitFile();
+    if (queued && BOTTOM_AREA_PROTOCOL.parseCommit(queued.raw, new Date().getTime())) return false;
     var state = readBottomAreaStateFile();
     if (!state) {
         if (createIfMissing) writeBottomAreaStateFile(bottomAreaState());
@@ -333,6 +368,15 @@ function acknowledgeBottomAreaCommitFile() {
     return removeRuntimeCommandFile(BOTTOM_AREA_COMMIT_FILE, 'bottom-area commit');
 }
 
+function publishBottomAreaCommitAck(commit) {
+    var serialised = BOTTOM_AREA_PROTOCOL.serialiseCommit(commit);
+    return !!serialised && tryWriteRuntimeFile(
+        BOTTOM_AREA_ACK_FILE,
+        serialised,
+        'bottom-area commit acknowledgement'
+    );
+}
+
 function readBottomAreaCommitFile() {
     try {
         return {
@@ -353,15 +397,50 @@ function applyPendingBottomAreaCommit(commit) {
     if (!commit || commit.id !== bottomAreaPendingCommitId) return false;
     bottomAreaCommitApplyTimer = null;
     bottomAreaPendingCommitId = '';
-    return applyBottomAreaState(commit.state, true);
+    var changed = applyBottomAreaState(commit.state, false);
+    var themeCommand = pendingBottomThemeCommand;
+    pendingBottomThemeCommand = null;
+    if (themeCommand && themeCommand.id === commit.id) {
+        bottomThemeLocalChanged = false;
+        pendingParentPaintId = commit.id;
+        applyThemeCommandNow(themeCommand, true);
+        changed = changed || bottomThemeLocalChanged;
+        darkOneJsp3ThemeTrace('commit', commit.id, 'bottom-controls');
+        if (!changed) finishBottomThemePaint('unchanged');
+    }
+    if (changed) window.Repaint();
+    return changed;
+}
+
+function finishBottomThemePaint(phase) {
+    if (!pendingParentPaintId) return;
+    if (tryWriteRuntimeFile(BOTTOM_AREA_PAINTED_FILE, pendingParentPaintId, 'bottom-area paint receipt')) {
+        darkOneJsp3ThemeTrace(phase || 'paint-callback', pendingParentPaintId, 'bottom-controls');
+        pendingParentPaintId = '';
+    }
+}
+
+function releasePendingThemeRelay() {
+    if (!pendingThemeRelay) return false;
+    var released = false;
+    try { released = utils.ReadTextFile(THEME_RELEASE_FILE, 65001) === pendingThemeRelay.id; } catch (e) {}
+    if (!released && new Date().getTime() < pendingThemeRelay.deadline) return false;
+    var relay = pendingThemeRelay;
+    pendingThemeRelay = null;
+    if (released) removeRuntimeCommandFile(THEME_RELEASE_FILE, 'theme release');
+    try { window.NotifyOthers(DARKONEJSP3_THEME_NOTIFICATION, relay.payload); } catch (e2) {}
+    return true;
 }
 
 function scheduleBottomAreaCommit(commit) {
     commit = BOTTOM_AREA_PROTOCOL.parseCommit(commit, new Date().getTime());
     if (!commit) return false;
     cancelPendingBottomAreaCommit();
+    pendingThemeRelay = null;
+    pendingParentPaintId = '';
     bottomAreaPendingCommitId = commit.id;
     bottomAreaLastCommitId = commit.id;
+    bottomAreaLastCommit = commit;
     bottomAreaExpectedState = BOTTOM_AREA_PROTOCOL.serialiseState(commit.state);
     bottomAreaExpectedStateDeadline = new Date().getTime() + BOTTOM_AREA_STATE_CONFIRM_MS;
     bottomAreaExpectedIssuedAt = commit.issuedAt;
@@ -369,12 +448,40 @@ function scheduleBottomAreaCommit(commit) {
     // Relay immediately inside the JSplitter host. Display/Waveform receives the
     // same absolute applyAt value and schedules its repaint for the same frame.
     broadcastBottomAreaCommit(commit);
+    stageThemeCommandForBottomCommit(commit);
     var delay = Math.max(0, commit.applyAt - new Date().getTime());
-    if (delay <= 0) return applyPendingBottomAreaCommit(commit);
-    bottomAreaCommitApplyTimer = setTimeout(function () {
+    if (delay <= 0) {
         applyPendingBottomAreaCommit(commit);
-    }, delay);
+    } else {
+        try {
+            bottomAreaCommitApplyTimer = setTimeout(function () {
+                applyPendingBottomAreaCommit(commit);
+            }, delay);
+        } catch (commitTimerError) { applyPendingBottomAreaCommit(commit); }
+    }
+    // Theme Manager writes its cross-host theme command before the matching
+    // bottom commit. Stage both against the same absolute boundary instead of
+    // letting the slower 500 ms fallback poll replay and reload the bottom area.
     return true;
+}
+
+function authoritativeBottomAreaCommit(commit) {
+    commit = BOTTOM_AREA_PROTOCOL.parseCommit(commit, new Date().getTime());
+    if (!commit) return null;
+    var now = new Date().getTime();
+    if (commit.applyAt - now >= BOTTOM_AREA_ACK_MIN_LEAD_MS) return commit;
+    return BOTTOM_AREA_PROTOCOL.commit(
+        commit.id,
+        now,
+        now + BOTTOM_AREA_ACK_MIN_LEAD_MS,
+        commit.state
+    );
+}
+
+function bottomAreaCommitHasThemeCommand(commit) {
+    if (!commit) return false;
+    var state = readThemeCommandFile();
+    return !!(state && state.command && state.command.id === commit.id);
 }
 
 function syncBottomAreaCommitFile() {
@@ -390,10 +497,23 @@ function syncBottomAreaCommitFile() {
     }
     if (state.commit.id === bottomAreaPendingCommitId ||
             state.commit.id === bottomAreaLastCommitId) {
+        if (bottomAreaLastCommit && bottomAreaLastCommit.id === state.commit.id &&
+                bottomAreaCommitHasThemeCommand(state.commit)) {
+            if (!publishBottomAreaCommitAck(bottomAreaLastCommit)) return false;
+        }
         acknowledgeBottomAreaCommitFile();
         return false;
     }
-    scheduleBottomAreaCommit(state.commit);
+    var themeCommit = bottomAreaCommitHasThemeCommand(state.commit);
+    var authoritative = themeCommit ?
+        authoritativeBottomAreaCommit(state.commit) : state.commit;
+    // Failure to publish readiness must not start an unacknowledged repaint.
+    // Leave the request in place for the next ordered poll to retry.
+    if (themeCommit && !publishBottomAreaCommitAck(authoritative)) return false;
+    if (!authoritative || !scheduleBottomAreaCommit(authoritative)) {
+        acknowledgeBottomAreaCommitFile();
+        return false;
+    }
     acknowledgeBottomAreaCommitFile();
     return true;
 }
@@ -447,6 +567,230 @@ function syncResetCommandFile() {
         return false;
     }
     return processResetCommand(state.command);
+}
+
+function readThemeCommandFile() {
+    try {
+        if (!utils.IsFile(THEME_COMMAND_FILE)) return null;
+        var raw = String(utils.ReadTextFile(THEME_COMMAND_FILE, 65001) || '');
+        return {
+            raw: raw,
+            command: DarkOneTheme.parseCommand(raw, new Date().getTime())
+        };
+    } catch (e) {}
+    return null;
+}
+
+function acknowledgeThemeCommandFile(commandId) {
+    if (commandId) {
+        var current = readThemeCommandFile();
+        if (!current || !current.command || current.command.id !== commandId) return false;
+    }
+    return removeRuntimeCommandFile(THEME_COMMAND_FILE, 'theme command');
+}
+
+function bottomAreaMatchesExpectedState(state) {
+    if (!bottomAreaExpectedState) return false;
+    var expected = BOTTOM_AREA_PROTOCOL.parseState(bottomAreaExpectedState);
+    return !!expected && sameBottomAreaState(expected, state);
+}
+
+function cancelPendingThemeCommand() {
+    if (themeCommandApplyTimer) clearTimeout(themeCommandApplyTimer);
+    themeCommandApplyTimer = null;
+    pendingThemeCommandId = '';
+}
+
+function applyThemeCommandNow(command, coordinated) {
+    if (!command) return false;
+    if (command.id === lastThemeCommandId) {
+        acknowledgeThemeCommandFile(command.id);
+        return false;
+    }
+    themeCommandApplyTimer = null;
+    pendingThemeCommandId = '';
+    var beforeBottom = bottomAreaState();
+    var changed = false;
+    try {
+        changed = darkOneJsp3ApplyTheme(
+            command.theme,
+            DARKONEJSP3_RESET_ROLE
+        ) === true;
+    } catch (themeError) {
+        try { console.log('[DarkOneJSP3] Theme command rejected: ' + themeError.message); }
+        catch (logError) {}
+        acknowledgeThemeCommandFile(command.id);
+        return false;
+    }
+    var afterBottom = bottomAreaState();
+    lastThemeCommandId = command.id;
+    window.SetProperty(LAST_THEME_COMMAND_PROPERTY, command.id);
+    // A matching coordinated commit already owns canonical persistence and its
+    // revision. Only legacy theme-command producers need this fallback write.
+    if (!sameBottomAreaState(beforeBottom, afterBottom) &&
+            !bottomAreaMatchesExpectedState(afterBottom)) {
+        writeBottomAreaStateFile(afterBottom);
+    }
+    var payload = DarkOneTheme.stringify(command.theme);
+    if (coordinated) {
+        pendingThemeRelay = { id: command.id, payload: payload, deadline: new Date().getTime() + 2000 };
+    } else {
+        try { window.NotifyOthers(DARKONEJSP3_THEME_NOTIFICATION, payload); } catch (e) {}
+    }
+    acknowledgeThemeCommandFile(command.id);
+    if (changed) {
+        layoutBottomControls();
+        if (!coordinated) window.Repaint();
+    }
+    bottomThemeLocalChanged = changed;
+    return true;
+}
+
+function processThemeCommand(command, applyAt) {
+    if (!command) return false;
+    if (command.id === lastThemeCommandId) {
+        acknowledgeThemeCommandFile(command.id);
+        return false;
+    }
+    if (command.id === pendingThemeCommandId) return true;
+    cancelPendingThemeCommand();
+    var target = Math.round(Number(applyAt));
+    if (!isFinite(target)) return applyThemeCommandNow(command);
+    var delay = Math.max(0, target - new Date().getTime());
+    if (delay <= 0) return applyThemeCommandNow(command);
+    pendingThemeCommandId = command.id;
+    try {
+        themeCommandApplyTimer = setTimeout(function () {
+            if (pendingThemeCommandId !== command.id) return;
+            applyThemeCommandNow(command);
+        }, delay);
+    } catch (timerError) {
+        return applyThemeCommandNow(command);
+    }
+    return true;
+}
+
+function stageThemeCommandForBottomCommit(commit) {
+    pendingBottomThemeCommand = null;
+    if (!commit) return false;
+    var state = readThemeCommandFile();
+    if (!state || !state.command || state.command.id !== commit.id) return false;
+    cancelPendingThemeCommand();
+    pendingBottomThemeCommand = state.command;
+    pendingThemeCommandId = state.command.id;
+    return true;
+}
+
+function syncThemeCommandFile() {
+    var state = readThemeCommandFile();
+    if (!state) return false;
+    if (!state.command) {
+        acknowledgeThemeCommandFile();
+        return false;
+    }
+    if (pendingBottomThemeCommand && pendingBottomThemeCommand.id === state.command.id) return false;
+    // A valid commit whose acknowledgement write failed still owns delivery.
+    try {
+        var queued = readBottomAreaCommitFile();
+        var queuedCommit = queued && BOTTOM_AREA_PROTOCOL.parseCommit(queued.raw, new Date().getTime());
+        if (queuedCommit && queuedCommit.id === state.command.id) return false;
+    } catch (e) {}
+    // Theme Manager writes the theme payload immediately before its bottom
+    // commit. A cross-process poll can land between those writes; preserve a
+    // short grace period so the 500 ms fallback cannot apply the theme early.
+    if (new Date().getTime() - state.command.issuedAt <
+            THEME_COMMAND_COORDINATION_GRACE_MS) return false;
+    return processThemeCommand(state.command);
+}
+
+function readThemeCaptureQueryFile() {
+    try {
+        if (!utils.IsFile(THEME_CAPTURE_QUERY_FILE)) return null;
+        var raw = String(utils.ReadTextFile(THEME_CAPTURE_QUERY_FILE, 65001) || '');
+        return {
+            raw: raw,
+            request: DarkOneTheme.parseCaptureQuery(raw, new Date().getTime())
+        };
+    } catch (e) {}
+    return null;
+}
+
+function acknowledgeThemeCaptureQueryFile() {
+    return removeRuntimeCommandFile(THEME_CAPTURE_QUERY_FILE, 'theme capture query');
+}
+
+function writeThemeCaptureResponses() {
+    if (!activeThemeCapture) return false;
+    var payload = DarkOneTheme.captureBundle(
+        activeThemeCapture.id,
+        activeThemeCapture.issuedAt,
+        activeThemeCapture.responses
+    );
+    return payload ? tryWriteRuntimeFile(
+        THEME_CAPTURE_RESPONSE_FILE,
+        payload,
+        'theme capture response'
+    ) : false;
+}
+
+function collectThemeCaptureResponse(data) {
+    if (!activeThemeCapture) return false;
+    var now = new Date().getTime();
+    if (now - activeThemeCapture.issuedAt > DARKONEJSP3_THEME_CAPTURE_MAX_AGE) {
+        activeThemeCapture = null;
+        return false;
+    }
+    var response = DarkOneTheme.parseCaptureResponse(data, activeThemeCapture.id);
+    if (!response || !JSPLITTER_THEME_CAPTURE_ROLES[response.role]) return false;
+    if (Object.prototype.hasOwnProperty.call(activeThemeCapture.responses, response.role)) return true;
+    activeThemeCapture.responses[response.role] = response.values;
+    writeThemeCaptureResponses();
+    return true;
+}
+
+function processThemeCaptureQuery(request) {
+    if (!request) return false;
+    if (activeThemeCapture && activeThemeCapture.id === request.id) {
+        acknowledgeThemeCaptureQueryFile();
+        return false;
+    }
+    activeThemeCapture = {
+        id: request.id,
+        issuedAt: request.issuedAt,
+        responses: {}
+    };
+    activeThemeCapture.responses[DARKONEJSP3_RESET_ROLE] = DarkOneTheme.capture(
+        request.theme,
+        DARKONEJSP3_RESET_ROLE
+    );
+    writeThemeCaptureResponses();
+    var payload = DarkOneTheme.captureQuery(request.theme, request.id, request.issuedAt);
+    try { window.NotifyOthers(DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION, payload); } catch (e) {}
+    acknowledgeThemeCaptureQueryFile();
+    return true;
+}
+
+function syncThemeCaptureQueryFile() {
+    if (activeThemeCapture && new Date().getTime() - activeThemeCapture.issuedAt >
+            DARKONEJSP3_THEME_CAPTURE_MAX_AGE) {
+        try {
+            if (utils.IsFile(THEME_CAPTURE_RESPONSE_FILE)) {
+                var rawResponse = String(utils.ReadTextFile(THEME_CAPTURE_RESPONSE_FILE, 65001) || '');
+                var staleResponse = JSON.parse(rawResponse);
+                if (staleResponse && String(staleResponse.id || '') === activeThemeCapture.id) {
+                    removeRuntimeCommandFile(THEME_CAPTURE_RESPONSE_FILE, 'expired theme capture response');
+                }
+            }
+        } catch (e) {}
+        activeThemeCapture = null;
+    }
+    var state = readThemeCaptureQueryFile();
+    if (!state) return false;
+    if (!state.request) {
+        acknowledgeThemeCaptureQueryFile();
+        return false;
+    }
+    return processThemeCaptureQuery(state.request);
 }
 
 function readQuickSearchLayoutCommand() {
@@ -557,9 +901,12 @@ function syncViewCommandFile() {
 function ensureRuntimeBridge() {
     if (runtimeBridgePollTimer) return;
     lastResetCommandId = String(window.GetProperty(LAST_RESET_COMMAND_PROPERTY, '') || '');
+    lastThemeCommandId = String(window.GetProperty(LAST_THEME_COMMAND_PROPERTY, '') || '');
     syncBottomAreaCommitFile();
     syncBottomAreaStateFile(true);
     syncResetCommandFile();
+    syncThemeCommandFile();
+    syncThemeCaptureQueryFile();
     syncQuickSearchLayoutCommand();
     syncViewCommandFile();
     runtimeBridgePollTick = 0;
@@ -568,6 +915,7 @@ function ensureRuntimeBridge() {
         // Short-lived commits are always consumed first. Slower fallbacks can
         // therefore never expose canonical state ahead of a coordinated apply.
         syncBottomAreaCommitFile();
+        releasePendingThemeRelay();
         runtimeBridgePollTick++;
         if (runtimeBridgePollTick % RUNTIME_COMMAND_POLL_DIVISOR === 0) {
             syncQuickSearchLayoutCommand();
@@ -579,6 +927,12 @@ function ensureRuntimeBridge() {
         if (runtimeBridgePollTick % RESET_COMMAND_POLL_DIVISOR === 0) {
             syncResetCommandFile();
         }
+        if (runtimeBridgePollTick % THEME_COMMAND_POLL_DIVISOR === 0) {
+            syncThemeCommandFile();
+        }
+        if (runtimeBridgePollTick % THEME_CAPTURE_POLL_DIVISOR === 0) {
+            syncThemeCaptureQueryFile();
+        }
         if (runtimeBridgePollTick >= 2000000000) {
             runtimeBridgePollTick = 0;
         }
@@ -588,10 +942,15 @@ function ensureRuntimeBridge() {
 }
 
 function disposeRuntimeBridge() {
+    pendingThemeRelay = null;
+    pendingBottomThemeCommand = null;
+    pendingParentPaintId = '';
     if (runtimeBridgePollTimer) clearTimeout(runtimeBridgePollTimer);
     runtimeBridgePollTimer = null;
     runtimeBridgePollTick = 0;
+    activeThemeCapture = null;
     cancelPendingBottomAreaCommit();
+    cancelPendingThemeCommand();
 }
 
 function bottomAreaColour(mode, customColour, transparentFallback) {
@@ -774,10 +1133,39 @@ function on_paint(gr) {
         gr.FillSolidRect(leftDivider, 0, px * 2, wh, dividerColour);
         gr.FillSolidRect(rightDivider, 0, px * 2, wh, dividerColour);
     }
-
+    finishBottomThemePaint();
 }
 
 function on_notify_data(name, data) {
+    if (name === DARKONEJSP3_THEME_CAPTURE_RESPONSE_NOTIFICATION) {
+        collectThemeCaptureResponse(data);
+        return;
+    }
+    if (name === DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION) {
+        if (typeof darkOneJsp3HandleTheme == 'function') {
+            darkOneJsp3HandleTheme(name, data, DARKONEJSP3_RESET_ROLE);
+        }
+        return;
+    }
+    if (name === DARKONEJSP3_THEME_NOTIFICATION) {
+        try {
+            var beforeBottom = bottomAreaState();
+            var changed = darkOneJsp3ApplyTheme(
+                data,
+                DARKONEJSP3_RESET_ROLE
+            ) === true;
+            var afterBottom = bottomAreaState();
+            if (!sameBottomAreaState(beforeBottom, afterBottom) &&
+                    !bottomAreaMatchesExpectedState(afterBottom)) {
+                writeBottomAreaStateFile(afterBottom);
+            }
+            if (changed) {
+                layoutBottomControls();
+                window.Repaint();
+            }
+        } catch (themeError) {}
+        return;
+    }
     if (name === BOTTOM_AREA_GEOMETRY_QUERY) {
         broadcastBottomAreaGeometry();
         return;

@@ -799,6 +799,7 @@ function on_paint(gr) {
 }
 
 function on_notify_data(name, data) {
+    if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data)) return;
     if (name === STARTUP_PROTOCOL.notifications.queryControls) {
         if (STARTUP_PROTOCOL.isVersion(data)) broadcastStartupControlState();
         return;

@@ -18,18 +18,19 @@ Column
    │  │  ├─ JScript Panel 3 03          DOJSP3.LastfmInfo
    │  │  ├─ JScript Panel 3 04          DOJSP3.AlbumNotes
    │  │  ├─ JScript Panel 3 05          DOJSP3.Queue
-   │  │  └─ JScript Panel 3 06          DOJSP3.Properties
+   │  │  ├─ JScript Panel 3 06          DOJSP3.Properties
+   │  │  └─ JScript Panel 3 07          DOJSP3.ThemeManager (optional v1.2 WIP)
    │  ├─ JSplitter 04                   DOJSP3.ArtSpectrum
-   │  │  ├─ JScript Panel 3 07          DOJSP3.AlbumArt
+   │  │  ├─ JScript Panel 3 08          DOJSP3.AlbumArt
    │  │  └─ Enhanced Spectrum Analyser  DOJSP3.Spectrum
-   │  └─ JScript Panel 3 08             DOJSP3.Playlist
+   │  └─ JScript Panel 3 09             DOJSP3.Playlist
    └─ JSplitter 05                      DOJSP3.Controls
-      ├─ JScript Panel 3 09             DOJSP3.ControlsLeft
-      ├─ JScript Panel 3 10             DOJSP3.QuickSearch
+      ├─ JScript Panel 3 10             DOJSP3.ControlsLeft
+      ├─ JScript Panel 3 11             DOJSP3.QuickSearch
       ├─ JSplitter 06                   DOJSP3.DisplayStack
-      │  ├─ JScript Panel 3 11          DOJSP3.Display
+      │  ├─ JScript Panel 3 12          DOJSP3.Display
       │  └─ Waveform Minibar (mod)      DOJSP3.Waveform
-      └─ JScript Panel 3 12             DOJSP3.ControlsRight
+      └─ JScript Panel 3 13             DOJSP3.ControlsRight
 ```
 
 ## JScript Panel 3 script assignments
@@ -41,12 +42,13 @@ Column
 04  samples\Album Notes.txt
 05  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
 06  samples\Properties.txt
-07  samples\Album Art.txt
-08  samples\JS Playlist.txt
-09  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
-10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
-11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
-12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
+07  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Theme Manager.txt (optional)
+08  samples\Album Art.txt
+09  samples\JS Playlist.txt
+10  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Left.txt
+11  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Quick Search.txt
+12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
+13  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
 ```
 
 ## JSplitter loader and controller assignments
@@ -82,8 +84,9 @@ Column
 - DarkOneJSP3/InfoStack/Menu, normally labelled INFOSTACK, opens the locally
   owned InfoStack navigation and configuration popup.
 - DarkOneJSP3/Tools/Menu, normally labelled TOOLS, opens the locally owned
-  DarkOne Tools popup. It is the sole launcher for shared theme tools and the
-  button appearance settings used by both control panels.
+  DarkOne Tools popup. **Theme Manager** is its first item and selects the
+  optional seventh InfoStack child. The menu also owns the button appearance
+  settings used by both control panels.
 
 ## Title rules
 
@@ -103,15 +106,17 @@ PSS01 -> JSplitter 01: root main/bottom geometry and shared background
 PSS02 -> JSplitter 02: side columns align to the outer edges of the
          original one-third separator strips; the upper pair share a
          configurable colour while their geometry remains fixed
-PSS03 -> JSplitter 03: six-panel information stack and tab row
+PSS03 -> JSplitter 03: six original information pages plus the optional
+         v1.2 Theme Manager page and tab
 PSS04 -> JSplitter 04: album artwork and spectrum placement
 PSS05 -> JSplitter 05: bottom controls, Quick Search and separators
 PSS06 -> JSplitter 06: display and waveform placement
 ```
 
 The old PSS03 source mentioned a seventh child, but the actual DarkOne2021
-layout and tab row contained six panels. DarkOneJSP3 implements those six
-panels.
+layout and tab row contained six information panels. DarkOneJSP3 preserves
+those six and uses an explicitly titled optional seventh child for Theme
+Manager; it does not infer or repurpose the stale legacy child.
 
 ## FCL note
 
@@ -120,4 +125,5 @@ contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with one
 `DarkOneJSP3` layout using the scripted Queue Viewer and scripted Quick Search.
 Importing it is not the recommended first method and it remains
 installation-specific. Project tooling and hotfixes do not patch or generate
-the FCL.
+the FCL. The v1.2.0 WIP Theme Manager child must therefore be added manually to
+an imported older layout.

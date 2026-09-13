@@ -1,10 +1,11 @@
 // ==PREPROCESSOR==
 // @name "JS Playlist - Enhanced"
-// @version "0.6.4"
+// @version "0.6.7"
 // @author "Br3tt aka Falstaff / DeViLhoOD"
 // @import "%fb2k_component_path%samples\shared\performance_utils.js"
 // @import "%fb2k_component_path%samples\shared\ui_cadence.js"
 // @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
 // @import "%fb2k_component_path%samples\shared\sample_defaults.js"
 // @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\jsplaylist\inputbox.js"
