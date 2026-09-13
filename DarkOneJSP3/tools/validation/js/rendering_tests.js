@@ -1897,6 +1897,9 @@ suite("bottom-area cross-host state", function () {
         __path('DarkOneJSP3/themes/Default.json'), 'utf8'
     ));
     function exerciseCoordinatedTheme(id, directNotificationFirst) {
+        // This protocol fixture must match the canonical commit below,
+        // independently of the bundled theme's editable custom colour.
+        coordinatedTheme.appearance.bottomArea.customBackground = "#FF000000";
         const issuedAt = hostNow;
         const applyAt = issuedAt + 50;
         const state = host.Protocol.state(

@@ -18,6 +18,7 @@ REQUIRED_PATHS = (
     'DarkOneJSP3/shared/view_bridge.js',
     'DarkOneJSP3/shared/theme_engine.js',
     'DarkOneJSP3/themes/Default.json',
+    'DarkOneJSP3/themes/DarkOne v4 Revival.json',
     'DarkOneJSP3/themes/README.md',
     'DarkOneJSP3/jsplitter/shared.js',
     'DarkOneJSP3/jsplitter/01_root.js',
@@ -113,7 +114,7 @@ EXPECTED_MODULE_VERSIONS = {
     'quick_search': ('0.1.25', 'Quick Search'),
     'allmusic': ('0.6.6', 'AllMusic'),
     'musicbrainz': ('0.6.4', 'MusicBrainz'),
-    'js_playlist': ('0.6.8', 'JS Playlist'),
+    'js_playlist': ('0.6.9', 'JS Playlist'),
     'playlist_manager': ('0.5.10', 'Playlist Manager'),
     'network_headers': ('0.6.2', 'network-header identity'),
     'album_notes': ('0.6.12', 'Album Notes'),
@@ -133,14 +134,14 @@ EXPECTED_MODULE_VERSIONS = {
     'tools_menu': ('0.3.0', 'DarkOne Tools menu module'),
     'info_stack_colours': ('0.1.1', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.2.1', 'InfoStack bridge helper'),
-    'release_validator': ('0.11.21', 'release-validator module'),
+    'release_validator': ('0.11.23', 'release-validator module'),
     'sample_defaults': ('0.2.5', 'standalone sample-default registry'),
     'combined_artwork': ('0.1.0', 'combined-artwork appearance module'),
     'sample_reset_bridge': ('0.2.5', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
     'bottom_area_appearance': ('0.3.6', 'shared bottom-area appearance'),
     'theme_engine': ('0.2.7', 'theme engine'),
-    'theme_manager': ('0.1.14', 'Theme Manager panel'),
+    'theme_manager': ('0.1.15', 'Theme Manager panel'),
 }
 
 # Principal menu labels whose source and documentation must remain aligned.

@@ -2,7 +2,7 @@
 ![foobar2000](https://img.shields.io/badge/foobar2000-v2.x-1f6feb?style=flat-square)
 ![Architecture](https://img.shields.io/badge/Architecture-64--bit-555555?style=flat-square)
 ![JScript Panel 3](https://img.shields.io/badge/JScript%20Panel%203-3.8.5-8a2be2?style=flat-square)
-![JSplitter](https://img.shields.io/badge/JSplitter-4.1.14-7b68ee?style=flat-square)
+![JSplitter](https://img.shields.io/badge/JSplitter-4.1.17-7b68ee?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square)
 ![Last Commit](https://img.shields.io/github/last-commit/Pav-Osmolski/DarkOneJSP3?style=flat-square)
 
@@ -49,8 +49,8 @@ workflow of the original theme.
 * JScript Panel 3 control, display, queue and information panels.
 * Direct2D-accelerated rendering for a smoother, more responsive interface.
 * Configurable InfoStack tabs, titles, dimensions, backgrounds and tab colours.
-* Optional modern Theme Manager page with readable JSON themes and coordinated
-  styling across DarkOneJSP3 panels.
+* Modern Theme Manager page with readable JSON themes and coordinated
+  styling across panels.
 * Four switchable upper layouts, including Playlist-priority and wide views.
 * Default or custom display panel accent colour.
 * Album Notes panel with configurable providers, source priority,
@@ -125,7 +125,7 @@ for standalone installation, compatibility guarantees and integration details.
 * [foobar2000 v2 x64](https://www.foobar2000.org/windows)
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-* [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
+* [JSplitter 4.x, tested with 4.1.17](https://github.com/dima-lur/jsplitter/releases)
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 

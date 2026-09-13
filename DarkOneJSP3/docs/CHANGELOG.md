@@ -2,6 +2,10 @@
 
 ## v1.2.0 - Theme Manager
 
+- Added editable theme author and description under Manager, with cancellation
+  and length guards. Included the updated Default and DarkOne v4 Revival
+  presets. Theme Manager is **0.1.15**; validator is **0.11.23**.
+
 - Fixed disappearing JS Playlist settings tabs after live Theme Apply. Tab
   buttons now rebuild with their replacement image, retaining the selected
   page, page scroll and unfinished text edits. Added executed regression

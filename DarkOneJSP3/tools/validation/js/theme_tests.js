@@ -143,8 +143,11 @@ suite("theme format validation", function () {
     const source = fs.readFileSync(__path("DarkOneJSP3/themes/Default.json"), "utf8");
     const theme = DarkOneTheme.parse(source);
     function assert(value, message) { if (!value) throw new Error(message); }
-    assert(theme.name === "Default", "Default theme name changed");
+    assert(theme.name === "New Default", "Bundled default theme name changed");
     assert(DarkOneTheme.validate(theme).valid, "Default theme is invalid");
+    const revival = DarkOneTheme.parse(fs.readFileSync(__path("DarkOneJSP3/themes/DarkOne v4 Revival.json"), "utf8"));
+    assert(DarkOneTheme.validate(revival).valid && revival.name === "DarkOne v4 Modern",
+        "Bundled Revival theme is invalid or its supplied display name changed");
     assert(DarkOneTheme.stringify(theme).endsWith("\n"), "Theme JSON lacks final newline");
     assert(DarkOneTheme.colour("#FF298FCC") === 0xff298fcc, "ARGB parsing failed");
     assert(DarkOneTheme.colour("#298FCC") === 0xff298fcc, "RGB parsing failed");
@@ -329,6 +332,11 @@ suite("theme role allow-list and clamping", function () {
         "Queue page palette mapping failed");
     assert(queue["DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR"] === 0xff303030,
         "Queue selection mapping failed");
+    theme.appearance.quickSearch.customText = "#FFDCDCDC";
+    theme.appearance.quickSearch.customBackground = "#FF000000";
+    theme.appearance.quickSearch.customBorder = "#FF000000";
+    theme.appearance.quickSearch.fixedFontSize = 0;
+    theme.appearance.quickSearch.automaticFontScale = 100;
     const quickSearch = DarkOneTheme.roleProperties(theme, "quick-search");
     assert(quickSearch["DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.TEXT.CUSTOM"] === 0xffdcdcdc &&
         quickSearch["DARKONEJSP3.QUICKSEARCH.COLOUR.NORMAL.BACKGROUND.CUSTOM"] === 0xff000000 &&
@@ -440,7 +448,7 @@ suite("theme command hardening", function () {
     const raw = DarkOneTheme.command(theme, "test-command", now);
     const parsed = DarkOneTheme.parseCommand(raw, now + 10);
     function assert(value, message) { if (!value) throw new Error(message); }
-    assert(parsed && parsed.id === "test-command" && parsed.theme.name === "Default",
+    assert(parsed && parsed.id === "test-command" && parsed.theme.name === theme.name,
         "Valid command did not round-trip");
     assert(DarkOneTheme.parseCommand(raw, now + 31000) === null, "Expired command was accepted");
     assert(DarkOneTheme.parseCommand("{}", now) === null, "Malformed command was accepted");
@@ -544,7 +552,7 @@ suite("theme manager file-operation guards", function () {
     vm.runInThisContext(fs.readFileSync(__path("DarkOneJSP3/shared/theme_engine.js"), "utf8"));
     vm.runInThisContext(source, {filename: "Theme Manager"});
 
-    assert(tmState.theme.name === "Default" && tmState.files.length === 1,
+    assert(tmState.theme.name === JSON.parse(defaultTheme).name && tmState.files.length === 1,
         "Theme Manager did not load Default.json");
     const olderScaleTheme = JSON.parse(defaultTheme);
     delete olderScaleTheme.appearance.quickSearch.fixedFontSize;
@@ -563,7 +571,7 @@ suite("theme manager file-operation guards", function () {
         notifications.some(item => item[0] === "DarkOneJSP3.ThemeManager.Available"),
         "Theme Manager did not publish both optional-child availability transports");
     assert(tmCategories.length === 6 && tmCategories[5].name === "Manager" &&
-        tmFields.Manager.length === 2, "Theme Manager self-customisation category is missing");
+        tmFields.Manager.length === 4, "Theme Manager self-customisation category is missing");
     assert(tmFields.Colours.some(field => field[1] === "appearance.playlist.colourType" &&
             field[2] === "enum" && field[3].join("|") === "Custom|Dynamic|Off") &&
         tmFields.Colours.some(field => field[1] === "appearance.playlist.mood") &&
@@ -580,6 +588,7 @@ suite("theme manager file-operation guards", function () {
         tmDisplayValue(roundnessField, -1) === "Automatic" &&
         tmDisplayValue(roundnessField, 33) === "33%",
         "Theme Manager exposes the internal button-roundness sentinel or an ambiguous label");
+    tmSet("appearance.controls.roundness", -1);
     popupSelections.push(1);
     tmEdit(roundnessField, 100, 100);
     assert(tmGet("appearance.controls.roundness") === -1 && popupMenus[0].checks.some(item => item[0] === 1 && item[1]) &&
@@ -695,10 +704,38 @@ suite("theme manager file-operation guards", function () {
     assert(tmState.theme.name === nameBeforeFailedSave && tmState.selectedFile === "Default.json" &&
         !files.has(rejectedWritePath), "Failed Save as mutated the live Theme Manager state");
     rejectedWritePath = "";
+    const authorField = tmFields.Manager.filter(f => f[1] === "author")[0];
+    const descriptionField = tmFields.Manager.filter(f => f[1] === "description")[0];
+    const metadataDescription = 'A longer description with "quotes", Unicode: café, and ' + "detail ".repeat(40);
+    inputs.push("Test author", metadataDescription);
+    tmEdit(authorField, 0, 0);
+    tmEdit(descriptionField, 0, 0);
+    assert(tmState.theme.author === "Test author" && tmState.theme.description === metadataDescription && tmState.dirty,
+        "Theme metadata editing failed or truncated a long description");
+    tmState.dirty = false;
+    inputs.push(null, undefined, metadataDescription);
+    tmEdit(authorField, 0, 0);
+    tmEdit(descriptionField, 0, 0);
+    tmEdit(descriptionField, 0, 0);
+    tmEdit(authorField, 0, 0); // thrown cancellation
+    assert(!tmState.dirty && tmState.theme.author === "Test author" && tmState.theme.description === metadataDescription,
+        "Cancelled or unchanged metadata edit changed the draft");
+    inputs.push("x".repeat(2049));
+    tmEdit(descriptionField, 0, 0);
+    assert(tmState.theme.description === metadataDescription && !tmState.dirty,
+        "Oversized description was silently truncated or replaced the draft");
+    inputs.push("");
+    tmEdit(authorField, 0, 0);
+    assert(tmState.theme.author === "", "Theme author cannot be cleared");
+    inputs.push("Test author");
+    tmEdit(authorField, 0, 0);
     inputs.push("Blue Test");
     tmSaveAs();
     assert(files.has(profile + "DarkOneJSP3\\themes\\Blue Test.json"),
         "Save as did not create readable JSON");
+    const savedMetadata = DarkOneTheme.parse(files.get(profile + "DarkOneJSP3\\themes\\Blue Test.json"));
+    assert(savedMetadata.author === "Test author" && savedMetadata.description === metadataDescription,
+        "Theme metadata did not survive Save as and JSON reload");
     inputs.push("Renamed Test");
     tmRename();
     assert(files.has(profile + "DarkOneJSP3\\themes\\Renamed Test.json") &&

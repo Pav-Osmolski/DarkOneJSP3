@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Theme Manager"
-// @version "0.1.14"
+// @version "0.1.15"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
@@ -84,7 +84,7 @@ var tmCategories = [
     { name: "Controls", description: "Button styling, hit targets and bottom controls." },
     { name: "InfoStack", description: "Tabs, backing and information-page appearance." },
     { name: "Layout", description: "Panel arrangements, playlist and artwork presentation." },
-    { name: "Manager", description: "Typography and scaling for the Theme Manager interface." }
+    { name: "Manager", description: "Theme details, plus typography and scaling for this interface." }
 ];
 
 var tmFields = {
@@ -201,6 +201,8 @@ var tmFields = {
         ["Artwork ratio", "appearance.pages.artwork.ratio", "number", 0.1, 0.9]
     ],
     Manager: [
+        ["Theme author", "author", "text", 160],
+        ["Theme description", "description", "text", 2048],
         ["Font size (0 = automatic)", "appearance.manager.fixedFontSize", "number", 0, 24],
         ["Automatic base scale (%)", "appearance.manager.automaticFontScale", "number", 50, 200]
     ]
@@ -969,13 +971,21 @@ function tmEdit(field, x, y) {
     } else {
         try {
             var entered = utils.InputBox("Set " + field[0] + ".", "DarkOneJSP3 Theme Manager", value == null ? "" : String(value));
+            if (entered == null) return;
             if (field[2] === "number") {
                 entered = Number(entered);
                 if (!isFinite(entered)) throw new Error("Enter a number.");
                 entered = Math.max(field[3], Math.min(field[4], entered));
             } else {
-                entered = String(entered).substring(0, 160);
+                entered = String(entered);
+                if (field[1] === "author" || field[1] === "description") {
+                    if (entered.length > field[3]) {
+                        tmSetStatus(field[0] + " must be " + field[3] + " characters or fewer.", tmColours.danger);
+                        return;
+                    }
+                } else entered = entered.substring(0, 160);
             }
+            if (entered === value) return;
             tmSet(field[1], entered);
         } catch (error) {
             if (error && error.message === "Enter a number.") tmSetStatus(error.message, tmColours.danger);

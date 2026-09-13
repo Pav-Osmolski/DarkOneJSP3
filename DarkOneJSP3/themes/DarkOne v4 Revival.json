@@ -1,17 +1,17 @@
 {
   "format": "DarkOneJSP3 Theme",
   "formatVersion": 1,
-  "name": "Default",
-  "description": "The factory DarkOneJSP3 appearance.",
+  "name": "DarkOne v4 Revival",
+  "description": "DarkOne v4 style adapted for DarkOneJSP3.",
   "author": "DeViLhoOD",
   "appearance": {
     "palette": {
       "pageBackground": "#FF181818",
       "text": "#FFDCDCDC",
-      "accent": "#FF298FCC",
+      "accent": "#FF6DB7E2",
       "selected": "#FF303030",
       "divider": "#FF000000",
-      "volumeIndicator": "#FF404040"
+      "volumeIndicator": "#FFDCDCDC"
     },
     "typography": {
       "controlFamily": "Arial Black",
@@ -31,15 +31,15 @@
       "roundness": 0,
       "hitboxScale": 1,
       "iconScale": 1,
-      "volumeIndicatorMode": 0
+      "volumeIndicatorMode": 1
     },
     "quickSearch": {
       "normalTextMode": 0,
       "customText": "#FFDCDCDC",
-      "normalBackgroundMode": 0,
+      "normalBackgroundMode": 1,
       "customBackground": "#FF202020",
-      "borderMode": 0,
-      "customBorder": "#FF21396B",
+      "borderMode": 1,
+      "customBorder": "#FF051A23",
       "errorTextMode": 0,
       "customErrorText": "#FFFFE1E1",
       "errorBackgroundMode": 6,
@@ -48,24 +48,24 @@
       "automaticFontScale": 70
     },
     "bottomArea": {
-      "backgroundMode": 2,
-      "customBackground": "#FF0B3044",
-      "linearGradient": false,
+      "backgroundMode": 3,
+      "customBackground": "#FF1F313F",
+      "linearGradient": true,
       "dividerMode": 4,
       "customDivider": "#FF000000",
-      "sideDividers": true,
-      "depth": 0,
+      "sideDividers": false,
+      "depth": 1,
       "quickSearchLines": 2,
       "quickSearchWidthPercent": 44
     },
     "infoStack": {
-      "backgroundMode": 4,
-      "customBackground": "#FF305161",
+      "backgroundMode": 3,
+      "customBackground": "#FF141E27",
       "fixedFontSize": 0,
       "automaticFontScale": 80,
       "tabAreaHeight": 0,
       "tabStripVisible": false,
-      "tabColourMode": 0,
+      "tabColourMode": 1,
       "tabs": {
         "Playlists": {
           "visible": true,
@@ -102,8 +102,8 @@
       "automaticFontScale": 200
     },
     "display": {
-      "accentMode": 0,
-      "style": 0
+      "accentMode": 1,
+      "style": 1
     },
     "displayWaveform": {
       "backgroundMode": 6,
@@ -121,8 +121,8 @@
       "artSpectrumMode": 0
     },
     "pages": {
-      "backgroundMode": 5,
-      "customBackground": "#FF181818",
+      "backgroundMode": 4,
+      "customBackground": "#FF141E27",
       "dynamicColours": false,
       "textMode": 0,
       "customText": "#FFDCDCDC",
@@ -138,10 +138,10 @@
       }
     },
     "playlistManager": {
-      "colourType": "Off",
+      "colourType": "Custom",
       "text": "#FFFFFFFF",
-      "background": "#FF191923",
-      "selectedBackground": "#FF0FB1FF",
+      "background": "#FF141E27",
+      "selectedBackground": "#FF124E6D",
       "showFilter": true,
       "filterWidth": 300,
       "rowHeight": 29,
@@ -151,10 +151,10 @@
       "colourType": "Custom",
       "text": "#FFFFFFFF",
       "highlight": "#FFFFFFFF",
-      "background": "#FF0A0A0A",
-      "selectedBackground": "#FF2677A8",
+      "background": "#FF141E27",
+      "selectedBackground": "#FF124E6D",
       "mood": "#FFC41E23",
-      "rating": "#FFFF8000",
+      "rating": "#FFDCDCDC",
       "showWallpaper": true
     }
   }

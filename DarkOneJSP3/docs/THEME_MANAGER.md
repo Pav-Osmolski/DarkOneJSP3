@@ -216,3 +216,16 @@ Spectrum Analyser visualisation settings and Waveform Minibar renderer optionsâ€
 remain under those components' own menus. Theme Manager changes only explicit
 DarkOneJSP3-owned appearance properties. Capture current follows the same
 allow-list and cannot import those native-component preferences.
+
+## Theme details and included presets
+
+Open the **Manager** category to edit **Theme author** and **Theme description**.
+Use **Save** or **Save as** to keep the changes in the JSON file. Blank values
+are allowed; cancelling keeps the previous text. Author supports up to 160
+characters and description up to 2,048; longer entries are rejected without
+truncating the existing text. Use **Save as** for edits to the protected default.
+
+The supplied presets are `Default.json` (display name **New Default**) and
+`DarkOne v4 Revival.json` (display name **DarkOne v4 Modern**). Their filenames
+and embedded names are preserved as supplied. **Reset default** still loads
+`Default.json`.
