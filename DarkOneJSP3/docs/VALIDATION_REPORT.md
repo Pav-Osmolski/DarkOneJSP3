@@ -352,7 +352,7 @@ validation and the audited-file count.
   availability, clipped scroll-row hit targets, reverse role-property capture,
   deterministic Custom/Dynamic/Off playlist flag translation, legacy
   two-switch normalisation, dedicated playlist and Quick Search colour paths,
-  independent InfoStack/Quick Search font paths, earlier-WIP shared-palette and
+  independent InfoStack/Quick Search font paths, earlier-development shared-palette and
   shared-font-scale fallbacks,
   signed native-picker conversion for every JS Playlist and Playlist Manager
   custom-colour command, unsigned ARGB input and safe cancel/failure handling,
@@ -616,7 +616,7 @@ manual smoke test before public release.
 
 ## Acknowledged Theme Apply regression coverage
 
-The v1.2.0 WIP validation now executes the complete two-phase bottom-area
+The v1.2.0 release validation executes the complete two-phase bottom-area
 handshake. It verifies that Bottom Controls accepts a Theme Manager request,
 stages the matching cross-host theme command, negotiates at least 75 ms of
 remaining lead time, publishes a request/state-matched acknowledgement and
@@ -677,9 +677,9 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.0 release package (release validator 0.11.23) passes with **231 audited
+The v1.2.0 release package (release validator 0.11.24) passes with **231 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
-count and remains byte-for-byte unchanged.
+count. The latest maintainer-exported FCL is included byte-for-byte as supplied.
 
 JS Playlist settings-tab regression: executed the real settings constructor and
 live theme callback with mocked host graphics. Verified four tabs on initial

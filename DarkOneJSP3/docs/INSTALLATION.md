@@ -17,7 +17,7 @@ Install these components before building or restoring the layout:
 - [foobar2000 v2 x64](https://www.foobar2000.org/windows)
 - [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 - [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-- [JSplitter 4.x, tested with 4.1.14](https://github.com/dima-lur/jsplitter/releases)
+- [JSplitter 4.x, tested with 4.1.17](https://github.com/dima-lur/jsplitter/releases)
 - [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 - [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
@@ -132,10 +132,10 @@ DarkOneJSP3\jsplitter\loaders\JSplitter 06 - Display and Waveform.txt
 Each loader enables the intended draw mode and imports its maintained external
 controller script.
 
-### Add Theme Manager for the v1.2.0 WIP
+### Add Theme Manager to an existing layout
 
-The bundled maintainer-exported FCL predates Theme Manager and is intentionally
-unchanged. Add a seventh JScript Panel 3 child to `DOJSP3.InfoStack`, give it
+The updated bundled FCL includes Theme Manager. For an older layout without
+it, add a seventh JScript Panel 3 child to `DOJSP3.InfoStack`, give it
 the custom title `DOJSP3.ThemeManager`, and load:
 
 ```text

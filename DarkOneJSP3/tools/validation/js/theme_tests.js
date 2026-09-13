@@ -143,10 +143,10 @@ suite("theme format validation", function () {
     const source = fs.readFileSync(__path("DarkOneJSP3/themes/Default.json"), "utf8");
     const theme = DarkOneTheme.parse(source);
     function assert(value, message) { if (!value) throw new Error(message); }
-    assert(theme.name === "New Default", "Bundled default theme name changed");
+    assert(theme.name === "Default", "Bundled default theme name changed");
     assert(DarkOneTheme.validate(theme).valid, "Default theme is invalid");
     const revival = DarkOneTheme.parse(fs.readFileSync(__path("DarkOneJSP3/themes/DarkOne v4 Revival.json"), "utf8"));
-    assert(DarkOneTheme.validate(revival).valid && revival.name === "DarkOne v4 Modern",
+    assert(DarkOneTheme.validate(revival).valid && revival.name === "DarkOne v4 Revival",
         "Bundled Revival theme is invalid or its supplied display name changed");
     assert(DarkOneTheme.stringify(theme).endsWith("\n"), "Theme JSON lacks final newline");
     assert(DarkOneTheme.colour("#FF298FCC") === 0xff298fcc, "ARGB parsing failed");
@@ -406,6 +406,8 @@ suite("theme role allow-list and clamping", function () {
         "Theme mapping allowed every InfoStack tab to be hidden");
     vm.runInThisContext(fs.readFileSync(
         __path("user-components-x64/foo_jscript_panel3/samples/shared/sample_defaults.js"), "utf8"));
+    theme.appearance.albumArt.backgroundMode = 0;
+    theme.appearance.albumArt.customBackground = "#FF000000";
     jsp3EnhancedApplyTheme(theme, "album-art");
     assert(values["2K3.PANEL.COLOURS.MODE"] === 0 &&
         values["2K3.PANEL.COLOURS.CUSTOM.BACKGROUND"] === 0xff000000,

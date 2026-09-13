@@ -578,7 +578,7 @@ function selectPanel(index, notify, allowHidden) {
     }
     if (!isTabAvailable(index)) {
         fb.ShowPopupMessage(
-            'Theme Manager is not present in this layout yet. Add a JScript Panel 3 child to the InfoStack splitter, set its custom title to DOJSP3.ThemeManager, and load DarkOneJSP3 - Theme Manager.txt.\n\nThe bundled FCL is intentionally unchanged.',
+            'Theme Manager is not present in this layout yet. Add a JScript Panel 3 child to the InfoStack splitter, set its custom title to DOJSP3.ThemeManager, and load DarkOneJSP3 - Theme Manager.txt.',
             'DarkOneJSP3 Theme Manager'
         );
         return;

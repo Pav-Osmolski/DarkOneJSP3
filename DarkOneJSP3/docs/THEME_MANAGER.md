@@ -3,9 +3,8 @@
 ## Status
 
 Theme Manager is available in v1.2.0. It is an optional seventh
-InfoStack page, opened from **TOOLS > Theme Manager**. The existing bundled FCL
-is preserved byte-for-byte and does not contain this new child; add the panel
-manually in an existing layout.
+InfoStack page, opened from **TOOLS > Theme Manager**. The updated bundled FCL includes this page. For an existing layout without it,
+add the panel manually using the steps below.
 
 ## Add the InfoStack page
 
@@ -176,7 +175,7 @@ properties. The InfoStack category calls its equivalents **Fixed tab font size
 (0 = auto)** and **Tab automatic base scale (%)** because those values affect
 only the tab strip. These and the playlist fields use dedicated JSON paths, so
 Capture current cannot confuse independent panel values. Themes from earlier
-v1.2.0 WIP builds that omit the new paths still read their former shared-palette
+Earlier development builds that omit the new paths still read their former shared-palette
 and shared-font-scale values during Apply; the next Capture current writes the
 dedicated form.
 
@@ -225,7 +224,7 @@ are allowed; cancelling keeps the previous text. Author supports up to 160
 characters and description up to 2,048; longer entries are rejected without
 truncating the existing text. Use **Save as** for edits to the protected default.
 
-The supplied presets are `Default.json` (display name **New Default**) and
-`DarkOne v4 Revival.json` (display name **DarkOne v4 Modern**). Their filenames
+The supplied presets are `Default.json` (display name **Default**) and
+`DarkOne v4 Revival.json` (display name **DarkOne v4 Revival**). Their filenames
 and embedded names are preserved as supplied. **Reset default** still loads
 `Default.json`.

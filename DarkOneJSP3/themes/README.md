@@ -33,7 +33,7 @@ are allowed; cancelling keeps the previous text. Author supports up to 160
 characters and description up to 2,048; longer entries are rejected without
 truncating the existing text. Use **Save as** for edits to the protected default.
 
-The supplied presets are `Default.json` (display name **New Default**) and
-`DarkOne v4 Revival.json` (display name **DarkOne v4 Modern**). Their filenames
+The supplied presets are `Default.json` (display name **Default**) and
+`DarkOne v4 Revival.json` (display name **DarkOne v4 Revival**). Their filenames
 and embedded names are preserved as supplied. **Reset default** still loads
 `Default.json`.

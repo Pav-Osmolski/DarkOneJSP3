@@ -19,7 +19,7 @@ Column
    │  │  ├─ JScript Panel 3 04          DOJSP3.AlbumNotes
    │  │  ├─ JScript Panel 3 05          DOJSP3.Queue
    │  │  ├─ JScript Panel 3 06          DOJSP3.Properties
-   │  │  └─ JScript Panel 3 07          DOJSP3.ThemeManager (optional v1.2 WIP)
+   │  │  └─ JScript Panel 3 07          DOJSP3.ThemeManager (optional)
    │  ├─ JSplitter 04                   DOJSP3.ArtSpectrum
    │  │  ├─ JScript Panel 3 08          DOJSP3.AlbumArt
    │  │  └─ Enhanced Spectrum Analyser  DOJSP3.Spectrum
@@ -125,5 +125,5 @@ contains an optional maintainer-exported FCL in DarkOneJSP3\fcl with one
 `DarkOneJSP3` layout using the scripted Queue Viewer and scripted Quick Search.
 Importing it is not the recommended first method and it remains
 installation-specific. Project tooling and hotfixes do not patch or generate
-the FCL. The v1.2.0 WIP Theme Manager child must therefore be added manually to
-an imported older layout.
+the FCL. The updated bundled FCL includes Theme Manager. Add its child manually only
+when retaining an older layout that does not already contain it.

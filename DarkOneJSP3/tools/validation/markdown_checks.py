@@ -23,6 +23,10 @@ def check_pages(paths, boundary: Path, errors: list[str], wiki=False):
         except (OSError, UnicodeError) as exc:
             errors.append(f'Cannot read Markdown {path.name}: {exc}')
             continue
+        # Published setup/reference pages must not retain development labels.
+        # Historical changelog entries may describe earlier development work.
+        if path.name not in {'CHANGELOG.md', 'Release-History.md'} and re.search(r'\bWIP\b|work[ -]in[ -]progress', body, re.I):
+            errors.append(f'{path.name}: stale development status in release documentation')
         lines = body.splitlines()
         in_fence = False
         outside = []

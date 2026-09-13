@@ -2,6 +2,14 @@
 
 ## v1.2.0 - Theme Manager
 
+- Finalised release documentation, removed obsolete development-status labels
+  and corrected the remaining bundled-FCL setup instructions. Added a shared
+  release-documentation status check; validator is **0.11.24**.
+
+- Included the latest maintainer-exported FCL with Theme Manager and the final
+  Default and DarkOne v4 Revival presets. Existing layouts can be upgraded
+  manually without importing the replacement layout.
+
 - Added editable theme author and description under Manager, with cancellation
   and length guards. Included the updated Default and DarkOne v4 Revival
   presets. Theme Manager is **0.1.15**; validator is **0.11.23**.
@@ -84,7 +92,7 @@
 - Fixed **Capture current** conflating the InfoStack tab automatic base scale
   with Quick Search's independent automatic font scale. Quick Search now has
   dedicated `fixedFontSize` and `automaticFontScale` JSON fields, while older
-  WIP themes retain a read-only fallback to the former shared value.
+  development themes retain a read-only fallback to the former shared value.
 - Added **Quick Search automatic base scale (%)** and **Quick Search fixed font
   size (0 = auto)** to Controls, and clarified the InfoStack labels as **Tab
   automatic base scale (%)** and **Fixed tab font size (0 = auto)**.
@@ -123,7 +131,7 @@
   the legacy two-switch state with Dynamic precedence. JSON stores the readable
   words rather than numeric mode IDs.
 - Added dedicated Quick Search text, background and border custom colours, and
-  clarified **Quick Search background mode**. Older WIP JSON themes retain
+  clarified **Quick Search background mode**. Older development JSON themes retain
   read-only fallbacks to their former shared palette fields, while new captures
   migrate values into the dedicated paths.
 - Fixed **Capture current** retaining stale/default values for JSplitter-owned
@@ -234,8 +242,8 @@
 - Extended theme coverage to control panels, Display, Quick Search, bottom
   area, InfoStack, Album Art, Display/Waveform backing, layout modes, JS Playlist,
   Playlist Manager and the supported information pages.
-- Kept the bundled FCL byte-for-byte unchanged. Existing layouts remain valid;
-  the optional Theme Manager child is added manually to existing layouts.
+- Existing layouts remain valid; the optional Theme Manager child can be
+  added manually. The final package includes the updated maintainer export.
 - Added runtime format, mapping, clamping, command-expiry, optional-callback,
   child-discovery, remembered-selection restoration, viewport clipping,
   lifecycle-retry and transactional file-operation tests, keeping the

@@ -92,12 +92,23 @@ class ValidationRegressionTests(unittest.TestCase):
             ('# Requirements\n\n- Columns UI (https://example.test)\n', 'descriptive component link'),
             ('# Test\n\n[Missing](Absent)\n', 'missing local link target'),
             ('# Test\n\n```text\nopen\n', 'unclosed code fence'),
+            ('# Layout\n\nTheme Manager (optional v1.2 WIP)\n', 'stale development status'),
+            ('# Setup\n\nThis is work in progress.\n', 'stale development status'),
         ):
             path = self.scratch / 'Test.md'
             path.write_text(body)
             errors = []
             check_pages([path], self.scratch, errors, wiki=True)
             self.assertTrue(any(expected in error for error in errors), errors)
+        for filename, body in (
+            ('Theme-Manager.md', '# Theme Manager\n\nAvailable in v1.2.0.\n'),
+            ('Release-History.md', '# History\n\nAn older WIP introduced this feature.\n'),
+        ):
+            path = self.scratch / filename
+            path.write_text(body)
+            errors = []
+            check_pages([path], self.scratch, errors, wiki=True)
+            self.assertFalse(errors, errors)
 
     def test_harness_cleans_leaked_timer(self):
         bundle = self.scratch / 'timer.js'
