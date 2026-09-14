@@ -2,7 +2,7 @@
 
 ## Status
 
-Theme Manager is available in v1.2.0. It is an optional seventh
+Theme Manager is available in v1.2.1. It is an optional seventh
 InfoStack page, opened from **TOOLS > Theme Manager**. The updated bundled FCL includes this page. For an existing layout without it,
 add the panel manually using the steps below.
 
@@ -228,3 +228,17 @@ The supplied presets are `Default.json` (display name **Default**) and
 `DarkOne v4 Revival.json` (display name **DarkOne v4 Revival**). Their filenames
 and embedded names are preserved as supplied. **Reset default** still loads
 `Default.json`.
+
+## Information-page refresh
+
+Theme Apply refreshes page colours in place for Album Notes + Album Art,
+Properties, Last.fm Artist Info + User Info, Queue Viewer and Last.fm Bio +
+Images. Colour-only changes retain loaded text, artwork, scroll position and
+queue selection. Wallpaper is reloaded only when its settings change; combined
+artwork layouts resize when visibility or ratio changes. Failed live refreshes
+retain the reload fallback. This does not make a guarantee about native frame
+presentation or eliminate all possible UI stalls.
+
+These handlers are shared imports, including the Queue Viewer compatibility
+path for saved wrappers. Update the supplied files with foobar2000 closed and
+restart; replacing the FCL is not required for this improvement.

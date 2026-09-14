@@ -105,18 +105,38 @@ installed foo_jscript_panel3 sample directory.
 These enhanced samples are standalone and can also be used by other themes.
 Existing filenames and legacy entry-script imports are preserved, but retaining
 a backup is still recommended because the files replace the installed sample
-tree. See ENHANCED_SAMPLES.md for the compatibility contract.
+tree. See [ENHANCED_SAMPLES.md](ENHANCED_SAMPLES.md) for the compatibility contract.
 
 Do not delete or overwrite the foo_jscript_panel3 component DLL. Component
 binaries are not supplied by this package.
 
 ## 4. Building or restoring the Columns UI layout
 
-### Recommended: manual layout setup
+### Quick setup: FCL import
 
-Recreate the exact hierarchy and custom titles in LAYOUT_AND_PANEL_MAP.md.
-This is the recommended setup because it creates component instances directly
-for the local installation and makes every script assignment visible.
+The easiest setup method is to import the included maintainer-exported FCL snapshot:
+
+```text
+DarkOneJSP3\fcl\DarkOneJSP3.fcl
+```
+
+The bundled FCL contains one saved layout, `DarkOneJSP3`, configured with the scripted Queue Viewer, Quick Search, and Theme Manager.
+
+Import it via:
+
+```text
+foobar2000 > Preferences > Display > Columns UI > Import configuration...
+```
+
+After importing, compare the resulting layout against the documented hierarchy, custom panel titles, and script assignments in [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md). The panel map remains the canonical reference for the supported layout.
+
+FCL files can contain component-instance metadata that may vary between installations. If the imported layout does not match your installed components, or if no FCL is present, use the manual setup method below.
+
+After confirming the layout, export a fresh local FCL for backup.
+
+### Manual setup: advanced users
+
+For a fully manual setup, recreate the exact hierarchy and custom panel titles documented in [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md). This method creates component instances directly for the local installation and makes every script assignment visible.
 
 Load these files in the six numbered JSplitter instances:
 
@@ -129,52 +149,39 @@ DarkOneJSP3\jsplitter\loaders\JSplitter 05 - Bottom Controls.txt
 DarkOneJSP3\jsplitter\loaders\JSplitter 06 - Display and Waveform.txt
 ```
 
-Each loader enables the intended draw mode and imports its maintained external
-controller script.
+Each loader enables the intended draw mode and imports its maintained external controller script.
 
 ### Add Theme Manager to an existing layout
 
-The updated bundled FCL includes Theme Manager. For an older layout without
-it, add a seventh JScript Panel 3 child to `DOJSP3.InfoStack`, give it
-the custom title `DOJSP3.ThemeManager`, and load:
+The updated bundled FCL already includes Theme Manager.
+
+For an older layout without it, add a seventh JScript Panel 3 child to `DOJSP3.InfoStack`, give it the custom title:
+
+```text
+DOJSP3.ThemeManager
+```
+
+Then load:
 
 ```text
 DarkOneJSP3\jscript\DarkOneJSP3 - Theme Manager.txt
 ```
 
-See [THEME_MANAGER.md](THEME_MANAGER.md) for the complete theme-file and UI
-guide. Without this optional child, existing layouts continue to work and
-TOOLS > Theme Manager displays setup instructions. InfoStack discovers the
-optional page after it announces availability. If component-startup timing
-causes that cross-component announcement to be missed, a short-lived presence
-beacon authorises bounded discovery retries; selecting TOOLS > Theme Manager
-also performs one guarded lookup. Stock six-child startup still avoids
-optional-title probes, missing-child errors and startup delays.
+See [THEME_MANAGER.md](THEME_MANAGER.md) for the complete theme-file and UI guide.
 
-### Optional FCL convenience
+Without this optional child, existing layouts continue to work normally and `TOOLS > Theme Manager` displays setup instructions. InfoStack discovers the optional page after it announces availability. If component-startup timing causes that announcement to be missed, a short-lived presence beacon authorises bounded discovery retries, and selecting `TOOLS > Theme Manager` performs one guarded lookup.
 
-This full package contains a maintainer-exported file at:
+Stock six-child startup still avoids optional-title probes, missing-child errors, and startup delays.
 
-```text
-DarkOneJSP3\fcl\DarkOneJSP3.fcl
-```
+### FCL maintenance note
 
-Importing it is optional and is not the primary setup method. The bundled FCL
-contains one saved layout, `DarkOneJSP3`, using the scripted Queue Viewer and
-scripted JScript Panel 3 Quick Search.
+Project tooling does not patch or generate the bundled FCL. A new copy is included only when the maintainer deliberately exports and replaces the convenience snapshot.
 
-FCL files contain component-instance metadata that can vary between
-installations. After import, verify the complete hierarchy, custom titles and
-script assignments against LAYOUT_AND_PANEL_MAP.md. Project tooling does not
-patch or generate the FCL, and hotfix archives do not include it.
-
-When no FCL is present, or when an imported layout does not match the installed
-components, use the manual layout method above. After confirming either method,
-export a fresh local FCL for backup.
+Hotfix archives may not include the FCL. When no FCL is present, or when an imported layout does not match the installed components, use the manual setup method above.
 
 ### Recommended scripted queue panel
 
-Use a JScript Panel 3 instance as the fifth child of DOJSP3.InfoStack, give it
+Use a JScript Panel 3 instance as the fifth child of `DOJSP3.InfoStack`, give it
 the exact custom title:
 
 ```text
@@ -187,7 +194,7 @@ and load:
 DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
 ```
 
-This is the recommended DarkOneJSP3 queue implementation. DOJSP3.Root uses
+This is the recommended DarkOneJSP3 queue implementation. `DOJSP3.Root` uses
 JSplitter to enumerate and modify the playback queue directly, while the
 JScript Panel provides DarkOne styling, multi-selection, keyboard navigation,
 source-item commands and writable queue controls including remove, multi-remove,
@@ -199,22 +206,22 @@ Enhanced Spectrum Analyser maintains its visualisation options in the native
 component. To reproduce the DarkOneJSP3 reference appearance, right-click the
 spectrum panel, open Options and use:
 
-- Peak: Line disabled; Gradient enabled; Vertical disabled
-- Peak colours, top to bottom: RGB 0, 128, 192 (#0080C0);
-  RGB 47, 120, 255 (#2F78FF); RGB 38, 98, 255 (#2662FF);
-  RGB 147, 0, 255 (#9300FF); RGB 223, 0, 255 (#DF00FF); and
-  RGB 255, 0, 172 (#FF00AC)
-- Peak: Color Count 6; Alpha 255; Peak Hold 0 ms; Velocity 20 dB/s
-- RMS: Line, Gradient and Vertical disabled; RGB 0, 0, 0 (#000000);
+- **Peak:** Line disabled; Gradient enabled; Vertical disabled
+- **Peak colours, top to bottom:** RGB 0, 128, 192 (`#0080C0`);
+  RGB 47, 120, 255 (`#2F78FF`); RGB 38, 98, 255 (`#2662FF`);
+  RGB 147, 0, 255 (`#9300FF`); RGB 223, 0, 255 (`#DF00FF`); and
+  RGB 255, 0, 172 (`#FF00AC`)
+- **Peak:** Color Count 6; Alpha 255; Peak Hold 0 ms; Velocity 20 dB/s
+- **RMS:** Line, Gradient and Vertical disabled; RGB 0, 0, 0 (`#000000`);
   Color Count 1; Alpha 96; Peak Hold 1000 ms; Velocity 3 dB/s
-- Peak Max: Line, Gradient and Vertical disabled; RGB 0, 0, 0 (#000000);
+- **Peak Max:** Line, Gradient and Vertical disabled; RGB 0, 0, 0 (`#000000`);
   Color Count 1; Alpha 128; Peak Hold 3000 ms; Velocity 3 dB/s
-- Background: Grid, Left Labels and Bottom Labels disabled; Color from
-  RGB 0, 0, 0 (#000000); Color to RGB 3, 7, 7 (#030707);
+- **Background:** Grid, Left Labels and Bottom Labels disabled; Color from
+  RGB 0, 0, 0 (`#000000`); Color to RGB 3, 7, 7 (`#030707`);
   Alpha from 255; Alpha to 255
-- Further Adjustment: Peak Detector disabled; Calibration Line disabled;
+- **Further Adjustment:** Peak Detector disabled; Calibration Line disabled;
   Tilt 4.5 dB/oct
-- Processing: Refresh Time 8 ms; Window Function HANNING; FFT Size 16384;
+- **Processing:** Refresh Time 8 ms; Window Function HANNING; FFT Size 16384;
   Average Time 400 ms
 
 Colour swatches belonging only to disabled lines and overlays do not affect the
@@ -234,24 +241,24 @@ background-refresh and anti-flicker behaviour described below.
 
 For the DarkOneJSP3 reference appearance, use:
 
-- Use custom colors: enabled
-- Played Fill: RGB 191, 198, 255 (#BFC6FF)
-- Played RMS: RGB 128, 140, 255 (#808CFF)
-- Unplayed Fill: RGB 223, 223, 223 (#DFDFDF)
-- Unplayed RMS: RGB 191, 191, 191 (#BFBFBF)
-- Background (played/unplayed): RGB 32, 32, 32 (#202020) as the opaque fallback
-- Cursor: RGB 0, 122, 217 (#007AD9)
-- Track to prefer when showing waveform: Playing, blank when stopped
-- Draw window border: disabled
-- Transparent background (requires Columns UI): enabled
-- Enable anti-aliasing: enabled (default; Waveform Minibar right-click menu)
+- **Use custom colors:** enabled
+- **Played Fill:** RGB 191, 198, 255 (`#BFC6FF`)
+- **Played RMS:** RGB 128, 140, 255 (`#808CFF`)
+- **Unplayed Fill:** RGB 223, 223, 223 (`#DFDFDF`)
+- **Unplayed RMS:** RGB 191, 191, 191 (`#BFBFBF`)
+- **Background (played/unplayed):** RGB 32, 32, 32 (`#202020`) as the opaque fallback
+- **Cursor:** RGB 0, 122, 217 (`#007AD9`)
+- **Track to prefer when showing waveform:** Playing, blank when stopped
+- **Draw window border:** disabled
+- **Transparent background (requires Columns UI):** enabled
+- **Enable anti-aliasing:** enabled (default; Waveform Minibar right-click menu)
 
-The patched component provides 25, 30, 50, 60, 100, 120 and 144 FPS playback
+The patched component provides **25, 30, 50, 60, 100, 120 and 144 FPS** playback
 choices. 60 FPS is the recommended balanced starting point. Use 25 or 30 FPS to
 reduce animation CPU cost, or select 100, 120 or 144 only when the smoother
 cursor motion is worth the additional redraw work on a high-refresh display.
 
-With Transparent background enabled, DarkOneJSP3 opts DOJSP3.Waveform into
+With Transparent background enabled, DarkOneJSP3 opts `DOJSP3.Waveform` into
 JSplitter pseudo-transparency so the resolved DisplayStack/Bottom-area backing
 shows through instead of the component's opaque fallback colour. The patched
 component observes native ancestor repaint events and refreshes that backing
@@ -259,7 +266,7 @@ immediately during playback, without a DarkOneJSP3-specific plugin message or
 polling timer in the normal path. A guarded 100 ms fallback is selected
 automatically if native repaint subscription cannot be installed.
 
-Enable anti-aliasing smooths the cached waveform bitmap when it is rebuilt; it
+**Enable anti-aliasing** smooths the cached waveform bitmap when it is rebuilt; it
 does not run at the selected playback FPS. Because transparent mode uses an RGB
 colour key rather than per-pixel alpha, a very high-contrast background may
 show a fine pre-blended edge fringe. Disable anti-aliasing to restore the
@@ -311,7 +318,7 @@ as the consolidated InfoStack child.
 
 Apply a hotfix only to the baseline named in APPLY_HOTFIX.txt. Hotfix archives
 include every changed documentation file plus changed scripts, metadata and
-validator files. They never replace or delete DarkOneJSP3.fcl.
+validator files. They never replace or delete `DarkOneJSP3.fcl`.
 
 Persistent JScript Panel and JSplitter properties are normally retained. If a
 panel still runs cached script text after an update, reload it or restart

@@ -1,5 +1,21 @@
 # DarkOneJSP3 Changelog
 
+## v1.2.1 - Information-page theme refresh
+
+- Album Notes + Album Art, Properties, Last.fm Artist Info + User Info,
+  Queue Viewer and Last.fm Bio + Images now refresh supported theme settings
+  without reloading their panels. Shared imports also support saved wrappers.
+- Refresh cached page colours and selection colours directly. Reload wallpaper
+  only when its mode, path or blur changes. Resize combined artwork layouts
+  only for visibility or ratio changes; refresh artwork only when its required
+  resources change. Colour-only updates preserve content and scroll state.
+- Preserve reload recovery for failed or unsupported in-place refreshes.
+- Added executed regression coverage for all five roles, combined artwork,
+  repeated Apply, wallpaper reuse, preserved state and both dispatch paths.
+- Theme engine is **0.2.8**, sample reset bridge **0.2.6**, and validator
+  **0.11.25**. Native playback verification remains outstanding.
+
+
 ## v1.2.0 - Theme Manager
 
 - Finalised release documentation, removed obsolete development-status labels

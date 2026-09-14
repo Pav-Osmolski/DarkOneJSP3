@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.2.0
+  <strong>Current release:</strong> v1.2.1
 </p>
 
 > [!IMPORTANT]
@@ -71,7 +71,7 @@ workflow of the original theme.
 
 ## Current release
 
-**DarkOneJSP3 v1.2.0** is the current release.
+**DarkOneJSP3 v1.2.1** is the current release.
 
 The documented panel map is the recommended setup method. A maintainer-exported
 FCL is included as an optional convenience for users who prefer to import a
@@ -83,7 +83,7 @@ starting layout.
 
 ![Wide view](assets/darkonejsp3-screenshot-wide.webp)
 
-![InfoStack Album Notes functionality](assets/darkonejsp3-screenshot-albumnotes.webp)
+![Theme Manager](assets/darkonejsp3-screenshot-thememanager.webp)
 
 ## Enhanced Sample Library
 
@@ -193,20 +193,21 @@ or its `profile` subfolder:
 Use only the structure already used by your active foobar2000 profile. Do not
 install the files into more than one location.
 
-### Quick setup (FCL import)
+### Quick setup: FCL import
 
-The included
-[`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a
-maintainer-exported convenience snapshot.
+The included [`DarkOneJSP3/fcl/DarkOneJSP3.fcl`](DarkOneJSP3/fcl/DarkOneJSP3.fcl) is a maintainer-exported convenience snapshot for the supported DarkOneJSP3 layout.
 
-The FCL contains one saved layout, `DarkOneJSP3`, using the scripted Queue
-Viewer and scripted JScript Panel 3 Quick Search.
+The FCL contains one saved layout, `DarkOneJSP3`, configured with the scripted Queue Viewer, Quick Search and Theme Manager.
 
-After importing it, compare the resulting layout with the documented panel
-titles and script assignments. The panel map remains the reference for the
-supported layout.
+Import it via:
 
-### Manual setup
+```text
+foobar2000 > Preferences > Display > Columns UI > Import configuration...
+```
+
+After importing, compare the resulting layout against the documented panel titles and script assignments. The panel map remains the canonical reference for the supported layout.
+
+### Manual setup: advanced users
 
 Construct the Columns UI hierarchy using the supplied panel map, then assign
 the documented panel titles and scripts.
@@ -243,6 +244,7 @@ DarkOneJSP3/
 ├── jsplitter/             JSplitter controllers, loaders and shared helpers
 ├── reference/             Original DarkOne2021 migration reference
 ├── shared/                Shared project scripts and reset support
+├── themes/                Bundled Theme Manager JSON theme files
 ├── tools/                 Modular release validator and mirror-sync utility
 ├── build-info.json        Release metadata
 └── darkonejsp3-layout-manifest.json

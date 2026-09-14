@@ -82,6 +82,72 @@ suite("optional theme callback guards", function () {
     manager.jsp3EnhancedRefreshTheme(["playlist-manager"]);
     if (metrics !== 1) throw new Error("Manager theme row spacing was not refreshed");
 
+    // Execute shared page refresh and both dispatch paths used by saved panels.
+    const pageSource = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/js/panel.js"), "utf8");
+    const pageValues = {};
+    let pagePaints = 0, pageColours = 0, pageWallpaper = 0, pageLayout = 0, pageArtwork = 0, pageReloads = 0;
+    const prop = (name, val) => ({name, val});
+    const page = {
+        enhanced_page_background: true, page_background: {mode: prop("bg", 3), custom: prop("custom", 1)},
+        dynamic_colours: prop("dynamic", false), text_colour: {mode: prop("textMode", 0), custom: prop("text", 2)},
+        selected_background: {mode: prop("selectedMode", 0), custom: prop("selected", 3)},
+        wallpaper: {mode: prop("wall", 0), path: prop("path", ""), blurred: prop("blur", false)},
+        colours_changed() { pageColours++; }, update_wallpaper() { pageWallpaper++; },
+        text_layout: {id: 1}, offset: -42, selection: [2, 4]
+    };
+    const pageContext = {panel: page, window: {
+        GetProperty(k, d) { return k in pageValues ? pageValues[k] : d; },
+        SetProperty() { throw new Error("Live cache refresh must not write properties"); },
+        Repaint() { pagePaints++; }, Reload() { pageReloads++; }
+    }, on_size() { pageLayout++; }, console: {log() {}}};
+    vm.createContext(pageContext);
+    vm.runInContext(extract(pageSource, "_refreshThemeProperty") + "\n" + extract(pageSource, "_refreshPageTheme"), pageContext);
+    for (const role of ["album-notes", "properties", "lastfm-info", "queue-viewer", "lastfm-bio"]) {
+        pageValues.text = page.text_colour.custom.val + 1;
+        if (!pageContext._refreshPageTheme(page, [role]) || page.text_colour.custom.val !== pageValues.text)
+            throw new Error("Information page colour cache was not refreshed: " + role);
+    }
+    if (pageColours !== 5 || pageWallpaper || pageLayout || page.offset !== -42 || page.selection.length !== 2 || page.text_layout.id !== 1)
+        throw new Error("Colour-only refresh rebuilt content, wallpaper, geometry or selection");
+    pageValues.path = "wallpaper.jpg";
+    pageContext._refreshPageTheme(page, ["properties"]);
+    pageContext._refreshPageTheme(page, ["properties"]);
+    if (pageWallpaper !== 1) throw new Error("Wallpaper refresh was missing or repeated for identical settings");
+    function appearance() { return {properties: {display: prop("display", true), background: prop("artbg", true), background_blur: prop("artblur", true)},
+        wants_artwork() { return this.properties.display.val || this.properties.background.val; },
+        wants_blur() { return this.properties.background.val && this.properties.background_blur.val; }}; }
+    pageContext.albumart_appearance = appearance();
+    pageContext.albumart = {properties: {ratio: prop("ratio", 0.5)}, metadb_changed() { pageArtwork++; }};
+    pageValues.ratio = 0.7;
+    pageContext._refreshPageTheme(page, ["album-notes", "musicbrainz"]);
+    if (pageLayout !== 1 || pageArtwork) throw new Error("Artwork ratio change reloaded the image or failed to resize");
+    pageValues.artblur = false;
+    pageContext._refreshPageTheme(page, ["album-notes", "musicbrainz"]);
+    pageContext._refreshPageTheme(page, ["album-notes", "musicbrainz"]);
+    if (pageArtwork !== 1 || pageLayout !== 1) throw new Error("Artwork blur change regenerated more than once");
+    pageContext.image_appearance = appearance();
+    pageContext.images = {properties: {ratio: prop("ratio", 0.7)}, image_index: 3, update_image() { pageArtwork++; }};
+    pageContext._refreshPageTheme(page, ["lastfm-bio"]);
+    if (pageArtwork !== 2 || pageContext.images.image_index !== 3) throw new Error("Biography image refresh lost the current image");
+    if (pageContext._refreshPageTheme(page, ["musicbrainz"]) || pageContext._refreshPageTheme(page, ["unsupported"]))
+        throw new Error("Shared page handler claimed unsupported roles");
+    pageContext.DARKONEJSP3_THEME_NOTIFICATION = "apply";
+    pageContext.jsp3EnhancedApplyTheme = () => true;
+    pageContext.jsp3EnhancedThemeTiming = () => {};
+    vm.runInContext(extract(fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/js/jsp3_enhanced_reset.js"), "utf8"), "jsp3EnhancedHandleSampleReset"), pageContext);
+    pageContext.jsp3EnhancedHandleSampleReset("apply", {}, "properties");
+    if (pageReloads) throw new Error("Saved sample wrapper still reloaded after page refresh");
+    const engineSource = fs.readFileSync(__path("DarkOneJSP3/shared/theme_engine.js"), "utf8");
+    vm.runInContext(extract(engineSource, "darkOneJsp3RefreshThemeResult"), pageContext);
+    pageContext.darkOneJsp3RefreshThemeResult({}, "queue-viewer");
+    if (pageReloads) throw new Error("Saved Queue wrapper still reloaded before the sample adapter");
+    pageContext.panel.colours_changed = () => { throw new Error("refresh failed"); };
+    pageValues.text++;
+    pageContext.jsp3EnhancedHandleSampleReset("apply", {}, "properties");
+    pageValues.text++;
+    pageContext.darkOneJsp3RefreshThemeResult({}, "queue-viewer");
+    if (pageReloads !== 2) throw new Error("Failed live page refresh did not retain reload recovery");
+
     const entries = [
         "DarkOneJSP3/jscript/js/Panel_Control_Left.js",
         "DarkOneJSP3/jscript/js/Panel_Control_Right.js",

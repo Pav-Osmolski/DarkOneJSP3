@@ -92,9 +92,13 @@ function jsp3EnhancedHandleSampleReset(name, info, roles) {
         }
         if (changed) {
             jsp3EnhancedThemeTiming(themeRoles, "properties-applied");
-            if (typeof jsp3EnhancedRefreshTheme === "function") {
+            if (typeof jsp3EnhancedRefreshTheme === "function" ||
+                    (typeof _refreshPageTheme === "function" && typeof panel !== "undefined")) {
                 try {
-                    if (jsp3EnhancedRefreshTheme(themeRoles) === true) {
+                    var refreshed = typeof jsp3EnhancedRefreshTheme === "function"
+                        ? jsp3EnhancedRefreshTheme(themeRoles)
+                        : _refreshPageTheme(panel, themeRoles);
+                    if (refreshed === true) {
                         jsp3EnhancedThemeTiming(themeRoles, "live-refreshed");
                         return true;
                     }

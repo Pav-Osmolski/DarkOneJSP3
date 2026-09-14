@@ -656,6 +656,12 @@ function darkOneJsp3CancelThemeStage() {
 
 function darkOneJsp3RefreshThemeResult(result, role, refreshChangedTheme) {
     var refreshed = false;
+    // Saved Queue Viewer wrappers call the project handler before the sample
+    // adapter. Opt them into the shared page refresh without replacing the FCL.
+    if (typeof refreshChangedTheme !== "function" && role === "queue-viewer" &&
+            typeof _refreshPageTheme === "function" && typeof panel !== "undefined") {
+        refreshChangedTheme = function () { return _refreshPageTheme(panel, [role]); };
+    }
     if (typeof refreshChangedTheme === "function") {
         try {
             refreshed = refreshChangedTheme(result) === true;

@@ -232,8 +232,9 @@ def run(ctx: ValidationContext) -> None:
         # however, every referenced repository image must also be present.
         repository_only_assets = {
             'assets/darkonejsp3-logo.png',
+            'assets/darkonejsp3-screenshot-lastfmbioimages.webp',
             'assets/darkonejsp3-screenshot-main.webp',
-            'assets/darkonejsp3-screenshot-albumnotes.webp',
+            'assets/darkonejsp3-screenshot-thememanager.webp',
             'assets/darkonejsp3-screenshot-wide.webp',
         }
         readme_targets = _local_markdown_targets(readme_body)

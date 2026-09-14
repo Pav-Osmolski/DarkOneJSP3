@@ -1,3 +1,59 @@
+// Refresh cached _p values without writing the already-applied properties back.
+function _refreshThemeProperty(property) {
+	if (!property || typeof property.name != 'string') return false;
+	var value = window.GetProperty(property.name, property.val);
+	if (value === property.val) return false;
+	property.val = value;
+	return true;
+}
+
+function _refreshPageTheme(page, roles) {
+	if (!page || !page.enhanced_page_background || !roles || !roles.length) return false;
+	for (var i = 0; i < roles.length; i++) {
+		if (['lastfm-bio', 'lastfm-info', 'properties', 'album-notes', 'queue-viewer'].indexOf(roles[i]) < 0 &&
+				!(roles[i] == 'musicbrainz' && roles.indexOf('album-notes') >= 0)) return false;
+	}
+	var colours = [page.page_background.mode, page.page_background.custom,
+		page.dynamic_colours, page.text_colour.mode, page.text_colour.custom];
+	if (page.selected_background) colours = colours.concat([page.selected_background.mode, page.selected_background.custom]);
+	var colourChanged = false;
+	for (var c = 0; c < colours.length; c++) {
+		if (_refreshThemeProperty(colours[c])) colourChanged = true;
+	}
+	var wallpaperChanged = false;
+	if (page.wallpaper) {
+		var wallpaper = [page.wallpaper.mode, page.wallpaper.path, page.wallpaper.blurred];
+		for (var w = 0; w < wallpaper.length; w++) {
+			if (_refreshThemeProperty(wallpaper[w])) wallpaperChanged = true;
+		}
+	}
+	var artwork = null, appearance = null;
+	if (roles.indexOf('album-notes') >= 0 && typeof albumart_appearance != 'undefined' && typeof albumart != 'undefined') {
+		appearance = albumart_appearance;
+		artwork = albumart;
+	} else if (roles.indexOf('lastfm-bio') >= 0 && typeof image_appearance != 'undefined' && typeof images != 'undefined') {
+		appearance = image_appearance;
+		artwork = images;
+	}
+	if (appearance && artwork) {
+		var wantedArtwork = appearance.wants_artwork();
+		var wantedBlur = appearance.wants_blur();
+		var layoutChanged = _refreshThemeProperty(appearance.properties.display);
+		_refreshThemeProperty(appearance.properties.background);
+		_refreshThemeProperty(appearance.properties.background_blur);
+		if (_refreshThemeProperty(artwork.properties.ratio)) layoutChanged = true;
+		if (wantedArtwork != appearance.wants_artwork() || wantedBlur != appearance.wants_blur()) {
+			if (roles.indexOf('album-notes') >= 0) artwork.metadb_changed();
+			else artwork.update_image();
+		}
+		if (layoutChanged && typeof on_size == 'function') on_size();
+	}
+	if (colourChanged) page.colours_changed();
+	if (wallpaperChanged) page.update_wallpaper();
+	window.Repaint();
+	return true;
+}
+
 var DARKONE_PAGE_BACKGROUND_TRANSPARENT = 0;
 var DARKONE_PAGE_BACKGROUND_BLACK = 1;
 var DARKONE_PAGE_BACKGROUND_GREY = 2;
