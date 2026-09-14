@@ -347,31 +347,70 @@ Its first command is Theme Manager, followed by Appearance and Buttons.
 
 ### Theme Manager
 
-Menu path: DarkOne Tools > Theme Manager
+Menu path: **TOOLS > Theme Manager**
 
-Selects the optional `DOJSP3.ThemeManager` InfoStack page. The page loads,
-previews, saves, names, renames and deletes readable JSON themes in
-`DarkOneJSP3\themes`. **Capture current** refreshes the unsaved draft from the
-DarkOneJSP3-owned settings of available panels; its file-backed bridge includes
-JSplitter-owned properties, and conflicting shared values are reported and left
-unchanged. **Theme tab visible** is read from its saved visibility property,
-independently of whether the Theme Manager child is available. Reset to Default
-reloads the protected `Default.json`.
-The page is labelled **Theme** inside InfoStack. **Visible tabs > Theme** affects
-only the horizontal strip; TOOLS and the optional INFOSTACK button can still
-open a hidden Theme page. The Manager category provides fixed font-size and
-automatic base-scale controls for the Theme Manager interface itself.
-The Colours category provides independent Custom, Dynamic and Off types for JS
-Playlist and Playlist Manager, along with their panel-specific colour values.
-Controls includes dedicated Quick Search text, background and border colours,
-plus its independent fixed font size and automatic base scale. InfoStack's
-similarly named controls apply only to the tab strip.
-Theme Apply preserves the resolved Theme child's structural availability and
-uses the same coordinated bottom-area commit as the direct Appearance menu, so
-all bottom surfaces change at one shared boundary. Its matching cross-host
-theme command is staged against that boundary rather than replayed by the
-slower fallback poll, and Bottom Controls is updated in place without a reload.
-See [THEME_MANAGER.md](THEME_MANAGER.md) for setup, format and safety details.
+Theme Manager brings supported DarkOneJSP3 appearance settings together in one
+place. Use it to customise the layout's appearance, save a personal theme or
+capture changes you have made through individual panel menus.
+
+#### Start with a theme
+
+1. Open **TOOLS > Theme Manager** and choose **Load** to select a theme. The
+   included presets are **Default** and **DarkOne v4 Revival**.
+2. Edit the settings in the categories below, then click **Apply** to preview
+   the draft across the available panels.
+3. Choose **Save as** to name and save your own theme. Use **Save** for later
+   changes to that personal theme.
+
+Loading, applying and saving are separate actions: **Apply** changes the live
+appearance; **Save** keeps the draft in a JSON file. Theme files are stored in
+`DarkOneJSP3/themes/`.
+
+#### Capture your current appearance
+
+If you have already customised individual panels, click **Capture current**
+to read their supported appearance settings into the draft. Review the result,
+then use **Save as** to keep it as a personal theme.
+
+Capture does not apply or save automatically. If panels disagree about a shared
+setting, that field stays unchanged and the status line reports the conflict.
+Missing responses are also reported; capture cannot read settings from panels
+that are not available.
+
+#### Settings categories
+
+| Category | What you can customise |
+| --- | --- |
+| **Colours** | Shared palette and independent JS Playlist and Playlist Manager colours, with Custom, Dynamic and Off modes. |
+| **Typography** | Font families, weights and scaling for supported panels. |
+| **Controls** | Buttons, bottom controls and Quick Search colours, border, font size and automatic base scale. |
+| **InfoStack** | Tab labels and visibility, tab-strip fonts, backgrounds and information-page appearance. |
+| **Layout** | Panel arrangements, playlist presentation and artwork options. |
+| **Manager** | Theme author and description, plus the Theme Manager interface's own font size and automatic base scale. |
+
+Quick Search's font controls affect Quick Search only. InfoStack's font controls
+apply to the tab strip, while Manager's controls affect Theme Manager itself.
+
+#### Manage saved themes
+
+- **Rename** changes the selected personal theme's name and filename.
+- **Delete** removes the selected personal theme after confirmation.
+- **Reset default** loads and applies `Default.json`.
+- **Theme author** and **Theme description**, under **Manager**, edit the theme's
+  details. Use **Save** or **Save as** to keep those edits.
+
+`Default.json` is protected from renaming and deletion. **Save** opens **Save as**
+when the default is selected, so personal edits do not overwrite it.
+
+#### Show or hide the Theme tab
+
+The page is labelled **Theme** in InfoStack. Use **Tab settings > Visible tabs >
+Theme** to show or hide its horizontal tab. Hiding it does not remove the page:
+**TOOLS > Theme Manager** and the optional **INFOSTACK** menu can still open it.
+
+The bundled FCL includes Theme Manager. If you retain an older layout without
+that page, follow the setup steps in [Theme Manager](THEME_MANAGER.md) for adding it manually.
+That guide also covers the JSON format and advanced troubleshooting.
 
 ### Appearance
 
