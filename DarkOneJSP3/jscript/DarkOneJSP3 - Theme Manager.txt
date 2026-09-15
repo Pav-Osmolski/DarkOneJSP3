@@ -1,6 +1,6 @@
 // ==PREPROCESSOR==
 // @name "DarkOneJSP3 - Theme Manager"
-// @version "0.1.15"
+// @version "0.1.16"
 // @author "DeViLhoOD"
 // @import "%fb2k_component_path%helpers.txt"
 // @import "%fb2k_profile_path%DarkOneJSP3\shared\colour_utils.js"
@@ -46,7 +46,7 @@ var TM_ROUNDNESS_LABELS = [
 var TM_CAPTURE_ROLES = [
     "control-left", "control-right", "display", "main-columns", "art-spectrum",
     "bottom-controls", "quick-search", "info-stack", "display-waveform",
-    "lastfm-bio", "lastfm-info", "properties", "album-notes", "queue-viewer",
+    "lastfm-bio", "lastfm-info", "properties", "album-notes", "allmusic", "queue-viewer",
     "album-art", "playlist-manager", "js-playlist"
 ];
 var TM_SPLITTER_CAPTURE_ROLES = [
@@ -86,6 +86,36 @@ var tmCategories = [
     { name: "Layout", description: "Panel arrangements, playlist and artwork presentation." },
     { name: "Manager", description: "Theme details, plus typography and scaling for this interface." }
 ];
+
+var tmCapabilityId = "";
+var tmCapabilitySerial = 0;
+var tmCapabilityReplies = 0;
+var tmCapabilityArtwork = false;
+var tmShowArtwork = true;
+var tmCapabilityTimer = 0;
+var tmCapabilityFinishTimer = 0;
+function tmQueryCapabilities() {
+    tmCapabilityId = String(new Date().getTime()) + ":" + (++tmCapabilitySerial);
+    tmCapabilityReplies = 0;
+    tmCapabilityArtwork = false;
+    try { window.NotifyOthers("DarkOneJSP3.Theme.Capabilities.Query", tmCapabilityId); } catch (e) {}
+    tmCapabilityFinishTimer = window.SetTimeout(function () {
+        tmCapabilityFinishTimer = 0;
+        // No replies can mean older saved entries: retain the full editor.
+        var visible = tmCapabilityReplies === 0 || tmCapabilityArtwork;
+        if (visible !== tmShowArtwork) {
+            tmShowArtwork = visible;
+            tmState.hits = [];
+            tmState.hover = null;
+            window.Repaint();
+        }
+    }, 400);
+}
+function tmVisibleFields() {
+    return tmFields[tmCategories[tmState.category].name].filter(function (field) {
+        return tmShowArtwork || field[1].indexOf("appearance.pages.artwork.") !== 0;
+    });
+}
 
 var tmFields = {
     Colours: [
@@ -1126,7 +1156,7 @@ function on_paint(gr) {
     var rowsTop = top + tmMetric(34);
     var rowsBottom = h - tmMetric(34);
     var rowH = tmMetric(48);
-    var fields = tmFields[tmCategories[tmState.category].name];
+    var fields = tmVisibleFields();
     var rowGap = tmMetric(6);
     var maxScroll = Math.max(0, fields.length * (rowH + rowGap) - Math.max(1, h - rowsTop - tmMetric(42)));
     tmState.scroll = Math.max(0, Math.min(maxScroll, tmState.scroll));
@@ -1195,7 +1225,7 @@ function on_mouse_lbtn_up(x, y) {
         if (!tmInside(hit, x, y)) continue;
         if (hit.type === "file") tmRead(hit.value, false);
         else if (hit.type === "category") { tmState.category = Number(hit.value); tmState.scroll = 0; window.SetProperty(TM_CATEGORY_PROPERTY, tmState.category); window.Repaint(); }
-        else if (hit.type === "field") tmEdit(tmFields[tmCategories[tmState.category].name][Number(hit.value)], x, y);
+        else if (hit.type === "field") tmEdit(tmVisibleFields()[Number(hit.value)], x, y);
         else if (hit.type === "action") {
             if (hit.value === "apply") tmApply();
             else if (hit.value === "load") tmRead(tmState.selectedFile, false);
@@ -1220,6 +1250,18 @@ function on_mouse_wheel(step) {
 }
 
 function on_notify_data(name, data) {
+    if (name === "DarkOneJSP3.Theme.Capabilities.Response") {
+        try {
+            if (typeof data !== "string" || data.length > 1024) return;
+            var capability = JSON.parse(data);
+            if (capability.id !== tmCapabilityId ||
+                ["album-notes", "lastfm-bio", "allmusic"].indexOf(capability.role) < 0 ||
+                typeof capability.artwork !== "boolean") return;
+            tmCapabilityReplies++;
+            tmCapabilityArtwork = tmCapabilityArtwork || capability.artwork;
+        } catch (e) {}
+        return;
+    }
     if (name === DARKONEJSP3_THEME_PAINT_NOTIFICATION) {
         try {
             if (typeof data !== "string" || data.length > 1024) return;
@@ -1267,6 +1309,8 @@ function tmAnnounceAvailability() {
 }
 
 function on_script_unload() {
+    if (tmCapabilityTimer) window.ClearInterval(tmCapabilityTimer);
+    if (tmCapabilityFinishTimer) window.ClearTimeout(tmCapabilityFinishTimer);
     tmCancelCapture();
     tmCancelPendingApply(true);
     try { if (utils.IsFile(TM_AVAILABILITY_FILE)) utils.RemovePath(TM_AVAILABILITY_FILE); } catch (e) {}
@@ -1281,3 +1325,7 @@ if (!tmRead(remembered, false)) {
     tmRebuildFonts();
 }
 tmAnnounceAvailability();
+
+// Refresh presence after scripts are replaced or panels are removed.
+tmQueryCapabilities();
+try { tmCapabilityTimer = window.SetInterval(tmQueryCapabilities, 5000); } catch (capabilityTimerError) {}

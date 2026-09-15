@@ -1,9 +1,8 @@
 # DarkOneJSP3 Theme Manager
 
-## Status
+## Overview
 
-Theme Manager is available in v1.2.1. It is an optional seventh
-InfoStack page, opened from **TOOLS > Theme Manager**. The updated bundled FCL includes this page. For an existing layout without it,
+Theme Manager is an optional seventh InfoStack page, opened from **TOOLS > Theme Manager**. The updated bundled FCL includes this page. For an existing layout without it,
 add the panel manually using the steps below.
 
 ## Add the InfoStack page
@@ -242,3 +241,21 @@ presentation or eliminate all possible UI stalls.
 These handlers are shared imports, including the Queue Viewer compatibility
 path for saved wrappers. Update the supplied files with foobar2000 closed and
 restart; replacing the FCL is not required for this improvement.
+
+## Supported reader variants
+
+Album Notes and Last.fm Bio support Theme Manager with or without images.
+The legacy `Allmusic Review.txt` entry retains its Album Notes behaviour;
+`Allmusic Review + Album Art.txt` uses the AllMusic provider with the shared
+page colours, wallpaper and configurable artwork presentation.
+
+Artwork controls are hidden when the responding reader panels are text-only.
+They remain available when any responding reader supports artwork. The manager
+refreshes this detection every five seconds. With no replies, it keeps the
+controls available for compatibility with older saved entries. Hidden settings
+remain in the draft and saved theme. Text-only readers do not apply or capture
+image settings.
+
+Reload the Theme Manager and both AllMusic entry scripts after updating.
+Existing Album Notes and Last.fm Bio entries use the updated shared helpers.
+No FCL re-import is needed.

@@ -27,6 +27,8 @@ def _check_reset_and_shared(ctx: ValidationContext) -> None:
             if (sample_defaults_import in body) != (sample_bridge_import in body):
                 errors.append(rel(entry) + ' imports only half of the standalone reset bridge')
     expected_reset_entries = {
+        'Allmusic Review.txt',
+        'Allmusic Review + Album Art.txt',
         'Album Notes + Album Art.txt',
         'Album Notes.txt',
         'Album Art.txt',
@@ -529,13 +531,13 @@ def _check_metadata_and_artwork(ctx: ValidationContext) -> None:
                 errors.append('Album Art wheel hardening is missing: ' + token)
 
     legacy_allmusic_entry = samples / 'Allmusic Review.txt'
-    if legacy_allmusic_entry.exists() and '// @version "0.6.8"' not in text(legacy_allmusic_entry):
-        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.8')
+    if legacy_allmusic_entry.exists() and '// @version "0.6.9"' not in text(legacy_allmusic_entry):
+        errors.append('Legacy AllMusic-slot Album Notes entry version is not 0.6.9')
     allmusic_art_entry = samples / 'Allmusic Review + Album Art.txt'
     if allmusic_art_entry.exists():
         allmusic_art_body = text(allmusic_art_entry)
         for token in [
-            '// @version "0.6.7"',
+            '// @version "0.6.8"',
             'var header_gap = _scale(0);',
             'var scroll_button_top_inset = _scale(2);',
             'Math.max(0, this.y - TM - header_gap + scroll_button_top_inset)',
@@ -640,6 +642,8 @@ def _check_metadata_and_artwork(ctx: ValidationContext) -> None:
         if not fade_source.exists():
             continue
         fade_body = text(fade_source)
+        if fade_source.name == 'Allmusic Review + Album Art.txt' and 'allmusic_paint(gr);' in fade_body:
+            fade_body += text(samples / 'js' / 'allmusic.js')
         if '_writeTextLayoutWithScrollFade(' not in fade_body:
             errors.append(rel(fade_source) + ' does not use the shared scroll-text edge fade')
         if 'this.up_btn.v(), this.down_btn.v()' not in fade_body:
@@ -774,8 +778,8 @@ def _check_playlist_and_resources(ctx: ValidationContext) -> None:
         body = text(js_playlist_entry)
         if 'jsp3EnhancedHandleSampleReset(name, info, "js-playlist")' not in body:
             errors.append('JS Playlist reset bridge is missing')
-        if '// @version "0.6.8"' not in body:
-            errors.append('JS Playlist entry version is not 0.6.8')
+        if '// @version "0.6.9"' not in body:
+            errors.append('JS Playlist entry version is not 0.6.9')
         for token in [
             'samples\\shared\\performance_utils.js',
             'samples\\shared\\ui_cadence.js',

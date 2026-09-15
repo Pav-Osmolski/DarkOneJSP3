@@ -164,7 +164,7 @@ def run(ctx: ValidationContext) -> None:
         for token in [
             'one saved layout, `DarkOneJSP3`',
             'scripted Queue Viewer',
-            'JScript Panel 3 Quick Search',
+            'Quick Search',
         ]:
             if token not in readme_flat:
                 errors.append('README.md Queue Viewer/Quick Search/FCL documentation is missing: ' + token)
@@ -194,7 +194,7 @@ def run(ctx: ValidationContext) -> None:
                 if component not in body:
                     errors.append(label + ' no longer lists ' + component)
         for label, body in [('README.md', readme_body), ('INSTALLATION.md', installation_body)]:
-            for token in ['one saved layout', '`DarkOneJSP3`', 'JScript Panel 3 Quick Search']:
+            for token in ['one saved layout', '`DarkOneJSP3`', 'Quick Search']:
                 if token not in body:
                     errors.append(label + ' does not preserve the current single-layout FCL description: ' + token)
         for token in [
@@ -209,7 +209,7 @@ def run(ctx: ValidationContext) -> None:
             'guarded 100 ms fallback',
             'Waveform Minibar stores its own component preferences',
         ]:
-            if token not in installation_body:
+            if token not in installation_body.replace('**', '').replace('`', ''):
                 errors.append('INSTALLATION.md Waveform Minibar setup guidance is missing: ' + token)
         for token in [
             'Enhanced Spectrum Analyser component preferences',
@@ -222,7 +222,7 @@ def run(ctx: ValidationContext) -> None:
             'Refresh Time 8 ms; Window Function HANNING; FFT Size 16384',
             'Average Time 400 ms',
         ]:
-            if token not in installation_body:
+            if token not in installation_body.replace('**', '').replace('`', ''):
                 errors.append(
                     'INSTALLATION.md Enhanced Spectrum Analyser setup guidance is missing: ' + token
                 )

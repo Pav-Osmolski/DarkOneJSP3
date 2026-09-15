@@ -10,7 +10,7 @@ function _refreshThemeProperty(property) {
 function _refreshPageTheme(page, roles) {
 	if (!page || !page.enhanced_page_background || !roles || !roles.length) return false;
 	for (var i = 0; i < roles.length; i++) {
-		if (['lastfm-bio', 'lastfm-info', 'properties', 'album-notes', 'queue-viewer'].indexOf(roles[i]) < 0 &&
+		if (['lastfm-bio', 'lastfm-info', 'properties', 'album-notes', 'allmusic', 'queue-viewer'].indexOf(roles[i]) < 0 &&
 				!(roles[i] == 'musicbrainz' && roles.indexOf('album-notes') >= 0)) return false;
 	}
 	var colours = [page.page_background.mode, page.page_background.custom,
@@ -28,7 +28,7 @@ function _refreshPageTheme(page, roles) {
 		}
 	}
 	var artwork = null, appearance = null;
-	if (roles.indexOf('album-notes') >= 0 && typeof albumart_appearance != 'undefined' && typeof albumart != 'undefined') {
+	if ((roles.indexOf('album-notes') >= 0 || roles.indexOf('allmusic') >= 0) && typeof albumart_appearance != 'undefined' && typeof albumart != 'undefined') {
 		appearance = albumart_appearance;
 		artwork = albumart;
 	} else if (roles.indexOf('lastfm-bio') >= 0 && typeof image_appearance != 'undefined' && typeof images != 'undefined') {
@@ -43,7 +43,7 @@ function _refreshPageTheme(page, roles) {
 		_refreshThemeProperty(appearance.properties.background_blur);
 		if (_refreshThemeProperty(artwork.properties.ratio)) layoutChanged = true;
 		if (wantedArtwork != appearance.wants_artwork() || wantedBlur != appearance.wants_blur()) {
-			if (roles.indexOf('album-notes') >= 0) artwork.metadb_changed();
+			if (roles.indexOf('album-notes') >= 0 || roles.indexOf('allmusic') >= 0) artwork.metadb_changed();
 			else artwork.update_image();
 		}
 		if (layoutChanged && typeof on_size == 'function') on_size();

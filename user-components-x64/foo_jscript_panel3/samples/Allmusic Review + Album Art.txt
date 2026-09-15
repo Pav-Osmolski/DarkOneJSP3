@@ -1,11 +1,15 @@
 // ==PREPROCESSOR==
 // @name "Allmusic Review + Album Art - Enhanced"
-// @version "0.6.7"
+// @version "0.6.8"
 // @author "marc2003 / DeViLhoOD"
 // @import "lodash"
 // @import "%fb2k_component_path%helpers.txt"
+// @import "%fb2k_component_path%samples\shared\sample_defaults.js"
+// @import "%fb2k_component_path%samples\shared\colour_utils.js"
+// @import "%fb2k_component_path%samples\js\jsp3_enhanced_reset.js"
 // @import "%fb2k_component_path%samples\js\common.js"
 // @import "%fb2k_component_path%samples\js\panel.js"
+// @import "%fb2k_component_path%samples\js\combined_artwork.js"
 // @import "%fb2k_component_path%samples\js\albumart.js"
 // @import "%fb2k_component_path%samples\js\allmusic.js"
 // ==/PREPROCESSOR==
@@ -14,25 +18,36 @@ var margin = _scale(12);
 var header_gap = _scale(0);
 var scroll_button_top_inset = _scale(2);
 
-var panel = new _panel();
+var panel = new _panel({ enhanced_page_background : true });
 var allmusic = new _allmusic(0, 0, 0, 0);
-var albumart = new _albumart(margin, margin, 0, 0);
-var white = RGB(255, 255, 255);
+var albumart_appearance = new _combined_artwork('2K3.ALLMUSIC.ART', 'Display album art', {
+	layout_changed : function () { on_size(); },
+	background_changed : function () { albumart.metadb_changed(); },
+});
+var albumart = new _albumart(margin, margin, 0, 0, {
+	review_panel : true,
+	appearance : albumart_appearance,
+});
+var allmusic_paint = _.bind(allmusic.paint, allmusic);
 
 allmusic.paint = function (gr) {
-	albumart.ensure_blur();
-	_drawImage(gr, albumart.bitmap.blur, 0, 0, panel.w, panel.h, image.crop);
-	_drawOverlay(gr, 0, 0, panel.w, panel.h, 180);
+	albumart.paint_background(gr);
 
 	var y = Math.max(0, this.y - TM - header_gap + scroll_button_top_inset);
-	gr.WriteTextSimple(this.header_text(), panel.fonts.title, white, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
-
-	if (this.text_layout) {
-		_writeTextLayoutWithScrollFade(gr, this.text_layout, white, this.x, this.y + margin, this.w, this.ha, this.offset, this.up_btn.v(), this.down_btn.v());
-		this.up_btn.paint(gr, white);
-		this.down_btn.paint(gr, white);
-	}
+	gr.WriteTextSimple(this.header_text(), panel.fonts.title, panel.colours.highlight, this.x, y, this.w, TM, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_TRIMMING_GRANULARITY_CHARACTER);
+	allmusic_paint(gr);
 }
+
+var allmusic_menu = {
+	rbtn_up : function (x, y) {
+		albumart_appearance.append_menu(panel.m);
+		allmusic.rbtn_up(x, y);
+	},
+	rbtn_up_done : function (idx) {
+		if (!albumart_appearance.handle_menu(idx))
+			allmusic.rbtn_up_done(idx);
+	},
+};
 
 panel.item_focus_change();
 
@@ -79,23 +94,30 @@ function on_mouse_move(x, y) {
 	albumart.move(x, y);
 }
 
+function on_mouse_leave() {
+	allmusic.move(-1, -1);
+	albumart.move(-1, -1);
+	_tt('');
+}
+
 function on_mouse_lbtn_dblclk(x, y) {
 	albumart.lbtn_dblclk(x, y);
 }
 
 function on_notify_data(name, info) {
+	if (jsp3EnhancedHandleSampleReset(name, info, ["allmusic"])) return;
 	allmusic.notify_data(name, info);
 }
 
 function on_mouse_rbtn_up(x, y) {
-	if (allmusic.containsXY(x, y))
-		return panel.rbtn_up(x, y, allmusic);
+	if (albumart_appearance.displayed() && albumart.containsXY(x, y))
+		return panel.rbtn_up(x, y, albumart);
 
-	return panel.rbtn_up(x, y, albumart);
+	return panel.rbtn_up(x, y, allmusic_menu);
 }
 
 function on_mouse_wheel(s) {
-	if (utils.IsKeyPressed(VK_CONTROL)) {
+	if (albumart_appearance.displayed() && utils.IsKeyPressed(VK_CONTROL)) {
 		var value = _clamp(albumart.properties.ratio.value - (s * 0.05), 0.2, 0.8);
 		if (value != albumart.properties.ratio.value) {
 			albumart.properties.ratio.value = value;
@@ -115,9 +137,8 @@ function on_paint(gr) {
 }
 
 function on_playback_dynamic_info_track(type) {
+	panel.playback_colours_changed(type);
 	if (type == 0) {
-		// stream metadata doesn't contain album tags for
-		// lookups but we can update the artist in the title section
 		window.Repaint();
 	} else {
 		albumart.metadb_changed();
@@ -125,11 +146,13 @@ function on_playback_dynamic_info_track(type) {
 }
 
 function on_playback_new_track() {
+	panel.playback_colours_changed();
 	panel.item_focus_change();
 }
 
 function on_playback_stop(reason) {
 	if (reason != 2) {
+		panel.playback_colours_changed();
 		panel.item_focus_change();
 	}
 }
@@ -145,25 +168,40 @@ function on_script_unload() {
 
 function on_size() {
 	panel.size();
+	if (!albumart_appearance.displayed()) {
+		albumart.x = albumart.y = albumart.w = albumart.h = 0;
+		allmusic.x = LM;
+		allmusic.y = TM + header_gap - scroll_button_top_inset;
+		allmusic.w = Math.max(1, panel.w - (LM * 2));
+		allmusic.h = Math.max(_scale(24), panel.h - allmusic.y);
+		allmusic.size();
+		return;
+	}
+
+	albumart.x = margin;
+	albumart.y = margin;
+	var available_w = Math.max(1, panel.w - (margin * 3));
+	var available_h = Math.max(1, panel.h - (margin * 3));
+	var minimum_text_h = _scale(24);
 
 	switch (albumart.properties.layout.value) {
-	case 0: // Image left, Text right
-		albumart.w = panel.w * albumart.properties.ratio.value;
-		albumart.h = panel.h - (margin * 2);
+	case 0: // Album Art left, Text right
+		albumart.w = Math.max(1, Math.min(Math.round(panel.w * albumart.properties.ratio.value), available_w));
+		albumart.h = Math.max(1, panel.h - (margin * 2));
 
 		allmusic.x = albumart.w + (margin * 2);
 		allmusic.y = margin + TM + header_gap - scroll_button_top_inset;
-		allmusic.w = panel.w - albumart.w - (margin * 3);
-		allmusic.h = panel.h - allmusic.y;
+		allmusic.w = Math.max(1, panel.w - albumart.w - (margin * 3));
+		allmusic.h = Math.max(minimum_text_h, panel.h - allmusic.y);
 		break;
-	case 1: // Image top, Text bottom
-		albumart.w = panel.w - (margin * 2);
-		albumart.h = panel.h * albumart.properties.ratio.value;
+	case 1: // Album Art top, Text bottom
+		albumart.w = Math.max(1, panel.w - (margin * 2));
+		albumart.h = Math.max(1, Math.min(Math.round(panel.h * albumart.properties.ratio.value), available_h));
 
 		allmusic.x = margin;
 		allmusic.y = albumart.h + (margin * 2) + TM + header_gap - scroll_button_top_inset;
-		allmusic.w = panel.w - (margin * 2);
-		allmusic.h = panel.h - allmusic.y;
+		allmusic.w = Math.max(1, panel.w - (margin * 2));
+		allmusic.h = Math.max(minimum_text_h, panel.h - allmusic.y);
 		break;
 	}
 

@@ -2,6 +2,14 @@
 
 ## v1.2.1 - Information-page theme refresh
 
+- Added Theme Manager support to both legacy AllMusic entries, retaining the
+  text entry's Album Notes provider behaviour and the artwork entry's AllMusic provider.
+- Text-only Album Notes and Last.fm Bio apply and capture page appearance without
+  writing image settings. AllMusic artwork uses the shared appearance and live refresh helpers.
+- Theme Manager filters reader artwork controls using current capability replies;
+  mixed text/image layouts retain applicable controls and saved values are preserved.
+- Removed release-specific availability wording from the Theme Manager guide.
+
 - Album Notes + Album Art, Properties, Last.fm Artist Info + User Info,
   Queue Viewer and Last.fm Bio + Images now refresh supported theme settings
   without reloading their panels. Shared imports also support saved wrappers.

@@ -174,6 +174,12 @@ var JSP3_ENHANCED_RESET_REGISTRY = {
     }
 };
 
+// AllMusic shares page defaults but owns its artwork settings.
+JSP3_ENHANCED_RESET_REGISTRY.allmusic = { appearance: {}, behaviour: {} };
+Object.keys(JSP3_ENHANCED_RESET_REGISTRY["album-notes"].appearance).forEach(function (key) {
+    JSP3_ENHANCED_RESET_REGISTRY.allmusic.appearance[key.replace("2K3.ALBUM.NOTES.ART", "2K3.ALLMUSIC.ART")] = JSP3_ENHANCED_RESET_REGISTRY["album-notes"].appearance[key];
+});
+
 // Standalone descriptive-theme adapter. This deliberately lives in the
 // component tree: enhanced samples must never require a DarkOneJSP3 profile
 // folder when they are used by another theme.
@@ -308,22 +314,22 @@ function jsp3EnhancedThemeProperties(info, role) {
         add("DARKONEJSP3.PAGE.WALLPAPER.BLURRED", "appearance.pages.wallpaperBlurred", "boolean");
     }
     if (role === "lastfm-bio" || role === "lastfm-info" || role === "properties" ||
-            role === "album-notes" || role === "queue-viewer") {
+            role === "album-notes" || role === "allmusic" || role === "queue-viewer") {
         page();
         if (role === "queue-viewer") {
             add("DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE", "appearance.pages.selectedBackgroundMode", "integer", 0, 2);
             add("DARKONEJSP3.PAGE.SELECTED.BACKGROUND.CUSTOM.COLOUR", "appearance.palette.selected", "colour");
         }
-        if (role === "lastfm-bio") {
+        if (role === "lastfm-bio" && (typeof panel === "undefined" || typeof image_appearance !== "undefined")) {
             add("2K3.LASTFM.BIO.IMAGES.DISPLAY", "appearance.pages.artwork.visible", "boolean");
             add("2K3.LASTFM.BIO.IMAGES.BACKGROUND.ENABLED", "appearance.pages.artwork.backgroundEnabled", "boolean");
             add("2K3.LASTFM.BIO.IMAGES.BACKGROUND.BLURRED", "appearance.pages.artwork.backgroundBlurred", "boolean");
             add("2K3.IMAGES.RATIO", "appearance.pages.artwork.ratio", "number", 0.1, 0.9);
         }
-        if (role === "album-notes") {
-            add("2K3.ALBUM.NOTES.ART.DISPLAY", "appearance.pages.artwork.visible", "boolean");
-            add("2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED", "appearance.pages.artwork.backgroundEnabled", "boolean");
-            add("2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED", "appearance.pages.artwork.backgroundBlurred", "boolean");
+        if ((role === "album-notes" || role === "allmusic") && (typeof panel === "undefined" || typeof albumart_appearance !== "undefined")) {
+            add((role === "allmusic" ? "2K3.ALLMUSIC.ART.DISPLAY" : "2K3.ALBUM.NOTES.ART.DISPLAY"), "appearance.pages.artwork.visible", "boolean");
+            add((role === "allmusic" ? "2K3.ALLMUSIC.ART.BACKGROUND.ENABLED" : "2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED"), "appearance.pages.artwork.backgroundEnabled", "boolean");
+            add((role === "allmusic" ? "2K3.ALLMUSIC.ART.BACKGROUND.BLURRED" : "2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED"), "appearance.pages.artwork.backgroundBlurred", "boolean");
             add("2K3.ARTREADER.RATIO", "appearance.pages.artwork.ratio", "number", 0.1, 0.9);
         }
     } else if (role === "album-art") {

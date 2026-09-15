@@ -1,4 +1,4 @@
-# DarkOneJSP3 v1.2.0 Validation Report
+# DarkOneJSP3 v1.2.1 Validation Report
 
 ## Scope
 
@@ -340,7 +340,7 @@ validation and the audited-file count.
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 41 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 42 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -616,7 +616,7 @@ manual smoke test before public release.
 
 ## Acknowledged Theme Apply regression coverage
 
-The v1.2.0 release validation executes the complete two-phase bottom-area
+The v1.2.1 release validation executes the complete two-phase bottom-area
 handshake. It verifies that Bottom Controls accepts a Theme Manager request,
 stages the matching cross-host theme command, negotiates at least 75 ms of
 remaining lead time, publishes a request/state-matched acknowledgement and
@@ -677,7 +677,7 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.0 release package (release validator 0.11.24) passes with **231 audited
+The v1.2.1 release package (release validator 0.11.25) passes with **231 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
 count. The latest maintainer-exported FCL is included byte-for-byte as supplied.
 
@@ -690,3 +690,15 @@ Theme metadata coverage checks edits, cancellation, unchanged values, clearing,
 length rejection and Save as/JSON reload with Unicode and quoted text. Both
 bundled presets pass theme-format validation. Protocol fixtures explicitly set
 the custom colours they exercise, independent of preset appearance choices.
+
+## Reader compatibility rebuild verification
+
+The reader compatibility checks cover text-only page theme application and
+capture, AllMusic artwork property isolation, and capability replies. Theme
+Manager tests cover text-only and mixed reader layouts, stale replies, the
+no-response fallback and preservation of the theme draft during filtering.
+
+This rebuild passes 42 behavioural suites and audits 232 files with zero
+warnings. The FCL, supplied themes, screenshots, README and installation guide
+are preserved byte-for-byte from the maintainer's revised baseline. Native
+foobar2000 testing of the new compatibility paths remains outstanding.

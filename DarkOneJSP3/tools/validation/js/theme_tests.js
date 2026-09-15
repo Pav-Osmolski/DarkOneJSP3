@@ -938,7 +938,58 @@ suite("theme manager file-operation guards", function () {
     on_mouse_move(10, 100); on_mouse_wheel(-1); on_paint(graphics);
     assert(tmState.sidebarWidth < 220 && tmState.fileScroll > 0,
         "Compact layout or independently scrollable theme list failed");
+    tmState.category = tmCategories.map(c => c.name).indexOf("Layout");
+    const originalArtworkFields = tmVisibleFields().filter(f => f[1].indexOf("appearance.pages.artwork.") === 0).length;
+    assert(originalArtworkFields > 0, "Missing artwork editor fields");
+    const draftBeforeFiltering = JSON.stringify(tmState.theme);
+    tmQueryCapabilities();
+    on_notify_data("DarkOneJSP3.Theme.Capabilities.Response", JSON.stringify({id: tmCapabilityId, role: "album-notes", artwork: false}));
+    timers[tmCapabilityFinishTimer - 1]();
+    assert(tmVisibleFields().every(f => f[1].indexOf("appearance.pages.artwork.") !== 0), "Text-only readers expose artwork controls");
+    tmQueryCapabilities();
+    on_notify_data("DarkOneJSP3.Theme.Capabilities.Response", JSON.stringify({id: "stale", role: "allmusic", artwork: true}));
+    on_notify_data("DarkOneJSP3.Theme.Capabilities.Response", JSON.stringify({id: tmCapabilityId, role: "lastfm-bio", artwork: false}));
+    timers[tmCapabilityFinishTimer - 1]();
+    assert(!tmShowArtwork, "Stale capability reply changed the editor");
+    tmQueryCapabilities();
+    on_notify_data("DarkOneJSP3.Theme.Capabilities.Response", JSON.stringify({id: tmCapabilityId, role: "lastfm-bio", artwork: false}));
+    on_notify_data("DarkOneJSP3.Theme.Capabilities.Response", JSON.stringify({id: tmCapabilityId, role: "allmusic", artwork: true}));
+    timers[tmCapabilityFinishTimer - 1]();
+    assert(tmShowArtwork, "Mixed reader layout lost artwork settings");
+    tmQueryCapabilities();
+    timers[tmCapabilityFinishTimer - 1]();
+    assert(tmShowArtwork && JSON.stringify(tmState.theme) === draftBeforeFiltering, "Unknown readers or filtering damaged the draft");
     on_script_unload();
     assert(!files.has(availabilityPath),
         "Theme Manager availability beacon survived panel unload");
+});
+
+suite("reader theme compatibility", function () {
+    const fs = require("fs"), vm = require("vm");
+    const replies = [], props = {};
+    const ctx = {panel: {}, window: {
+        GetProperty(k,d) { return k in props ? props[k] : d; },
+        SetProperty(k,v) { props[k] = v; },
+        NotifyOthers(n,v) { replies.push(JSON.parse(v)); }
+    }};
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/shared/sample_defaults.js"), "utf8"),ctx);
+    vm.runInContext(fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/js/jsp3_enhanced_reset.js"), "utf8"),ctx);
+    const theme = JSON.parse(fs.readFileSync(__path("DarkOneJSP3/themes/Default.json"), "utf8"));
+    function check(ok,message) { if (!ok) throw new Error(message); }
+    ["album-notes", "lastfm-bio", "allmusic"].forEach(role => {
+        const mapped = ctx.jsp3EnhancedThemeProperties(theme,role);
+        check("DARKONEJSP3.PAGE.BACKGROUND.MODE" in mapped, "Page appearance missing for " + role);
+        check(!Object.keys(mapped).some(k => k.indexOf("2K3.") === 0), "Text-only reader maps artwork: " + role);
+        const captured = ctx.jsp3EnhancedCaptureTheme(theme,role);
+        check(!Object.keys(captured).some(k => k.indexOf("appearance.pages.artwork.") === 0), "Text-only capture includes artwork");
+        ctx.jsp3EnhancedHandleSampleReset("DarkOneJSP3.Theme.Capabilities.Query", "test", [role]);
+        check(replies[replies.length-1].artwork === false, "Text-only capability incorrect");
+    });
+    ctx.albumart_appearance = {};
+    const mapped = ctx.jsp3EnhancedThemeProperties(theme,"allmusic");
+    check("2K3.ALLMUSIC.ART.DISPLAY" in mapped, "AllMusic artwork mapping missing");
+    check(!("2K3.ALBUM.NOTES.ART.DISPLAY" in mapped), "AllMusic writes Album Notes artwork properties");
+    ctx.jsp3EnhancedHandleSampleReset("DarkOneJSP3.Theme.Capabilities.Query", "mixed", ["allmusic"]);
+    check(replies[replies.length-1].artwork === true, "AllMusic artwork capability missing");
 });

@@ -289,7 +289,7 @@ var DarkOneTheme = (function () {
         } else if (role === "display-waveform") {
             add(result, theme, "DarkOneJSP3.DisplayWaveform.BackgroundMode", "appearance.displayWaveform.backgroundMode", "mode0_6");
             add(result, theme, "DarkOneJSP3.DisplayWaveform.BackgroundColour", "appearance.displayWaveform.customBackground", "colour");
-        } else if (role === "lastfm-bio" || role === "lastfm-info" || role === "properties" || role === "album-notes" || role === "queue-viewer") {
+        } else if (role === "lastfm-bio" || role === "lastfm-info" || role === "properties" || role === "album-notes" || role === "allmusic" || role === "queue-viewer") {
             commonPage(result, theme);
             if (role === "queue-viewer") {
                 add(result, theme, "DARKONEJSP3.PAGE.SELECTED.BACKGROUND.MODE", "appearance.pages.selectedBackgroundMode", "mode0_2");
@@ -301,10 +301,10 @@ var DarkOneTheme = (function () {
                 add(result, theme, "2K3.LASTFM.BIO.IMAGES.BACKGROUND.BLURRED", "appearance.pages.artwork.backgroundBlurred", "bool");
                 add(result, theme, "2K3.IMAGES.RATIO", "appearance.pages.artwork.ratio", "ratio");
             }
-            if (role === "album-notes") {
-                add(result, theme, "2K3.ALBUM.NOTES.ART.DISPLAY", "appearance.pages.artwork.visible", "bool");
-                add(result, theme, "2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED", "appearance.pages.artwork.backgroundEnabled", "bool");
-                add(result, theme, "2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED", "appearance.pages.artwork.backgroundBlurred", "bool");
+            if (role === "album-notes" || role === "allmusic") {
+                add(result, theme, (role === "allmusic" ? "2K3.ALLMUSIC.ART.DISPLAY" : "2K3.ALBUM.NOTES.ART.DISPLAY"), "appearance.pages.artwork.visible", "bool");
+                add(result, theme, (role === "allmusic" ? "2K3.ALLMUSIC.ART.BACKGROUND.ENABLED" : "2K3.ALBUM.NOTES.ART.BACKGROUND.ENABLED"), "appearance.pages.artwork.backgroundEnabled", "bool");
+                add(result, theme, (role === "allmusic" ? "2K3.ALLMUSIC.ART.BACKGROUND.BLURRED" : "2K3.ALBUM.NOTES.ART.BACKGROUND.BLURRED"), "appearance.pages.artwork.backgroundBlurred", "bool");
                 add(result, theme, "2K3.ARTREADER.RATIO", "appearance.pages.artwork.ratio", "ratio");
             }
         } else if (role === "playlist-manager") {

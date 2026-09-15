@@ -48,6 +48,20 @@ function jsp3EnhancedThemeTiming(roles, phase) {
 }
 
 function jsp3EnhancedHandleSampleReset(name, info, roles) {
+    if (name === "DarkOneJSP3.Theme.Capabilities.Query") {
+        var supported = ["album-notes", "lastfm-bio", "allmusic"];
+        var list = Object.prototype.toString.call(roles) === "[object Array]" ? roles : [roles];
+        if (typeof info !== "string" || info.length > 128) return true;
+        for (var r = 0; r < list.length; r++) {
+            if (supported.indexOf(list[r]) < 0) continue;
+            var artwork = list[r] === "lastfm-bio"
+                ? typeof image_appearance !== "undefined"
+                : typeof albumart_appearance !== "undefined";
+            try { window.NotifyOthers("DarkOneJSP3.Theme.Capabilities.Response",
+                JSON.stringify({ id: info, role: list[r], artwork: artwork })); } catch (e) {}
+        }
+        return true;
+    }
     if (typeof DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION !== "undefined" &&
             name === DARKONEJSP3_THEME_CAPTURE_QUERY_NOTIFICATION) {
         var captureRequest = jsp3EnhancedThemeCaptureRequest(info);
