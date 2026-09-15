@@ -673,3 +673,18 @@ Include:
 - Album Notes Current source > Copy diagnostics output, when applicable;
 - whether the issue also occurs after a restart; and
 - any non-default property or component setting related to the affected area.
+
+## Missing icons or square symbols
+
+The scripts prefer Segoe Fluent Icons and automatically use Segoe MDL2 Assets
+when Fluent is unavailable. The selected font supplies the scroll arrows,
+playlist/filter icons, rating stars and shared sample controls. With neither
+icon font available, simplified text symbols keep the controls readable.
+
+Merge both package folders, including `user-components-x64/foo_jscript_panel3/helpers.txt`,
+then restart foobar2000 so saved entry scripts reload their helpers and rebuild
+cached icons. Installing Segoe Fluent Icons is optional if you prefer its look;
+restart foobar2000 after installing a font.
+
+Microsoft documents the compatible glyphs in its
+[Segoe MDL2 Assets icon reference](https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-ui-symbol-font).

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>Current release:</strong> v1.2.1
+  <strong>Current release:</strong> v1.2.2
 </p>
 
 > [!IMPORTANT]

@@ -263,6 +263,30 @@ var chars = {
 	tab : '\t',
 };
 
+// == JSP3 ICON FONT FALLBACK ==
+// Resolve once per panel, before any icon fonts or cached button images exist.
+// Fluent and MDL2 use the same code points for the icons in chars above.
+var JSP3_ICON_FONT_NAME = (function () {
+    var candidates = ['Segoe Fluent Icons', 'Segoe MDL2 Assets'];
+    for (var i = 0; i < candidates.length; i++) {
+        try { if (utils.CheckFont(candidates[i])) return candidates[i]; } catch (e) {}
+    }
+    // No private-use glyphs in the emergency fallback: ordinary text remains
+    // legible even on systems missing both Microsoft icon fonts.
+    var basic = {
+        check_on: 'x', check_off: '-', heart_on: '+', heart_off: '-',
+        radio_on: '*', radio_off: 'o', rating_on: '*', rating_off: '.',
+        list: '=', lock: 'L', working: '...', up: '^', down: 'v', left: '<',
+        right: '>', close: 'x', stop: '#', prev: '|<', play: '>', pause: '||',
+        next: '>|', search: '?', preferences: '*', menu: '=', music: 'M',
+        volume: 'V', repeat_all: 'R', repeat_one: '1', repeat_off: '-',
+        shuffle: 'S', random: '?', album: 'A', folder: 'F', autoplaylist: 'A'
+    };
+    Object.keys(basic).forEach(function (key) { chars[key] = basic[key]; });
+    return 'Segoe UI';
+})();
+// == END JSP3 ICON FONT FALLBACK ==
+
 var DWRITE_FONT_WEIGHT_THIN = 100;
 var DWRITE_FONT_WEIGHT_EXTRA_LIGHT = 200;
 var DWRITE_FONT_WEIGHT_ULTRA_LIGHT = 200;

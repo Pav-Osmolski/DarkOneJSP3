@@ -45,7 +45,7 @@ function _button(x, y, w, h, normal, hover, fn, tiptext) {
 	this.current = normal;
 
 	if (this.current.char) {
-		this.font = JSON.stringify({Name:'Segoe Fluent Icons',Size:this.h - _scale(10)});
+		this.font = JSON.stringify({Name:JSP3_ICON_FONT_NAME,Size:this.h - _scale(10)});
 	}
 }
 
@@ -518,7 +518,7 @@ function _sb(ch, x, y, w, h, v, fn) {
 	this.h = h;
 	this.v = v;
 	this.fn = fn;
-	this.font = JSON.stringify({Name:'Segoe Fluent Icons',Size:h});
+	this.font = JSON.stringify({Name:JSP3_ICON_FONT_NAME,Size:h});
 }
 
 function _scale(size) {

@@ -333,8 +333,8 @@ function get_font() {
 	g_font_box = smooth_font(name, 10, true);
 	g_font_group1 = smooth_font(name, 20, true);
 	g_font_group2 = smooth_font(name, 16);
-	g_font_fluent_12 = smooth_font("Segoe Fluent Icons", 12);
-	g_font_fluent_20 = smooth_font("Segoe Fluent Icons", 20);
+	g_font_fluent_12 = smooth_font(JSP3_ICON_FONT_NAME, 12);
+	g_font_fluent_20 = smooth_font(JSP3_ICON_FONT_NAME, 20);
 
 	g_time_width = "00:00:00".calc_width2(g_font) + 20;
 	g_rating_width = chars.rating_off.repeat(5).calc_width2(g_font_fluent_20) + 4;

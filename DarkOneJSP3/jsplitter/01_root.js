@@ -10,6 +10,8 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // invisible overlay intercepting mouse input.
 //
 // Version history (newest first):
+// v0.7.41 paints the saved bottom-area appearance behind startup reveal.
+//
 // v0.7.40 adds generation-bound Queue Viewer skip-to-track playback while
 // preserving the queue tail and rolling back if playback advance fails.
 //
@@ -61,6 +63,44 @@ var stageTimer = 0;
 var rootMainVisible = false;
 var rootControlsVisible = false;
 var startupStateWriteFailureLogged = false;
+var startupBottomAreaState = null;
+
+function readStartupBottomAreaState() {
+    var paths = [fb.ProfilePath + 'js_data\\darkonejsp3.bottom-area-state.txt',
+        fb.ProfilePath + 'DarkOneJSP3\\shared\\bottom-area-state.txt'];
+    for (var i = 0; i < paths.length; i++) {
+        try {
+            var state = DarkOneProtocol.bottomArea.parseState(utils.ReadTextFile(paths[i], 65001));
+            if (state) return state;
+        } catch (e) {}
+    }
+    return null;
+}
+
+function paintStartupBottomArea(gr) {
+    var state = startupBottomAreaState;
+    if (!state || ww <= 0 || wh <= 0) return;
+    var modes = DarkOneProtocol.bottomArea.modes;
+    var colour = DOJSP3.colours.separator;
+    if (state.backgroundMode === modes.black) colour = 0xff000000;
+    else if (state.backgroundMode === modes.darkOne) colour = DOJSP3.colours.bar;
+    else if (state.backgroundMode === modes.custom) colour = DarkOneColour.opaque(state.backgroundCustomColour);
+    else if (state.backgroundMode === modes.columnsUi) colour = DarkOneColour.columnsUi(3, DOJSP3.colours.bar);
+    var height = DOJSP3.clamp(DOJSP3.idiv(ww, 10) + DOJSP3.idiv(ww, 128), 1, wh);
+    var top = Math.max(1, wh - height);
+    if (state.backgroundLinearGradient) {
+        DOJSP3.fillVerticalGradient(gr, 0, top, ww, height, colour,
+            DarkOneColour.scaleBrightness(colour, 0.7));
+    } else gr.FillSolidRect(0, top, ww, height, colour);
+    if (state.depthMode === DarkOneProtocol.bottomArea.depths.soft) {
+        gr.FillSolidRect(0, top, ww, 1, 0xff000000);
+        if (height > 1) gr.FillSolidRect(0, top + 1, ww, 1, 0xff0f0f0f);
+        if (height > 2) gr.FillSolidRect(0, top + 2, ww, Math.min(2, height - 2),
+            DarkOneColour.scaleBrightness(colour, 1.2));
+    }
+}
+
+startupBottomAreaState = readStartupBottomAreaState();
 
 
 // Direct playback-queue bridge. JSplitter exposes GetPlaybackQueueContents(),
@@ -551,13 +591,16 @@ function missingStartupControllers() {
 }
 
 function revealStartupTheme() {
+    // Read again after controller readiness: a first-run migration or theme
+    // commit may have published the canonical appearance during startup.
+    startupBottomAreaState = readStartupBottomAreaState();
     clearStartupTimers();
     startupComplete = true;
     startupPreview = false;
     stagedRevealPending = startupTransition() === STARTUP_STAGED_REVEAL;
 
     // Keep both native child windows hidden while the root replaces its black
-    // curtain with the final DarkOne-grey backing frame. The tested 150 ms
+    // curtain with the saved bottom-area backing frame. The tested 150 ms
     // settle period lets queued native sizing/painting complete before
     // DOJSP3.DisplayStack becomes visible, avoiding its black first frame.
     setRootVisibility(false, false);
@@ -792,10 +835,10 @@ function on_size(width, height) {
 }
 
 function on_paint(gr) {
-    // Once startup is complete, paint the prepared DarkOne-grey backing even
-    // while Staged reveal is waiting to show the bottom controls.
+    // Match the saved bottom appearance while its native children are hidden.
     var curtainActive = !startupComplete || startupPreview;
     gr.FillSolidRect(0, 0, ww, wh, curtainActive ? 0xff000000 : DOJSP3.colours.bar);
+    if (!curtainActive) paintStartupBottomArea(gr);
 }
 
 function on_notify_data(name, data) {

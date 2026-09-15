@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -18,7 +18,7 @@
     "network_headers": "0.6.2",
     "album_notes": "0.6.12",
     "info_stack_controller": "0.7.5",
-    "startup_controller": "0.7.40",
+    "startup_controller": "0.7.41",
     "main_columns_controller": "0.7.42",
     "page_background": "0.2.0",
     "colour_helpers": "0.1.7",
@@ -44,5 +44,5 @@
     "theme_manager": "0.1.16"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.2.1"
+  "release": "DarkOneJSP3 v1.2.2"
 }

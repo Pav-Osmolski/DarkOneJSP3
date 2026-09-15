@@ -3779,3 +3779,89 @@ suite("Combined artwork appearance", function () {
            (appearance.properties.border_custom.value >>> 0) === 0xff123456,
            'Combined artwork Sunken/custom border settings were not persisted');
 });
+
+suite("saved theme startup backing", function () {
+    const fs = require("fs"), vm = require("vm");
+    const rootSource = fs.readFileSync(__path("DarkOneJSP3/jsplitter/01_root.js"), "utf8");
+    const files = new Map();
+    let reads = 0;
+    const ctx = {fb: {ProfilePath: ""}, include() {}, window: {},
+        utils: {ReadTextFile(path) { reads++; return files.get(path) || ""; }},
+        ww: 1920, wh: 1080, startupComplete: true, startupPreview: false};
+    vm.createContext(ctx);
+    ["shared/colour_utils.js", "shared/jsplitter_protocols.js", "jsplitter/shared.js"].forEach(path =>
+        vm.runInContext(fs.readFileSync(__path("DarkOneJSP3/" + path), "utf8"), ctx));
+    ["readStartupBottomAreaState", "paintStartupBottomArea", "on_paint"].forEach(name => {
+        const match = rootSource.match(new RegExp("function " + name + "\\([^]*?\\n}"));
+        if (!match) throw new Error("Missing " + name);
+        vm.runInContext(match[0], ctx);
+    });
+    function check(ok, message) { if (!ok) throw new Error(message); }
+    const p = ctx.DarkOneProtocol.bottomArea;
+    const theme = JSON.parse(fs.readFileSync(__path("DarkOneJSP3/themes/DarkOne v4 Revival.json"), "utf8"));
+    const a = theme.appearance.bottomArea;
+    const colour = parseInt(a.customBackground.slice(1), 16) | 0xff000000;
+    const state = p.state(a.backgroundMode, colour, a.linearGradient, a.dividerMode, colour, a.sideDividers, a.depth);
+    const path = "js_data\\darkonejsp3.bottom-area-state.txt";
+    files.set(path, p.serialiseState(state));
+    ctx.startupBottomAreaState = ctx.readStartupBottomAreaState();
+    check(ctx.startupBottomAreaState, "Saved theme was not read before paint");
+    const fills = [];
+    const gr = {FillSolidRect(x,y,w,h,c) {fills.push({x,y,w,h,c:c>>>0});}};
+    ctx.on_paint(gr);
+    const beforePaintReads = reads;
+    ctx.on_paint(gr);
+    check(reads === beforePaintReads, "Startup paint performs filesystem I/O");
+    const height = Math.floor(1920/10) + Math.floor(1920/128), top = 1080-height;
+    function pixel(y) { let c; fills.forEach(f => {if (y>=f.y && y<f.y+f.h) c=f.c;}); return c; }
+    check(pixel(top+10) !== 0xff202020, "Revival still reveals default-grey bottom backing");
+    if (a.linearGradient) check(pixel(1079) === (ctx.DarkOneColour.scaleBrightness(colour,0.7)>>>0), "Startup gradient does not match controls");
+    ctx.startupComplete = false; fills.length = 0; ctx.on_paint(gr);
+    check(fills.length === 1 && fills[0].c === 0xff000000, "Readiness curtain no longer stays black");
+    ctx.startupComplete = true; ctx.startupPreview = true; fills.length = 0; ctx.on_paint(gr);
+    check(fills.length === 1 && fills[0].c === 0xff000000, "Preview curtain no longer stays black");
+    files.set(path, "malformed");
+    check(ctx.readStartupBottomAreaState() === null, "Malformed state was accepted");
+    files.set("DarkOneJSP3\\shared\\bottom-area-state.txt", p.serialiseState(state));
+    check(ctx.readStartupBottomAreaState() !== null, "Legacy saved state fallback failed");
+    files.clear(); ctx.startupPreview = false; ctx.startupBottomAreaState = ctx.readStartupBottomAreaState();
+    fills.length = 0; ctx.on_paint(gr);
+    check(fills.length === 1 && fills[0].c === 0xff202020, "Missing-state fallback changed");
+});
+
+suite("icon font fallback", function () {
+    const fs = require("fs"), vm = require("vm");
+    const helpers = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/helpers.txt"), "utf8");
+    const charsSource = helpers.match(/var chars = \{[^]*?\n};/)[0];
+    const fallback = helpers.split("// == JSP3 ICON FONT FALLBACK ==")[1].split("// == END JSP3 ICON FONT FALLBACK ==")[0];
+    function check(ok,message) {if (!ok) throw new Error(message);}
+    function load(available, fail) {
+        const calls = [];
+        const ctx = {utils: {CheckFont(name) {calls.push(name); if (fail) throw new Error("font probe failed"); return available.indexOf(name)>=0;}}};
+        vm.createContext(ctx);
+        vm.runInContext(charsSource,ctx);
+        const original = JSON.stringify(ctx.chars);
+        vm.runInContext(fallback,ctx);
+        return {ctx,calls,original};
+    }
+    const fluent = load(["Segoe Fluent Icons","Segoe MDL2 Assets"]);
+    check(fluent.ctx.JSP3_ICON_FONT_NAME === "Segoe Fluent Icons" && fluent.calls.length===1, "Fluent preference failed");
+    check(JSON.stringify(fluent.ctx.chars) === fluent.original, "Fluent glyphs changed");
+    const mdl = load(["Segoe MDL2 Assets"]);
+    check(mdl.ctx.JSP3_ICON_FONT_NAME === "Segoe MDL2 Assets" && mdl.calls.length===2, "Windows 10 fallback failed");
+    check(JSON.stringify(mdl.ctx.chars) === mdl.original, "MDL2 glyph mappings changed");
+    for (let i=0;i<100;i++) void mdl.ctx.JSP3_ICON_FONT_NAME;
+    check(mdl.calls.length===2, "Cached font access probes installed fonts repeatedly");
+    [load([]),load([],true)].forEach(result => {
+        check(result.ctx.JSP3_ICON_FONT_NAME === "Segoe UI", "Emergency font fallback failed");
+        Object.keys(result.ctx.chars).forEach(key => {
+            if (["etx","bel","tab"].indexOf(key)>=0) return;
+            check(/^[\x20-\x7e]+$/.test(result.ctx.chars[key]), "Emergency glyph remains private-use: " + key);
+        });
+        check(result.ctx.chars.etx === "\x03" && result.ctx.chars.bel === "\x07" && result.ctx.chars.tab === "\t", "Formatting control characters changed");
+    });
+    ["js/common.js","js/rating.js","js/seekbar.js","jsplaylist/main.js","smooth/common.js"].forEach(path => {
+        const source = fs.readFileSync(__path("user-components-x64/foo_jscript_panel3/samples/"+path),"utf8");
+        check(source.indexOf("JSP3_ICON_FONT_NAME")>=0 && source.indexOf("Segoe Fluent Icons")<0, "Icon consumer bypasses fallback: "+path);
+    });
+});

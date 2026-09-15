@@ -187,7 +187,7 @@ function _seekbar(x, y, w, h, spectrogram_mode) {
 
 		this.paint = function (gr) {
 			if (this.working) {
-				gr.WriteTextSimple(chars.working, JSON.stringify({Name:'Segoe Fluent Icons',Size:this.h - _scale(16)}), this.properties.marker_colour.value, this.x, this.y, this.w, this.h, 2, 2);
+				gr.WriteTextSimple(chars.working, JSON.stringify({Name:JSP3_ICON_FONT_NAME,Size:this.h - _scale(16)}), this.properties.marker_colour.value, this.x, this.y, this.w, this.h, 2, 2);
 			} else if (this.image) {
 				_drawImage(gr, this.image, this.x, this.y, this.w, this.h, image.stretch);
 			}

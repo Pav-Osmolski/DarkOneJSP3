@@ -1,5 +1,17 @@
 # DarkOneJSP3 Changelog
 
+## v1.2.2 - Startup appearance and icon compatibility
+
+- Startup reveal now paints the saved bottom-area background, gradient and depth
+  behind the hidden controls, avoiding a fixed Default-grey strip with custom themes.
+- Icon rendering now prefers Segoe Fluent Icons and falls back automatically to
+  Segoe MDL2 Assets when Fluent is unavailable. This covers reader scroll arrows,
+  playlist/filter icons, rating stars and shared sample controls.
+- If neither icon font is available, basic text symbols replace private-use
+  glyphs so controls remain readable. Font selection is cached per panel.
+- Existing users can merge the updated files and restart foobar2000. No FCL
+  re-import or manual font installation is required for the MDL2 fallback.
+
 ## v1.2.1 - Information-page theme refresh
 
 - Added Theme Manager support to both legacy AllMusic entries, retaining the

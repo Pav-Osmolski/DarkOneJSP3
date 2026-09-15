@@ -1,4 +1,4 @@
-# DarkOneJSP3 v1.2.1 Validation Report
+# DarkOneJSP3 v1.2.2 Validation Report
 
 ## Scope
 
@@ -340,7 +340,7 @@ validation and the audited-file count.
   entries are compiled in one isolated Node syntax batch. Imported sources are
   combined in their actual execution order without a redundant wrapper-only
   pass.
-- All 42 behavioural JavaScript suites are grouped by subsystem and executed by
+- All 44 behavioural JavaScript suites are grouped by subsystem and executed by
   one shared Node harness. Each suite receives an isolated VM context, a named
   structured failure and a bounded timeout, preventing global test-state leaks.
 - The layout manifest contains durable target, panel, FCL and user-facing
@@ -616,7 +616,7 @@ manual smoke test before public release.
 
 ## Acknowledged Theme Apply regression coverage
 
-The v1.2.1 release validation executes the complete two-phase bottom-area
+The v1.2.2 release validation executes the complete two-phase bottom-area
 handshake. It verifies that Bottom Controls accepts a Theme Manager request,
 stages the matching cross-host theme command, negotiates at least 75 ms of
 remaining lead time, publishes a request/state-matched acknowledgement and
@@ -677,7 +677,7 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.1 release package (release validator 0.11.25) passes with **231 audited
+The v1.2.2 release package (release validator 0.11.25) passes with **232 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
 count. The latest maintainer-exported FCL is included byte-for-byte as supplied.
 
@@ -698,7 +698,22 @@ capture, AllMusic artwork property isolation, and capability replies. Theme
 Manager tests cover text-only and mixed reader layouts, stale replies, the
 no-response fallback and preservation of the theme draft during filtering.
 
-This rebuild passes 42 behavioural suites and audits 232 files with zero
-warnings. The FCL, supplied themes, screenshots, README and installation guide
+This rebuild passes 44 behavioural suites and audits 232 files with zero
+warnings. The FCL, supplied themes, screenshots and installation guide
 are preserved byte-for-byte from the maintainer's revised baseline. Native
 foobar2000 testing of the new compatibility paths remains outstanding.
+
+## Startup theme backing
+
+Startup backing tests use the bundled Revival theme to check the bottom-area
+colour and gradient, black readiness/preview curtains, malformed or missing state,
+legacy state fallback and absence of file reads in paint callbacks. Native startup
+visual verification of this fix remains outstanding.
+
+## Icon font compatibility
+
+Automated checks cover Fluent preference, MDL2 fallback, missing fonts, font-probe
+exceptions, cached font selection, unchanged icon mappings with Fluent/MDL2,
+readable emergency symbols and preservation of text-format control characters.
+The five shared icon consumers are checked for use of the selected font.
+Native Windows 10 visual verification remains outstanding.
