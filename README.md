@@ -69,14 +69,6 @@ workflow of the original theme.
   and compatibility for older theme entry scripts.
 * Configurable bottom-area colours and buttons across JSP3 and JSplitter.
 
-## Current release
-
-**DarkOneJSP3 v1.2.1** is the current release.
-
-The documented panel map is the recommended setup method. A maintainer-exported
-FCL is included as an optional convenience for users who prefer to import a
-starting layout.
-
 ## Screenshots
 
 ![Main view](assets/darkonejsp3-screenshot-main.webp)
