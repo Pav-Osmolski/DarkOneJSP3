@@ -35,6 +35,8 @@ Close foobar2000, then back up:
 
 ## 3. Fresh installation
 
+Ensure that the components listed under Requirements are fully installed before proceeding.
+
 The package contains two top-level folders:
 
 ```text
@@ -125,12 +127,18 @@ The bundled FCL contains one saved layout, `DarkOneJSP3`, configured with the sc
 Import it via:
 
 ```text
-foobar2000 > Preferences > Display > Columns UI > Import configuration...
+foobar2000 > Preferences > Display > Columns UI > (Setup tab) Import configuration...
 ```
 
 After importing, compare the resulting layout against the documented hierarchy, custom panel titles, and script assignments in [LAYOUT_AND_PANEL_MAP.md](LAYOUT_AND_PANEL_MAP.md). The panel map remains the canonical reference for the supported layout.
 
 FCL files can contain component-instance metadata that may vary between installations. If the imported layout does not match your installed components, or if no FCL is present, use the manual setup method below.
+
+If you see extra Columns UI toolbars at the top, disable them via:
+
+```text
+foobar2000 > Preferences > Display > Columns UI > (Main window tab) Show toolbars
+```
 
 After confirming the layout, export a fresh local FCL for backup.
 

@@ -121,9 +121,8 @@ for standalone installation, compatibility guarantees and integration details.
 * [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
 * [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 
-Third-party component binaries are not included. Install compatible versions
-from their official project pages or trusted foobar2000 component sources
-before configuring the theme.
+Third-party component binaries are not included in the DarkOneJSP3 package. Install compatible versions
+from the list above or trusted foobar2000 component sources before configuring the theme.
 
 ## Installation
 
@@ -132,7 +131,9 @@ before configuring the theme.
 
 Back up your active foobar2000 profile before installing or upgrading.
 
-The package contains two top-level directories: `DarkOneJSP3` and
+Ensure that the components listed under Requirements are fully installed.
+
+The DarkOneJSP3 package contains two top-level directories: `DarkOneJSP3` and
 `user-components-x64`. Merge both into the directory used by your active
 foobar2000 profile.
 
@@ -194,10 +195,16 @@ The FCL contains one saved layout, `DarkOneJSP3`, configured with the scripted Q
 Import it via:
 
 ```text
-foobar2000 > Preferences > Display > Columns UI > Import configuration...
+foobar2000 > Preferences > Display > Columns UI > (Setup tab) Import configuration...
 ```
 
 After importing, compare the resulting layout against the documented panel titles and script assignments. The panel map remains the canonical reference for the supported layout.
+
+If you see extra Columns UI toolbars at the top, disable them via:
+
+```text
+foobar2000 > Preferences > Display > Columns UI > (Main window tab) Show toolbars
+```
 
 ### Manual setup: advanced users
 
