@@ -8,6 +8,12 @@ from .context import ValidationContext
 from .expectations import MENU_DOCUMENTATION_EXPECTATIONS
 
 
+def _package_versions(body: str) -> list[str]:
+    # Four-part native component versions are not DarkOneJSP3 releases.
+    # Do not match a three-part prefix of e.g. v1.9.2.0 or v1.9.2.9.
+    return re.findall(r'\bv(\d+\.\d+\.\d+)\b(?!\.\d)', body)
+
+
 def _section(body: str, title: str, level: int = 2) -> str:
     hashes = '#' * level
     match = re.search(
@@ -127,7 +133,7 @@ def run(ctx: ValidationContext) -> None:
             errors.append(
                 rel(path) + ' restores the superseded Waveform Minibar component URL'
             )
-        for documented_version in re.findall(r'\bv(\d+\.\d+\.\d+)\b', body):
+        for documented_version in _package_versions(body):
             if documented_version != version:
                 errors.append(
                     rel(path) + ' references an earlier package version outside CHANGELOG.md: v' +

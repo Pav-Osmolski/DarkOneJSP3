@@ -683,6 +683,10 @@ alignment. The lower control-panel dividers remain independently configured.
 
 ### Enhanced Spectrum Analyser
 
+You can use the original Enhanced Spectrum Analyser v1.9.2.0 or the optional
+[Enhanced build patcher](https://github.com/Pav-Osmolski/foo_enhanced_spectrum_analyzer/releases/).
+Follow the patcher release instructions when updating the component.
+
 The spectrum panel is a native component. DarkOneJSP3 supplies its layout
 position and surrounding divider colours but does not replace or reproduce the
 component's own context menu. Configure analyser modes, channels, frequency

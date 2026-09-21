@@ -118,8 +118,12 @@ for standalone installation, compatibility guarantees and integration details.
 * [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 * [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
 * [JSplitter 4.x, tested with 4.1.17](https://github.com/dima-lur/jsplitter/releases)
-* [Enhanced Spectrum Analyser](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710)
+* [Enhanced Spectrum Analyser v1.9.2.0](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710) | [Enhanced build patcher](https://github.com/Pav-Osmolski/foo_enhanced_spectrum_analyzer/releases/)
 * [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
+
+The Enhanced build patcher is an optional update to Enhanced Spectrum Analyser;
+the original v1.9.2.0 remains a supported option. Follow the instructions on the
+patcher release page if you choose to use it.
 
 Third-party component binaries are not included in the DarkOneJSP3 package. Install compatible versions
 from the list above or trusted foobar2000 component sources before configuring the theme.

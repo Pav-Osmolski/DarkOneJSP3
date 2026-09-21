@@ -13,12 +13,20 @@ sys.dont_write_bytecode = True
 from validation.context import ValidationContext
 from validation import manifest_checks, inventory_checks
 from validation.markdown_checks import check_pages
+from validation.documentation_checks import _package_versions
 from build_release import package, validate_archive
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidationRegressionTests(unittest.TestCase):
+    def test_component_versions_are_not_package_versions(self):
+        self.assertEqual(_package_versions('v1.9.2.0 | v1.9.2.9 | v1.9.20.0'), [])
+        self.assertEqual(_package_versions('DarkOneJSP3 v1.2.2; previously v1.2.1.'),
+                         ['1.2.2', '1.2.1'])
+        self.assertEqual(_package_versions('[patcher v1.9.2.9](https://example.test) v1.2.2'),
+                         ['1.2.2'])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='darkone-validation-test-')
         self.addCleanup(self.temp.cleanup)
