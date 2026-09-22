@@ -728,6 +728,24 @@ var DarkOneNetwork = typeof DarkOneNetwork != 'undefined' ? DarkOneNetwork : (fu
         return JSON.stringify(values);
     }
 
+    function lastfm_headers() {
+        var profile = get_html_header_profile();
+        var values = {
+            'User-Agent': profile == HEADER_PROFILE_CHROME ? chrome_user_agent() : application_user_agent(''),
+            'Referer': 'https://www.last.fm/',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-GB,en;q=0.9'
+        };
+        if (profile == HEADER_PROFILE_CHROME) add_chrome_client_hints(values);
+        return JSON.stringify(values);
+    }
+
+    function lastfm_verification_page(html) {
+        html = String(html || '');
+        return /(?:src|href)\s*=\s*["'][^"']*\/_fs-ch-[^"']+["']/i.test(html) ||
+            /(?:src|href)\s*=\s*["'][^"']*\/cdn-cgi\/challenge-platform\//i.test(html);
+    }
+
     function allmusic_referer(url) {
         var match = String(url || '').match(/^(https?:\/\/(?:www\.)?allmusic\.com\/album\/[^\/?#]+)/i);
         return match ? match[1].replace(/^http:/i, 'https:') + '/' : 'https://www.allmusic.com/';
@@ -888,6 +906,8 @@ var DarkOneNetwork = typeof DarkOneNetwork != 'undefined' ? DarkOneNetwork : (fu
         headerProfileLabel : header_profile_label,
         applicationUserAgent : application_user_agent,
         chromeUserAgent : chrome_user_agent,
+        lastfmHtmlHeaders : lastfm_headers,
+        isLastfmVerificationPage : lastfm_verification_page,
         allMusicHeaders : allmusic_headers,
         musicBrainzHeaders : musicbrainz_headers,
         theAudioDBHeaders : theaudiodb_headers,

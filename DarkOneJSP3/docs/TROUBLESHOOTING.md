@@ -688,3 +688,42 @@ restart foobar2000 after installing a font.
 
 Microsoft documents the compatible glyphs in its
 [Segoe MDL2 Assets icon reference](https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-ui-symbol-font).
+
+## Last.fm HTML request identity and browser verification
+
+In either Last.fm Bio variant, right-click the biography text and choose
+**Request identity > HTML services**. Select **JSP3 Enhanced Samples application**
+or **Google Chrome 150-style (experimental)**. This is the same shared HTML
+profile used by Album Notes; changing it affects both panels. The next Last.fm
+extra-info or image-gallery request uses the selected identity without a reload.
+The main biography still uses the Last.fm API and your API key; this menu changes
+HTML requests only.
+
+After changing identity, use **Force update** for biography extra info and
+**Download now** for images. A detected browser-verification response stops
+automatic image retries for that artist in the current session and preserves
+cached images and biography extra info. Manual downloads remain available.
+Changing headers may help compatibility but cannot execute a JavaScript browser
+challenge or guarantee that Last.fm will return a gallery.
+
+Merge the updated shared sample files with foobar2000 closed, then restart.
+Existing Bio entry scripts can stay loaded; no FCL re-import is needed.
+
+### Last.fm image has the wrong extension
+
+Some Last.fm images contain GIF data despite being offered as JPEGs. The image
+panel checks downloaded images and existing Last.fm cache files when it lists
+them, then corrects recognised extensions. Unreadable images are excluded from
+the slideshow; a failed download remains eligible for the bounded retry policy.
+Custom image folders are not renamed. Existing destination files are never
+overwritten during correction.
+
+This identifies the image format; it does not add GIF animation. The panel uses
+a static decoded frame. Use the external-viewer double-click option to open an
+image in a viewer that supports animation.
+
+Signature inspection uses Windows ADO and FileSystemObject. If unavailable,
+blocked, read-only, or the image exceeds 32 MiB, a decodable image remains usable
+under its original filename and the console explains why correction was skipped.
+Checks are cached for the panel session; reload the panel after manually replacing
+an unreadable cached image.

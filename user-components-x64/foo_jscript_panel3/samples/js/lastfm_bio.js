@@ -43,7 +43,7 @@ function _lastfm_bio(x, y, w, h) {
 			return;
 
 		var url = 'https://www.last.fm/music/' + encodeURIComponent(this.artist);
-		var task_id = utils.HTTPRequestAsync(window.ID, 0, url, this.headers);
+		var task_id = utils.HTTPRequestAsync(window.ID, 0, url, DarkOneNetwork.lastfmHtmlHeaders());
 		this.filenames[task_id] = this.filename_extra;
 	}
 
@@ -69,6 +69,11 @@ function _lastfm_bio(x, y, w, h) {
 			console.log(N, response_text);
 			return;
 		}
+
+        if (DarkOneNetwork.isLastfmVerificationPage(response_text)) {
+            console.log(N, '[Last.fm biography] Browser verification required for extra info. Cached data was preserved. Try Request identity > HTML services, then Force update; changing identity may not resolve verification.');
+            return;
+        }
 
 		doc.open();
 
@@ -274,7 +279,21 @@ function _lastfm_bio(x, y, w, h) {
 		}
 	}
 
+    this.dispose_identity_menus = function () {
+        if (this.identity_html_menu) { this.identity_html_menu.Dispose(); this.identity_html_menu = null; }
+        if (this.identity_menu) { this.identity_menu.Dispose(); this.identity_menu = null; }
+    }
+
 	this.rbtn_up = function (x, y) {
+        this.dispose_identity_menus();
+        this.identity_menu = window.CreatePopupMenu();
+        this.identity_html_menu = window.CreatePopupMenu();
+        this.identity_html_menu.AppendMenuItem(MF_STRING, 1150, 'JSP3 Enhanced Samples application');
+        this.identity_html_menu.AppendMenuItem(MF_STRING, 1151, 'Google Chrome 150-style (experimental)');
+        this.identity_html_menu.CheckMenuRadioItem(1150, 1151, DarkOneNetwork.getHtmlHeaderProfile() == 'chrome' ? 1151 : 1150);
+        this.identity_html_menu.AppendTo(this.identity_menu, MF_STRING, 'HTML services');
+        this.identity_menu.AppendTo(panel.m, MF_STRING, 'Request identity');
+
 		panel.m.AppendMenuItem(EnableMenuIf(panel.metadb), 1100, 'Force update');
 		panel.m.AppendMenuSeparator();
 		panel.m.AppendMenuItem(MF_STRING, 1101, 'Last.fm API key...');
@@ -298,6 +317,11 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.rbtn_up_done = function (idx) {
+        this.dispose_identity_menus();
+        if (idx == 1150 || idx == 1151) {
+            DarkOneNetwork.setHtmlHeaderProfile(idx == 1151 ? 'chrome' : 'application');
+            return;
+        }
 		switch (idx) {
 		case 1100:
 			this.get();
@@ -350,6 +374,7 @@ function _lastfm_bio(x, y, w, h) {
 	}
 
 	this.dispose = function () {
+        this.dispose_identity_menus();
 		if (this.disposed)
 			return;
 
@@ -433,10 +458,7 @@ function _lastfm_bio(x, y, w, h) {
 		flag_map : new _p('2K3.TEXT.BIO.FLAG.MAP', 'korea, republic of|kr'),
 	};
 
-	this.headers = JSON.stringify({
-		'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
-		'Referer' : 'https://www.last.fm',
-	});
+
 
 	this.up_btn = new _sb(chars.up, this.x, this.y, _scale(12), _scale(12), _.bind(function () { return this.offset < 0; }, this), _.bind(function () { this.wheel(1); }, this));
 	this.down_btn = new _sb(chars.down, this.x, this.y, _scale(12), _scale(12), _.bind(function () { return this.offset > this.ha - this.text_height; }, this), _.bind(function () { this.wheel(-1); }, this));

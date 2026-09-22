@@ -4,6 +4,7 @@ function _lastfm() {
 	}
 
 	this.notify_data = function (name, data) {
+		if (DarkOneNetwork.onNotify(name, data)) return;
 		if (name == '2K3.NOTIFY.LASTFM') {
 			this.read_file();
 

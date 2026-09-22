@@ -3492,7 +3492,7 @@ suite("Last.fm image lifecycle", function () {
         '_firstElement', '_getFiles', '_drawImage', '_drawOverlay',
         'DWRITE_TEXT_ALIGNMENT_CENTER', 'DWRITE_PARAGRAPH_ALIGNMENT_CENTER',
         'DWRITE_WORD_WRAPPING_NO_WRAP', 'DWRITE_TRIMMING_GRANULARITY_CHARACTER',
-        source + '\nreturn _images;'
+        fs.readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/js/darkone_network.js'), 'utf8') + '\n' + source + '\nreturn _images;'
     );
     const Images = factory(
         panel, windowMock, utils, {artists: 'artists\\'}, lodash, Property,
@@ -3667,6 +3667,20 @@ suite("Last.fm image lifecycle", function () {
     assert(images.artist_state('__proto__').attempts === 0 && images.artist_state('constructor').attempts === 0,
            'Artist names collided with object prototype properties');
 
+    images.artist = 'Verification Artist';
+    assert(images.download(true), 'Verification fixture request failed');
+    images.http_request_done(requests[requests.length - 1], true,
+        '<script src="/_fs-ch-example/script.js?reload=true"></script>', 200, '');
+    assert(images.current_state().last_error === 'browser-verification' &&
+        !images.current_state().retryable && !images.current_state().unavailable,
+        'Verification was treated as an empty gallery or retryable failure');
+    now += 100000;
+    assert(!images.maybe_auto_download(), 'Verification caused an automatic retry loop');
+    images.image_paths = []; images.bitmap.normal = null;
+    assert(images.status_text() === 'Last.fm browser verification required', 'Verification status was unclear');
+    assert(images.download(false), 'Verification blocked an explicit manual retry');
+    images.http_request_done(requests[requests.length - 1], true, currentGallery, 200, '');
+    assert(images.current_state().retryable, 'A real gallery did not recover after verification');
     images.reset_image();
     const disposalBase = bitmapDisposals;
     images.bitmap.normal = {Dispose() { bitmapDisposals++; }};
@@ -3865,3 +3879,119 @@ suite("icon font fallback", function () {
         check(source.indexOf("JSP3_ICON_FONT_NAME")>=0 && source.indexOf("Segoe Fluent Icons")<0, "Icon consumer bypasses fallback: "+path);
     });
 });
+
+suite("Last.fm shared request identity", function () {
+    const fs = require('fs'), vm = require('vm');
+    const root = 'user-components-x64/foo_jscript_panel3/samples/js/';
+    const files = {}, requests = [], menus = [];
+    const ctx = {folders:{data:'data/'},utils:{IsFile:p=>p in files,ReadUTF8:p=>files[p],CreateFolder(){},HTTPRequestAsync(id,method,url,headers){requests.push(JSON.parse(headers));return requests.length;}},
+        _save(p,s){files[p]=s;}, window:{ID:1,NotifyOthers(){},CreatePopupMenu(){const m={disposed:0,AppendMenuItem(){},CheckMenuRadioItem(){},AppendTo(){},Dispose(){this.disposed++;}};menus.push(m);return m;}},
+        panel:{m:{AppendMenuItem(){},AppendMenuSeparator(){}},metadb:{}},MF_STRING:0,EnableMenuIf(){return 0;},N:'Bio',console,
+        _tagged:a=>!!a};
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(__path(root+'darkone_network.js'),'utf8'),ctx);
+    function check(ok,m){if(!ok)throw new Error(m);}
+    const network=ctx.DarkOneNetwork;
+    check(JSON.parse(network.lastfmHtmlHeaders())['User-Agent'].indexOf('JSP3EnhancedSamples/')===0,'Default application identity missing');
+    network.setHtmlHeaderProfile('chrome');
+    check(JSON.parse(network.lastfmHtmlHeaders())['User-Agent'].indexOf('Chrome/150.')>=0,'Chrome profile missing');
+    check(network.getApiHeaderProfile()==='application','HTML selection modified the API profile');
+    network.onNotify('DarkOneJSP3.Network.State',JSON.stringify({scope:'headers-html',profile:'application'}));
+    check(JSON.parse(network.lastfmHtmlHeaders())['User-Agent'].indexOf('JSP3EnhancedSamples/')===0,'Peer profile change ignored');
+    const bio=fs.readFileSync(__path(root+'lastfm_bio.js'),'utf8');
+    const extract=name=>{const m=bio.match(new RegExp('this\\.'+name+' = function \\([^]*?\\n\\t}'));check(m,'Missing method '+name);return m[0];};
+    vm.runInContext('var testBio = {}; (function(){'+['get_extra','http_request_done','dispose_identity_menus','rbtn_up_done'].map(extract).join('\n')+'}).call(testBio);',ctx);
+    ctx.testBio.artist='Spacehog';ctx.testBio.filename_extra='cache';ctx.testBio.filenames={};
+    ctx.testBio.get_extra();
+    check(requests[0]['User-Agent'].indexOf('JSP3EnhancedSamples/')===0,'Bio did not use application identity');
+    ctx.testBio.rbtn_up_done(1151);ctx.testBio.get_extra();
+    check(requests[1]['User-Agent'].indexOf('Chrome/150.')>=0,'Bio cached old request headers');
+    ctx.testBio.http_request_done(2,true,'<script src="/_fs-ch-test/script.js"></script>');
+    check(!('2' in ctx.testBio.filenames),'Verification callback was not retired');
+    check(!network.isLastfmVerificationPage('<ul class="image-list"></ul>'),'Empty gallery misclassified');
+    check(!network.isLastfmVerificationPage('<p>Please enable JavaScript</p>'),'Ordinary noscript advice misclassified');
+    ctx.testBio.identity_menu=ctx.window.CreatePopupMenu();ctx.testBio.identity_html_menu=ctx.window.CreatePopupMenu();
+    ctx.testBio.dispose_identity_menus();ctx.testBio.dispose_identity_menus();
+    check(menus.every(m=>m.disposed===1),'Menus not disposed exactly once');
+});
+suite("Last.fm image format validation", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/js/images.js'), 'utf8');
+    function assert(ok, message) { if (!ok) throw new Error(message); }
+    const files = Object.create(null);
+    let disposed = 0, closed = 0, reads = 0, unavailable = false;
+    const logs = [];
+    const utils = {
+        IsFile(path) { return !!files[path.toLowerCase()]; },
+        LoadImage(path) {
+            const file = files[path.toLowerCase()];
+            if (!file || file.invalid) return null;
+            return {Dispose() { disposed++; }};
+        }
+    };
+    function ActiveXObject(name) {
+        if (unavailable) throw Error('COM disabled');
+        if (name === 'Scripting.FileSystemObject') return {
+            FileExists: utils.IsFile,
+            GetFile(path) {
+                const key = path.toLowerCase(), file = files[key];
+                if (!file) throw Error('Missing file');
+                return {Size: file.size || file.bytes.length, Move(target) {
+                    if (file.locked || files[target.toLowerCase()]) throw Error('Cannot move');
+                    files[target.toLowerCase()] = file;
+                    delete files[key];
+                }};
+            }
+        };
+        if (name === 'ADODB.Stream') return {
+            Open() {}, Close() { closed++; },
+            LoadFromFile(path) { this.bytes = files[path.toLowerCase()].bytes; reads++; },
+            Read(n) { return this.bytes.slice(0, n); }
+        };
+        throw Error(name);
+    }
+    function VBArray(bytes) { this.toArray = () => bytes; }
+    // Exercise actual production methods without the panel UI constructor.
+    const start = source.indexOf('\tthis.image_format = function');
+    const end = source.indexOf('\tthis.download_file_done = function', start);
+    const images = {checked_files: Object.create(null), exts: ['jpg','gif','png','webp','bmp','tif'], log: message => logs.push(message)};
+    new Function('utils','ActiveXObject','VBArray',source.slice(start,end)).call(images,utils,ActiveXObject,VBArray);
+    const ascii = value => Array.from(value).map(c => c.charCodeAt(0));
+    function add(path, bytes, extra) { files[path.toLowerCase()] = Object.assign({bytes}, extra); }
+    const path = 'C:\\artists\\Spacehog\\Spacehog_8accbf1201e74055ae398ec5d12ecce7.jpg';
+    const target = path.replace(/jpg$/, 'gif');
+    add(path, ascii('GIF89a'));
+    assert(images.inspect_image_file(path, true) === target && !utils.IsFile(path) && utils.IsFile(target), 'GIF disguised as JPEG not corrected');
+    assert(disposed === 1 && closed === 1, 'Native image/stream was not released');
+    assert(images.existing_image_file(path), 'Renamed GIF would be downloaded again');
+    const readCount = reads;
+    images.inspect_image_file(target, false);
+    assert(reads === readCount, 'Cached image reread unnecessarily');
+    const cases = [
+        [ascii('GIF87a'),'gif'], [[255,216,255,224],'jpg'],
+        [[137,80,78,71,13,10,26,10],'png'], [ascii('RIFF0000WEBP'),'webp'],
+        [ascii('BM'),'bmp'], [[73,73,42,0],'tif'], [[77,77,0,42],'tif'],
+        [ascii('<html>verification'), ''], [[137,80,78,71], ''], [ascii('RIFF0000WAVE'),'']
+    ];
+    cases.forEach(([bytes, expected]) => assert(images.image_format(bytes) === expected, 'Incorrect signature classification'));
+    add('bad.jpg',ascii('<html>'),{invalid:true});
+    assert(images.inspect_image_file('bad.jpg',true) === '', 'Unreadable response entered slideshow');
+    add('collision.jpg',ascii('GIF89a')); add('collision.gif',ascii('GIF87a'));
+    assert(images.inspect_image_file('collision.jpg',true) === 'collision.jpg' && files['collision.gif'].bytes[4] === 55, 'Collision overwrote a file');
+    add('locked.jpg',ascii('GIF89a'),{locked:true});
+    assert(images.inspect_image_file('locked.jpg',true) === 'locked.jpg', 'Rename failure discarded decodable image');
+    add('large.jpg',ascii('GIF89a'),{size:33*1024*1024});
+    const beforeLarge = reads;
+    assert(images.inspect_image_file('large.jpg',true) === 'large.jpg' && reads === beforeLarge, 'Oversized file buffered');
+    unavailable = true;
+    add('fallback.jpg',ascii('GIF89a'));
+    assert(images.inspect_image_file('fallback.jpg',true) === 'fallback.jpg', 'Unavailable COM broke decoded image fallback');
+    unavailable = false;
+    add('unknown.jpg',ascii('NEWCODEC'));
+    assert(images.inspect_image_file('unknown.jpg',true) === 'unknown.jpg', 'Unknown decoder-supported format renamed by guess');
+    add('bad.jpg',ascii('GIF89a'));
+    assert(images.inspect_image_file('bad.jpg',true) === 'bad.gif', 'Successful retry remained excluded');
+    assert(source.includes('this.existing_image_file(item.filename)'), 'Download deduplication is not wired');
+    assert(source.includes('this.inspect_image_file(path, true)'), 'Download validation is not wired');
+});
+

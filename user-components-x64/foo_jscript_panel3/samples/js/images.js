@@ -232,6 +232,7 @@ function _images(options) {
 		var state = this.current_state();
 		if (state.pending)
 			return 'Downloading images...';
+        if (state.last_error == 'browser-verification') return 'Last.fm browser verification required';
 		if (state.phase == 'retrying')
 			return state.last_error == 'no-images'
 				? 'No images found - retrying...'
@@ -346,7 +347,7 @@ function _images(options) {
 
 		try {
 			var url = 'https://www.last.fm/music/' + encodeURIComponent(artist) + '/+images';
-			var task_id = utils.HTTPRequestAsync(window.ID, 0, url, this.headers);
+			var task_id = utils.HTTPRequestAsync(window.ID, 0, url, DarkOneNetwork.lastfmHtmlHeaders());
 			this.artists[task_id] = artist;
 			if (automatic)
 				this.automatic_tasks[task_id] = artist;
@@ -398,6 +399,93 @@ function _images(options) {
 		return true;
 	}
 
+
+	// Inspect content, not the URL suffix. GIFs remain static in this bitmap renderer.
+	this.image_format = function (bytes) {
+		function ascii(start, count) {
+			var value = '';
+			for (var i = start; i < start + count && i < bytes.length; i++)
+				value += String.fromCharCode(bytes[i]);
+			return value;
+		}
+		if (ascii(0, 6) == 'GIF87a' || ascii(0, 6) == 'GIF89a') return 'gif';
+		if (bytes[0] == 255 && bytes[1] == 216 && bytes[2] == 255) return 'jpg';
+		if (bytes[0] == 137 && ascii(1, 3) == 'PNG' &&
+			bytes[4] == 13 && bytes[5] == 10 && bytes[6] == 26 && bytes[7] == 10) return 'png';
+		if (ascii(0, 4) == 'RIFF' && ascii(8, 4) == 'WEBP') return 'webp';
+		if (ascii(0, 2) == 'BM') return 'bmp';
+		if (ascii(0, 4) == 'II\x2a\x00' || ascii(0, 4) == 'MM\x00\x2a') return 'tif';
+		// Unknown formats are left to the installed image decoder, never guessed.
+		return '';
+	}
+
+	this.inspect_image_file = function (path, force) {
+		var key = path.toLowerCase();
+		var cached = this.checked_files[key];
+		if (!force && cached !== undefined && (!cached || utils.IsFile(cached))) return cached;
+		if (Object.keys(this.checked_files).length >= 1024) this.checked_files = Object.create(null);
+		var img = null;
+		var stream = null;
+		var result = path;
+		try {
+			img = utils.LoadImage(path);
+			if (!img) throw new Error('Image decoder rejected the file');
+		} catch (e) {
+			this.log('Unreadable image excluded: ' + path + ' (' + String(e.message || e) + ')');
+			this.checked_files[key] = '';
+			return '';
+		} finally {
+			if (img) try { img.Dispose(); } catch (e) {}
+		}
+		try {
+			var files = new ActiveXObject('Scripting.FileSystemObject');
+			// LoadFromFile buffers the file: bound the allocation before reading.
+			if (Number(files.GetFile(path).Size) > 32 * 1024 * 1024)
+				throw new Error('File exceeds the 32 MiB signature inspection limit');
+			stream = new ActiveXObject('ADODB.Stream');
+			stream.Type = 1;
+			stream.Open();
+			stream.LoadFromFile(path);
+			var format = this.image_format(new VBArray(stream.Read(16)).toArray());
+			stream.Close();
+			stream = null;
+			var extension = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
+			if (format && extension != format && !(format == 'jpg' && extension == 'jpeg') &&
+					!(format == 'tif' && extension == 'tiff')) {
+				var target = path.substring(0, path.lastIndexOf('.') + 1) + format;
+				if (files.FileExists(target)) {
+					this.log('Image extension correction skipped because the destination exists: ' + target);
+				} else {
+					files.GetFile(path).Move(target);
+					result = target;
+					this.log('Corrected image extension: ' + path + ' -> ' + target);
+				}
+			}
+		} catch (e) {
+			// COM may be unavailable or the cache read-only. Keep the decoded image usable.
+			if (!this.signature_warning_logged) {
+				this.log('Image extension inspection unavailable; keeping decoded images: ' + String(e.message || e));
+				this.signature_warning_logged = true;
+			}
+		} finally {
+			if (stream) try { stream.Close(); } catch (e) {}
+		}
+		// Bounded session cache avoids file reads during every slideshow refresh.
+		if (Object.keys(this.checked_files).length >= 1024) this.checked_files = Object.create(null);
+		this.checked_files[key] = result;
+		this.checked_files[result.toLowerCase()] = result;
+		return result;
+	}
+
+	this.existing_image_file = function (path) {
+		var base = path.substring(0, path.lastIndexOf('.') + 1);
+		for (var i = 0; i < this.exts.length; i++) {
+			var candidate = base + this.exts[i];
+			if (utils.IsFile(candidate) && this.inspect_image_file(candidate, false)) return true;
+		}
+		return false;
+	}
+
 	this.download_file_done = function (path, success, error_text) {
 		if (this.disposed || !path)
 			return;
@@ -413,6 +501,13 @@ function _images(options) {
 
 		if (task)
 			delete this.download_tasks[lower_path];
+
+		if (success) {
+			var inspected_path = this.inspect_image_file(path, true);
+			success = !!inspected_path;
+			if (success) path = inspected_path;
+			else error_text = 'Downloaded file is not a decodable image: ' + path;
+		}
 
 		if (!success) {
 			this.log('Image file failed for "' + (task ? task.artist : this.artist) + '": ' +
@@ -479,6 +574,18 @@ function _images(options) {
 			return;
 
 		status = Number(status) || 0;
+        if (DarkOneNetwork.isLastfmVerificationPage(response_text)) {
+            state.pending = false;
+            state.last_error = 'browser-verification';
+            state.last_http_status = status;
+            state.retryable = false;
+            state.retry_after_until = 0;
+            state.unavailable = false;
+            state.phase = 'error';
+            this.log('Last.fm browser verification required for "' + artist + '". Automatic retries stopped; cached images were preserved. Try Request identity > HTML services in the biography menu, then Download now. Changing identity may not resolve verification.');
+            this.notify_status_changed();
+            return;
+        }
 		var http_ok = success && (!status || (status >= 200 && status < 300));
 		if (!http_ok) {
 			var retryable = this.is_transient_http_failure(success, status);
@@ -539,7 +646,7 @@ function _images(options) {
 		var queued = 0;
 		for (var j = 0; j < candidates.length && queued < this.properties.limit.value; j++) {
 			var item = candidates[j];
-			if (utils.IsFile(item.filename))
+			if (this.existing_image_file(item.filename))
 				continue;
 			// Keep timed-out paths quarantined until their callback arrives. The
 			// native API cannot distinguish two generations writing the same path.
@@ -976,6 +1083,16 @@ function _images(options) {
 		} else {
 			this.image_paths = _getFiles(this.folder, this.exts);
 		}
+		if (this.properties.source.value == 1) {
+			var checked = [];
+			for (var i = 0; i < this.image_paths.length; i++) {
+				var original = this.image_paths[i];
+				if (this.download_tasks[original.toLowerCase()]) continue;
+				var path = this.inspect_image_file(original, false);
+				if (path && checked.indexOf(path) == -1) checked.push(path);
+			}
+			this.image_paths = checked;
+		}
 	}
 
 	this.wheel = function (s) {
@@ -1026,12 +1143,14 @@ function _images(options) {
 	this.download_timeout_ms = 120000;
 	this.limits = [1, 3, 5, 10, 15, 20];
 	this.modes = ['grid', 'left', 'right', 'top', 'bottom', 'off'];
-	this.exts = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'heif', 'heic', 'avif', 'jxl'];
+	this.exts = ['bmp', 'tif', 'tiff', 'webp', 'jpg', 'jpeg', 'png', 'gif', 'heif', 'heic', 'avif', 'jxl'];
 	this.folder = '';
 	this.artist = '';
 	this.artists = {};
 	this.automatic_tasks = {};
 	this.download_tasks = {};
+	this.checked_files = Object.create(null);
+	this.signature_warning_logged = false;
 	this.properties = {};
 	this.image_index = 0;
 	this.time = 0;
@@ -1069,10 +1188,7 @@ function _images(options) {
 		this.properties.blur_opacity = new _p('2K3.IMAGES.BLUR.OPACITY', 0.5);
 	}
 
-	this.headers = JSON.stringify({
-		'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
-		'Referer' : 'https://www.last.fm',
-	});
+
 
 	utils.CreateFolder(folders.artists);
 	this.interval_id = window.SetInterval(this.interval_func, 1000);

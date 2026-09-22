@@ -1,5 +1,16 @@
 # DarkOneJSP3 Changelog
 
+## v1.2.3 - Last.fm request identity and image validation
+
+- Last.fm images are checked with the image decoder and their file signatures.
+  Mislabelled cached/downloaded GIF, JPEG, PNG, WebP, BMP and TIFF images receive
+  the correct extension without overwriting existing files. Corrected files are
+  recognised on later downloads. GIFs display as a static frame in the panel.
+
+- Last.fm Bio variants now share Album Notes HTML request identity profiles for
+  extra-info and image requests. Browser-verification pages preserve cached data
+  and stop automatic image retries; manual retries remain available.
+
 ## v1.2.2 - Startup appearance and icon compatibility
 
 - Startup reveal now paints the saved bottom-area background, gradient and depth
