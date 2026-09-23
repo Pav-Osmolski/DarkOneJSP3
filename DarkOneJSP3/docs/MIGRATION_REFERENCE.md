@@ -55,7 +55,10 @@ numbered JSplitter controller.
 
 ## Important migration rules
 
-- The fourth InfoStack child is `DOJSP3.AlbumNotes` and loads `Album Notes.txt`.
+- The second InfoStack child is `DOJSP3.LastfmBio` and loads `Last.fm Bio.txt`
+  or `Last.fm Bio + Images.txt`.
+- The fourth InfoStack child is `DOJSP3.AlbumNotes` and loads `Album Notes.txt`
+  or `Album Notes + Album Art.txt`.
 - Rebuild migrated layouts against the exact current hierarchy and titles.
 - Visible InfoStack labels can be customised independently from custom titles.
 - Hotfixes do not update `DarkOneJSP3.fcl`. Verify any imported file against the

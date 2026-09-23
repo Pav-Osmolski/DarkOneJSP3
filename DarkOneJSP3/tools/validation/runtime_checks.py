@@ -307,7 +307,7 @@ def _run_behaviour_suites(ctx: ValidationContext, node: str,
         return
     harness = ctx.project / 'tools' / 'validation' / 'js' / 'harness.js'
     result = subprocess.run(
-        [node, str(harness), str(ctx.root), str(bundle), '15000', '44'],
+        [node, str(harness), str(ctx.root), str(bundle), '15000', '47'],
         capture_output=True, text=True, timeout=60)
     if not result.returncode:
         return

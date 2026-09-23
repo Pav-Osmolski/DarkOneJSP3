@@ -131,6 +131,12 @@ become visible.
 
 ### Combined image layouts
 
+Panel 02 (`DOJSP3.LastfmBio`) accepts `samples\Last.fm Bio.txt` or
+`samples\Last.fm Bio + Images.txt`. Panel 04 (`DOJSP3.AlbumNotes`) accepts
+`samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`.
+Choose one script per panel: the plain versions provide text, while the combined
+versions add images. Keep the same custom title and position for either choice.
+
 Last.fm Bio + Images and Album Notes + Album Art add controls for their displayed
 artwork before the content-specific commands:
 
@@ -1352,7 +1358,8 @@ restores the original hard-edged waveform.
 ## 10. Album Notes and online sources
 
 The fourth InfoStack child must be titled DOJSP3.AlbumNotes and load
-samples\Album Notes.txt. Right-click empty content space inside the page.
+`samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`.
+Right-click empty content space inside the page.
 
 ### View
 

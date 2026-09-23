@@ -120,7 +120,7 @@ EXPECTED_MODULE_VERSIONS = {
     'album_notes': ('0.6.12', 'Album Notes'),
     'album_art': ('0.1.5', 'Album Art'),
     'info_stack_controller': ('0.7.5', 'InfoStack controller'),
-    'startup_controller': ('0.7.40', 'startup controller'),
+    'startup_controller': ('0.7.41', 'startup controller'),
     'main_columns_controller': ('0.7.42', 'Main Columns controller'),
     'page_background': ('0.2.0', 'page-background module'),
     'colour_helpers': ('0.1.7', 'colour-helper module'),
@@ -134,14 +134,14 @@ EXPECTED_MODULE_VERSIONS = {
     'tools_menu': ('0.3.0', 'DarkOne Tools menu module'),
     'info_stack_colours': ('0.1.1', 'InfoStack colour helper'),
     'info_stack_bridges': ('0.2.1', 'InfoStack bridge helper'),
-    'release_validator': ('0.11.23', 'release-validator module'),
+    'release_validator': ('0.11.25', 'release-validator module'),
     'sample_defaults': ('0.2.5', 'standalone sample-default registry'),
     'combined_artwork': ('0.1.0', 'combined-artwork appearance module'),
-    'sample_reset_bridge': ('0.2.5', 'standalone sample reset bridge'),
+    'sample_reset_bridge': ('0.2.6', 'standalone sample reset bridge'),
     'standalone_sample_compatibility': ('0.1.1', 'legacy sample-entry compatibility layer'),
     'bottom_area_appearance': ('0.3.6', 'shared bottom-area appearance'),
-    'theme_engine': ('0.2.7', 'theme engine'),
-    'theme_manager': ('0.1.15', 'Theme Manager panel'),
+    'theme_engine': ('0.2.8', 'theme engine'),
+    'theme_manager': ('0.1.16', 'Theme Manager panel'),
 }
 
 # Principal menu labels whose source and documentation must remain aligned.

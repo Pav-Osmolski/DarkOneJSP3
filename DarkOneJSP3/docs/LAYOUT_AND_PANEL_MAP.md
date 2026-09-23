@@ -37,9 +37,9 @@ Column
 
 ```text
 01  samples\Smooth Playlist Manager.txt
-02  samples\Last.fm Bio.txt
+02  samples\Last.fm Bio.txt | samples\Last.fm Bio + Images.txt
 03  samples\Last.fm Artist Info + User Info.txt
-04  samples\Album Notes.txt
+04  samples\Album Notes.txt | samples\Album Notes + Album Art.txt
 05  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Queue Viewer.txt
 06  samples\Properties.txt
 07  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Theme Manager.txt (optional)
@@ -50,6 +50,14 @@ Column
 12  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Display Panel.txt
 13  <profile>\DarkOneJSP3\jscript\DarkOneJSP3 - Control Panel - Right.txt
 ```
+
+The `|` separator above means either script is a valid choice.
+
+Panel 02 (`DOJSP3.LastfmBio`) accepts `samples\Last.fm Bio.txt` or
+`samples\Last.fm Bio + Images.txt`. Panel 04 (`DOJSP3.AlbumNotes`) accepts
+`samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`.
+Choose one script per panel: the plain versions provide text, while the combined
+versions add images. Keep the same custom title and position for either choice.
 
 ## JSplitter loader and controller assignments
 

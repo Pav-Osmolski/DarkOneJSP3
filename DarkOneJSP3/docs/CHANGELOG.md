@@ -1,5 +1,23 @@
 # DarkOneJSP3 Changelog
 
+## v1.2.4 - Smoother Last.fm image browsing
+
+- Clarified that InfoStack panels 02 and 04 support either the text-only or
+  combined image scripts; updated setup, migration and troubleshooting guidance.
+
+- Mouse-wheel image selection now restarts the slideshow interval after the
+  selected image is ready, so it remains visible for a full cycle duration.
+
+- Improved Last.fm image browsing with an 80 ms scroll debounce, a three-image
+  cache (up to 64 MiB of estimated bitmap pixels), display copies capped at 2048
+  pixels on the longest side, and blurred backgrounds prepared from copies no
+  larger than 256 pixels. Original image files remain unchanged.
+- Folder refreshes preserve the selected image. Excluded files no longer cause
+  repeated refreshes every three seconds. Cache signature inspection is spread
+  across timer callbacks; images are decoded on use instead of decoding the whole
+  folder up front. Download validation reuses prepared display bitmaps.
+- Artist changes and panel unload cancel deferred work and release cached images.
+
 ## v1.2.3 - Last.fm request identity and image validation
 
 - Last.fm images are checked with the image decoder and their file signatures.

@@ -1,8 +1,8 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.4",
   "target": {
     "jscript_panel": "3.8.5",
-    "jsplitter": "4.1.14",
+    "jsplitter": "4.1.17",
     "foobar2000": "v2 x64"
   },
   "jsplitters": [
@@ -87,7 +87,7 @@
       "type": "JScript Panel 3",
       "source": "DarkOneJSP3/jscript/DarkOneJSP3 - Theme Manager.txt",
       "script": "DarkOneJSP3/jscript/DarkOneJSP3 - Theme Manager.txt",
-      "version": "0.1.14",
+      "version": "0.1.16",
       "optional": true
     },
     {
@@ -108,7 +108,7 @@
       "title": "DOJSP3.Playlist",
       "type": "JScript Panel 3",
       "source": "samples/JS Playlist.txt",
-      "version": "0.6.8"
+      "version": "0.6.9"
     },
     {
       "number": 11,

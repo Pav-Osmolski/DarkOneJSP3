@@ -419,23 +419,16 @@ function _images(options) {
 		return '';
 	}
 
-	this.inspect_image_file = function (path, force) {
+	this.inspect_image_file = function (path, force, signature_only) {
 		var key = path.toLowerCase();
 		var cached = this.checked_files[key];
 		if (!force && cached !== undefined && (!cached || utils.IsFile(cached))) return cached;
 		if (Object.keys(this.checked_files).length >= 1024) this.checked_files = Object.create(null);
-		var img = null;
 		var stream = null;
 		var result = path;
-		try {
-			img = utils.LoadImage(path);
-			if (!img) throw new Error('Image decoder rejected the file');
-		} catch (e) {
-			this.log('Unreadable image excluded: ' + path + ' (' + String(e.message || e) + ')');
+		if (!signature_only && !this.load_entry(path)) {
 			this.checked_files[key] = '';
 			return '';
-		} finally {
-			if (img) try { img.Dispose(); } catch (e) {}
 		}
 		try {
 			var files = new ActiveXObject('Scripting.FileSystemObject');
@@ -458,6 +451,10 @@ function _images(options) {
 				} else {
 					files.GetFile(path).Move(target);
 					result = target;
+					if (this.image_cache[key]) {
+						this.image_cache[target.toLowerCase()] = this.image_cache[key];
+						delete this.image_cache[key];
+					}
 					this.log('Corrected image extension: ' + path + ' -> ' + target);
 				}
 			}
@@ -481,7 +478,7 @@ function _images(options) {
 		var base = path.substring(0, path.lastIndexOf('.') + 1);
 		for (var i = 0; i < this.exts.length; i++) {
 			var candidate = base + this.exts[i];
-			if (utils.IsFile(candidate) && this.inspect_image_file(candidate, false)) return true;
+			if (utils.IsFile(candidate) && this.inspect_image_file(candidate, false, true)) return true;
 		}
 		return false;
 	}
@@ -503,6 +500,7 @@ function _images(options) {
 			delete this.download_tasks[lower_path];
 
 		if (success) {
+			this.evict_entry(lower_path);
 			var inspected_path = this.inspect_image_file(path, true);
 			success = !!inspected_path;
 			if (success) path = inspected_path;
@@ -699,7 +697,7 @@ function _images(options) {
 		this.time++;
 		this.maybe_auto_download();
 
-		if (this.properties.cycle.value > 0 && this.image_paths.length > 1 && this.time % this.properties.cycle.value == 0) {
+		if (this.properties.cycle.value > 0 && this.image_paths.length > 1 && Date.now() - this.cycle_started_at >= this.properties.cycle.value * 1000 && !this.wheel_timer) {
 			this.image_index++;
 
 			if (this.image_index == this.image_paths.length) {
@@ -710,7 +708,7 @@ function _images(options) {
 			window.Repaint();
 		}
 
-		if (this.properties.source.value == 1 && this.folder.length && this.time % 3 == 0 && _getFiles(this.folder, this.exts).length != this.image_paths.length) {
+		if (this.properties.source.value == 1 && this.folder.length && this.time % 3 == 0 && this.folder_snapshot() != this.folder_stamp) {
 			this.update();
 		}
 	}, this);
@@ -730,7 +728,7 @@ function _images(options) {
 
 	this.lbtn_dblclk = function (x, y) {
 		if (this.containsXY(x, y) && this.image_index < this.image_paths.length) {
-			var path = this.image_paths[this.image_index];
+			var path = this.displayed_path || this.image_paths[this.image_index];
 			switch (this.properties.double_click_mode.value) {
 			case 0:
 				utils.Run(path);
@@ -945,6 +943,7 @@ function _images(options) {
 		case 1430:
 		case 1460:
 			this.properties.cycle.value = idx - 1400;
+			this.cycle_started_at = Date.now();
 			break;
 		case 1500:
 		case 1501:
@@ -981,20 +980,129 @@ function _images(options) {
 		}
 	}
 
-	this.reset_image = function () {
-		if (this.bitmap.normal) {
-			try {
-				this.bitmap.normal.Dispose();
-			} catch (e) {}
-			this.bitmap.normal = null;
-		}
 
-		if (this.bitmap.blur) {
-			try {
-				this.bitmap.blur.Dispose();
-			} catch (e) {}
-			this.bitmap.blur = null;
+	this.cancel_wheel = function () {
+		if (this.wheel_timer) window.ClearTimeout(this.wheel_timer);
+		this.wheel_timer = 0;
+		this.pending_index = -1;
+	}
+
+	this.evict_entry = function (key) {
+		var entry = this.image_cache[key];
+		if (!entry) return;
+		if (this.bitmap.normal == entry.normal) this.bitmap.normal = null;
+		if (this.bitmap.blur == entry.blur) this.bitmap.blur = null;
+		if (entry.normal) entry.normal.Dispose();
+		if (entry.blur) entry.blur.Dispose();
+		delete this.image_cache[key];
+	}
+
+	this.trim_cache = function (keep) {
+		var keys = Object.keys(this.image_cache);
+		var total = 0;
+		for (var i = 0; i < keys.length; i++) total += this.image_cache[keys[i]].bytes;
+		var self = this;
+		keys.sort(function (a, b) { return self.image_cache[a].used - self.image_cache[b].used; });
+		for (var j = 0; j < keys.length && (Object.keys(this.image_cache).length > 3 || total > 64 * 1024 * 1024); j++) {
+			if (keys[j] == keep || keys[j] == this.displayed_path.toLowerCase()) continue;
+			total -= this.image_cache[keys[j]].bytes;
+			this.evict_entry(keys[j]);
 		}
+	}
+
+	this.load_entry = function (path) {
+		var key = path.toLowerCase();
+		var entry = this.image_cache[key];
+		var blur = this.wants_blur();
+		if (entry && (!blur || entry.blur)) {
+			entry.used = ++this.cache_clock;
+			return entry;
+		}
+		var img = null;
+		var normal = null;
+		var blurred = null;
+		try {
+			img = utils.LoadImage(path);
+			if (!img) throw new Error('Image decoder rejected the file');
+			var width = Math.max(1, Number(img.Width) || 1);
+			var height = Math.max(1, Number(img.Height) || 1);
+			// Bound retained display memory; the source file is never modified.
+			var scale = Math.min(1, 2048 / Math.max(width, height));
+			var w = Math.max(1, Math.round(width * scale));
+			var h = Math.max(1, Math.round(height * scale));
+			if (scale < 1) img.Resize(w, h);
+			normal = entry ? entry.normal : img.CreateBitmap();
+			var bytes = w * h * 4;
+			if (blur) {
+				var small = Math.min(1, 256 / Math.max(w, h));
+				var bw = Math.max(1, Math.round(w * small));
+				var bh = Math.max(1, Math.round(h * small));
+				if (small < 1) img.Resize(bw, bh);
+				img.StackBlur(Math.max(1, Math.round(120 * scale * small)));
+				blurred = img.CreateBitmap();
+				bytes += bw * bh * 4;
+			}
+			entry = {normal: normal, blur: blurred, bytes: bytes, used: ++this.cache_clock};
+			this.image_cache[key] = entry;
+			this.trim_cache(key);
+			return entry;
+		} catch (e) {
+			if (normal && (!entry || normal != entry.normal)) normal.Dispose();
+			if (blurred) blurred.Dispose();
+			this.log('Image load failed: ' + path + ' (' + String(e.message || e) + ')');
+			return entry || null;
+		} finally {
+			if (img) try { img.Dispose(); } catch (e) {}
+		}
+	}
+
+	this.reset_image = function () {
+		// Bitmap ownership belongs to the cache; dispose each native object once.
+		var owned = [];
+		var keys = Object.keys(this.image_cache);
+		for (var i = 0; i < keys.length; i++) {
+			owned.push(this.image_cache[keys[i]].normal, this.image_cache[keys[i]].blur);
+			this.evict_entry(keys[i]);
+		}
+		if (this.bitmap.normal && owned.indexOf(this.bitmap.normal) == -1) this.bitmap.normal.Dispose();
+		if (this.bitmap.blur && owned.indexOf(this.bitmap.blur) == -1) this.bitmap.blur.Dispose();
+		this.bitmap.normal = null;
+		this.bitmap.blur = null;
+		this.displayed_path = '';
+	}
+
+	this.folder_snapshot = function () {
+		return _getFiles(this.folder, this.exts).sort().join('\n');
+	}
+
+	this.cancel_inspection = function () {
+		if (this.inspection_timer) window.ClearTimeout(this.inspection_timer);
+		this.inspection_timer = 0;
+	}
+
+	this.schedule_inspection = function () {
+		this.cancel_inspection();
+		if (this.properties.source.value != 1 || this.disposed) return;
+		var self = this;
+		var pending = this.image_paths.slice();
+		function step() {
+			self.inspection_timer = 0;
+			if (self.disposed) return;
+			if (window.IsVisible === false) { self.inspection_timer = window.SetTimeout(step, 500); return; }
+			if (self.wheel_timer) { self.inspection_timer = window.SetTimeout(step, 80); return; }
+			while (pending.length) {
+				var path = pending.shift();
+				if (self.checked_files[path.toLowerCase()] !== undefined) continue;
+				var corrected = self.inspect_image_file(path, false, true);
+				var index = self.image_paths.indexOf(path);
+				if (index != -1 && corrected) self.image_paths[index] = corrected;
+				if (self.displayed_path == path) self.displayed_path = corrected;
+				self.folder_stamp = self.folder_snapshot();
+				break;
+			}
+			if (pending.length) self.inspection_timer = window.SetTimeout(step, 80);
+		}
+		if (pending.length) this.inspection_timer = window.SetTimeout(step, 80);
 	}
 
 	this.dispose = function () {
@@ -1002,6 +1110,8 @@ function _images(options) {
 			return;
 
 		this.disposed = true;
+		this.cancel_wheel();
+		this.cancel_inspection();
 		if (this.interval_id) {
 			window.ClearInterval(this.interval_id);
 			this.interval_id = 0;
@@ -1020,6 +1130,12 @@ function _images(options) {
 		if (this.disposed)
 			return;
 
+		this.cancel_wheel();
+		if (this.cache_folder != this.folder) {
+			this.reset_image();
+			this.checked_files = Object.create(null);
+			this.cache_folder = this.folder;
+		}
 		this.update_image_paths();
 		if (this.image_paths.length && _tagged(this.artist)) {
 			var state = this.current_state();
@@ -1035,29 +1151,41 @@ function _images(options) {
 	}
 
 	this.update_image = function () {
-		this.reset_image();
-
-		if (this.image_index < this.image_paths.length) {
-			var img = null;
-			try {
-				img = utils.LoadImage(this.image_paths[this.image_index]);
-				if (img) {
-					this.bitmap.normal = img.CreateBitmap();
-					if (this.wants_blur()) {
-						img.StackBlur(120);
-						this.bitmap.blur = img.CreateBitmap();
-					}
-				}
-			} catch (e) {
-				console.log(N, e.message || e);
-			} finally {
-				if (img) {
-					try {
-						img.Dispose();
-					} catch (e) {}
-				}
-			}
+		var path = this.image_paths[this.image_index];
+		if (!path) {
+			this.bitmap.normal = null;
+			this.bitmap.blur = null;
+			this.displayed_path = '';
+			return;
 		}
+		var entry = this.load_entry(path);
+		if (!entry) {
+			this.checked_files[path.toLowerCase()] = '';
+			this.image_paths.splice(this.image_index, 1);
+			this.image_index = Math.min(this.image_index, Math.max(0, this.image_paths.length - 1));
+			if (this.image_paths.length) {
+				var self = this;
+				this.cancel_wheel();
+				this.pending_index = this.image_index;
+				this.wheel_timer = window.SetTimeout(function () {
+					self.wheel_timer = 0;
+					self.pending_index = -1;
+					if (self.disposed) return;
+					self.update_image();
+					window.Repaint();
+				}, 80);
+			} else {
+				this.bitmap.normal = null;
+				this.bitmap.blur = null;
+				this.displayed_path = '';
+			}
+			return;
+		}
+		this.bitmap.normal = entry.normal;
+		this.bitmap.blur = entry.blur;
+		if (this.displayed_path != path) this.cycle_started_at = Date.now();
+		this.displayed_path = path;
+		this.trim_cache(path.toLowerCase());
 	}
 
 	this.wants_artwork = function () {
@@ -1071,6 +1199,7 @@ function _images(options) {
 	}
 
 	this.update_image_paths = function () {
+		var selected = this.displayed_path;
 		this.image_index = 0;
 		this.image_paths = [];
 
@@ -1088,11 +1217,16 @@ function _images(options) {
 			for (var i = 0; i < this.image_paths.length; i++) {
 				var original = this.image_paths[i];
 				if (this.download_tasks[original.toLowerCase()]) continue;
-				var path = this.inspect_image_file(original, false);
+				var known = this.checked_files[original.toLowerCase()];
+				var path = known === undefined ? original : known;
 				if (path && checked.indexOf(path) == -1) checked.push(path);
 			}
 			this.image_paths = checked;
 		}
+		var selected_index = this.image_paths.indexOf(selected);
+		if (selected_index != -1) this.image_index = selected_index;
+		this.folder_stamp = this.folder_snapshot();
+		this.schedule_inspection();
 	}
 
 	this.wheel = function (s) {
@@ -1111,16 +1245,20 @@ function _images(options) {
 			return false;
 
 		if (this.image_paths.length > 1) {
-			this.image_index -= s;
-
-			if (this.image_index < 0) {
-				this.image_index = this.image_paths.length - 1;
-			} else if (this.image_index >= this.image_paths.length) {
-				this.image_index = 0;
-			}
-
-			this.update_image();
-			window.Repaint();
+			var index = this.pending_index >= 0 ? this.pending_index : this.image_index;
+			this.pending_index = ((index - s) % this.image_paths.length + this.image_paths.length) % this.image_paths.length;
+			if (this.wheel_timer) window.ClearTimeout(this.wheel_timer);
+			var self = this;
+			this.wheel_timer = window.SetTimeout(function () {
+				self.wheel_timer = 0;
+				if (self.disposed) return;
+				self.image_index = self.pending_index;
+				self.pending_index = -1;
+				self.update_image();
+				// Start a full dwell after decoding, including a full wheel wrap to the same image.
+				self.cycle_started_at = Date.now();
+				window.Repaint();
+			}, 80);
 		}
 
 		return true;
@@ -1149,11 +1287,20 @@ function _images(options) {
 	this.artists = {};
 	this.automatic_tasks = {};
 	this.download_tasks = {};
+	this.image_cache = Object.create(null);
+	this.cache_clock = 0;
+	this.cache_folder = '';
+	this.displayed_path = '';
+	this.folder_stamp = '';
+	this.wheel_timer = 0;
+	this.inspection_timer = 0;
+	this.pending_index = -1;
 	this.checked_files = Object.create(null);
 	this.signature_warning_logged = false;
 	this.properties = {};
 	this.image_index = 0;
 	this.time = 0;
+	this.cycle_started_at = Date.now();
 	this.counter = 0;
 	this.auto_download_attempt_limit = 3;
 	this.auto_download_retry_ms = 30000;

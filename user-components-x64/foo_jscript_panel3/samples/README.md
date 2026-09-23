@@ -96,3 +96,12 @@ Last.fm Bio + Images also places Hide if no images available below Download now.
 It collapses the region only after a successful Last.fm response confirms that
 no usable artist images exist. Network and parsing failures stay visible, and a
 manual retry reveals the region while it is active.
+
+## InfoStack panel choices
+
+Panel 02 (`DOJSP3.LastfmBio`) accepts `samples\Last.fm Bio.txt` or
+`samples\Last.fm Bio + Images.txt`. Panel 04 (`DOJSP3.AlbumNotes`) accepts
+`samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`.
+Choose one script per panel: the plain versions provide text, while the combined
+versions add images. Keep the same custom title and position for either choice.
+

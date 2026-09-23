@@ -89,7 +89,7 @@ def main(argv=None):
         parser.error('Output files already exist; choose a fresh output directory')
     with tempfile.TemporaryDirectory(prefix='darkone-build-', dir=output) as temp:
         staging = Path(temp)
-        report = {'version': version, 'behaviour_suites': 44,
+        report = {'version': version, 'behaviour_suites': 47,
                   'native_foobar2000_tested': False, 'archives': {}}
         for source, name in zip((root, wiki), names[:2]):
             report['archives'][name] = package(source, staging / name)

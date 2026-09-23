@@ -284,11 +284,17 @@ colour key rather than per-pixel alpha, a very high-contrast background may
 show a fine pre-blended edge fringe. Disable anti-aliasing to restore the
 original hard-edged rasterizer output in that case.
 
+### Biography script choice
+
+Panel 02 (`DOJSP3.LastfmBio`) can load `samples\Last.fm Bio.txt` or
+`samples\Last.fm Bio + Images.txt`. Keep its custom title and hierarchy position
+when choosing the image variant.
+
 ### Required Album Notes title
 
 The fourth child of DOJSP3.InfoStack must:
 
-- load samples\Album Notes.txt; and
+- load `samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`; and
 - use the exact custom title DOJSP3.AlbumNotes.
 
 The standalone samples\MusicBrainz.txt panel may be used elsewhere, but not

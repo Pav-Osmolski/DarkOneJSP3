@@ -3458,6 +3458,8 @@ suite("Last.fm image lifecycle", function () {
             return id;
         },
         ClearInterval(id) { intervals.delete(id); },
+        SetTimeout() { return nextInterval++; },
+        ClearTimeout() {},
         Repaint() {}
     };
     function Property(name, value) {
@@ -3954,7 +3956,7 @@ suite("Last.fm image format validation", function () {
     // Exercise actual production methods without the panel UI constructor.
     const start = source.indexOf('\tthis.image_format = function');
     const end = source.indexOf('\tthis.download_file_done = function', start);
-    const images = {checked_files: Object.create(null), exts: ['jpg','gif','png','webp','bmp','tif'], log: message => logs.push(message)};
+    const images = {image_cache: Object.create(null), load_entry(path) { const img = utils.LoadImage(path); if (!img) return null; img.Dispose(); return {}; }, checked_files: Object.create(null), exts: ['jpg','gif','png','webp','bmp','tif'], log: message => logs.push(message)};
     new Function('utils','ActiveXObject','VBArray',source.slice(start,end)).call(images,utils,ActiveXObject,VBArray);
     const ascii = value => Array.from(value).map(c => c.charCodeAt(0));
     function add(path, bytes, extra) { files[path.toLowerCase()] = Object.assign({bytes}, extra); }
@@ -3993,5 +3995,157 @@ suite("Last.fm image format validation", function () {
     assert(images.inspect_image_file('bad.jpg',true) === 'bad.gif', 'Successful retry remained excluded');
     assert(source.includes('this.existing_image_file(item.filename)'), 'Download deduplication is not wired');
     assert(source.includes('this.inspect_image_file(path, true)'), 'Download validation is not wired');
+});
+
+suite("Last.fm image performance", function () {
+    const fs = require('fs');
+    const source = fs.readFileSync(__path('user-components-x64/foo_jscript_panel3/samples/js/images.js'), 'utf8');
+    function assert(ok, message) { if (!ok) throw Error(message); }
+    let next = 1, loads = 0, blurs = 0, nativeDisposals = 0;
+    let blurEnabled = true;
+    let now = 100000;
+    const timers = new Map(), bitmapObjects = [], sizes = [], inspected = [];
+    let disk = ['a.jpg','b.jpg','c.jpg','d.jpg','bad.jpg'];
+    const windowMock = {
+        ID: 1, IsVisible: true,
+        SetInterval(fn) { this.interval = fn; return next++; }, ClearInterval() {},
+        SetTimeout(fn) { const id = next++; timers.set(id, fn); return id; },
+        ClearTimeout(id) { timers.delete(id); }, Repaint() {}
+    };
+    function runTimers() {
+        const batch = [...timers.entries()]; timers.clear();
+        batch.forEach(([id, fn]) => fn());
+    }
+    const utils = {
+        CreateFolder() {}, IsFile(path) { return disk.includes(path); },
+        LoadImage(path) {
+            loads++;
+            if (path === 'bad.jpg') return null;
+            return {
+                Width: 4000, Height: 3000,
+                Resize(w,h) { this.Width=w; this.Height=h; },
+                StackBlur(radius) { blurs++; sizes.push([this.Width,this.Height,radius]); },
+                CreateBitmap() {
+                    const obj={Width:this.Width,Height:this.Height,disposed:false,Dispose() {
+                        assert(!this.disposed,'Bitmap disposed twice'); this.disposed=true;
+                    }};
+                    bitmapObjects.push(obj); return obj;
+                }, Dispose() { nativeDisposals++; }
+            };
+        }
+    };
+    const Images = new Function('utils','window','panel','_','_p','folders','image','_getFiles','_tagged','N','console','Date',
+        source+'\nreturn _images;')(
+        utils,windowMock,{text_objects:[{name:'lastfm_bio'}]},
+        {bind:(fn,ctx)=>fn.bind(ctx),includes:(a,b)=>a.indexOf(b)!==-1},
+        function (name,value) { this.value=value; }, {artists:'artists'}, {crop_top:1,full:3},
+        ()=>disk.slice(), ()=>false, 'test', {log() {}}, {now:()=>now}
+    );
+    const images=new Images({appearance:{wants_blur:()=>blurEnabled}});
+    images.containsXY=()=>true;
+    images.notify_status_changed=()=>{};
+    images.inspect_image_file=function(path,force,signatureOnly) {
+        assert(signatureOnly,'Folder inspection performed eager decoding');
+        inspected.push(path); this.checked_files[path]=path; return path;
+    };
+    images.folder='artist-a';
+    images.update();
+    assert(loads===1 && inspected.length===0,'Initial folder visit decoded or inspected the whole gallery');
+    assert(sizes[0][0]===256 && sizes[0][1]===192,'Blur did not use a reduced-size image');
+    assert(images.bitmap.normal.Width===2048,'Display bitmap memory was not bounded');
+    assert(nativeDisposals===1,'Source image leaked');
+    const oldBitmap=images.bitmap.normal;
+    images.wheel(-1); images.wheel(-1); images.wheel(-1);
+    assert(loads===1 && images.bitmap.normal===oldBitmap,'Wheel events loaded intermediate images');
+    runTimers();
+    assert(loads===2 && images.displayed_path==='d.jpg','Scroll burst did not select final image');
+    images.wheel(3); runTimers();
+    assert(loads===2 && images.displayed_path==='a.jpg','Revisit decoded cached image again');
+    images.update();
+    assert(loads===2 && images.displayed_path==='a.jpg','Unchanged refresh reloaded current image');
+    images.image_index=2; images.update_image();
+    images.update();
+    assert(images.image_index===2 && images.displayed_path==='c.jpg','Refresh reset the selected image');
+    images.image_index=1; images.update_image();
+    assert(Object.keys(images.image_cache).length<=3,'LRU cache exceeded its entry limit');
+    assert(bitmapObjects.some(b=>b.disposed),'LRU eviction did not dispose bitmaps');
+    images.checked_files['bad.jpg']='';
+    images.update();
+    let refreshes=0;
+    const update=images.update;
+    images.update=function() { refreshes++; return update.call(this); };
+    images.properties.cycle.value=0;
+    images.maybe_auto_download=()=>{};
+    images.check_download_deadlines=()=>{};
+    for(let i=0;i<9;i++) windowMock.interval();
+    assert(refreshes===0,'Excluded file triggered repeated three-second refreshes');
+    disk.push('new.jpg');
+    for(let i=0;i<3;i++) windowMock.interval();
+    assert(refreshes===1,'Actual folder change was not detected once');
+    const before=inspected.length;
+    runTimers();
+    assert(inspected.length<=before+1,'Deferred inspection processed multiple files in one step');
+    images.image_paths=['bad.jpg','a.jpg'];
+    images.image_index=0;
+    images.update_image();
+    assert(images.checked_files['bad.jpg']==='' && images.wheel_timer,
+           'Unreadable image did not schedule a non-blocking advance');
+    runTimers();
+    assert(images.displayed_path==='a.jpg','Unreadable image prevented the next valid image displaying');
+    images.update();
+    images.wheel(-1);
+    images.folder='artist-b';
+    images.update();
+    assert(images.wheel_timer===0 && Object.keys(images.image_cache).length===1,'Artist change kept stale scroll/cache work');
+    blurEnabled=false;
+    const blurCount=blurs;
+    images.image_index=1; images.update_image();
+    assert(blurs===blurCount,'Blur computed while disabled');
+    blurEnabled=true;
+    images.update_image();
+    assert(blurs===blurCount+1 && images.bitmap.blur,'Enabling blur failed to upgrade cached image');
+    images.cancel_inspection();
+    images.image_paths=['a.jpg','b.jpg'];
+    disk=['a.jpg','b.jpg'];
+    images.folder_stamp=images.folder_snapshot();
+    images.image_index=0;
+    images.update_image();
+    images.properties.cycle.value=5;
+    images.cycle_started_at=now;
+    now+=4000;
+    images.wheel(-1);
+    now+=80;
+    runTimers();
+    const landed=now;
+    assert(images.displayed_path==='b.jpg' && images.cycle_started_at===landed,
+           'Wheel landing did not restart the cycle clock');
+    now=landed+920;
+    windowMock.interval();
+    assert(images.displayed_path==='b.jpg','Previous cycle deadline overrode manual selection');
+    now=landed+4999;
+    windowMock.interval();
+    assert(images.displayed_path==='b.jpg','Subsecond landing received less than a full five-second dwell');
+    now=landed+5000;
+    windowMock.interval();
+    assert(images.displayed_path==='a.jpg','Automatic cycling did not resume after full dwell');
+    now+=3000;
+    const refreshStart=images.cycle_started_at;
+    images.update();
+    assert(images.cycle_started_at===refreshStart,'Unchanged folder refresh restarted automatic cycling');
+    images.wheel(-2);
+    now+=80;
+    runTimers();
+    assert(images.displayed_path==='a.jpg' && images.cycle_started_at===now,
+           'Full wheel wrap failed to restart the cycle');
+    images.properties.cycle.value=0;
+    now+=60000;
+    windowMock.interval();
+    assert(images.displayed_path==='a.jpg','Disabled cycling advanced an image');
+    images.wheel(-1);
+    images.dispose();
+    assert(timers.size===0 && bitmapObjects.every(b=>b.disposed),'Unload leaked timers or bitmaps');
+    const stopped=loads;
+    runTimers();
+    assert(loads===stopped,'Deferred work ran after unload');
 });
 

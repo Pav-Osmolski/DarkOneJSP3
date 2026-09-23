@@ -1,6 +1,6 @@
 {
   "package": "DarkOneJSP3",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
@@ -44,5 +44,5 @@
     "theme_manager": "0.1.16"
   },
   "attribution": "DeViLhoOD",
-  "release": "DarkOneJSP3 v1.2.2"
+  "release": "DarkOneJSP3 v1.2.4"
 }

@@ -128,3 +128,12 @@ directory, and resolves every distributed sample entry import. It also checks
 legacy helpers.txt fallbacks, neutral and legacy reset notifications, property
 compatibility, the optional page-background alias and generic context-menu
 routing without the colour helper loaded.
+
+## InfoStack panel choices
+
+Panel 02 (`DOJSP3.LastfmBio`) accepts `samples\Last.fm Bio.txt` or
+`samples\Last.fm Bio + Images.txt`. Panel 04 (`DOJSP3.AlbumNotes`) accepts
+`samples\Album Notes.txt` or `samples\Album Notes + Album Art.txt`.
+Choose one script per panel: the plain versions provide text, while the combined
+versions add images. Keep the same custom title and position for either choice.
+

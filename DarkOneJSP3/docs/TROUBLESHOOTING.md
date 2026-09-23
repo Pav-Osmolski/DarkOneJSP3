@@ -39,8 +39,8 @@ Visible tab text is unrelated to the DOJSP3.* identifier.
 
 ### Album Notes tab is blank
 
-The fourth child of DOJSP3.InfoStack must load samples\Album Notes.txt and
-use the exact title DOJSP3.AlbumNotes.
+The fourth child of DOJSP3.InfoStack must load `samples\Album Notes.txt` or
+`samples\Album Notes + Album Art.txt` and use the exact title DOJSP3.AlbumNotes.
 
 ### Album Notes flashes briefly during startup
 
@@ -628,7 +628,8 @@ participating wrappers import the appropriate project or standalone sample reset
 
 The consolidated Album Notes panel resets both its provider role and embedded
 MusicBrainz role in one reload while preserving downloaded provider cache files.
-Confirm that samples\Album Notes.txt imports the component-local sample reset helpers.
+Confirm that the selected wrapper, `samples\Album Notes.txt` or
+`samples\Album Notes + Album Art.txt`, imports the component-local sample reset helpers.
 
 ### Playlist refresh or scroll settings do not reset
 
@@ -712,8 +713,9 @@ Existing Bio entry scripts can stay loaded; no FCL re-import is needed.
 ### Last.fm image has the wrong extension
 
 Some Last.fm images contain GIF data despite being offered as JPEGs. The image
-panel checks downloaded images and existing Last.fm cache files when it lists
-them, then corrects recognised extensions. Unreadable images are excluded from
+panel validates downloads and checks existing Last.fm cache signatures in short
+deferred steps, then corrects recognised extensions. Cached images are decoded
+when used for display. Unreadable images are excluded from
 the slideshow; a failed download remains eligible for the bounded retry policy.
 Custom image folders are not renamed. Existing destination files are never
 overwritten during correction.
@@ -727,3 +729,24 @@ blocked, read-only, or the image exceeds 32 MiB, a decodable image remains usabl
 under its original filename and the console explains why correction was skipped.
 Checks are cached for the panel session; reload the panel after manually replacing
 an unreadable cached image.
+
+### Image browsing responsiveness
+
+Rapid wheel movements are combined over an 80 ms pause so only the final selected
+image is loaded. The previous image stays visible during selection. After the
+selection lands, the slideshow interval restarts, giving that image a full cycle
+duration. The existing one-second scheduler advances on the first tick after
+that interval has elapsed; it never advances early. Up to three
+prepared images are cached with a 64 MiB estimated bitmap-pixel budget. Display
+copies are capped at 2048 pixels on the longest side; original files and external
+viewers retain the full resolution. Blur uses a copy no larger than 256 pixels,
+with the blur radius scaled to match. Cache entries are released when changing
+artists or unloading the panel.
+
+Folder refreshes preserve the selected image, and unreadable files no longer
+cause refreshes every three seconds. Signature checks run one file per deferred
+step and pause during wheel navigation. These timers do not create a background
+thread: first-time decoding of a large image can still briefly block the interface.
+The cache budget covers retained bitmaps, not temporary decoder memory or the
+total foobar2000 process. Reload the panel after externally replacing a cached
+image under the same filename.

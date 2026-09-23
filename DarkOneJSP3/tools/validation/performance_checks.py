@@ -191,7 +191,7 @@ def run(ctx: ValidationContext) -> None:
     if quick_search_wrapper.exists():
         body = text(quick_search_wrapper)
         for token in [
-            '// @version "0.1.21"',
+            '// @version "0.1.25"',
             'DarkOneJSP3\\jscript\\js\\Quick_Search.js',
             'samples\\jsplaylist\\inputbox.js',
             'quickSearch.resetConfiguration(scope);',
