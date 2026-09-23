@@ -4149,3 +4149,133 @@ suite("Last.fm image performance", function () {
     assert(loads===stopped,'Deferred work ran after unload');
 });
 
+suite('JSplitter asynchronous controller runtime', function () {
+    const fs=require('fs');
+    const source=fs.readFileSync(__path('DarkOneJSP3/jsplitter/runtime.js'),'utf8');
+    const create=new Function(source+'\nreturn createDarkOneControllerRuntime;')();
+    function assert(ok,message) {if(!ok) throw Error(message);}
+    let time=100, shown='', memoryReads=0, failPost=false;
+    const channels=[], pending=[], panels=[], events=[];
+    class Channel {
+        constructor(name) {this.name=name;this.closed=false;channels.push(this);}
+        postMessage(value) {
+            if(failPost) throw Error('serialization failed');
+            channels.filter(c=>c!==this&&!c.closed&&c.name===this.name).forEach(c=>{
+                const copy=JSON.parse(JSON.stringify(value));
+                pending.push(()=>{if(!c.closed)c.onmessage({data:copy});});
+            });
+        }
+        close(){this.closed=true;}
+    }
+    function make(id,channelClass) {
+        const host={ID:id,Name:'Panel '+id,NotifyOthers(name,data){
+            panels.filter(p=>p.host!==host).forEach(p=>p.handler(name,data));
+        }};
+        Object.defineProperty(host,'JsMemoryStats',{get(){memoryReads++;return {Heap:123};}});
+        const runtime=create(host,{Channel:channelClass,now:()=>time,
+            systemInfo:()=>({OS:'test'}),highResolutionTimers:()=>false,show:text=>shown=text});
+        const handler=runtime.bind((name,data)=>{events.push([id,name,data]);time+=2;});
+        const panel={host,runtime,handler};panels.push(panel);return panel;
+    }
+    const a=make(1,Channel),b=make(2,Channel);
+    const width='DarkOneJSP3.InfoStack.MainAreaWidth';
+    assert(a.runtime.send(width,'1000')===true&&events.length===0,'Width message was delivered synchronously');
+    pending.shift()();
+    assert(events.length===1&&events[0][2]==='1000','Asynchronous width was not delivered');
+    a.runtime.send(width,'1100'); a.runtime.send(width,'1200');
+    const older=pending.shift(),newer=pending.shift();newer();older();
+    assert(events.length===2&&events[1][2]==='1200','Stale width message overwrote newer geometry');
+    channels[1].onmessage({data:{version:99,name:width,data:'2000',sender:'bad',sequence:1}});
+    assert(events.length===2,'Malformed transport message was accepted');
+    a.runtime.send('DarkOneJSP3.Startup.QueryReady',true);
+    assert(events[2][1]==='DarkOneJSP3.Startup.QueryReady','Startup query became asynchronous');
+    a.runtime.send('DarkOneJSP3.Theme.Apply','theme');
+    assert(events[3][1]==='DarkOneJSP3.Theme.Apply','Theme commit became asynchronous');
+    const wrapped=a.runtime.wrap('paint',function(v){time+=7;return v+1;});
+    assert(wrapped(5)===6,'Timing wrapper changed callback result');
+    try {a.runtime.wrap('paint',()=>{time+=3;throw Error('expected');})();}catch(e){assert(e.message==='expected','Wrong error');}
+    assert(memoryReads===0,'Memory snapshots were polled during normal operation');
+    a.runtime.showReport();
+    const report=JSON.parse(shown);
+    assert(report.panels.length===2&&memoryReads===2,'Diagnostics omitted a controller or repeatedly polled memory');
+    assert(report.panels[0].timingsMs.paint.count===2&&report.panels[0].timingsMs.paint.maximum===7,
+        'Callback timing aggregation lost normal or exceptional calls');
+    assert(report.system.OS==='test'&&report.highResolutionTimers===false,'System diagnostics missing');
+    failPost=true;
+    a.runtime.send(width,'1300');
+    assert(channels.every(c=>c.closed)&&events.some(e=>e[1]===width&&e[2]==='1300'),
+        'Post failure did not switch controllers together to legacy delivery');
+    const legacy=make(3,null);
+    legacy.runtime.send(width,'1400');
+    assert(events.some(e=>e[0]===2&&e[2]==='1400'),'Legacy host fallback failed');
+    failPost=false;
+    const c=make(4,Channel),d=make(5,Channel);
+    c.runtime.send(width,'1500');d.runtime.close();
+    const before=events.length;while(pending.length)pending.shift()();
+    assert(events.length===before,'Queued message ran after receiver unload');
+    c.runtime.close();
+    assert(c.runtime.send(width,'1600')===false,'Unloaded sender still sent messages');
+    const fallback=create({ID:9,NotifyOthers(){}},{Channel:class{constructor(){throw Error('missing');}},now:()=>time,
+        systemInfo(){throw Error('missing');},highResolutionTimers(){throw Error('missing');},show:t=>shown=t});
+    fallback.bind(()=>{});fallback.showReport();
+    assert(JSON.parse(shown).system==='Unavailable','Missing diagnostic API crashed report');
+    panels.forEach(p=>p.runtime.close());fallback.close();
+    // Verify every actual controller installs the runtime after its declarations.
+    ['01_root','02_main_columns','03_info_stack_tabs','04_art_spectrum','05_bottom_controls','06_display_waveform'].forEach(name=>{
+        const text=fs.readFileSync(__path('DarkOneJSP3/jsplitter/'+name+'.js'),'utf8');
+        assert(text.includes("darkOneControllerRuntime.wrap('paint', on_paint)")&&
+            text.includes('darkOneControllerRuntime.bind(on_notify_data)')&&text.includes('darkOneControllerRuntime.close()'),
+            'Controller omitted diagnostics or cleanup: '+name);
+        const install=text.slice(text.indexOf('// Install after initialization'));
+        // Run the real installer in strict mode with the runtime present. Earlier
+        // controller mocks omitted it and consequently skipped this failure path.
+        [false,true].forEach(hasPrior=>{
+            let closed=0, previous=0;
+            const runtime={wrap:(label,fn)=>fn,bind:fn=>fn,close(){closed++;}};
+            const setup='"use strict"; function on_paint() {} function on_size() {} function on_notify_data() {}\n'+
+                (hasPrior?'function on_script_unload() { prior(); }\n':'');
+            const factory=new Function('darkOneControllerRuntime','prior',setup+install+
+                '\nreturn on_script_unload;');
+            const unload=factory(runtime,()=>previous++);
+            assert(typeof unload==='function','Installer failed to declare unload callback: '+name);
+            unload();
+            assert(closed===1&&previous===(hasPrior?1:0),'Installer lost or duplicated unload cleanup: '+name);
+            const legacy=factory(null,()=>previous++);
+            assert(hasPrior?typeof legacy==='function':legacy===undefined,
+                'Unavailable runtime changed legacy unload behaviour: '+name);
+        });
+    });
+    const bridgeSource=fs.readFileSync(__path('DarkOneJSP3/shared/view_bridge.js'),'utf8');
+    const bridge=new Function('fb',bridgeSource+'\nreturn DarkOneViewBridge;')({ProfilePath:'test\\'});
+    assert(bridge.parseNotification(bridge.serialiseNotification(bridge.commands.diagnostics,null))==='diagnostics',
+        'Diagnostics command cannot cross the existing JSP3 bridge');
+});
+
+suite('JSplitter partial InfoStack painting', function () {
+    const fs=require('fs');
+    function assert(ok,message){if(!ok)throw Error(message);}
+    const source=fs.readFileSync(__path('DarkOneJSP3/jsplitter/03_info_stack_tabs.js'),'utf8');
+    const runtime=fs.readFileSync(__path('DarkOneJSP3/jsplitter/runtime.js'),'utf8');
+    const rect=new Function(runtime+'\nreturn darkOneUpdateRect;')();
+    const start=source.indexOf('function on_paint('),end=source.indexOf('function on_mouse_move(',start);
+    const model={backgroundMode:1,backgroundColour:123,labels:['A','B','C'],tabAccentColour:4,
+        rects:[{index:0,x:0,width:100},{index:1,x:100,width:100},{index:2,x:200,width:100}]};
+    const paint=new Function('infoStackRenderModel','BACKGROUND_TRANSPARENT','ww','wh','isTabStripVisible',
+        'activeIndex','hoverIndex','DOJSP3','font','tabY','tabAreaHeight','TAB_TEXT_FLAGS','darkOneUpdateRect',
+        source.slice(start,end)+'\nreturn on_paint;')(
+            model,0,300,200,()=>true,0,1,{colours:{buttonActive:1,buttonHover:2}},'font',0,25,0,rect);
+    const fills=[],labels=[];
+    const gr={FillSolidRect(...args){fills.push(args);},GdiDrawText(text){labels.push(text);}};
+    paint(gr,110,0,20,25);
+    assert(labels.join()==='B'&&fills[0].slice(0,4).join()==='110,0,20,25','Partial paint drew unrelated tabs or background');
+    labels.length=0;fills.length=0;
+    paint(gr,0,100,300,20);
+    assert(labels.length===0&&fills.length===1,'Content-only update redrew the tab strip');
+    labels.length=0;fills.length=0;paint(gr);
+    assert(labels.join()==='A,B,C'&&fills[0].slice(0,4).join()==='0,0,300,200','Older paint callback lost full drawing');
+    labels.length=0;fills.length=0;paint(gr,400,0,20,20);
+    assert(labels.length===0&&fills.length===0,'Off-panel rectangle was painted');
+    const clipped=rect(-5,-5,10,10,100,100);
+    assert(clipped.width===5&&clipped.height===5,'Update rectangle was not clipped to the panel');
+});
+

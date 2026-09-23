@@ -126,3 +126,16 @@ function on_notify_data(name, data) {
     if (darkOneJsp3HandleReset(name, data)) return;
     startupReadiness.handle(name);
 }
+
+// Install after initialization so asynchronous updates see complete controller state.
+if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) {
+    if (typeof on_paint === 'function') on_paint = darkOneControllerRuntime.wrap('paint', on_paint);
+    if (typeof on_size === 'function') on_size = darkOneControllerRuntime.wrap('layout', on_size);
+    if (typeof on_notify_data === 'function') on_notify_data = darkOneControllerRuntime.bind(on_notify_data);
+    var darkOnePreviousUnload = typeof on_script_unload === 'function' ? on_script_unload : function () {};
+    // Declare the binding: some controllers have no earlier unload callback.
+    var on_script_unload = function () {
+        darkOneControllerRuntime.close();
+        darkOnePreviousUnload();
+    };
+}

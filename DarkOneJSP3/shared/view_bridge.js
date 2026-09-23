@@ -1,6 +1,8 @@
 "use strict";
 
 // Version history (newest first):
+// v0.3.0 adds the root-owned controller diagnostics command.
+//
 // v0.2.1 extends selected InfoStack page actions through Theme (106) and moves
 // the divider custom-colour editor to the non-conflicting action 906.
 //
@@ -19,7 +21,8 @@ var DarkOneViewBridge = (function () {
     var commands = Object.freeze({
         layoutToggle: 'layout-toggle',
         visualiserToggle: 'visualiser-toggle',
-        infoStackMenu: 'infostack-menu'
+        infoStackMenu: 'infostack-menu',
+        diagnostics: 'diagnostics'
     });
 
     function normaliseInfoStackActionId(value) {
@@ -80,7 +83,7 @@ var DarkOneViewBridge = (function () {
 
     function normaliseCommand(value) {
         value = String(value || '').toLowerCase();
-        if (value === commands.layoutToggle || value === commands.visualiserToggle || value === commands.infoStackMenu) return value;
+        if (value === commands.layoutToggle || value === commands.visualiserToggle || value === commands.infoStackMenu || value === commands.diagnostics) return value;
         var infoStackAction = infoStackActionCommand(infoStackActionFromCommand(value));
         if (infoStackAction) return infoStackAction;
         var startupAction = parseStartupActionCommand(value);

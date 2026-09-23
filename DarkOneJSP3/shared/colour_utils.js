@@ -143,7 +143,7 @@ var DarkOneColour = Object.freeze({
 
         if (pickerAvailable) {
             try {
-                var chosen = utils.ColourPicker(0, this.nativeSigned(current));
+                var chosen = utils.ColourPicker(typeof window !== 'undefined' ? (Number(window.ID) || 0) : 0, this.nativeSigned(current));
                 var normalised = this.normalisePickerChoice(chosen);
                 // Both supported native pickers return their supplied default
                 // when the dialog is cancelled. Treat an unchanged result as

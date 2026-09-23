@@ -2212,7 +2212,7 @@ def _check_controls_and_colours(ctx: ValidationContext) -> None:
             errors.append('Shared colour helper does not provide contextual picker diagnostics')
         if 'var chosen = utils.ColourPicker(this.nativeSigned(current));' not in body:
             errors.append('Shared colour helper does not pass a signed 32-bit colour to JScript Panel ColourPicker')
-        if 'var chosen = utils.ColourPicker(0, this.nativeSigned(current));' not in body:
+        if "var chosen = utils.ColourPicker(typeof window !== 'undefined' ? (Number(window.ID) || 0) : 0, this.nativeSigned(current));" not in body:
             errors.append('Shared colour helper does not pass a signed 32-bit colour to JSplitter ColourPicker')
 
         for token in [

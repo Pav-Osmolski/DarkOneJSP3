@@ -7,6 +7,8 @@ var DARKONEJSP3_RESET_ROLE = "main-columns";
 // spectrum column, and right playlist column.
 //
 // Version history (newest first):
+// v0.8.0 sends routine width snapshots asynchronously with a legacy fallback.
+//
 // v0.7.42 refreshes theme colours/layout without reloading native children.
 //
 // v0.7.41 publishes the real main-area width so an expanded InfoStack retains
@@ -297,7 +299,11 @@ function layoutMainColumns(modeOverride, transition) {
     // InfoStack historically inferred the full main-area width from its fixed
     // left-column width. Supply the real width before moving it so the expanded
     // layout keeps exactly the same responsive tab font, padding and height.
-    window.NotifyOthers(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));
+    if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) {
+        darkOneControllerRuntime.send(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));
+    } else {
+        window.NotifyOthers(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));
+    }
 
     // ArtSpectrum contains native child windows. Hide only this outer host while
     // changing layouts, pre-layout its grandchildren at the final target size,
@@ -389,6 +395,10 @@ function refreshMainColumnsTheme(change) {
 }
 
 function on_notify_data(name, data) {
+    if (name === 'DarkOneJSP3.InfoStack.MainAreaWidth.Query') {
+        if (ww > 0) window.NotifyOthers(INFO_STACK_MAIN_AREA_WIDTH_NOTIFICATION, String(ww));
+        return;
+    }
     if (typeof darkOneJsp3HandleTheme == 'function' && darkOneJsp3HandleTheme(name, data, DARKONEJSP3_RESET_ROLE, refreshMainColumnsTheme)) return;
     if (name === ART_SPECTRUM_MODE_STATE_NOTIFICATION) {
         var visible = String(data) !== 'art-only';
@@ -474,4 +484,17 @@ function on_mouse_rbtn_up(x, y) {
     }
 
     return true;
+}
+
+// Install after initialization so asynchronous updates see complete controller state.
+if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) {
+    if (typeof on_paint === 'function') on_paint = darkOneControllerRuntime.wrap('paint', on_paint);
+    if (typeof on_size === 'function') on_size = darkOneControllerRuntime.wrap('layout', on_size);
+    if (typeof on_notify_data === 'function') on_notify_data = darkOneControllerRuntime.bind(on_notify_data);
+    var darkOnePreviousUnload = typeof on_script_unload === 'function' ? on_script_unload : function () {};
+    // Declare the binding: some controllers have no earlier unload callback.
+    var on_script_unload = function () {
+        darkOneControllerRuntime.close();
+        darkOnePreviousUnload();
+    };
 }

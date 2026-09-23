@@ -1735,6 +1735,7 @@ function darkOneToolsMenu(x, y) {
 
     darkOneAppendToolsStartupMenu(startup, startupTransition, startupState);
     startup.AppendTo(m, MF_STRING, 'Startup');
+    m.AppendMenuItem(MF_STRING, 9901, 'Diagnostics...');
 
     m.AppendMenuSeparator();
     reset.AppendMenuItem(MF_STRING, 9700, 'Reset this panel');
@@ -1771,6 +1772,12 @@ function darkOneToolsMenu(x, y) {
     }
 
     if (bottomAreaHandled) return true;
+    if (idx === 9901) {
+        if (!DarkOneViewBridge.writeCommand(DarkOneViewBridge.commands.diagnostics, null)) {
+            utils.MessageBox('The diagnostics request could not be sent.', 'DarkOneJSP3', 0x00000010);
+        }
+        return true;
+    }
     if (idx === 9900) {
         try {
             if (!DarkOneViewBridge.writeCommand(

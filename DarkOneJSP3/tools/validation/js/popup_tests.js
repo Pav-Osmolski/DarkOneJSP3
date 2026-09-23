@@ -27,14 +27,14 @@ suite("native colour helper", function () {
         InputBox() { inputCalls++; return '#123456'; }
     };
     const consoleMock = {log(message) { logs.push(String(message)); }};
-    const factory = new Function('utils', 'console', source + '\nreturn DarkOneColour;');
-    const colour = factory(utilsMock, consoleMock);
+    const factory = new Function('utils', 'console', 'window', source + '\nreturn DarkOneColour;');
+    const colour = factory(utilsMock, consoleMock, {ID:12345});
     function assert(condition, message) { if (!condition) throw new Error(message); }
     assert(source.indexOf('utils.ColourPicker(current, true)') === -1,
         'Shared helper still contains the unsupported two-argument JScript Panel picker call');
     assert(source.indexOf('utils.ColourPicker(this.nativeSigned(current))') !== -1,
         'Shared helper omits signed JScript Panel picker conversion');
-    assert(source.indexOf('utils.ColourPicker(0, this.nativeSigned(current))') !== -1,
+    assert(source.indexOf("utils.ColourPicker(typeof window !== 'undefined' ? (Number(window.ID) || 0) : 0, this.nativeSigned(current))") !== -1,
         'Shared helper omits signed JSplitter picker conversion');
     [playlistEntry, playlistManagerEntry].forEach(entry =>
         assert(entry.indexOf('samples\\shared\\colour_utils.js') !== -1,
@@ -82,7 +82,7 @@ suite("native colour helper", function () {
     pickerResult = '__DEFAULT__';
     assert(colour.pickJsplitter(0xff112233, 'Divider test', 'Prompt') === null,
         'Unchanged JSplitter picker result did not preserve the current mode');
-    assert(pickerCalls[0].length === 2 && pickerCalls[0][1] < 0 &&
+    assert(pickerCalls[0].length === 2 && pickerCalls[0][0] === 12345 && pickerCalls[0][1] < 0 &&
         (pickerCalls[0][1] >>> 0) === 0xff112233,
         'JSplitter picker did not receive the required signed 32-bit colour');
     pickerResult = (0xff445566 | 0);

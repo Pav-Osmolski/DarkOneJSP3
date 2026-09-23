@@ -10,6 +10,8 @@ var DARKONEJSP3_RESET_ROLE = "root";
 // invisible overlay intercepting mouse input.
 //
 // Version history (newest first):
+// v0.8.0 adds controller diagnostics and runtime cleanup.
+//
 // v0.7.41 paints the saved bottom-area appearance behind startup reveal.
 //
 // v0.7.40 adds generation-bound Queue Viewer skip-to-track playback while
@@ -853,6 +855,10 @@ function on_notify_data(name, data) {
     }
     if (name === DarkOneViewBridge.notification) {
         var viewCommand = DarkOneViewBridge.parseNotification(data);
+        if (viewCommand === DarkOneViewBridge.commands.diagnostics) {
+            if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) darkOneControllerRuntime.showReport();
+            return;
+        }
         if (handleStartupViewCommand(viewCommand)) return;
     }
 
@@ -906,3 +912,16 @@ function on_script_unload() {
 writeStartupControlState();
 initialiseQueueBridge();
 initialiseQueueCommandBridge();
+
+// Install after initialization so asynchronous updates see complete controller state.
+if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) {
+    if (typeof on_paint === 'function') on_paint = darkOneControllerRuntime.wrap('paint', on_paint);
+    if (typeof on_size === 'function') on_size = darkOneControllerRuntime.wrap('layout', on_size);
+    if (typeof on_notify_data === 'function') on_notify_data = darkOneControllerRuntime.bind(on_notify_data);
+    var darkOnePreviousUnload = typeof on_script_unload === 'function' ? on_script_unload : function () {};
+    // Declare the binding: some controllers have no earlier unload callback.
+    var on_script_unload = function () {
+        darkOneControllerRuntime.close();
+        darkOnePreviousUnload();
+    };
+}

@@ -1747,3 +1747,11 @@ Search honours the same reset scopes:
 appearance resets sizing, font, icon, frame and colours; behaviour resets search
 and result preferences. Tag definitions, history and favourites are preserved by
 scoped resets and cleared only by the panel's explicit complete reset.
+
+## Controller diagnostics
+
+Choose TOOLS > Diagnostics to open a local JSplitter controller report. It includes
+session callback timings, available memory/system details and whether routine
+layout-width updates use BroadcastChannel or the legacy fallback. Details are
+also written to the foobar2000 console. This does not profile the separate JScript
+Panel 3 samples. No settings are changed by requesting a report.

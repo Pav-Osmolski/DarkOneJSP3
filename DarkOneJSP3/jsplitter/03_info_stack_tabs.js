@@ -8,6 +8,8 @@ var DARKONEJSP3_RESET_ROLE = "info-stack";
 // for Theme Manager without changing or regenerating the exported FCL.
 //
 // Version history (newest first):
+// v0.8.0 restricts painting to dirty regions and instruments controller callbacks.
+//
 // v0.7.5 applies theme-owned InfoStack appearance in place so an appearance
 // update cannot discard the resolved optional child or publish a false Theme
 // availability snapshot during a controller reload.
@@ -720,9 +722,13 @@ function on_size(width, height) {
     publishInfoStackMenuState();
 }
 
-function on_paint(gr) {
+function on_paint(gr, x, y, width, height) {
+    var dirty = typeof darkOneUpdateRect === 'function'
+        ? darkOneUpdateRect(x, y, width, height, ww, wh)
+        : {x:0,y:0,width:ww,height:wh};
+    if (dirty.width <= 0 || dirty.height <= 0) return;
     if (infoStackRenderModel.backgroundMode !== BACKGROUND_TRANSPARENT) {
-        gr.FillSolidRect(0, 0, ww, wh, infoStackRenderModel.backgroundColour);
+        gr.FillSolidRect(dirty.x, dirty.y, dirty.width, dirty.height, infoStackRenderModel.backgroundColour);
     }
 
     if (!isTabStripVisible()) return;
@@ -730,6 +736,8 @@ function on_paint(gr) {
     var rects = infoStackRenderModel.rects;
     for (var slot = 0; slot < rects.length; slot++) {
         var rect = rects[slot];
+        if (rect.x + rect.width <= dirty.x || rect.x >= dirty.x + dirty.width ||
+                tabY + tabAreaHeight <= dirty.y || tabY >= dirty.y + dirty.height) continue;
         var colour = rect.index === activeIndex
             ? DOJSP3.colours.buttonActive
             : (rect.index === hoverIndex ? DOJSP3.colours.buttonHover : infoStackRenderModel.tabAccentColour);
@@ -997,3 +1005,16 @@ function on_script_unload() {
 
 requestThemeManagerAvailability();
 scheduleThemeManagerResolution();
+
+// Install after initialization so asynchronous updates see complete controller state.
+if (typeof darkOneControllerRuntime !== 'undefined' && darkOneControllerRuntime) {
+    if (typeof on_paint === 'function') on_paint = darkOneControllerRuntime.wrap('paint', on_paint);
+    if (typeof on_size === 'function') on_size = darkOneControllerRuntime.wrap('layout', on_size);
+    if (typeof on_notify_data === 'function') on_notify_data = darkOneControllerRuntime.bind(on_notify_data);
+    var darkOnePreviousUnload = typeof on_script_unload === 'function' ? on_script_unload : function () {};
+    // Declare the binding: some controllers have no earlier unload callback.
+    var on_script_unload = function () {
+        darkOneControllerRuntime.close();
+        darkOnePreviousUnload();
+    };
+}

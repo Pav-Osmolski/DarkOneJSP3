@@ -17,7 +17,7 @@ Install these components before building or restoring the layout:
 - [foobar2000 v2 x64](https://www.foobar2000.org/windows)
 - [Columns UI](https://www.foobar2000.org/components/view/foo_ui_columns)
 - [JScript Panel 3.8.5](https://hydrogenaudio.org/index.php/topic,110516.msg1067716.html#msg1067716)
-- [JSplitter 4.x, tested with 4.1.17](https://github.com/dima-lur/jsplitter/releases)
+- [JSplitter 4.x, 4.2.1 recommended](https://github.com/dima-lur/jsplitter/releases)
 - [Enhanced Spectrum Analyser v1.9.2.0](https://hydrogenaudio.org/index.php/topic,116014.msg1026710.html#msg1026710) | [Enhanced build patcher](https://github.com/Pav-Osmolski/foo_enhanced_spectrum_analyzer/releases/)
 - [Waveform Minibar (mod) 1.2.69-patched](https://github.com/Pav-Osmolski/foo_wave_minibar_mod-patched/releases)
 

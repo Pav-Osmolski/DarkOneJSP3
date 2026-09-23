@@ -1,4 +1,4 @@
-# DarkOneJSP3 v1.2.4 Validation Report
+# DarkOneJSP3 v1.3.0 Validation Report
 
 ## Scope
 
@@ -616,7 +616,7 @@ manual smoke test before public release.
 
 ## Acknowledged Theme Apply regression coverage
 
-The v1.2.4 release validation executes the complete two-phase bottom-area
+The v1.3.0 release validation executes the complete two-phase bottom-area
 handshake. It verifies that Bottom Controls accepts a Theme Manager request,
 stages the matching cross-host theme command, negotiates at least 75 ms of
 remaining lead time, publishes a request/state-matched acknowledgement and
@@ -637,7 +637,7 @@ fallback polling that bypasses a failed acknowledgement. Timer and release-file
 failures retain bounded recovery rather than leaving Apply waiting indefinitely.
 
 The seven-Apply recording still showed child-panel spreads of up to 50 ms and
-exposed backing delays of approximately 217–283 ms in the previous build.
+exposed backing delays of approximately 217Ã¢â‚¬â€œ283 ms in the previous build.
 The latest implementation removes competing local commit timers, reduces
 resource rebuilds and postpones potentially expensive wider theme delivery
 until bottom paint callbacks complete. Automated host mocks verify ordering
@@ -677,7 +677,7 @@ JS Playlist menu-handler tests also cover repeated OK, smoothness 2/3, invalid
 and cancelled numeric input, retention of automatic free-scroll distance and
 preservation of unrelated preferences without reload.
 
-The v1.2.4 release package (release validator 0.11.25) passes with **232 audited
+The v1.3.0 release package (release validator 0.12.0) passes with **233 audited
 files and zero warnings**. The bundled FCL is excluded from the audited-file
 count. The latest maintainer-exported FCL is included byte-for-byte as supplied.
 
@@ -698,9 +698,10 @@ capture, AllMusic artwork property isolation, and capability replies. Theme
 Manager tests cover text-only and mixed reader layouts, stale replies, the
 no-response fallback and preservation of the theme draft during filtering.
 
-This rebuild passes 45 behavioural suites and audits 232 files with zero
-warnings. The FCL, supplied themes, screenshots and installation guide
-are preserved byte-for-byte from the maintainer's revised baseline. Native
+The current rebuild passes 49 behavioural suites and audits 233 files with zero
+warnings. The FCL, supplied themes and screenshots are preserved byte-for-byte.
+Installation documentation includes the current supported panel choices and
+recommended JSplitter version. Native
 foobar2000 testing of the new compatibility paths remains outstanding.
 
 ## Startup theme backing
@@ -717,3 +718,24 @@ exceptions, cached font selection, unchanged icon mappings with Fluent/MDL2,
 readable emergency symbols and preservation of text-format control characters.
 The five shared icon consumers are checked for use of the selected font.
 Native Windows 10 visual verification remains outstanding.
+
+## JSplitter controller runtime
+
+Simulated-host checks cover deferred width delivery, rejection of stale and
+malformed messages, synchronous startup/theme notifications, legacy fallback,
+fallback after send failure, controller-wide downgrade, timer-free diagnostics
+collection, exceptional callback timing and channel cleanup. Real InfoStack paint
+code is exercised with partial, full, clipped and off-panel rectangles. Native
+colour-picker arguments preserve signed ARGB and pass the owning window handle.
+
+The target is JSplitter 4.2.1. These automated checks are not a native component
+smoke test or performance benchmark. Native startup, theme/layout changes,
+diagnostics output and dialog ownership still require verification in foobar2000.
+The previous release changelog and all older entries are preserved.
+
+## Strict-mode controller initialization
+
+Every controller's actual runtime installation block is executed in strict mode
+with the runtime enabled, both with and without an existing unload callback.
+Checks require successful initialization and exactly-once runtime/previous-handler
+cleanup, plus unchanged legacy behaviour when the runtime is unavailable.

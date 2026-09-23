@@ -177,3 +177,19 @@ function darkOneJsp3HandleReset(name, data) {
     try { window.Reload(); } catch (e) { window.Repaint(); }
     return true;
 }
+
+// New APIs stay inside the JSplitter host, never the JSP3 sample runtime.
+include(fb.ProfilePath + 'DarkOneJSP3\\jsplitter\\runtime.js');
+var darkOneControllerRuntime = typeof createDarkOneControllerRuntime === 'function'
+    ? createDarkOneControllerRuntime(window, {
+        Channel: typeof BroadcastChannel === 'function' ? BroadcastChannel : null,
+        now: function () {
+            try { if (typeof performance !== 'undefined') return performance.now(); } catch (e) {}
+            return Date.now();
+        },
+        systemInfo: function () { return utils.SystemInfo || 'Unavailable'; },
+        highResolutionTimers: function () {
+            return typeof utils.HighResolutionTimersEnabled === 'boolean' ? utils.HighResolutionTimersEnabled : 'Unavailable';
+        },
+        show: function (text) { console.log(text); fb.ShowPopupMessage(text, 'DarkOneJSP3 controller diagnostics'); }
+    }) : null;

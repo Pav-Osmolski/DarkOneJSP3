@@ -1,5 +1,21 @@
 # DarkOneJSP3 Changelog
 
+## v1.3.0 - JSplitter controller improvements
+
+- Fixed strict-mode controller loading when no previous unload callback exists
+  (Main Columns and ArtSpectrum), preserving runtime and existing cleanup.
+
+- Target JSplitter 4.2.1, with feature-detected fallbacks for the new APIs.
+- Added TOOLS > Diagnostics with per-controller session timings, memory snapshots,
+  available system information and the effective high-resolution timer setting.
+  Reports cover JSplitter controllers; they do not profile JScript Panel 3 samples.
+- Use BroadcastChannel for routine main-area width updates, with NotifyOthers
+  fallback. Startup readiness, theme commits and command/query traffic retain
+  their synchronous ordering. Unloading closes the channel.
+- InfoStack painting skips tabs outside the update rectangle and restricts the
+  background fill to the affected area; older paint callbacks retain full drawing.
+- JSplitter colour pickers now use their owning panel window handle.
+
 ## v1.2.4 - Smoother Last.fm image browsing
 
 - Clarified that InfoStack panels 02 and 04 support either the text-only or

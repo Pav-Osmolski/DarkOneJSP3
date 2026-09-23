@@ -750,3 +750,28 @@ thread: first-time decoding of a large image can still briefly block the interfa
 The cache budget covers retained bitmaps, not temporary decoder memory or the
 total foobar2000 process. Reload the panel after externally replacing a cached
 image under the same filename.
+
+### JSplitter 4.2.1 and controller diagnostics
+
+DarkOneJSP3 targets JSplitter 4.2.1. Update all supplied scripts together
+and restart foobar2000; the FCL does not need re-importing. New APIs are detected
+at runtime: unavailable BroadcastChannel uses the legacy notifications, missing
+statistics are reported as unavailable, and older paint callbacks draw normally.
+
+TOOLS > Diagnostics requests a local report from the six JSplitter controllers.
+The popup and console show callback counts, average/maximum/last duration in
+milliseconds, available memory information and the message transport. Missing
+panels indicate that a controller is absent, has not loaded or uses older scripts.
+Reports are produced only when requested and are not uploaded anywhere.
+
+The timing counters cover this script session, including script setup, layout,
+painting and notifications. They do not measure native child rendering, full
+startup latency, or image decoding in JScript Panel 3. Memory statistics retain
+the host's scope: do not add controller snapshots together as process totals.
+
+High-resolution timers remain optional and are not enabled by these scripts.
+Background Workers and artwork-generated themes are not part of this update.
+
+Automated checks use simulated host APIs. Native foobar2000/JSplitter 4.2.1 smoke
+testing is still required: check startup, repeated layout changes, theme apply,
+colour-picker ownership, Diagnostics and controller reloads before publishing.
