@@ -7,7 +7,7 @@ JScript Panel 3.8.5.
 
 ## Project direction and adaptation
 
-DeViLhoOD
+[DeViLhoOD](https://github.com/Pav-Osmolski)
 - DarkOne2021 adaptation and maintenance.
 - DarkOneJSP3 project direction, design decisions, migration requirements,
   integration, testing and quality assurance.
@@ -15,7 +15,7 @@ DeViLhoOD
 
 ## Original DarkOne theme
 
-tedGo
+[tedGo](https://www.deviantart.com/tedgo)
 - Creator of the original DarkOne theme and DarkOne4Mod.
 - Original visual design, layout concepts, control-panel identity, artwork and
   the core control/display scripts from which DarkOne2021 and DarkOneJSP3
@@ -23,14 +23,14 @@ tedGo
 
 ## Playlist scripts
 
-Br3tt (also known as Falstaff)
+[Br3tt (also known as Falstaff)](https://www.deviantart.com/br3tt)
 - Original JS Playlist, Smooth Playlist Manager and related smooth-playlist
   scripts used as the foundation for the DarkOne playlist panels.
 - DarkOneJSP3 adaptations retain the original author credit in their headers.
 
 ## JScript Panel 3 and samples
 
-marc2003
+[marc2003](https://github.com/marc2k3)
 - Creator and maintainer of JScript Panel 3.
 - Author of the JScript Panel sample framework and many panels used or adapted
   by DarkOneJSP3, including Album Art, Last.fm, AllMusic, Properties and the
@@ -46,7 +46,7 @@ T. P. Wang
 
 ## JSplitter
 
-dima-lur
+[dima-lur](https://github.com/dima-lur)
 - Creator and maintainer of JSplitter.
 - JSplitter provides the scripted layout, panel hosting, geometry and visibility
   layer used by DarkOneJSP3.

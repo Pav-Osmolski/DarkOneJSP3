@@ -67,7 +67,6 @@ workflow of the original theme.
   visible rows, cached column geometry and Direct2D bitmap reuse.
 * Standalone enhanced JScript Panel samples with component-local dependencies
   and compatibility for older theme entry scripts.
-* Configurable bottom-area colours and buttons across JSP3 and JSplitter.
 
 ## Screenshots
 
@@ -277,16 +276,16 @@ intentional compatibility mirrors and generated adapters.
 
 DarkOneJSP3 exists because of the work of many people:
 
-* **tedGo** — creator of the original DarkOne theme and DarkOne4Mod; original
+* **[tedGo](https://www.deviantart.com/tedgo)** — creator of the original DarkOne theme and DarkOne4Mod; original
   visual identity, layout concepts, artwork and foundational control/display
   scripts.
-* **DeViLhoOD** — DarkOne2021 adaptation; DarkOneJSP3 project direction,
+* **[DeViLhoOD](https://github.com/Pav-Osmolski)** — DarkOne2021 adaptation; DarkOneJSP3 project direction,
   migration, integration, design decisions, testing and maintenance.
-* **Br3tt / Falstaff** — original JS Playlist, Smooth Playlist Manager and
+* **[Br3tt / Falstaff](https://www.deviantart.com/br3tt)** — original JS Playlist, Smooth Playlist Manager and
   related playlist scripts used as foundations for adapted panels.
-* **marc2003** — creator and maintainer of JScript Panel 3 and author of many
+* **[marc2003](https://github.com/marc2k3)** — creator and maintainer of JScript Panel 3 and author of many
   sample scripts used or adapted by the project.
-* **dima-lur** — creator and maintainer of JSplitter.
+* **[dima-lur](https://github.com/dima-lur)** — creator and maintainer of JSplitter.
 * **Case** and **T. P. Wang** — additional sample contributions retained in the
   JScript Panel sample tree.
 * The authors and maintainers of foobar2000, Columns UI, Enhanced Spectrum
