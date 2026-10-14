@@ -29,6 +29,7 @@
 - [🧩 Enhanced Sample Library](#enhanced-sample-library)
 - [🛠️ Requirements and Installation](#requirements)
 - [📖 Documentation](#documentation)
+- [☕ Support development](#support-development)
 - [⚖️ Credits and attribution](#credits-and-attribution)
 
 ## Overview
@@ -259,18 +260,12 @@ user-components-x64/
                            DarkOneJSP3 and compatible foobar2000 themes
 ```
 
-## Validation
+## Support development
 
-Run the validator from the package or repository root containing both
-`DarkOneJSP3` and `user-components-x64`:
+If you enjoy DarkOneJSP3 and would like to support its ongoing development
+and maintenance, you can [buy me a coffee on Ko-fi](https://ko-fi.com/devilhood42).
 
-```text
-python DarkOneJSP3/tools/validate_release.py .
-```
-
-The validator checks package structure, namespaces, imports, reset coverage,
-metadata, documentation consistency, JavaScript syntax, Python compilation and
-intentional compatibility mirrors and generated adapters.
+Support is entirely optional and always appreciated.
 
 ## Credits and attribution
 
