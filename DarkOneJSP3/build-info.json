@@ -4,7 +4,7 @@
   "targets": {
     "foobar2000": "v2 x64",
     "jscript_panel": "3.8.5",
-    "jsplitter": "4.2.1"
+    "jsplitter": "4.4.0"
   },
   "modules": {
     "control_left": "3.0.36-jsp3-3.8.5",

@@ -728,7 +728,7 @@ collection, exceptional callback timing and channel cleanup. Real InfoStack pain
 code is exercised with partial, full, clipped and off-panel rectangles. Native
 colour-picker arguments preserve signed ARGB and pass the owning window handle.
 
-The target is JSplitter 4.2.1. These automated checks are not a native component
+The target is JSplitter 4.4.0. These automated checks are not a native component
 smoke test or performance benchmark. Native startup, theme/layout changes,
 diagnostics output and dialog ownership still require verification in foobar2000.
 The previous release changelog and all older entries are preserved.

@@ -751,9 +751,9 @@ The cache budget covers retained bitmaps, not temporary decoder memory or the
 total foobar2000 process. Reload the panel after externally replacing a cached
 image under the same filename.
 
-### JSplitter 4.2.1 and controller diagnostics
+### JSplitter 4.4.0 and controller diagnostics
 
-DarkOneJSP3 targets JSplitter 4.2.1. Update all supplied scripts together
+DarkOneJSP3 targets JSplitter 4.4.0 or later. Update all supplied scripts together
 and restart foobar2000; the FCL does not need re-importing. New APIs are detected
 at runtime: unavailable BroadcastChannel uses the legacy notifications, missing
 statistics are reported as unavailable, and older paint callbacks draw normally.
@@ -772,6 +772,6 @@ the host's scope: do not add controller snapshots together as process totals.
 High-resolution timers remain optional and are not enabled by these scripts.
 Background Workers and artwork-generated themes are not part of this update.
 
-Automated checks use simulated host APIs. Native foobar2000/JSplitter 4.2.1 smoke
+Automated checks use simulated host APIs. Native foobar2000/JSplitter 4.4.0 smoke
 testing is still required: check startup, repeated layout changes, theme apply,
 colour-picker ownership, Diagnostics and controller reloads before publishing.
